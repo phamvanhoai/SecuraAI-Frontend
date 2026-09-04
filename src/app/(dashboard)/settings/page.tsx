@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Bell,
   Building2,
@@ -11,6 +13,7 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
+import { useToast } from "@/components/feedback/toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -128,9 +131,19 @@ function SettingNav({
   );
 }
 function SaveBar() {
+  const toast = useToast();
   return (
     <div className="border-border flex justify-end border-t px-5 py-4">
-      <button className="bg-brand text-brand-contrast inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold">
+      <button
+        className="bg-brand text-brand-contrast hover:bg-brand-strong inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition-colors active:translate-y-px"
+        onClick={() =>
+          toast.success(
+            "Đã lưu thay đổi",
+            "Cấu hình mẫu đã được cập nhật trên giao diện.",
+          )
+        }
+        type="button"
+      >
         <Save className="size-4" />
         Lưu thay đổi
       </button>

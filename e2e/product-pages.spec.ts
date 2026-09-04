@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const pages = [
-  ["/dashboard", "Tổng quan an toàn thông tin"],
+  ["/dashboard", "Dashboard tổng quan"],
   ["/users", "Quản lý người dùng"],
   ["/roles", "Vai trò và quyền"],
   ["/assets", "Quản lý tài sản"],
@@ -14,6 +14,14 @@ const pages = [
   ["/notifications", "Thông báo"],
   ["/files", "Quản lý tệp"],
   ["/settings", "Cài đặt hệ thống"],
+  ["/alerts", "Cảnh báo an toàn thông tin"],
+  ["/policies", "Quản lý chính sách"],
+  ["/training", "Đào tạo nhận thức"],
+  ["/anomaly-monitoring", "Giám sát bất thường"],
+  ["/ai-models", "Mô hình AI"],
+  ["/event-logs", "Log và sự kiện"],
+  ["/custom-dashboard", "Dashboard tùy chỉnh"],
+  ["/profile", "Hồ sơ cá nhân"],
 ] as const;
 
 test.beforeEach(async ({ context }) => {
@@ -49,8 +57,24 @@ test("dashboard and users pages remain usable on mobile", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("shows a success toast when saving settings", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/settings");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Lưu thay đổi" }).first().click();
+  expect(pageErrors).toEqual([]);
+  await expect(page.getByRole("status")).toContainText("Đã lưu thay đổi");
+  await expect(page.getByRole("status")).toContainText(
+    "Cấu hình mẫu đã được cập nhật trên giao diện.",
+  );
+  await page.getByRole("button", { name: "Đóng thông báo" }).click();
+  await expect(page.getByRole("status")).not.toBeVisible();
+});
+
 test("captures review surfaces when requested", async ({ page }) => {
   test.skip(process.env.CAPTURE_UI !== "1", "Visual capture is opt-in");
+  await page.setViewportSize({ width: 1536, height: 1024 });
   await page.goto("/dashboard");
   await page.screenshot({
     path: "test-results/static-dashboard.png",

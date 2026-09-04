@@ -7,7 +7,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <Sidebar />
       <div className="min-w-0 flex-1">
         <Header />
-        <main className="mx-auto max-w-[1400px] px-4 py-7 md:px-8 md:py-9">
+        <main className="mx-auto max-w-[1600px] px-4 py-5 md:px-5 md:py-5">
           {children}
         </main>
       </div>
