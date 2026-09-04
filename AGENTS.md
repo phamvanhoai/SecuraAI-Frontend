@@ -48,6 +48,13 @@ Keep strict mode, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. N
 
 Use semantic HTML, programmatic labels, keyboard-operable controls, visible focus, correct ARIA and sufficient contrast. Verify responsive desktop/tablet/mobile behavior and loading, error, empty and not-found states.
 
+## Toast notifications
+
+- Use the shared `useToast` hook from `@/components/feedback/toast` for transient feedback after user actions. Do not create page-specific toast implementations or add another toast library.
+- Use `toast.success`, `toast.error`, `toast.warning` or `toast.info` according to the outcome. Keep titles concise and put recovery guidance in `description`.
+- Use inline validation or `Alert` for persistent/form errors; do not use a toast when the message must remain next to the affected field.
+- Toasts must never expose credentials, tokens, sensitive response bodies or internal exception details.
+
 ## Testing and definition of done
 
 Add schema/boundary tests, behavioral component tests and risk-proportionate browser tests. Done means the requested architecture/behavior is implemented without fake data, relevant docs are current, and `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` and applicable `pnpm test:e2e` pass.
