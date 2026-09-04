@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function SampleNotice() {
   return (
-    <div className="border-warning/25 bg-warning-soft text-warning inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium">
+    <div className="border-info/20 bg-info-soft text-info inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium">
       Dữ liệu mẫu phục vụ thiết kế giao diện
     </div>
   );
@@ -25,12 +25,14 @@ export function ProductPageHeader({
   return (
     <>
       <Breadcrumb title={title} />
-      <div className="mb-7 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
-          <h1 className="text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
             {title}
           </h1>
-          <p className="text-muted mt-3 max-w-2xl leading-6">{description}</p>
+          <p className="text-muted mt-2 max-w-2xl text-sm leading-6">
+            {description}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {secondaryAction ? (
@@ -71,14 +73,12 @@ export function MetricStrip({ metrics }: { metrics: readonly Metric[] }) {
   return (
     <section
       aria-label="Chỉ số mẫu"
-      className="border-border bg-surface mb-6 grid overflow-hidden rounded-xl border sm:grid-cols-2 xl:grid-cols-4"
+      className="mb-5 grid gap-3 sm:grid-cols-2 xl:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]"
     >
-      {metrics.map((metric, index) => (
+      {metrics.map((metric) => (
         <div
           className={cn(
-            "p-5",
-            index > 0 && "border-border border-t sm:border-t-0 sm:border-l",
-            index === 2 && "sm:border-l-0 xl:border-l",
+            "border-border bg-surface rounded-[10px] border p-4 shadow-[0_4px_18px_rgba(28,55,100,0.035)]",
           )}
           key={metric.label}
         >
@@ -178,7 +178,7 @@ export function StaticTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
-        <thead className="bg-neutral-soft text-muted text-xs">
+        <thead className="text-muted dark:bg-neutral-soft bg-[#f7f9fd] text-xs">
           <tr>
             {headers.map((header) => (
               <th className="px-4 py-3 font-semibold" key={header} scope="col">
@@ -194,7 +194,7 @@ export function StaticTable({
               key={rowIndex}
             >
               {row.map((cell, cellIndex) => (
-                <td className="px-4 py-3.5 align-middle" key={cellIndex}>
+                <td className="px-4 py-3 align-middle" key={cellIndex}>
                   {cell}
                 </td>
               ))}
@@ -220,7 +220,7 @@ export function ProductPanel({
   return (
     <section
       className={cn(
-        "border-border bg-surface overflow-hidden rounded-xl border",
+        "border-border bg-surface overflow-hidden rounded-[10px] border shadow-[0_4px_18px_rgba(28,55,100,0.035)]",
         className,
       )}
     >

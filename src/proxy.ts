@@ -15,14 +15,27 @@ const protectedPrefixes = [
   "/notifications",
   "/files",
   "/settings",
+  "/alerts",
+  "/policies",
+  "/training",
+  "/anomaly-monitoring",
+  "/ai-models",
+  "/event-logs",
+  "/custom-dashboard",
+  "/profile",
 ] as const;
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
   const hasSession =
-    request.cookies.has(authCookieNames.access) || request.cookies.has(authCookieNames.refresh);
+    request.cookies.has(authCookieNames.access) ||
+    request.cookies.has(authCookieNames.refresh);
 
-  if (protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+  if (
+    protectedPrefixes.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  ) {
     if (!hasSession) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("returnUrl", `${pathname}${search}`);
@@ -53,5 +66,13 @@ export const config = {
     "/notifications/:path*",
     "/files/:path*",
     "/settings/:path*",
+    "/alerts/:path*",
+    "/policies/:path*",
+    "/training/:path*",
+    "/anomaly-monitoring/:path*",
+    "/ai-models/:path*",
+    "/event-logs/:path*",
+    "/custom-dashboard/:path*",
+    "/profile/:path*",
   ],
 };
