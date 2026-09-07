@@ -1,2 +1,2 @@
 /** Reporting public API. Implementation awaits backend contracts. */
-export {};
+export { RolePanel, type RolePanelKind } from "./components/role-panel";

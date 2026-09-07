@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { login } from "../api/login";
 import { loginSchema, type LoginInput } from "../schemas/login-schema";
 
-export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) {
+export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
   const [message, setMessage] = useState<string>();
   const {
     register,
@@ -28,7 +28,11 @@ export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) 
       await login(values);
       window.location.assign(returnUrl);
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "Không thể đăng nhập. Vui lòng thử lại.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể đăng nhập. Vui lòng thử lại.",
+      );
     }
   }
 
@@ -47,7 +51,11 @@ export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) 
           {...register("email")}
         />
       </FormField>
-      <FormField id="password" label="Mật khẩu" error={errors.password?.message}>
+      <FormField
+        id="password"
+        label="Mật khẩu"
+        error={errors.password?.message}
+      >
         <Input
           id="password"
           type="password"
@@ -58,7 +66,10 @@ export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) 
         />
       </FormField>
       <div className="flex justify-end">
-        <Link className="text-sm font-medium text-brand underline-offset-4 hover:underline" href="/forgot-password">
+        <Link
+          className="text-brand text-sm font-medium underline-offset-4 hover:underline"
+          href="/forgot-password"
+        >
           Quên mật khẩu?
         </Link>
       </div>

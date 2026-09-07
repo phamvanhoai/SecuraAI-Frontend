@@ -3,22 +3,38 @@
 import {
   Bell,
   Building2,
+  Copy,
   KeyRound,
   Link2,
+  Plus,
   Save,
   ShieldCheck,
 } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import {
   ProductPageHeader,
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
+import { Alert } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
+type SettingsTab =
+  "organization" | "security" | "notifications" | "integrations" | "api";
+const tabs: readonly { id: SettingsTab; label: string; icon: ReactNode }[] = [
+  { id: "organization", label: "Tổ chức", icon: <Building2 /> },
+  { id: "security", label: "Bảo mật", icon: <ShieldCheck /> },
+  { id: "notifications", label: "Thông báo", icon: <Bell /> },
+  { id: "integrations", label: "Tích hợp", icon: <Link2 /> },
+  { id: "api", label: "API và khóa", icon: <KeyRound /> },
+];
+
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<SettingsTab>("organization");
   return (
     <>
       <ProductPageHeader
@@ -30,81 +46,217 @@ export default function SettingsPage() {
           aria-label="Nhóm cài đặt"
           className="border-border bg-surface h-fit rounded-xl border p-2"
         >
-          <SettingNav icon={<Building2 />} label="Tổ chức" active />
-          <SettingNav icon={<ShieldCheck />} label="Bảo mật" />
-          <SettingNav icon={<Bell />} label="Thông báo" />
-          <SettingNav icon={<Link2 />} label="Tích hợp" />
-          <SettingNav icon={<KeyRound />} label="API và khóa" />
+          {tabs.map((tab) => (
+            <button
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${activeTab === tab.id ? "bg-brand-soft text-brand" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              <span className="[&>svg]:size-4">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
         </nav>
-        <div className="space-y-6">
-          <ProductPanel
-            title="Thông tin tổ chức"
-            description="Thông tin mẫu hiển thị trong báo cáo và thông báo hệ thống."
-          >
-            <div className="grid gap-5 p-5 md:grid-cols-2">
-              <Field label="Tên tổ chức">
-                <Input defaultValue="Công ty Cổ phần Secura Việt Nam" />
-              </Field>
-              <Field label="Mã tổ chức">
-                <Input defaultValue="SECURA-VN" />
-              </Field>
-              <Field label="Múi giờ">
-                <Select defaultValue="asia-ho-chi-minh">
-                  <option value="asia-ho-chi-minh">Asia/Ho_Chi_Minh</option>
-                </Select>
-              </Field>
-              <Field label="Ngôn ngữ">
-                <Select defaultValue="vi">
-                  <option value="vi">Tiếng Việt</option>
-                  <option value="en">English</option>
-                </Select>
-              </Field>
-            </div>
-            <SaveBar />
-          </ProductPanel>
-          <ProductPanel
-            title="Chính sách phiên đăng nhập"
-            description="Giá trị giao diện mẫu, chưa thay đổi cấu hình backend."
-          >
-            <div className="grid gap-5 p-5 md:grid-cols-2">
-              <Field label="Thời hạn access token">
-                <Input value="15 phút" readOnly />
-              </Field>
-              <Field label="Thời hạn refresh token">
-                <Input value="7 ngày" readOnly />
-              </Field>
-              <Field label="Số phiên tối đa">
-                <Input defaultValue="5" type="number" />
-              </Field>
-              <Field label="Khóa sau số lần thất bại">
-                <Input defaultValue="10" type="number" />
-              </Field>
-            </div>
-            <SaveBar />
-          </ProductPanel>
-          <ProductPanel title="Tích hợp">
-            <div className="space-y-3 p-5">
-              <Integration name="Microsoft Entra ID" status="Chưa kết nối" />
-              <Integration
-                name="Splunk Enterprise Security"
-                status="Đang hoạt động"
-                active
-              />
-              <Integration name="Email SMTP" status="Đang hoạt động" active />
-            </div>
-          </ProductPanel>
+        <div aria-live="polite" className="space-y-6">
+          {activeTab === "organization" && <OrganizationSettings />}
+          {activeTab === "security" && <SecuritySettings />}
+          {activeTab === "notifications" && <NotificationSettings />}
+          {activeTab === "integrations" && <IntegrationSettings />}
+          {activeTab === "api" && <ApiKeySettings />}
         </div>
       </div>
     </>
   );
 }
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+
+function OrganizationSettings() {
+  return (
+    <ProductPanel
+      title="Thông tin tổ chức"
+      description="Thông tin mẫu hiển thị trong báo cáo và thông báo hệ thống."
+    >
+      <div className="grid gap-5 p-5 md:grid-cols-2">
+        <Field label="Tên tổ chức">
+          <Input defaultValue="Công ty Cổ phần Secura Việt Nam" />
+        </Field>
+        <Field label="Mã tổ chức">
+          <Input defaultValue="SECURA-VN" />
+        </Field>
+        <Field label="Tên miền">
+          <Input defaultValue="secura.vn" />
+        </Field>
+        <Field label="Email liên hệ">
+          <Input defaultValue="security@secura.vn" type="email" />
+        </Field>
+        <Field label="Múi giờ">
+          <Select defaultValue="asia-ho-chi-minh">
+            <option value="asia-ho-chi-minh">Asia/Ho_Chi_Minh</option>
+          </Select>
+        </Field>
+        <Field label="Ngôn ngữ">
+          <Select defaultValue="vi">
+            <option value="vi">Tiếng Việt</option>
+            <option value="en">English</option>
+          </Select>
+        </Field>
+      </div>
+      <SaveBar area="tổ chức" />
+    </ProductPanel>
+  );
+}
+
+function SecuritySettings() {
+  return (
+    <>
+      <ProductPanel
+        title="Chính sách phiên đăng nhập"
+        description="Kiểm soát thời hạn phiên và số lần đăng nhập thất bại."
+      >
+        <div className="grid gap-5 p-5 md:grid-cols-2">
+          <Field label="Thời hạn access token">
+            <Input value="15 phút" readOnly />
+          </Field>
+          <Field label="Thời hạn refresh token">
+            <Input value="7 ngày" readOnly />
+          </Field>
+          <Field label="Số phiên tối đa">
+            <Input defaultValue="5" min="1" type="number" />
+          </Field>
+          <Field label="Khóa sau số lần thất bại">
+            <Input defaultValue="10" min="1" type="number" />
+          </Field>
+        </div>
+        <SaveBar area="bảo mật" />
+      </ProductPanel>
+      <ProductPanel title="Xác thực và mật khẩu">
+        <div className="space-y-4 p-5">
+          <ToggleSetting
+            defaultChecked
+            label="Yêu cầu xác thực đa yếu tố cho quản trị viên"
+          />
+          <ToggleSetting
+            defaultChecked
+            label="Buộc đổi mật khẩu trong lần đăng nhập đầu tiên"
+          />
+          <ToggleSetting label="Cho phép đăng nhập đồng thời trên nhiều thiết bị" />
+        </div>
+      </ProductPanel>
+    </>
+  );
+}
+
+function NotificationSettings() {
+  return (
+    <ProductPanel
+      title="Quy tắc thông báo"
+      description="Chọn sự kiện và kênh nhận thông báo mặc định."
+    >
+      <div className="divide-border divide-y p-5">
+        <NotificationRule
+          title="Rủi ro nghiêm trọng"
+          description="Thông báo khi phát hiện hoặc thay đổi rủi ro critical"
+        />
+        <NotificationRule
+          title="Sự cố được phân công"
+          description="Thông báo cho người hoặc nhóm phụ trách sự cố"
+        />
+        <NotificationRule
+          title="Kiểm soát sắp đến hạn"
+          description="Nhắc trước kỳ đánh giá và gia hạn bằng chứng"
+        />
+        <NotificationRule
+          title="Báo cáo hoàn tất"
+          description="Thông báo khi báo cáo theo lịch đã sẵn sàng"
+        />
+      </div>
+      <SaveBar area="thông báo" />
+    </ProductPanel>
+  );
+}
+
+function IntegrationSettings() {
+  return (
+    <ProductPanel
+      title="Tích hợp hệ thống"
+      description="Theo dõi trạng thái kết nối với các dịch vụ bên ngoài."
+    >
+      <div className="space-y-3 p-5">
+        <Integration
+          name="Microsoft Entra ID"
+          description="Đồng bộ danh tính và nhóm người dùng"
+          status="Chưa kết nối"
+        />
+        <Integration
+          active
+          name="Splunk Enterprise Security"
+          description="Tiếp nhận log và sự kiện bảo mật"
+          status="Đang hoạt động"
+        />
+        <Integration
+          active
+          name="Email SMTP"
+          description="Gửi cảnh báo và báo cáo định kỳ"
+          status="Đang hoạt động"
+        />
+      </div>
+    </ProductPanel>
+  );
+}
+
+function ApiKeySettings() {
+  const toast = useToast();
+  return (
+    <>
+      <Alert>
+        Backend chưa cung cấp endpoint quản lý khóa API. Các giá trị dưới đây
+        chỉ mô tả giao diện và không chứa khóa thật.
+      </Alert>
+      <ProductPanel
+        title="Khóa API"
+        description="Quản lý thông tin định danh dùng cho tích hợp máy với máy."
+      >
+        <div className="border-border flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium">Production SIEM</p>
+            <p className="text-muted mt-1 text-sm">
+              sk_live_••••••••7F2A · Chưa có dữ liệu backend
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusBadge tone="neutral">Chưa triển khai</StatusBadge>
+            <button
+              aria-label="Sao chép mã khóa mẫu"
+              className="border-border hover:bg-neutral-soft rounded-lg border p-2"
+              onClick={() =>
+                toast.info(
+                  "Không thể sao chép",
+                  "Khóa mẫu không phải thông tin xác thực thật.",
+                )
+              }
+              type="button"
+            >
+              <Copy className="size-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end p-5">
+          <button
+            className="bg-brand text-brand-contrast inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold opacity-60"
+            disabled
+            type="button"
+          >
+            <Plus className="size-4" />
+            Tạo khóa API
+          </button>
+        </div>
+      </ProductPanel>
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -112,25 +264,8 @@ function Field({
     </div>
   );
 }
-function SettingNav({
-  icon,
-  label,
-  active = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <button
-      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium ${active ? "bg-brand-soft text-brand" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
-    >
-      <span className="[&>svg]:size-4">{icon}</span>
-      {label}
-    </button>
-  );
-}
-function SaveBar() {
+
+function SaveBar({ area }: { area: string }) {
   const toast = useToast();
   return (
     <div className="border-border flex justify-end border-t px-5 py-4">
@@ -139,7 +274,7 @@ function SaveBar() {
         onClick={() =>
           toast.success(
             "Đã lưu thay đổi",
-            "Cấu hình mẫu đã được cập nhật trên giao diện.",
+            `Cấu hình ${area} mẫu đã được cập nhật trên giao diện.`,
           )
         }
         type="button"
@@ -150,20 +285,59 @@ function SaveBar() {
     </div>
   );
 }
+
+function ToggleSetting({
+  label,
+  defaultChecked = false,
+}: {
+  label: string;
+  defaultChecked?: boolean;
+}) {
+  return (
+    <label className="flex items-center gap-3 text-sm">
+      <Checkbox defaultChecked={defaultChecked} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function NotificationRule({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+        <p className="text-muted mt-1 text-xs">{description}</p>
+      </div>
+      <div className="flex gap-4">
+        <ToggleSetting defaultChecked label="Trong ứng dụng" />
+        <ToggleSetting defaultChecked label="Email" />
+      </div>
+    </div>
+  );
+}
+
 function Integration({
   name,
+  description,
   status,
   active = false,
 }: {
   name: string;
+  description: string;
   status: string;
   active?: boolean;
 }) {
   return (
-    <div className="bg-neutral-soft flex items-center justify-between gap-4 rounded-lg p-4">
+    <div className="bg-neutral-soft flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="font-medium">{name}</p>
-        <p className="text-muted mt-1 text-xs">Cấu hình tích hợp mẫu</p>
+        <p className="text-muted mt-1 text-xs">{description}</p>
       </div>
       <StatusBadge tone={active ? "success" : "neutral"}>{status}</StatusBadge>
     </div>
