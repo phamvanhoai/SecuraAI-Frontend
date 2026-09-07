@@ -3,6 +3,10 @@ import { authCookieNames } from "@/lib/auth/auth-cookies";
 
 const protectedPrefixes = [
   "/dashboard",
+  "/admin",
+  "/security-officer",
+  "/employee",
+  "/executive-auditor",
   "/users",
   "/roles",
   "/assets",
@@ -44,7 +48,7 @@ export function proxy(request: NextRequest): NextResponse {
   }
 
   if (pathname === "/login" && hasSession) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/admin", request.url));
   }
 
   return NextResponse.next();
@@ -54,6 +58,10 @@ export const config = {
   matcher: [
     "/login",
     "/dashboard/:path*",
+    "/admin/:path*",
+    "/security-officer/:path*",
+    "/employee/:path*",
+    "/executive-auditor/:path*",
     "/users/:path*",
     "/roles/:path*",
     "/assets/:path*",

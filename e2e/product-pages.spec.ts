@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const pages = [
-  ["/dashboard", "Dashboard tổng quan"],
+  ["/admin", "Dashboard tổng quan"],
+  ["/security-officer", "Panel Chuyên viên ATTT"],
+  ["/employee", "Panel Nhân viên"],
+  ["/executive-auditor", "Panel Lãnh đạo / Kiểm toán"],
   ["/users", "Quản lý người dùng"],
   ["/roles", "Vai trò và quyền"],
   ["/assets", "Quản lý tài sản"],
@@ -49,7 +52,7 @@ test("renders every static product page", async ({ page }) => {
 
 test("dashboard and users pages remain usable on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/dashboard");
+  await page.goto("/admin");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.goto("/users");
   await expect(
@@ -75,7 +78,7 @@ test("shows a success toast when saving settings", async ({ page }) => {
 test("captures review surfaces when requested", async ({ page }) => {
   test.skip(process.env.CAPTURE_UI !== "1", "Visual capture is opt-in");
   await page.setViewportSize({ width: 1536, height: 1024 });
-  await page.goto("/dashboard");
+  await page.goto("/admin");
   await page.screenshot({
     path: "test-results/static-dashboard.png",
     fullPage: true,
