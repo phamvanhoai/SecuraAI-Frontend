@@ -4,54 +4,32 @@ import { PanelLeftClose, PanelLeftOpen, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { navigation } from "@/config/navigation";
+import {
+  getPanelKind,
+  getPanelNavigation,
+  panelLabels,
+  type NavigationItem,
+} from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
-const overviewPaths = ["/dashboard", "/alerts"];
-const managementPaths = [
-  "/users",
-  "/roles",
-  "/assets",
-  "/risks",
-  "/incidents",
-  "/controls",
-  "/compliance",
-  "/audits",
-  "/policies",
-  "/training",
+const sectionOrder: readonly NavigationItem["section"][] = [
+  "Tổng quan",
+  "Quản lý",
+  "AI & Giám sát",
+  "Báo cáo",
+  "Cài đặt",
 ];
-const monitoringPaths = ["/anomaly-monitoring", "/ai-models", "/event-logs"];
-const reportingPaths = [
-  "/reports",
-  "/custom-dashboard",
-  "/notifications",
-  "/files",
-];
-const sections = [
-  {
-    label: "Tổng quan",
-    items: navigation.filter((item) => overviewPaths.includes(item.href)),
-  },
-  {
-    label: "Quản lý",
-    items: navigation.filter((item) => managementPaths.includes(item.href)),
-  },
-  {
-    label: "AI & Giám sát",
-    items: navigation.filter((item) => monitoringPaths.includes(item.href)),
-  },
-  {
-    label: "Báo cáo",
-    items: navigation.filter((item) => reportingPaths.includes(item.href)),
-  },
-  {
-    label: "Cài đặt",
-    items: navigation.filter((item) => item.href === "/settings"),
-  },
-] as const;
 
 export function Sidebar() {
   const pathname = usePathname();
+  const panel = getPanelKind(pathname);
+  const navigation = getPanelNavigation(panel);
+  const sections = sectionOrder
+    .map((label) => ({
+      label,
+      items: navigation.filter((item) => item.section === label),
+    }))
+    .filter((section) => section.items.length > 0);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -88,8 +66,8 @@ export function Sidebar() {
             <span className="block text-base font-semibold tracking-tight text-white">
               SecuraAI
             </span>
-            <span className="block text-[10px] text-slate-400">
-              ISMS/GRC Platform
+            <span className="block truncate text-[10px] text-slate-400">
+              {panelLabels[panel]}
             </span>
           </span>
           <button
@@ -101,7 +79,7 @@ export function Sidebar() {
           </button>
         </div>
         <nav
-          aria-label="Điều hướng chính"
+          aria-label={`Điều hướng panel ${panelLabels[panel]}`}
           className="flex-1 overflow-y-auto px-2 py-3"
         >
           {sections.map((section, sectionIndex) => (

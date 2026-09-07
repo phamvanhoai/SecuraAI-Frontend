@@ -6,6 +6,7 @@ import {
   Siren,
   Target,
 } from "lucide-react";
+import Link from "next/link";
 import {
   DistributionDonut,
   RiskTrendChart,
@@ -119,12 +120,12 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          <a
+          <Link
             className="text-brand flex items-center gap-2 px-4 py-3 text-sm font-medium"
-            href="/alerts"
+            href="/admin/alerts"
           >
             Xem tất cả <ArrowUpRight className="size-4" />
-          </a>
+          </Link>
         </ProductPanel>
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.15fr_0.9fr]">

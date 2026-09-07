@@ -9,11 +9,22 @@ export function hasPermission(
   return checks.every((permission) => granted.includes(permission));
 }
 
-export function safeReturnUrl(value: string | null | undefined, fallback = "/dashboard"): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
+export function safeReturnUrl(
+  value: string | null | undefined,
+  fallback = "/admin",
+): string {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  )
+    return fallback;
   try {
     const url = new URL(value, "https://securaai.local");
-    return url.origin === "https://securaai.local" ? `${url.pathname}${url.search}${url.hash}` : fallback;
+    return url.origin === "https://securaai.local"
+      ? `${url.pathname}${url.search}${url.hash}`
+      : fallback;
   } catch {
     return fallback;
   }
