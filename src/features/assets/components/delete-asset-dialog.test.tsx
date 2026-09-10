@@ -53,10 +53,10 @@ describe("DeleteAssetDialog", () => {
   it("requires the exact asset code before deleting", async () => {
     const user = userEvent.setup();
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
-    const deleteButton = screen.getByRole("button", { name: "Xóa tài sản" });
+    const deleteButton = screen.getByRole("button", { name: "Delete Asset" });
     expect(deleteButton).toBeDisabled();
 
-    await user.type(screen.getByLabelText(/Nhập mã/), "AST-001");
+    await user.type(screen.getByLabelText(/Enter code/), "AST-001");
     expect(deleteButton).toBeEnabled();
     await user.click(deleteButton);
 
@@ -70,11 +70,11 @@ describe("DeleteAssetDialog", () => {
       new ApiError("Backend conflict", 409, "CONFLICT"),
     );
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText(/Nhập mã/), "AST-001");
-    await user.click(screen.getByRole("button", { name: "Xóa tài sản" }));
+    await user.type(screen.getByLabelText(/Enter code/), "AST-001");
+    await user.click(screen.getByRole("button", { name: "Delete Asset" }));
 
     expect(
-      await screen.findByText(/dữ liệu nghiệp vụ đang hoạt động/),
+      await screen.findByText(/Unable to delete because the asset has active business dependencies./),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
   });

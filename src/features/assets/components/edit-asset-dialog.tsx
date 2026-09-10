@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetDetail } from "../hooks/use-asset-detail";
+import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
 import { useUpdateAsset } from "../hooks/use-update-asset";
 import {
   updateAssetSchema,
@@ -21,10 +22,10 @@ import {
 import type { AssetListItem } from "../schemas/asset-list-schema";
 
 const statusLabels = {
-  active: "Đang hoạt động",
-  inactive: "Không hoạt động",
-  retired: "Đã ngừng sử dụng",
-  disposed: "Đã thanh lý",
+  active: "Active",
+  inactive: "Inactive",
+  retired: "Retired",
+  disposed: "Disposed",
 } as const;
 const allowedStatusTransitions: Readonly<
   Record<AssetListItem["status"], readonly AssetListItem["status"][]>
@@ -45,6 +46,7 @@ export function EditAssetDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const detail = useAssetDetail(assetId);
+  const options = useAssetCreateOptions(assetId !== null);
   const mutation = useUpdateAsset(assetId);
   const toast = useToast();
   const {
@@ -69,6 +71,7 @@ export function EditAssetDialog({
       name: detail.data.name,
       assetType: detail.data.assetType,
       description: detail.data.description ?? "",
+      departmentId: detail.data.department?.id ?? "",
       hostname: detail.data.hostname ?? "",
       ipAddress: detail.data.ipAddress ?? "",
       location: detail.data.location ?? "",
@@ -101,22 +104,20 @@ export function EditAssetDialog({
   const disposed = detail.data?.status === "disposed";
   return (
     <Dialog
-      title="Chỉnh sửa tài sản CNTT"
+      title="Edit IT Asset"
       dialogRef={dialogRef}
       onClose={close}
       className="w-[min(40rem,calc(100%-2rem))]"
     >
       {detail.isPending ? (
         <p className="text-muted py-8 text-center">
-          Đang tải thông tin tài sản…
+          Loading asset information…
         </p>
       ) : null}
       {detail.isError ? (
         <Alert>
-          <strong className="block">Không thể tải tài sản</strong>
-          <span>
-            Tài sản có thể không tồn tại hoặc bạn không có quyền truy cập.
-          </span>
+          <strong className="block">Unable to load asset</strong>
+          <span>The asset may not exist or you do not have access.</span>
         </Alert>
       ) : null}
       {detail.data ? (
@@ -126,16 +127,14 @@ export function EditAssetDialog({
               {message}
             </Alert>
           ) : null}
-          {disposed ? (
-            <Alert>Tài sản đã thanh lý nên không thể chỉnh sửa.</Alert>
-          ) : null}
+          {disposed ? <Alert>Disposed assets cannot be edited.</Alert> : null}
           <p className="text-muted text-sm">
-            Mã tài sản: {detail.data.assetCode}
+            Asset code: {detail.data.assetCode}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="edit-name"
-              label="Tên tài sản"
+              label="Asset name"
               error={errors.name?.message}
             >
               <Input
@@ -147,7 +146,7 @@ export function EditAssetDialog({
             </FormField>
             <FormField
               id="edit-assetType"
-              label="Loại tài sản"
+              label="Asset type"
               error={errors.assetType?.message}
             >
               <Input
@@ -156,6 +155,28 @@ export function EditAssetDialog({
                 disabled={disposed}
                 {...register("assetType")}
               />
+            </FormField>
+            <FormField
+              id="edit-departmentId"
+              label="Department"
+              error={errors.departmentId?.message}
+            >
+              <Select
+                id="edit-departmentId"
+                disabled={disposed || options.isPending}
+                {...register("departmentId")}
+              >
+                <option value="">
+                  {options.isPending
+                    ? "Loading departments…"
+                    : "No department assigned"}
+                </option>
+                {(options.data?.departments ?? []).map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.code} – {department.name}
+                  </option>
+                ))}
+              </Select>
             </FormField>
             <FormField
               id="edit-hostname"
@@ -171,7 +192,7 @@ export function EditAssetDialog({
             </FormField>
             <FormField
               id="edit-ipAddress"
-              label="Địa chỉ IP"
+              label="IP address"
               error={errors.ipAddress?.message}
             >
               <Input
@@ -182,7 +203,7 @@ export function EditAssetDialog({
             </FormField>
             <FormField
               id="edit-location"
-              label="Vị trí"
+              label="Location"
               error={errors.location?.message}
             >
               <Input
@@ -194,7 +215,7 @@ export function EditAssetDialog({
             </FormField>
             <FormField
               id="edit-status"
-              label="Trạng thái"
+              label="Status"
               error={errors.status?.message}
             >
               <Select
@@ -212,7 +233,7 @@ export function EditAssetDialog({
           </div>
           <FormField
             id="edit-description"
-            label="Mô tả"
+            label="Description"
             error={errors.description?.message}
           >
             <Textarea
@@ -222,16 +243,20 @@ export function EditAssetDialog({
               {...register("description")}
             />
           </FormField>
+          {options.isError ? (
+            <Alert className="border-warning/25 bg-warning/10">
+              Unable to load departments. You can keep the current department.
+            </Alert>
+          ) : null}
           <p className="text-muted text-xs">
-            Mức quan trọng được thay đổi bằng chức năng Classify Asset
-            Criticality riêng.
+            Criticality can only be changed through Classify Asset Criticality.
           </p>
           <div className="flex justify-end gap-2">
             <Button onClick={close} variant="secondary">
-              Hủy
+              Cancel
             </Button>
             <Button type="submit" disabled={disposed || mutation.isPending}>
-              {mutation.isPending ? "Đang lưu…" : "Lưu thay đổi"}
+              {mutation.isPending ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </form>

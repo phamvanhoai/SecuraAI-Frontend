@@ -43,21 +43,21 @@ export function DeleteAssetDialog({
     try {
       await mutation.mutateAsync(asset.id);
       close();
-      toast.success("Đã xóa tài sản", `${asset.assetCode} – ${asset.name}`);
+      toast.success("Asset deleted", `${asset.assetCode} – ${asset.name}`);
     } catch (error: unknown) {
       setMessage(
         error instanceof ApiError && error.status === 409
-          ? "Không thể xóa vì tài sản đang được sử dụng bởi dữ liệu nghiệp vụ đang hoạt động."
+          ? "Unable to delete because the asset has active business dependencies."
           : error instanceof Error
             ? error.message
-            : "Không thể xóa tài sản. Vui lòng thử lại.",
+            : "Unable to delete asset. Please try again.",
       );
     }
   };
 
   return (
     <Dialog
-      title="Xóa tài sản"
+      title="Delete Asset"
       dialogRef={dialogRef}
       onClose={close}
       className="w-[min(32rem,calc(100%-2rem))]"
@@ -65,18 +65,18 @@ export function DeleteAssetDialog({
       {asset ? (
         <div className="space-y-4">
           <Alert className="border-danger/25 bg-danger-soft text-danger">
-            Tài sản sẽ bị xóa khỏi danh sách. Hệ thống sẽ từ chối nếu tài sản
-            còn liên kết nghiệp vụ đang hoạt động.
+            The asset will be removed from the list. The system will reject
+            deletion if it has active business dependencies.
           </Alert>
           <p className="text-sm leading-6">
-            Bạn đang xóa <strong>{asset.assetCode}</strong> – {asset.name}.
+            You are deleting <strong>{asset.assetCode}</strong> – {asset.name}.
           </p>
           <label
             className="block space-y-2"
             htmlFor="delete-asset-confirmation"
           >
             <span className="text-sm font-medium">
-              Nhập mã <strong>{asset.assetCode}</strong> để xác nhận
+              Enter code <strong>{asset.assetCode}</strong> to confirm
             </span>
             <Input
               id="delete-asset-confirmation"
@@ -92,7 +92,7 @@ export function DeleteAssetDialog({
           ) : null}
           <div className="flex justify-end gap-2">
             <Button onClick={close} variant="secondary">
-              Hủy
+              Cancel
             </Button>
             <Button
               className="bg-danger text-white hover:opacity-90"
@@ -101,7 +101,7 @@ export function DeleteAssetDialog({
               }
               onClick={remove}
             >
-              {mutation.isPending ? "Đang xóa…" : "Xóa tài sản"}
+              {mutation.isPending ? "Deleting…" : "Delete Asset"}
             </Button>
           </div>
         </div>
