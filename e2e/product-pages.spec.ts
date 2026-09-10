@@ -6,7 +6,6 @@ const pages = [
   ["/employee", "Panel Nhân viên"],
   ["/executive-auditor", "Panel Lãnh đạo / Kiểm toán"],
   ["/users", "Quản lý người dùng"],
-  ["/roles", "Vai trò và quyền"],
   ["/assets", "Quản lý tài sản"],
   ["/risks", "Đánh giá rủi ro"],
   ["/incidents", "Quản lý sự cố"],
@@ -48,6 +47,54 @@ test("renders every static product page", async ({ page }) => {
       page.getByText("Dữ liệu mẫu phục vụ thiết kế giao diện", { exact: true }),
     ).toBeVisible();
   }
+});
+
+test("renders roles returned by the access-control API", async ({ page }) => {
+  await page.route("**/api/access-control/permissions?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        success: true,
+        data: {
+          items: [],
+          pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+        },
+      },
+    });
+  });
+  await page.route("**/api/access-control/roles?*", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        success: true,
+        data: {
+          items: [
+            {
+              id: "22222222-2222-4222-8222-222222222222",
+              code: "ADMIN",
+              name: "Administrator",
+              description: null,
+              isSystem: true,
+              permissions: [],
+              assignedUserCount: 1,
+              workflowStepCount: 0,
+              createdAt: "2026-09-10T00:00:00.000Z",
+              updatedAt: "2026-09-10T00:00:00.000Z",
+            },
+          ],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        },
+      },
+    });
+  });
+  await page.goto("/admin/roles");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Roles and permissions" }),
+  ).toBeVisible();
+  await expect(page.getByText("Administrator")).toBeVisible();
+  await expect(
+    page.getByText("Dữ liệu mẫu phục vụ thiết kế giao diện", { exact: true }),
+  ).not.toBeVisible();
 });
 
 test("dashboard and users pages remain usable on mobile", async ({ page }) => {

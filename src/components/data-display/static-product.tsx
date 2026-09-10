@@ -16,11 +16,15 @@ export function ProductPageHeader({
   description,
   primaryAction,
   secondaryAction,
+  onPrimaryAction,
+  showSampleNotice = true,
 }: {
   title: string;
   description: string;
   primaryAction?: string;
   secondaryAction?: string;
+  onPrimaryAction?: () => void;
+  showSampleNotice?: boolean;
 }) {
   return (
     <>
@@ -42,16 +46,22 @@ export function ProductPageHeader({
             </button>
           ) : null}
           {primaryAction ? (
-            <button className="bg-brand text-brand-contrast hover:bg-brand-strong inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap transition-colors active:translate-y-px">
+            <button
+              className="bg-brand text-brand-contrast hover:bg-brand-strong focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
+              onClick={onPrimaryAction}
+              type="button"
+            >
               <Plus className="size-4" strokeWidth={1.8} />
               {primaryAction}
             </button>
           ) : null}
         </div>
       </div>
-      <div className="mb-6">
-        <SampleNotice />
-      </div>
+      {showSampleNotice ? (
+        <div className="mb-6">
+          <SampleNotice />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -63,7 +73,13 @@ export type Metric = {
   tone?: "brand" | "warning" | "danger" | "neutral";
 };
 
-export function MetricStrip({ metrics }: { metrics: readonly Metric[] }) {
+export function MetricStrip({
+  metrics,
+  ariaLabel = "Chỉ số mẫu",
+}: {
+  metrics: readonly Metric[];
+  ariaLabel?: string;
+}) {
   const tones = {
     brand: "text-brand",
     warning: "text-warning",
@@ -72,7 +88,7 @@ export function MetricStrip({ metrics }: { metrics: readonly Metric[] }) {
   } as const;
   return (
     <section
-      aria-label="Chỉ số mẫu"
+      aria-label={ariaLabel}
       className="mb-5 grid gap-3 sm:grid-cols-2 xl:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]"
     >
       {metrics.map((metric) => (
