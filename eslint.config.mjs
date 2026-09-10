@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Project-local agent skills are vendored tooling, not application code.
+    ".agents/**",
   ]),
 ]);
 
