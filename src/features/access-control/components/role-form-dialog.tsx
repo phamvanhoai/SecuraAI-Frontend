@@ -167,10 +167,10 @@ export function RoleFormDialog({
         </fieldset>
         <div className="mt-6 flex justify-end gap-2">
           <Button
-            className="border-border bg-surface text-foreground hover:bg-neutral-soft border"
             disabled={pending}
             onClick={onClose}
             type="button"
+            variant="secondary"
           >
             Cancel
           </Button>

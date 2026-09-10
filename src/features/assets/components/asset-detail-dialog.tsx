@@ -44,12 +44,16 @@ export function AssetDetailDialog({
       className="w-[min(44rem,calc(100%-2rem))]"
     >
       {detail.isPending ? (
-        <p className="text-muted py-8 text-center">Đang tải chi tiết tài sản…</p>
+        <p className="text-muted py-8 text-center">
+          Đang tải chi tiết tài sản…
+        </p>
       ) : null}
       {detail.isError ? (
         <Alert>
           <strong className="block">Không thể tải chi tiết tài sản</strong>
-          <span>Tài sản có thể không tồn tại hoặc bạn không có quyền truy cập.</span>
+          <span>
+            Tài sản có thể không tồn tại hoặc bạn không có quyền truy cập.
+          </span>
         </Alert>
       ) : null}
       {detail.data ? (
@@ -58,25 +62,39 @@ export function AssetDetailDialog({
             <p className="text-muted text-sm">{detail.data.assetCode}</p>
             <h3 className="mt-1 text-xl font-semibold">{detail.data.name}</h3>
             {detail.data.description ? (
-              <p className="text-muted mt-2 text-sm leading-6">{detail.data.description}</p>
+              <p className="text-muted mt-2 text-sm leading-6">
+                {detail.data.description}
+              </p>
             ) : null}
           </div>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
             <Detail label="Loại tài sản" value={detail.data.assetType} />
-            <Detail label="Mức quan trọng" value={criticalityLabels[detail.data.criticality]} />
-            <Detail label="Trạng thái" value={statusLabels[detail.data.status]} />
+            <Detail
+              label="Mức quan trọng"
+              value={criticalityLabels[detail.data.criticality]}
+            />
+            <Detail
+              label="Trạng thái"
+              value={statusLabels[detail.data.status]}
+            />
             <Detail label="Hostname" value={detail.data.hostname} />
             <Detail label="Địa chỉ IP" value={detail.data.ipAddress} />
             <Detail label="Vị trí" value={detail.data.location} />
             <Detail label="Đơn vị" value={detail.data.department?.name} />
             <Detail label="Chủ sở hữu" value={detail.data.owner?.fullName} />
-            <Detail label="Ngày tạo" value={formatDate(detail.data.createdAt)} />
-            <Detail label="Cập nhật gần nhất" value={formatDate(detail.data.updatedAt)} />
+            <Detail
+              label="Ngày tạo"
+              value={formatDate(detail.data.createdAt)}
+            />
+            <Detail
+              label="Cập nhật gần nhất"
+              value={formatDate(detail.data.updatedAt)}
+            />
           </dl>
         </div>
       ) : null}
       <div className="mt-6 flex justify-end">
-        <Button className="bg-neutral-soft text-foreground hover:bg-border" onClick={() => dialogRef.current?.close()}>
+        <Button onClick={() => dialogRef.current?.close()} variant="secondary">
           Đóng
         </Button>
       </div>
@@ -84,11 +102,21 @@ export function AssetDetailDialog({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string | null | undefined }) {
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
   return (
     <div>
-      <dt className="text-muted text-xs font-medium uppercase tracking-wide">{label}</dt>
-      <dd className="mt-1 text-sm font-medium">{value ?? "Chưa có thông tin"}</dd>
+      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm font-medium">
+        {value ?? "Chưa có thông tin"}
+      </dd>
     </div>
   );
 }

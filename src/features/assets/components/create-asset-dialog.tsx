@@ -188,11 +188,7 @@ export function CreateAssetDialog() {
             Phòng ban và chủ sở hữu có thể được gán sau khi tạo tài sản.
           </p>
           <div className="flex justify-end gap-2">
-            <Button
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              type="button"
-              onClick={close}
-            >
+            <Button type="button" onClick={close} variant="secondary">
               Hủy
             </Button>
             <Button disabled={mutation.isPending} type="submit">

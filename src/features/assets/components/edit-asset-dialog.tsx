@@ -85,7 +85,10 @@ export function EditAssetDialog({
     try {
       const asset = await mutation.mutateAsync(values);
       close();
-      toast.success("Đã cập nhật tài sản", `${asset.assetCode} – ${asset.name}`);
+      toast.success(
+        "Đã cập nhật tài sản",
+        `${asset.assetCode} – ${asset.name}`,
+      );
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
@@ -104,55 +107,127 @@ export function EditAssetDialog({
       className="w-[min(40rem,calc(100%-2rem))]"
     >
       {detail.isPending ? (
-        <p className="text-muted py-8 text-center">Đang tải thông tin tài sản…</p>
+        <p className="text-muted py-8 text-center">
+          Đang tải thông tin tài sản…
+        </p>
       ) : null}
       {detail.isError ? (
         <Alert>
           <strong className="block">Không thể tải tài sản</strong>
-          <span>Tài sản có thể không tồn tại hoặc bạn không có quyền truy cập.</span>
+          <span>
+            Tài sản có thể không tồn tại hoặc bạn không có quyền truy cập.
+          </span>
         </Alert>
       ) : null}
       {detail.data ? (
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
           {message ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              {message}
+            </Alert>
           ) : null}
           {disposed ? (
             <Alert>Tài sản đã thanh lý nên không thể chỉnh sửa.</Alert>
           ) : null}
-          <p className="text-muted text-sm">Mã tài sản: {detail.data.assetCode}</p>
+          <p className="text-muted text-sm">
+            Mã tài sản: {detail.data.assetCode}
+          </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="edit-name" label="Tên tài sản" error={errors.name?.message}>
-              <Input id="edit-name" maxLength={150} disabled={disposed} {...register("name")} />
+            <FormField
+              id="edit-name"
+              label="Tên tài sản"
+              error={errors.name?.message}
+            >
+              <Input
+                id="edit-name"
+                maxLength={150}
+                disabled={disposed}
+                {...register("name")}
+              />
             </FormField>
-            <FormField id="edit-assetType" label="Loại tài sản" error={errors.assetType?.message}>
-              <Input id="edit-assetType" maxLength={50} disabled={disposed} {...register("assetType")} />
+            <FormField
+              id="edit-assetType"
+              label="Loại tài sản"
+              error={errors.assetType?.message}
+            >
+              <Input
+                id="edit-assetType"
+                maxLength={50}
+                disabled={disposed}
+                {...register("assetType")}
+              />
             </FormField>
-            <FormField id="edit-hostname" label="Hostname" error={errors.hostname?.message}>
-              <Input id="edit-hostname" maxLength={255} disabled={disposed} {...register("hostname")} />
+            <FormField
+              id="edit-hostname"
+              label="Hostname"
+              error={errors.hostname?.message}
+            >
+              <Input
+                id="edit-hostname"
+                maxLength={255}
+                disabled={disposed}
+                {...register("hostname")}
+              />
             </FormField>
-            <FormField id="edit-ipAddress" label="Địa chỉ IP" error={errors.ipAddress?.message}>
-              <Input id="edit-ipAddress" disabled={disposed} {...register("ipAddress")} />
+            <FormField
+              id="edit-ipAddress"
+              label="Địa chỉ IP"
+              error={errors.ipAddress?.message}
+            >
+              <Input
+                id="edit-ipAddress"
+                disabled={disposed}
+                {...register("ipAddress")}
+              />
             </FormField>
-            <FormField id="edit-location" label="Vị trí" error={errors.location?.message}>
-              <Input id="edit-location" maxLength={255} disabled={disposed} {...register("location")} />
+            <FormField
+              id="edit-location"
+              label="Vị trí"
+              error={errors.location?.message}
+            >
+              <Input
+                id="edit-location"
+                maxLength={255}
+                disabled={disposed}
+                {...register("location")}
+              />
             </FormField>
-            <FormField id="edit-status" label="Trạng thái" error={errors.status?.message}>
-              <Select id="edit-status" disabled={disposed} {...register("status")}>
+            <FormField
+              id="edit-status"
+              label="Trạng thái"
+              error={errors.status?.message}
+            >
+              <Select
+                id="edit-status"
+                disabled={disposed}
+                {...register("status")}
+              >
                 {allowedStatusTransitions[detail.data.status].map((status) => (
-                  <option value={status} key={status}>{statusLabels[status]}</option>
+                  <option value={status} key={status}>
+                    {statusLabels[status]}
+                  </option>
                 ))}
               </Select>
             </FormField>
           </div>
-          <FormField id="edit-description" label="Mô tả" error={errors.description?.message}>
-            <Textarea id="edit-description" maxLength={10_000} disabled={disposed} {...register("description")} />
+          <FormField
+            id="edit-description"
+            label="Mô tả"
+            error={errors.description?.message}
+          >
+            <Textarea
+              id="edit-description"
+              maxLength={10_000}
+              disabled={disposed}
+              {...register("description")}
+            />
           </FormField>
           <p className="text-muted text-xs">
-            Mức quan trọng được thay đổi bằng chức năng Classify Asset Criticality riêng.
+            Mức quan trọng được thay đổi bằng chức năng Classify Asset
+            Criticality riêng.
           </p>
           <div className="flex justify-end gap-2">
-            <Button className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1" onClick={close}>
+            <Button onClick={close} variant="secondary">
               Hủy
             </Button>
             <Button type="submit" disabled={disposed || mutation.isPending}>
