@@ -157,6 +157,7 @@ export const panelModules = {
     modules.files,
   ],
   employee: [
+    modules.assets,
     modules.training,
     modules.policies,
     modules.incidents,
@@ -164,6 +165,7 @@ export const panelModules = {
     modules.files,
   ],
   "executive-auditor": [
+    modules.assets,
     modules.risks,
     modules.compliance,
     modules.audits,

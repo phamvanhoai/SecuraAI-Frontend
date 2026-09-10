@@ -11,6 +11,7 @@ import {
   type NavigationItem,
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { useSessionUser } from "@/features/auth";
 
 const sectionOrder: readonly NavigationItem["section"][] = [
   "Tổng quan",
@@ -23,7 +24,11 @@ const sectionOrder: readonly NavigationItem["section"][] = [
 export function Sidebar() {
   const pathname = usePathname();
   const panel = getPanelKind(pathname);
-  const navigation = getPanelNavigation(panel);
+  const session = useSessionUser();
+  const canReadAssets = session.data?.permissions.includes("assets.read") ?? false;
+  const navigation = getPanelNavigation(panel).filter(
+    (item) => !item.href.endsWith("/assets") || canReadAssets,
+  );
   const sections = sectionOrder
     .map((label) => ({
       label,

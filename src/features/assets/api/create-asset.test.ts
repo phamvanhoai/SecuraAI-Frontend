@@ -33,7 +33,6 @@ describe("createAsset", () => {
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        criticality: "medium",
         description: undefined,
         hostname: undefined,
         location: undefined,
@@ -47,7 +46,6 @@ describe("createAsset", () => {
           assetCode: "AST-002",
           name: "Server",
           assetType: "server",
-          criticality: "medium",
         }),
       }),
     );
@@ -74,7 +72,6 @@ describe("createAsset", () => {
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        criticality: "medium",
         description: undefined,
         hostname: undefined,
         location: undefined,

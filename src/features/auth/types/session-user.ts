@@ -7,6 +7,7 @@ export const sessionUserSchema = z.object({
   status: z.string(),
   mustChangePassword: z.boolean(),
   roles: z.array(z.object({ code: z.string(), name: z.string() })),
+  permissions: z.array(z.string()),
 });
 
 export type AuthSessionUser = z.infer<typeof sessionUserSchema>;

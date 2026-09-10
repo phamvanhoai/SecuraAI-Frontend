@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateAsset } from "../hooks/use-create-asset";
+import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
 import {
   createAssetSchema,
   type CreateAssetInput,
@@ -24,10 +25,11 @@ const defaults: CreateAssetInput = {
   name: "",
   assetType: "",
   description: "",
-  criticality: "medium",
   hostname: "",
   ipAddress: "",
   location: "",
+  departmentId: "",
+  ownerUserId: "",
 };
 
 export function CreateAssetDialog() {
@@ -35,6 +37,7 @@ export function CreateAssetDialog() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const mutation = useCreateAsset();
+  const options = useAssetCreateOptions(open);
   const toast = useToast();
   const {
     register,
@@ -63,12 +66,12 @@ export function CreateAssetDialog() {
       const asset = await mutation.mutateAsync(values);
       reset(defaults);
       close();
-      toast.success("Đã tạo tài sản", `${asset.assetCode} – ${asset.name}`);
+      toast.success("Asset created", `${asset.assetCode} – ${asset.name}`);
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Không thể tạo tài sản. Vui lòng thử lại.",
+          : "Unable to create asset. Please try again.",
       );
     }
   };
@@ -77,9 +80,9 @@ export function CreateAssetDialog() {
     <>
       <Button type="button" onClick={() => setOpen(true)}>
         <Plus className="size-4" aria-hidden="true" />
-        Thêm tài sản
+        Add asset
       </Button>
-      <Dialog dialogRef={dialog} title="Tạo tài sản CNTT" onClose={close}>
+      <Dialog dialogRef={dialog} title="Create IT Asset" onClose={close}>
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -89,7 +92,7 @@ export function CreateAssetDialog() {
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="assetCode"
-              label="Mã tài sản"
+              label="Asset code"
               error={errors.assetCode?.message}
             >
               <Input
@@ -104,7 +107,7 @@ export function CreateAssetDialog() {
             </FormField>
             <FormField
               id="name"
-              label="Tên tài sản"
+              label="Asset name"
               error={errors.name?.message}
             >
               <Input
@@ -117,7 +120,7 @@ export function CreateAssetDialog() {
             </FormField>
             <FormField
               id="assetType"
-              label="Loại tài sản"
+              label="Asset type"
               error={errors.assetType?.message}
             >
               <Input
@@ -132,15 +135,44 @@ export function CreateAssetDialog() {
               />
             </FormField>
             <FormField
-              id="criticality"
-              label="Mức quan trọng"
-              error={errors.criticality?.message}
+              id="departmentId"
+              label="Department"
+              error={errors.departmentId?.message}
             >
-              <Select id="criticality" {...register("criticality")}>
-                <option value="low">Thấp</option>
-                <option value="medium">Trung bình</option>
-                <option value="high">Cao</option>
-                <option value="critical">Rất cao</option>
+              <Select
+                id="departmentId"
+                disabled={options.isPending}
+                {...register("departmentId")}
+              >
+                <option value="">
+                  {options.isPending ? "Loading departments…" : "No department assigned"}
+                </option>
+                {(options.data?.departments ?? []).map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.code} – {department.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField
+              id="ownerUserId"
+              label="Owner"
+              error={errors.ownerUserId?.message}
+            >
+              <Select
+                id="ownerUserId"
+                disabled={options.isPending}
+                {...register("ownerUserId")}
+              >
+                <option value="">
+                  {options.isPending ? "Loading users…" : "No owner assigned"}
+                </option>
+                {(options.data?.owners ?? []).map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.fullName}
+                    {owner.employeeCode ? ` – ${owner.employeeCode}` : ""}
+                  </option>
+                ))}
               </Select>
             </FormField>
             <FormField
@@ -152,7 +184,7 @@ export function CreateAssetDialog() {
             </FormField>
             <FormField
               id="ipAddress"
-              label="Địa chỉ IP"
+              label="IP address"
               error={errors.ipAddress?.message}
             >
               <Input
@@ -167,7 +199,7 @@ export function CreateAssetDialog() {
             </FormField>
             <FormField
               id="location"
-              label="Vị trí"
+              label="Location"
               error={errors.location?.message}
             >
               <Input id="location" maxLength={255} {...register("location")} />
@@ -175,7 +207,7 @@ export function CreateAssetDialog() {
           </div>
           <FormField
             id="description"
-            label="Mô tả"
+            label="Description"
             error={errors.description?.message}
           >
             <Textarea
@@ -184,8 +216,18 @@ export function CreateAssetDialog() {
               {...register("description")}
             />
           </FormField>
+          {options.isError ? (
+            <Alert className="border-warning/25 bg-warning/10">
+              Unable to load departments and owners. You can still create an unassigned asset.
+            </Alert>
+          ) : null}
+          {options.data?.truncated.departments || options.data?.truncated.owners ? (
+            <p className="text-muted text-xs">
+              The list shows up to 200 active options.
+            </p>
+          ) : null}
           <p className="text-muted text-xs">
-            Phòng ban và chủ sở hữu có thể được gán sau khi tạo tài sản.
+            New assets default to Medium criticality. Use Classify Criticality after creation to assess four impact criteria.
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -193,10 +235,10 @@ export function CreateAssetDialog() {
               type="button"
               onClick={close}
             >
-              Hủy
+              Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Đang tạo…" : "Tạo tài sản"}
+              {mutation.isPending ? "Creating…" : "Create asset"}
             </Button>
           </div>
         </form>

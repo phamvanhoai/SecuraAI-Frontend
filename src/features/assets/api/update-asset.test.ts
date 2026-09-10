@@ -29,6 +29,7 @@ describe("updateAsset", () => {
       name: data.name,
       assetType: data.assetType,
       description: null,
+      departmentId: null,
       hostname: data.hostname,
       ipAddress: data.ipAddress,
       location: data.location,

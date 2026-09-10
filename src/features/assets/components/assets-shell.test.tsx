@@ -2,10 +2,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { pushMock, useAssetsMock, createMutationMock } = vi.hoisted(() => ({
+const { pushMock, useAssetsMock, createMutationMock, useSessionUserMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
   useAssetsMock: vi.fn(),
   createMutationMock: { mutateAsync: vi.fn(), isPending: false },
+  useSessionUserMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -13,6 +14,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("../hooks/use-assets", () => ({ useAssets: useAssetsMock }));
+vi.mock("../hooks/use-export-assets", () => ({
+  useExportAssets: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("../hooks/use-asset-history", () => ({
+  useAssetHistory: () => ({ isPending: false, isError: false, data: undefined }),
+}));
 vi.mock("../hooks/use-asset-detail", () => ({
   useAssetDetail: () => ({ isPending: false, isError: false, data: undefined }),
 }));
@@ -22,14 +29,40 @@ vi.mock("../hooks/use-update-asset", () => ({
 vi.mock("../hooks/use-delete-asset", () => ({
   useDeleteAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+vi.mock("../hooks/use-classify-asset-criticality", () => ({
+  useClassifyAssetCriticality: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("../hooks/use-assign-asset-owner", () => ({
+  useAssignAssetOwner: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("../hooks/use-create-asset", () => ({
   useCreateAsset: () => createMutationMock,
 }));
+vi.mock("../hooks/use-asset-create-options", () => ({
+  useAssetCreateOptions: () => ({
+    isPending: false,
+    isError: false,
+    data: {
+      departments: [],
+      owners: [],
+      truncated: { departments: false, owners: false },
+    },
+  }),
+}));
 vi.mock("@/components/feedback/toast", () => ({
-  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+  useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }),
+}));
+vi.mock("@/features/auth", () => ({
+  useSessionUser: useSessionUserMock,
 }));
 
 import { AssetsShell } from "./assets-shell";
+
+async function openActions(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(
+    screen.getByRole("button", { name: "Actions for AST-001" }),
+  );
+}
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -52,6 +85,20 @@ afterEach(cleanup);
 describe("AssetsShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useSessionUserMock.mockReturnValue({
+      isPending: false,
+      data: {
+        permissions: [
+          "assets.read",
+          "assets.create",
+          "assets.update",
+          "assets.delete",
+          "assets.classify",
+          "assets.assign-owner",
+          "assets.history.read",
+        ],
+      },
+    });
     useAssetsMock.mockReturnValue({
       isPending: false,
       isError: false,
@@ -79,26 +126,26 @@ describe("AssetsShell", () => {
     render(<AssetsShell />);
     expect(screen.getByText("Database Server")).toBeInTheDocument();
     expect(screen.getByText("AST-001")).toBeInTheDocument();
-    expect(screen.getAllByText("Chưa gán")).toHaveLength(2);
-    expect(screen.getByText("1 tài sản phù hợp")).toBeInTheDocument();
+    expect(screen.getAllByText("Unassigned")).toHaveLength(2);
+    expect(screen.getByText("1 matching assets")).toBeInTheDocument();
   });
 
   it("writes search and filters to the URL", async () => {
     const user = userEvent.setup();
     render(<AssetsShell />);
     const filters = within(
-      screen.getByRole("form", { name: "Bộ lọc tài sản" }),
+      screen.getByRole("form", { name: "Asset filters" }),
     );
     await user.type(
-      filters.getByPlaceholderText("Tên, mã, hostname hoặc vị trí"),
+      filters.getByPlaceholderText("Name, code, hostname, or location"),
       "database",
     );
     await user.selectOptions(
-      filters.getByLabelText("Mức quan trọng"),
+      filters.getByLabelText("Criticality"),
       "critical",
     );
-    await user.selectOptions(filters.getByLabelText("Trạng thái"), "active");
-    await user.click(filters.getByRole("button", { name: "Lọc" }));
+    await user.selectOptions(filters.getByLabelText("Status"), "active");
+    await user.click(filters.getByRole("button", { name: "Filter" }));
 
     expect(pushMock).toHaveBeenCalledWith(
       expect.stringContaining("q=database"),
@@ -119,7 +166,7 @@ describe("AssetsShell", () => {
     });
     render(<AssetsShell />);
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Không thể tải danh sách tài sản",
+      "Unable to load asset list",
     );
     expect(screen.queryByText("Database Server")).not.toBeInTheDocument();
   });
@@ -128,7 +175,8 @@ describe("AssetsShell", () => {
     const user = userEvent.setup();
     render(<AssetsShell />);
 
-    await user.click(screen.getByRole("button", { name: "Xem chi tiết" }));
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "View details" }));
 
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
   });
@@ -137,18 +185,89 @@ describe("AssetsShell", () => {
     const user = userEvent.setup();
     render(<AssetsShell />);
 
-    await user.click(screen.getByRole("button", { name: "Chỉnh sửa" }));
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "Edit" }));
 
-    expect(screen.getByRole("dialog", { name: "Chỉnh sửa tài sản CNTT" })).toHaveAttribute("open");
+    expect(screen.getByRole("dialog", { name: "Edit IT Asset" })).toHaveAttribute("open");
   });
 
   it("opens a confirmation dialog before deleting", async () => {
     const user = userEvent.setup();
     render(<AssetsShell />);
 
-    await user.click(screen.getByRole("button", { name: "Xóa" }));
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "Delete" }));
 
-    expect(screen.getByRole("dialog", { name: "Xóa tài sản" })).toHaveAttribute("open");
-    expect(screen.getByRole("button", { name: "Xóa tài sản" })).toBeDisabled();
+    expect(screen.getByRole("dialog", { name: "Delete Asset" })).toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Delete Asset" })).toBeDisabled();
+  });
+
+  it("shows read-only actions for Employee and Executive permissions", () => {
+    useSessionUserMock.mockReturnValue({
+      isPending: false,
+      data: { permissions: ["assets.read"] },
+    });
+    render(<AssetsShell />);
+
+    expect(screen.queryByRole("button", { name: "Add asset" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Actions for AST-001" })).toBeInTheDocument();
+  });
+
+  it("does not load or show the asset list without assets.read", () => {
+    useSessionUserMock.mockReturnValue({ isPending: false, data: { permissions: [] } });
+    render(<AssetsShell />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("do not have permission");
+    expect(useAssetsMock).toHaveBeenCalledWith(expect.any(Object), false);
+  });
+
+  it("opens criticality classification for Security Officer", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "Classify criticality" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Classify Asset Criticality" }),
+    ).toHaveAttribute("open");
+  });
+
+  it("opens owner assignment for Security Officer", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "Assign owner" }));
+
+    expect(
+      screen.getByRole("dialog", { name: "Assign Asset Owner" }),
+    ).toHaveAttribute("open");
+  });
+
+  it("opens asset change history when permitted", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await openActions(user);
+    await user.click(screen.getByRole("menuitem", { name: "Change history" }));
+
+    expect(screen.getByRole("dialog", { name: "Asset Change History" })).toHaveAttribute("open");
+  });
+
+  it("shows only permitted actions after opening the menu", async () => {
+    useSessionUserMock.mockReturnValue({
+      isPending: false,
+      data: { permissions: ["assets.read"] },
+    });
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await openActions(user);
+    expect(screen.getByRole("menuitem", { name: "View details" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Classify criticality" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Assign owner" })).not.toBeInTheDocument();
   });
 });
