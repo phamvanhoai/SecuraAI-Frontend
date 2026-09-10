@@ -7,12 +7,16 @@ import { Dialog } from "@/components/ui/dialog";
 import { useAssetDetail } from "../hooks/use-asset-detail";
 
 const criticalityLabels = {
-  low: "Low", medium: "Medium",
+  low: "Low",
+  medium: "Medium",
   high: "High",
   critical: "Critical",
 } as const;
 const statusLabels = {
-  active: "Active", inactive: "Inactive", retired: "Retired", disposed: "Disposed",
+  active: "Active",
+  inactive: "Inactive",
+  retired: "Retired",
+  disposed: "Disposed",
 } as const;
 
 export function AssetDetailDialog({
@@ -44,7 +48,8 @@ export function AssetDetailDialog({
       ) : null}
       {detail.isError ? (
         <Alert>
-          <strong className="block">Unable to load asset details</strong><span>The asset may not exist or you do not have access.</span>
+          <strong className="block">Unable to load asset details</strong>
+          <span>The asset may not exist or you do not have access.</span>
         </Alert>
       ) : null}
       {detail.data ? (
@@ -53,18 +58,36 @@ export function AssetDetailDialog({
             <p className="text-muted text-sm">{detail.data.assetCode}</p>
             <h3 className="mt-1 text-xl font-semibold">{detail.data.name}</h3>
             {detail.data.description ? (
-              <p className="text-muted mt-2 text-sm leading-6">{detail.data.description}</p>
+              <p className="text-muted mt-2 text-sm leading-6">
+                {detail.data.description}
+              </p>
             ) : null}
           </div>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            <Detail label="Asset type" value={detail.data.assetType} /><Detail label="Criticality" value={criticalityLabels[detail.data.criticality]} /><Detail label="Status" value={statusLabels[detail.data.status]} />
+            <Detail label="Asset type" value={detail.data.assetType} />
+            <Detail
+              label="Criticality"
+              value={criticalityLabels[detail.data.criticality]}
+            />
+            <Detail label="Status" value={statusLabels[detail.data.status]} />
             <Detail label="Hostname" value={detail.data.hostname} />
-            <Detail label="IP address" value={detail.data.ipAddress} /><Detail label="Location" value={detail.data.location} /><Detail label="Department" value={detail.data.department?.name} /><Detail label="Owner" value={detail.data.owner?.fullName} /><Detail label="Created at" value={formatDate(detail.data.createdAt)} /><Detail label="Last updated" value={formatDate(detail.data.updatedAt)} />
+            <Detail label="IP address" value={detail.data.ipAddress} />
+            <Detail label="Location" value={detail.data.location} />
+            <Detail label="Department" value={detail.data.department?.name} />
+            <Detail label="Owner" value={detail.data.owner?.fullName} />
+            <Detail
+              label="Created at"
+              value={formatDate(detail.data.createdAt)}
+            />
+            <Detail
+              label="Last updated"
+              value={formatDate(detail.data.updatedAt)}
+            />
           </dl>
         </div>
       ) : null}
       <div className="mt-6 flex justify-end">
-        <Button className="bg-neutral-soft text-foreground hover:bg-border" onClick={() => dialogRef.current?.close()}>
+        <Button onClick={() => dialogRef.current?.close()} variant="secondary">
           Close
         </Button>
       </div>
@@ -72,10 +95,18 @@ export function AssetDetailDialog({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string | null | undefined }) {
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
   return (
     <div>
-      <dt className="text-muted text-xs font-medium uppercase tracking-wide">{label}</dt>
+      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
+        {label}
+      </dt>
       <dd className="mt-1 text-sm font-medium">{value ?? "Not available"}</dd>
     </div>
   );

@@ -4,11 +4,11 @@
 
 Enterprise security administration for regulated organizations. The interface prioritizes trust, legibility, predictable navigation and accessible state communication.
 
-## Taste-Skill dials
+## UI UX Pro Max design dials
 
-- `DESIGN_VARIANCE: 4`: controlled asymmetry in authentication, predictable structure in product screens.
+- `DESIGN_VARIANCE: 3`: controlled asymmetry in authentication, predictable structure in product screens.
 - `MOTION_INTENSITY: 2`: hover, focus, press and state feedback only.
-- `VISUAL_DENSITY: 6`: compact enough for daily administration without becoming a cockpit.
+- `VISUAL_DENSITY: 7`: compact enough for daily administration without becoming a cockpit.
 
 ## System rules
 
@@ -21,4 +21,4 @@ Enterprise security administration for regulated organizations. The interface pr
 - Motion: do not add decorative animation. Honor `prefers-reduced-motion` globally.
 - Data: prototype screens may use invented values only when the page labels them clearly as sample data; never present them as production results or wire them into fake behavior.
 
-The installed Taste-Skill targets landing pages and redesign audits, not dense dashboards. Its audit and pre-flight principles apply here; domain-heavy product patterns should evolve toward an enterprise system such as Fluent UI only through an explicit migration decision.
+UI UX Pro Max is the primary design methodology. The verified project master is `design-system/securaai/MASTER.md`. Taste Skill remains a secondary redesign and anti-generic audit layer; domain-heavy product patterns should evolve toward another enterprise system such as Fluent UI only through an explicit migration decision.

@@ -65,12 +65,16 @@ export function DeleteAssetDialog({
       {asset ? (
         <div className="space-y-4">
           <Alert className="border-danger/25 bg-danger-soft text-danger">
-            The asset will be removed from the list. The system will reject deletion if it has active business dependencies.
+            The asset will be removed from the list. The system will reject
+            deletion if it has active business dependencies.
           </Alert>
           <p className="text-sm leading-6">
             You are deleting <strong>{asset.assetCode}</strong> – {asset.name}.
           </p>
-          <label className="block space-y-2" htmlFor="delete-asset-confirmation">
+          <label
+            className="block space-y-2"
+            htmlFor="delete-asset-confirmation"
+          >
             <span className="text-sm font-medium">
               Enter code <strong>{asset.assetCode}</strong> to confirm
             </span>
@@ -82,18 +86,19 @@ export function DeleteAssetDialog({
             />
           </label>
           {message ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              {message}
+            </Alert>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              onClick={close}
-            >
+            <Button onClick={close} variant="secondary">
               Cancel
             </Button>
             <Button
               className="bg-danger text-white hover:opacity-90"
-              disabled={confirmation.trim() !== asset.assetCode || mutation.isPending}
+              disabled={
+                confirmation.trim() !== asset.assetCode || mutation.isPending
+              }
               onClick={remove}
             >
               {mutation.isPending ? "Deleting…" : "Delete Asset"}

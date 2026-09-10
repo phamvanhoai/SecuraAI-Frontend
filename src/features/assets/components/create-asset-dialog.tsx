@@ -145,7 +145,9 @@ export function CreateAssetDialog() {
                 {...register("departmentId")}
               >
                 <option value="">
-                  {options.isPending ? "Loading departments…" : "No department assigned"}
+                  {options.isPending
+                    ? "Loading departments…"
+                    : "No department assigned"}
                 </option>
                 {(options.data?.departments ?? []).map((department) => (
                   <option key={department.id} value={department.id}>
@@ -218,23 +220,22 @@ export function CreateAssetDialog() {
           </FormField>
           {options.isError ? (
             <Alert className="border-warning/25 bg-warning/10">
-              Unable to load departments and owners. You can still create an unassigned asset.
+              Unable to load departments and owners. You can still create an
+              unassigned asset.
             </Alert>
           ) : null}
-          {options.data?.truncated.departments || options.data?.truncated.owners ? (
+          {options.data?.truncated.departments ||
+          options.data?.truncated.owners ? (
             <p className="text-muted text-xs">
               The list shows up to 200 active options.
             </p>
           ) : null}
           <p className="text-muted text-xs">
-            New assets default to Medium criticality. Use Classify Criticality after creation to assess four impact criteria.
+            New assets default to Medium criticality. Use Classify Criticality
+            after creation to assess four impact criteria.
           </p>
           <div className="flex justify-end gap-2">
-            <Button
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              type="button"
-              onClick={close}
-            >
+            <Button type="button" onClick={close} variant="secondary">
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
