@@ -1,7 +1,7 @@
 "use client";
 
-import { Search } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { Ellipsis, Eye, Pencil, Search, Trash2 } from "lucide-react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -13,8 +13,10 @@ import {
   ProductPanel,
 } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
+import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -31,6 +33,7 @@ import {
   type LogSourceForm,
 } from "../schemas/log-source-schema";
 import { DeleteLogSourceDialog } from "./delete-log-source-dialog";
+import { LogSourceDetailDialog } from "./log-source-detail-dialog";
 
 const defaults: LogSourceForm = {
   name: "",
@@ -41,16 +44,20 @@ const defaults: LogSourceForm = {
   collectRawPayload: true,
 };
 
+type LogSourceFormErrors = Partial<Record<keyof LogSourceForm, string>>;
+
 export function LogSourcesManager() {
   const toast = useToast();
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<LogSource | null>(null);
+  const [viewing, setViewing] = useState<LogSource | null>(null);
   const [deleting, setDeleting] = useState<LogSource | null>(null);
   const [form, setForm] = useState<LogSourceForm>(defaults);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<LogSourceFormErrors>({});
   const sources = useLogSources({
     page,
     limit: 20,
@@ -100,18 +107,53 @@ export function LogSourcesManager() {
       key: "actions",
       header: "Actions",
       cell: (item) => (
-        <div className="flex gap-2">
-          <Button className="min-h-9 px-3" onClick={() => openEdit(item)}>
-            Edit
-          </Button>
-          <Button
-            className="min-h-9 px-3"
-            onClick={() => setDeleting(item)}
-            variant="secondary"
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-6 place-items-center">
+              <span className="sr-only">Actions for {item.name}</span>
+              <Ellipsis
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.8}
+              />
+            </span>
+          }
+        >
+          <button
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={(event) => {
+              closeActionMenu(event);
+              setViewing(item);
+            }}
+            type="button"
           >
+            <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            View details
+          </button>
+          <button
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={(event) => {
+              closeActionMenu(event);
+              openEdit(item);
+            }}
+            type="button"
+          >
+            <Pencil aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            Edit
+          </button>
+          <button
+            className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={(event) => {
+              closeActionMenu(event);
+              setDeleting(item);
+            }}
+            type="button"
+          >
+            <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.8} />
             Delete
-          </Button>
-        </div>
+          </button>
+        </DropdownMenu>
       ),
     },
   ];
@@ -120,7 +162,11 @@ export function LogSourcesManager() {
     setEditing(null);
     setForm(defaults);
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
+  }
+  function closeActionMenu(event: MouseEvent<HTMLButtonElement>): void {
+    event.currentTarget.closest("details")?.removeAttribute("open");
   }
   function openEdit(item: LogSource) {
     setEditing(item);
@@ -136,15 +182,51 @@ export function LogSourcesManager() {
         : {}),
     });
     setFormError(null);
+    setFieldErrors({});
     setFormOpen(true);
+  }
+  function clearFieldError(field: keyof LogSourceForm): void {
+    setFieldErrors((current) => {
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
   }
   async function save(event: FormEvent) {
     event.preventDefault();
+    setFormError(null);
     const parsed = logSourceFormSchema.safeParse(form);
     if (!parsed.success) {
-      setFormError(parsed.error.issues[0]?.message ?? "Invalid configuration");
+      const errors: LogSourceFormErrors = {};
+      for (const issue of parsed.error.issues) {
+        switch (issue.path[0]) {
+          case "name":
+            errors.name ??= issue.message;
+            break;
+          case "sourceType":
+            errors.sourceType ??= issue.message;
+            break;
+          case "status":
+            errors.status ??= issue.message;
+            break;
+          case "format":
+            errors.format ??= issue.message;
+            break;
+          case "timezone":
+            errors.timezone ??= issue.message;
+            break;
+          case "collectRawPayload":
+            errors.collectRawPayload ??= issue.message;
+            break;
+          case "pollingIntervalSeconds":
+            errors.pollingIntervalSeconds ??= issue.message;
+            break;
+        }
+      }
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     try {
       if (editing)
         await update.mutateAsync({ id: editing.id, values: parsed.data });
@@ -263,6 +345,10 @@ export function LogSourcesManager() {
           </div>
         ) : null}
       </ProductPanel>
+      <LogSourceDetailDialog
+        onClose={() => setViewing(null)}
+        source={viewing}
+      />
       <DeleteLogSourceDialog
         onClose={() => setDeleting(null)}
         source={deleting}
@@ -277,21 +363,37 @@ export function LogSourcesManager() {
               {editing ? "Edit log source" : "Configure log source"}
             </h2>
             {formError ? <Alert>{formError}</Alert> : null}
-            <label className="block text-sm font-medium">
-              Name
+            <FormField
+              id="log-source-name"
+              label="Name"
+              error={fieldErrors.name}
+            >
               <Input
+                aria-describedby={
+                  fieldErrors.name ? "log-source-name-error" : undefined
+                }
+                aria-invalid={Boolean(fieldErrors.name)}
+                id="log-source-name"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(event) => {
+                  clearFieldError("name");
+                  setForm({ ...form, name: event.target.value });
+                }}
               />
-            </label>
+            </FormField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium">
-                Source type
+              <FormField
+                id="log-source-type"
+                label="Source type"
+                error={fieldErrors.sourceType}
+              >
                 {editing ? (
                   <>
                     <Input
                       aria-describedby="source-type-edit-help"
+                      aria-invalid={Boolean(fieldErrors.sourceType)}
                       className="capitalize"
+                      id="log-source-type"
                       readOnly
                       value={form.sourceType}
                     />
@@ -305,79 +407,127 @@ export function LogSourcesManager() {
                   </>
                 ) : (
                   <Select
+                    aria-describedby={
+                      fieldErrors.sourceType
+                        ? "log-source-type-error"
+                        : undefined
+                    }
+                    aria-invalid={Boolean(fieldErrors.sourceType)}
+                    id="log-source-type"
                     value={form.sourceType}
-                    onChange={(e) =>
+                    onChange={(event) => {
+                      clearFieldError("sourceType");
                       setForm({
                         ...form,
-                        sourceType: e.target
+                        sourceType: event.target
                           .value as LogSourceForm["sourceType"],
-                      })
-                    }
+                      });
+                    }}
                   >
                     {sourceTypes.map((value) => (
                       <option key={value}>{value}</option>
                     ))}
                   </Select>
                 )}
-              </label>
-              <label className="text-sm font-medium">
-                Status
+              </FormField>
+              <FormField
+                id="log-source-status"
+                label="Status"
+                error={fieldErrors.status}
+              >
                 <Select
+                  aria-describedby={
+                    fieldErrors.status ? "log-source-status-error" : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.status)}
+                  id="log-source-status"
                   value={form.status}
-                  onChange={(e) =>
+                  onChange={(event) => {
+                    clearFieldError("status");
                     setForm({
                       ...form,
-                      status: e.target.value as LogSourceForm["status"],
-                    })
-                  }
+                      status: event.target.value as LogSourceForm["status"],
+                    });
+                  }}
                 >
                   {sourceStatuses.map((value) => (
                     <option key={value}>{value}</option>
                   ))}
                 </Select>
-              </label>
-              <label className="text-sm font-medium">
-                Format
+              </FormField>
+              <FormField
+                id="log-source-format"
+                label="Format"
+                error={fieldErrors.format}
+              >
                 <Select
+                  aria-describedby={
+                    fieldErrors.format ? "log-source-format-error" : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.format)}
+                  id="log-source-format"
                   value={form.format}
-                  onChange={(e) =>
+                  onChange={(event) => {
+                    clearFieldError("format");
                     setForm({
                       ...form,
-                      format: e.target.value as LogSourceForm["format"],
-                    })
-                  }
+                      format: event.target.value as LogSourceForm["format"],
+                    });
+                  }}
                 >
                   {logFormats.map((value) => (
                     <option key={value}>{value}</option>
                   ))}
                 </Select>
-              </label>
-              <label className="text-sm font-medium">
-                Timezone
+              </FormField>
+              <FormField
+                id="log-source-timezone"
+                label="Timezone"
+                error={fieldErrors.timezone}
+              >
                 <Input
-                  value={form.timezone}
-                  onChange={(e) =>
-                    setForm({ ...form, timezone: e.target.value })
+                  aria-describedby={
+                    fieldErrors.timezone
+                      ? "log-source-timezone-error"
+                      : undefined
                   }
+                  aria-invalid={Boolean(fieldErrors.timezone)}
+                  id="log-source-timezone"
+                  value={form.timezone}
+                  onChange={(event) => {
+                    clearFieldError("timezone");
+                    setForm({ ...form, timezone: event.target.value });
+                  }}
                 />
-              </label>
-              <label className="text-sm font-medium">
-                Polling interval (seconds)
+              </FormField>
+              <FormField
+                id="log-source-polling-interval"
+                label="Polling interval (seconds)"
+                error={fieldErrors.pollingIntervalSeconds}
+              >
                 <Input
+                  aria-describedby={
+                    fieldErrors.pollingIntervalSeconds
+                      ? "log-source-polling-interval-error"
+                      : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.pollingIntervalSeconds)}
+                  id="log-source-polling-interval"
                   type="number"
                   min={1}
                   max={86400}
                   value={form.pollingIntervalSeconds ?? ""}
-                  onChange={(e) =>
+                  onChange={(event) => {
+                    clearFieldError("pollingIntervalSeconds");
                     setForm({
                       ...form,
-                      pollingIntervalSeconds: e.target.value
-                        ? Number(e.target.value)
+                      pollingIntervalSeconds: event.target.value
+                        ? Number(event.target.value)
                         : undefined,
-                    })
-                  }
+                    });
+                  }}
                 />
-              </label>
+              </FormField>
               <label className="flex items-center gap-2 pt-6 text-sm font-medium">
                 <input
                   type="checkbox"

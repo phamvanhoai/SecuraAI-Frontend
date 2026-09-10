@@ -47,13 +47,26 @@ export const logSourceListSchema = z.object({
 });
 
 export const logSourceFormSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(150),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(150, "Name must not exceed 150 characters"),
   sourceType: z.enum(sourceTypes),
   status: z.enum(sourceStatuses),
   format: z.enum(logFormats),
-  timezone: z.string().trim().min(1).max(100),
+  timezone: z
+    .string()
+    .trim()
+    .min(1, "Timezone is required")
+    .max(100, "Timezone must not exceed 100 characters"),
   collectRawPayload: z.boolean(),
-  pollingIntervalSeconds: z.coerce.number().int().min(1).max(86400).optional(),
+  pollingIntervalSeconds: z.coerce
+    .number()
+    .int("Polling interval must be a whole number")
+    .min(1, "Polling interval must be at least 1 second")
+    .max(86400, "Polling interval must not exceed 86,400 seconds")
+    .optional(),
 });
 
 export type LogSource = z.infer<typeof logSourceSchema>;
