@@ -108,7 +108,12 @@ export function DropdownMenu({
         }}
         {...props}
       >
-        <summary className="focus-visible:outline-brand cursor-pointer list-none rounded-lg p-2 focus-visible:outline-2">
+        <summary
+          aria-expanded={Boolean(position)}
+          aria-haspopup="menu"
+          className="focus-visible:outline-brand cursor-pointer list-none rounded-lg p-2 focus-visible:outline-2"
+          role="button"
+        >
           {label}
         </summary>
       </details>
@@ -117,6 +122,12 @@ export function DropdownMenu({
             <div
               ref={contentRef}
               className="border-border bg-surface fixed z-50 min-w-48 rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]"
+              onClick={(event) => {
+                if (!(event.target instanceof Element)) return;
+                if (!event.target.closest("button")) return;
+                if (menuRef.current) menuRef.current.open = false;
+                setPosition(null);
+              }}
               style={position}
             >
               {children}

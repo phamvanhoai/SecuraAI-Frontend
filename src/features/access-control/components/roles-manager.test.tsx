@@ -91,6 +91,17 @@ describe("RolesManager", () => {
     expect(
       screen.queryByText("Dữ liệu mẫu phục vụ thiết kế giao diện"),
     ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Administrator" }),
+    );
+    await user.click(screen.getByRole("button", { name: "View details" }));
+    const detailDialog = within(
+      screen.getByRole("dialog", { name: "Role details" }),
+    );
+    expect(detailDialog.getByText("roles.read")).toBeVisible();
+    expect(detailDialog.getByText("System")).toBeVisible();
+    await user.click(detailDialog.getByRole("button", { name: "Close" }));
+
     await user.click(screen.getByRole("button", { name: "Create role" }));
     const dialog = within(screen.getByRole("dialog"));
     await user.type(dialog.getByLabelText("Role code"), "risk_reviewer");
