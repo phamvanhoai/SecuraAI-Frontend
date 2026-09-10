@@ -45,20 +45,20 @@ Dependency flow: `page/layout -> feature component -> feature hook -> feature AP
 
 Permission code cụ thể chưa được backend công bố; cột permission vì vậy ghi “chờ contract”, không tự tạo code production.
 
-| Backend module | API route hiện có/prefix | Frontend feature | Navigation | Permission |
-|---|---|---|---|---|
-| auth | `/auth/login`, `/auth/refresh`, `/auth/logout` | `auth` | `/login` | public; refresh/logout theo session |
-| users | `/users/me` | `users` | `/users` | chờ contract CRUD |
-| access-control | `/access-control` (skeleton) | `access-control` | `/roles` | chờ contract |
-| asset-management | `/assets` (skeleton) | `assets` | `/assets` | chờ contract |
-| risk-management | `/risks` (skeleton) | `risks` | `/risks` | chờ contract |
-| incident-management | `/incidents` (skeleton) | `incidents` | `/incidents` | chờ contract |
-| policy-compliance | `/compliance` (skeleton) | `compliance` | `/controls`, `/compliance` | chờ contract |
-| audit-settings | `/administration` (skeleton) | `audits` | `/audits`, `/settings` | chờ contract |
-| reporting | `/reports` (skeleton) | `reports` | `/dashboard`, `/reports` | chờ contract |
-| notifications | `/notifications` (skeleton) | `notifications` | `/notifications` | chờ contract |
-| file-management | `/files` (skeleton) | `file-management` | `/files` | chờ contract |
-| organization, integrations, security-monitoring, ai-alerts, training-awareness, approval-workflow | module prefix skeleton | future features | chưa đưa vào navigation foundation | chờ contract |
+| Backend module                                                                                    | API route hiện có/prefix                               | Frontend feature  | Navigation                         | Permission                                            |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------- | ---------------------------------- | ----------------------------------------------------- |
+| auth                                                                                              | `/auth/login`, `/auth/refresh`, `/auth/logout`         | `auth`            | `/login`                           | public; refresh/logout theo session                   |
+| users                                                                                             | `/users/me`                                            | `users`           | `/users`                           | chờ contract CRUD                                     |
+| access-control                                                                                    | `/access-control/roles`, `/access-control/permissions` | `access-control`  | `/admin/roles`, `/roles`           | `roles.read/create/update/delete` do backend kiểm tra |
+| asset-management                                                                                  | `/assets` (skeleton)                                   | `assets`          | `/assets`                          | chờ contract                                          |
+| risk-management                                                                                   | `/risks` (skeleton)                                    | `risks`           | `/risks`                           | chờ contract                                          |
+| incident-management                                                                               | `/incidents` (skeleton)                                | `incidents`       | `/incidents`                       | chờ contract                                          |
+| policy-compliance                                                                                 | `/compliance` (skeleton)                               | `compliance`      | `/controls`, `/compliance`         | chờ contract                                          |
+| audit-settings                                                                                    | `/administration` (skeleton)                           | `audits`          | `/audits`, `/settings`             | chờ contract                                          |
+| reporting                                                                                         | `/reports` (skeleton)                                  | `reports`         | `/dashboard`, `/reports`           | chờ contract                                          |
+| notifications                                                                                     | `/notifications` (skeleton)                            | `notifications`   | `/notifications`                   | chờ contract                                          |
+| file-management                                                                                   | `/files` (skeleton)                                    | `file-management` | `/files`                           | chờ contract                                          |
+| organization, integrations, security-monitoring, ai-alerts, training-awareness, approval-workflow | module prefix skeleton                                 | future features   | chưa đưa vào navigation foundation | chờ contract                                          |
 
 Health endpoints `/health/live` và `/health/ready` không phải feature navigation.
 
@@ -66,10 +66,10 @@ Health endpoints `/health/live` và `/health/ready` không phải feature naviga
 
 `apiRequest<T>` kiểm tra status, parse JSON an toàn, hỗ trợ query/`AbortSignal`, chuẩn hóa lỗi và đọc response `{ success, data }`. Mutation không tự retry.
 
-Backend nhận refresh token và trả token pair trong JSON. Next.js BFF trao đổi contract này ở server, giữ access/refresh token trong cookie `HttpOnly`, bật `Secure` ở production và xoay refresh token qua `/api/auth/session` hoặc `/api/auth/refresh`. Frontend không lưu token trong `localStorage`, `sessionStorage` hay cookie đọc được bằng JavaScript. OpenAPI hiện là khai báo nội tuyến và chưa đủ để sinh toàn bộ domain types; khi spec đầy đủ nên dùng `openapi-typescript` trong CI thay vì sao chép Prisma schema.
+Backend nhận refresh token và trả token pair trong JSON. Next.js BFF trao đổi contract này ở server, giữ access/refresh token trong cookie `HttpOnly`, bật `Secure` ở production và xoay refresh token qua `/api/auth/session` hoặc `/api/auth/refresh`. Frontend không lưu token trong `localStorage`, `sessionStorage` hay cookie đọc được bằng JavaScript. Quản lý vai trò gọi backend qua các Route Handler `/api/access-control/roles` và lấy danh mục quyền đầy đủ qua `/api/access-control/permissions`. OpenAPI hiện là khai báo nội tuyến và chưa đủ để sinh toàn bộ domain types; khi spec đầy đủ nên dùng `openapi-typescript` trong CI thay vì sao chép Prisma schema.
 
 ## Phạm vi chưa triển khai
 
-Các trang nghiệp vụ hiện là prototype giao diện với dữ liệu mẫu được gắn nhãn rõ ràng. Chưa có domain CRUD, KPI lấy từ backend, upload, thông báo realtime hoặc tích hợp AI; các nút và bộ lọc trên các trang mẫu chưa thực thi hành động. Luồng đăng nhập/BFF vẫn là phần tích hợp thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
+Ngoại trừ luồng đăng nhập/BFF và quản lý vai trò đã tích hợp thật, các trang nghiệp vụ còn lại hiện là prototype giao diện với dữ liệu mẫu được gắn nhãn rõ ràng. Các module đó chưa có domain CRUD, KPI lấy từ backend, upload, thông báo realtime hoặc tích hợp AI; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
 
 Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
