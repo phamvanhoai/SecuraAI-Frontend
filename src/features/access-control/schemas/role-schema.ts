@@ -45,15 +45,15 @@ export const roleFormSchema = z.object({
   code: z
     .string()
     .trim()
-    .min(2, "Mã vai trò phải có ít nhất 2 ký tự")
-    .max(50, "Mã vai trò không được quá 50 ký tự")
-    .regex(/^[A-Z][A-Z0-9_]*$/, "Chỉ dùng chữ in hoa, số và dấu gạch dưới"),
+    .min(2, "Role code must contain at least 2 characters")
+    .max(50, "Role code must not exceed 50 characters")
+    .regex(/^[A-Z][A-Z0-9_]*$/, "Use uppercase letters, numbers, and underscores only"),
   name: z
     .string()
     .trim()
-    .min(2, "Tên vai trò phải có ít nhất 2 ký tự")
-    .max(100, "Tên vai trò không được quá 100 ký tự"),
-  description: z.string().trim().max(1000, "Mô tả không được quá 1000 ký tự"),
+    .min(2, "Role name must contain at least 2 characters")
+    .max(100, "Role name must not exceed 100 characters"),
+  description: z.string().trim().max(1000, "Description must not exceed 1,000 characters"),
   permissionIds: z.array(z.uuid()).max(200),
 });
 

@@ -33,15 +33,15 @@ const PAGE_SIZE = 20;
 
 function userError(error: unknown): string {
   if (!(error instanceof ApiError))
-    return "Không thể hoàn tất yêu cầu. Vui lòng thử lại.";
+    return "Unable to complete the request. Please try again.";
   const messages: Partial<Record<string, string>> = {
-    FORBIDDEN: "Bạn không có quyền thực hiện thao tác này.",
-    UNAUTHENTICATED: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-    CONFLICT: "Dữ liệu vai trò đang bị trùng hoặc vai trò vẫn được sử dụng.",
-    VALIDATION_FAILED: "Dữ liệu vai trò hoặc danh sách quyền không hợp lệ.",
+    FORBIDDEN: "You do not have permission to perform this action.",
+    UNAUTHENTICATED: "Your session has expired. Please sign in again.",
+    CONFLICT: "The role already exists or is still in use.",
+    VALIDATION_FAILED: "The role data or permission list is invalid.",
   };
   return (
-    messages[error.code] ?? "Không thể hoàn tất yêu cầu. Vui lòng thử lại."
+    messages[error.code] ?? "Unable to complete the request. Please try again."
   );
 }
 
@@ -69,50 +69,50 @@ export function RolesManager() {
   const columns: readonly DataTableColumn<Role>[] = [
     {
       key: "role",
-      header: "Vai trò",
+      header: "Role",
       cell: (role) => (
         <span>
           <span className="block font-medium">{role.name}</span>
           <span className="text-muted text-xs">
-            {role.description ?? "Không có mô tả"}
+            {role.description ?? "No description"}
           </span>
         </span>
       ),
     },
     {
       key: "code",
-      header: "Mã",
+      header: "Code",
       cell: (role) => <code className="text-xs">{role.code}</code>,
     },
     {
       key: "users",
-      header: "Người dùng",
+      header: "Users",
       cell: (role) => role.assignedUserCount,
     },
     {
       key: "permissions",
-      header: "Quyền",
+      header: "Permissions",
       cell: (role) => role.permissions.length,
     },
     {
       key: "type",
-      header: "Loại",
+      header: "Type",
       cell: (role) => (
         <StatusBadge tone={role.isSystem ? "success" : "info"}>
-          {role.isSystem ? "Hệ thống" : "Tùy chỉnh"}
+          {role.isSystem ? "System" : "Custom"}
         </StatusBadge>
       ),
     },
     {
       key: "actions",
-      header: "Thao tác",
+      header: "Actions",
       cell: (role) =>
         role.isSystem ? (
-          <span className="text-muted text-xs">Chỉ xem</span>
+          <span className="text-muted text-xs">Read only</span>
         ) : (
           <div className="flex gap-1">
             <button
-              aria-label={`Sửa vai trò ${role.name}`}
+              aria-label={`Edit role ${role.name}`}
               className="hover:bg-neutral-soft focus-visible:outline-brand rounded-md p-2 focus-visible:outline-2"
               onClick={() => openEdit(role)}
               type="button"
@@ -120,7 +120,7 @@ export function RolesManager() {
               <Pencil className="size-4" />
             </button>
             <button
-              aria-label={`Xóa vai trò ${role.name}`}
+              aria-label={`Delete role ${role.name}`}
               className="text-danger hover:bg-danger-soft focus-visible:outline-danger rounded-md p-2 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={deleteMutation.isPending}
               onClick={() => void remove(role)}
@@ -156,10 +156,10 @@ export function RolesManager() {
     try {
       if (editingRole) {
         await updateMutation.mutateAsync({ id: editingRole.id, input: values });
-        toast.success("Đã cập nhật vai trò");
+        toast.success("Role updated");
       } else {
         await createMutation.mutateAsync(values);
-        toast.success("Đã tạo vai trò");
+        toast.success("Role created");
       }
       setDialogOpen(false);
     } catch (error: unknown) {
@@ -170,16 +170,16 @@ export function RolesManager() {
   async function remove(role: Role): Promise<void> {
     if (
       !window.confirm(
-        `Xóa vai trò “${role.name}”? Thao tác này không thể hoàn tác.`,
+        `Delete role “${role.name}”? This action cannot be undone.`,
       )
     )
       return;
     try {
       await deleteMutation.mutateAsync(role.id);
-      toast.success("Đã xóa vai trò");
+      toast.success("Role deleted");
       if (roles.data?.items.length === 1 && page > 1) setPage(page - 1);
     } catch (error: unknown) {
-      toast.error("Không thể xóa vai trò", userError(error));
+      toast.error("Unable to delete role", userError(error));
     }
   }
 
@@ -193,58 +193,58 @@ export function RolesManager() {
   return (
     <>
       <ProductPageHeader
-        title="Vai trò và quyền"
-        description="Quản lý vai trò tùy chỉnh và phạm vi quyền truy cập do backend kiểm soát."
+        title="Roles and permissions"
+        description="Manage custom roles and backend-enforced permission scopes."
         onPrimaryAction={openCreate}
-        primaryAction="Tạo vai trò"
+        primaryAction="Create role"
         showSampleNotice={false}
       />
       <MetricStrip
-        ariaLabel="Chỉ số vai trò"
+        ariaLabel="Role metrics"
         metrics={[
           {
-            label: "Tổng vai trò",
+            label: "Total roles",
             value: String(roles.data?.pagination.total ?? 0),
-            detail: `${systemCount} vai trò hệ thống trên trang`,
+            detail: `${systemCount} system roles on this page`,
             tone: "brand",
           },
           {
-            label: "Quyền truy cập",
+            label: "Permissions",
             value: String(permissions.length),
-            detail: "Backend trả về trên trang hiện tại",
+            detail: "Returned by the backend",
             tone: "neutral",
           },
           {
-            label: "Người dùng đã gán",
+            label: "Assigned users",
             value: String(assignedCount),
-            detail: "Trong các vai trò trên trang",
+            detail: "Across roles on this page",
             tone: "neutral",
           },
         ]}
       />
-      <ProductPanel title="Danh sách vai trò">
+      <ProductPanel title="Role list">
         <form
           className="border-border flex gap-2 border-b p-4"
           onSubmit={submitSearch}
         >
           <label className="relative block w-full max-w-md">
-            <span className="sr-only">Tìm vai trò</span>
+            <span className="sr-only">Search roles</span>
             <Search className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <input
               className="border-border bg-background placeholder:text-muted focus:border-brand focus:ring-brand/15 min-h-10 w-full rounded-lg border pr-3 pl-9 text-sm outline-none focus:ring-3"
               maxLength={100}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Tìm theo tên hoặc mã vai trò"
+              placeholder="Search by role name or code"
               value={searchDraft}
             />
           </label>
           <Button className="min-h-10" type="submit">
-            Tìm kiếm
+            Search
           </Button>
         </form>
         <div className="p-4">
           {roles.isPending ? (
-            <div aria-label="Đang tải danh sách vai trò" className="space-y-3">
+            <div aria-label="Loading roles" className="space-y-3">
               {[1, 2, 3, 4].map((item) => (
                 <Skeleton className="h-14" key={item} />
               ))}
@@ -257,16 +257,16 @@ export function RolesManager() {
                 onClick={() => void roles.refetch()}
                 type="button"
               >
-                Thử lại
+                Try again
               </button>
             </Alert>
           ) : items.length === 0 ? (
             <EmptyState
-              title="Không có vai trò"
+              title="No roles"
               description={
                 search
-                  ? "Không tìm thấy vai trò phù hợp với từ khóa."
-                  : "Backend chưa có vai trò nào."
+                  ? "No roles match your search."
+                  : "The backend has no roles yet."
               }
             />
           ) : (
@@ -276,7 +276,7 @@ export function RolesManager() {
               rows={items}
             />
           )}
-          {roles.data && roles.data.pagination.totalPages > 1 ? (
+          {roles.data ? (
             <div className="mt-4">
               <Pagination
                 page={page}
