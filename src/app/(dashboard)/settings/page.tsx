@@ -23,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
+import { IntegrationManagementView } from "@/features/integrations";
+
 type SettingsTab =
   "organization" | "security" | "notifications" | "integrations" | "api";
 const tabs: readonly { id: SettingsTab; label: string; icon: ReactNode }[] = [
@@ -63,7 +65,7 @@ export default function SettingsPage() {
           {activeTab === "organization" && <OrganizationSettings />}
           {activeTab === "security" && <SecuritySettings />}
           {activeTab === "notifications" && <NotificationSettings />}
-          {activeTab === "integrations" && <IntegrationSettings />}
+          {activeTab === "integrations" && <IntegrationManagementView />}
           {activeTab === "api" && <ApiKeySettings />}
         </div>
       </div>
@@ -176,34 +178,6 @@ function NotificationSettings() {
   );
 }
 
-function IntegrationSettings() {
-  return (
-    <ProductPanel
-      title="Tích hợp hệ thống"
-      description="Theo dõi trạng thái kết nối với các dịch vụ bên ngoài."
-    >
-      <div className="space-y-3 p-5">
-        <Integration
-          name="Microsoft Entra ID"
-          description="Đồng bộ danh tính và nhóm người dùng"
-          status="Chưa kết nối"
-        />
-        <Integration
-          active
-          name="Splunk Enterprise Security"
-          description="Tiếp nhận log và sự kiện bảo mật"
-          status="Đang hoạt động"
-        />
-        <Integration
-          active
-          name="Email SMTP"
-          description="Gửi cảnh báo và báo cáo định kỳ"
-          status="Đang hoạt động"
-        />
-      </div>
-    </ProductPanel>
-  );
-}
 
 function ApiKeySettings() {
   const toast = useToast();
@@ -322,24 +296,3 @@ function NotificationRule({
   );
 }
 
-function Integration({
-  name,
-  description,
-  status,
-  active = false,
-}: {
-  name: string;
-  description: string;
-  status: string;
-  active?: boolean;
-}) {
-  return (
-    <div className="bg-neutral-soft flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="font-medium">{name}</p>
-        <p className="text-muted mt-1 text-xs">{description}</p>
-      </div>
-      <StatusBadge tone={active ? "success" : "neutral"}>{status}</StatusBadge>
-    </div>
-  );
-}

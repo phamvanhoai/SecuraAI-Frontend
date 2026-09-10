@@ -6,7 +6,7 @@ function rolePath(roleId: string): string {
 
 export async function GET(
   _request: Request,
-  context: RouteContext<"/api/access-control/roles/[roleId]">,
+  context: { params: Promise<{ roleId: string }> },
 ): Promise<Response> {
   const { roleId } = await context.params;
   return proxyAuthenticatedRequest(rolePath(roleId));
@@ -14,7 +14,7 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  context: RouteContext<"/api/access-control/roles/[roleId]">,
+  context: { params: Promise<{ roleId: string }> },
 ): Promise<Response> {
   const { roleId } = await context.params;
   return proxyAuthenticatedRequest(rolePath(roleId), {
@@ -26,7 +26,7 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  context: RouteContext<"/api/access-control/roles/[roleId]">,
+  context: { params: Promise<{ roleId: string }> },
 ): Promise<Response> {
   const { roleId } = await context.params;
   return proxyAuthenticatedRequest(rolePath(roleId), { method: "DELETE" });
