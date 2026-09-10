@@ -65,12 +65,16 @@ export function DeleteAssetDialog({
       {asset ? (
         <div className="space-y-4">
           <Alert className="border-danger/25 bg-danger-soft text-danger">
-            Tài sản sẽ bị xóa khỏi danh sách. Hệ thống sẽ từ chối nếu tài sản còn liên kết nghiệp vụ đang hoạt động.
+            Tài sản sẽ bị xóa khỏi danh sách. Hệ thống sẽ từ chối nếu tài sản
+            còn liên kết nghiệp vụ đang hoạt động.
           </Alert>
           <p className="text-sm leading-6">
             Bạn đang xóa <strong>{asset.assetCode}</strong> – {asset.name}.
           </p>
-          <label className="block space-y-2" htmlFor="delete-asset-confirmation">
+          <label
+            className="block space-y-2"
+            htmlFor="delete-asset-confirmation"
+          >
             <span className="text-sm font-medium">
               Nhập mã <strong>{asset.assetCode}</strong> để xác nhận
             </span>
@@ -82,18 +86,19 @@ export function DeleteAssetDialog({
             />
           </label>
           {message ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              {message}
+            </Alert>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              onClick={close}
-            >
+            <Button onClick={close} variant="secondary">
               Hủy
             </Button>
             <Button
               className="bg-danger text-white hover:opacity-90"
-              disabled={confirmation.trim() !== asset.assetCode || mutation.isPending}
+              disabled={
+                confirmation.trim() !== asset.assetCode || mutation.isPending
+              }
               onClick={remove}
             >
               {mutation.isPending ? "Đang xóa…" : "Xóa tài sản"}
