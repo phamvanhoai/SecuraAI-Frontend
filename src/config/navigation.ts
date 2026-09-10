@@ -3,6 +3,7 @@ import {
   Bell,
   Boxes,
   BrainCircuit,
+  CalendarClock,
   ClipboardCheck,
   FileStack,
   FolderOpen,
@@ -109,6 +110,12 @@ const modules = {
     icon: FileStack,
     section: "AI & Giám sát",
   },
+  integrationSchedules: {
+    title: "Sync Schedules",
+    slug: "integrations/schedules",
+    icon: CalendarClock,
+    section: "AI & Giám sát",
+  },
   reports: {
     title: "Báo cáo",
     slug: "reports",
@@ -142,7 +149,27 @@ const modules = {
 } as const satisfies Record<string, ModuleDefinition>;
 
 export const panelModules = {
-  admin: Object.values(modules),
+  admin: [
+    modules.alerts,
+    modules.users,
+    modules.roles,
+    modules.assets,
+    modules.risks,
+    modules.incidents,
+    modules.controls,
+    modules.compliance,
+    modules.audits,
+    modules.policies,
+    modules.training,
+    modules.anomalyMonitoring,
+    modules.aiModels,
+    modules.eventLogs,
+    modules.reports,
+    modules.customDashboard,
+    modules.notifications,
+    modules.files,
+    modules.settings,
+  ],
   "security-officer": [
     modules.alerts,
     modules.assets,
@@ -194,7 +221,7 @@ export function getPanelKind(pathname: string | null): PanelKind {
 export function getPanelNavigation(
   panel: PanelKind,
 ): readonly NavigationItem[] {
-  return [
+  const base: NavigationItem[] = [
     {
       title: "Tổng quan",
       href: `/${panel}`,
@@ -206,6 +233,22 @@ export function getPanelNavigation(
       href: `/${panel}/${item.slug}`,
     })),
   ];
+
+  // Add direct-href items that are not panel-scoped
+  if (panel === "admin") {
+    base.splice(
+      base.findIndex((i) => i.title === "Mô hình AI") + 1,
+      0,
+      {
+        title: "Sync Schedules",
+        href: "/integrations/schedules",
+        icon: CalendarClock,
+        section: "AI & Giám sát",
+      },
+    );
+  }
+
+  return base;
 }
 
 export function panelHasModule(panel: PanelKind, slug: string): boolean {

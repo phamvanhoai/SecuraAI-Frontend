@@ -6,8 +6,6 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCreateSyncSchedule,
@@ -17,12 +15,8 @@ import {
 } from "../hooks/use-integrations";
 import type { SyncSchedule } from "../schemas/integration-schema";
 
-const CRON_PRESETS = [
-  { label: "Every 15 min", expr: "*/15 * * * *" },
-  { label: "Hourly", expr: "0 * * * *" },
-  { label: "Every 6 hours", expr: "0 */6 * * *" },
-  { label: "Daily at midnight", expr: "0 0 * * *" },
-] as const;
+import { describeCron } from "../utils/cron-utils";
+import { CronBuilder } from "./cron-builder";
 
 export function SyncSchedulesTab({
   integrationId,
@@ -124,7 +118,7 @@ export function SyncSchedulesTab({
 
       {showAddForm ? (
         <form
-          className="border-border bg-neutral-soft/40 space-y-3 rounded-lg border p-3.5 text-xs"
+          className="border-border bg-neutral-soft/40 space-y-3.5 rounded-lg border p-4 text-xs"
           onSubmit={handleCreate}
         >
           {errorMsg ? (
@@ -133,48 +127,19 @@ export function SyncSchedulesTab({
             </Alert>
           ) : null}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs" htmlFor="cron-input">
-              Cron Expression (5 fields: minute hour day month weekday)
-            </Label>
-            <Input
-              className="font-mono text-xs"
-              id="cron-input"
-              onChange={(e) => setNewCron(e.target.value)}
-              placeholder="*/15 * * * *"
-              required
-              value={newCron}
-            />
-          </div>
+          {/* User-friendly Visual & Advanced Cron Builder */}
+          <CronBuilder onChange={setNewCron} value={newCron} />
 
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            <span className="text-muted self-center text-[11px]">Quick Presets:</span>
-            {CRON_PRESETS.map((preset) => (
-              <button
-                className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
-                  newCron === preset.expr
-                    ? "border-brand bg-brand-soft text-brand font-medium"
-                    : "border-border bg-surface hover:bg-neutral-soft text-foreground"
-                }`}
-                key={preset.expr}
-                onClick={() => setNewCron(preset.expr)}
-                type="button"
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 border-t border-border pt-3">
             <Button
-              className="min-h-8 px-2.5 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+              className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
               onClick={() => setShowAddForm(false)}
               type="button"
             >
               Cancel
             </Button>
             <Button
-              className="min-h-8 px-2.5 text-xs"
+              className="min-h-8 px-3 text-xs"
               disabled={createMutation.isPending || !newCron.trim()}
               type="submit"
             >
@@ -195,45 +160,50 @@ export function SyncSchedulesTab({
         </div>
       ) : (
         <div className="divide-border border-border divide-y rounded-lg border">
-          {schedules.map((schedule) => (
-            <div
-              className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
-              key={schedule.id}
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="bg-neutral-soft font-mono text-xs font-semibold px-2 py-0.5 rounded border border-border">
-                    {schedule.scheduleExpression}
-                  </span>
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
-                      schedule.isActive
-                        ? "bg-success-soft text-success border border-success/20"
-                        : "bg-neutral-soft text-muted border border-border"
-                    }`}
-                  >
-                    {schedule.isActive ? "Active" : "Paused"}
-                  </span>
+          {schedules.map((schedule) => {
+            const desc = describeCron(schedule.scheduleExpression);
+            return (
+              <div
+                className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                key={schedule.id}
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-neutral-soft font-mono text-xs font-semibold px-2 py-0.5 rounded border border-border">
+                      {schedule.scheduleExpression}
+                    </span>
+                    <span className="text-[11px] font-medium text-foreground/85">
+                      • {desc.description}
+                    </span>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${
+                        schedule.isActive
+                          ? "bg-success-soft text-success border border-success/20"
+                          : "bg-neutral-soft text-muted border border-border"
+                      }`}
+                    >
+                      {schedule.isActive ? "Active" : "Paused"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-[11px] text-muted">
+                    <span className="flex items-center gap-1">
+                      <Clock className="size-3" />
+                      Last run:{" "}
+                      {schedule.lastRunAt
+                        ? new Date(schedule.lastRunAt).toLocaleString("en-US")
+                        : "Never run"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="size-3" />
+                      Next run:{" "}
+                      {schedule.nextRunAt
+                        ? new Date(schedule.nextRunAt).toLocaleString("en-US")
+                        : "—"}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-[11px] text-muted">
-                  <span className="flex items-center gap-1">
-                    <Clock className="size-3" />
-                    Last run:{" "}
-                    {schedule.lastRunAt
-                      ? new Date(schedule.lastRunAt).toLocaleString("en-US")
-                      : "Never run"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="size-3" />
-                    Next run:{" "}
-                    {schedule.nextRunAt
-                      ? new Date(schedule.nextRunAt).toLocaleString("en-US")
-                      : "—"}
-                  </span>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <Button
                   className="min-h-8 px-2.5 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                   onClick={() => handleToggle(schedule)}
@@ -254,7 +224,8 @@ export function SyncSchedulesTab({
                 </Button>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
 

@@ -6,7 +6,12 @@ describe("panel navigation", () => {
     const links = getPanelNavigation("admin").map((item) => item.href);
     expect(links).toContain("/admin/users");
     expect(links).toContain("/admin/settings");
-    expect(links.every((href) => href.startsWith("/admin"))).toBe(true);
+    // Sync Schedules is a direct-href item (not panel-prefixed)
+    expect(links).toContain("/integrations/schedules");
+    const panelLinks = links.filter(
+      (href) => href !== "/integrations/schedules",
+    );
+    expect(panelLinks.every((href) => href.startsWith("/admin"))).toBe(true);
   });
 
   it("limits employee navigation to employee functions", () => {
