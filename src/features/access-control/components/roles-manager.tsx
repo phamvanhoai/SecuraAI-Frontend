@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Search, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, Pencil, Search, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
 import {
@@ -28,6 +29,7 @@ import {
 } from "../hooks/use-roles";
 import type { Permission, Role, RoleFormValues } from "../schemas/role-schema";
 import { RoleFormDialog } from "./role-form-dialog";
+import { RoleDetailDialog } from "./role-detail-dialog";
 
 const PAGE_SIZE = 20;
 
@@ -52,6 +54,7 @@ export function RolesManager() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [viewingRole, setViewingRole] = useState<Role | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const roles = useRoles({
     page,
@@ -106,30 +109,59 @@ export function RolesManager() {
     {
       key: "actions",
       header: "Actions",
-      cell: (role) =>
-        role.isSystem ? (
-          <span className="text-muted text-xs">Read only</span>
-        ) : (
-          <div className="flex gap-1">
-            <button
-              aria-label={`Edit role ${role.name}`}
-              className="hover:bg-neutral-soft focus-visible:outline-brand rounded-md p-2 focus-visible:outline-2"
-              onClick={() => openEdit(role)}
-              type="button"
-            >
-              <Pencil className="size-4" />
-            </button>
-            <button
-              aria-label={`Delete role ${role.name}`}
-              className="text-danger hover:bg-danger-soft focus-visible:outline-danger rounded-md p-2 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={deleteMutation.isPending}
-              onClick={() => void remove(role)}
-              type="button"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        ),
+      cell: (role) => (
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-6 place-items-center">
+              <span className="sr-only">Actions for {role.name}</span>
+              <Ellipsis
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.8}
+              />
+            </span>
+          }
+        >
+          <button
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={() => setViewingRole(role)}
+            type="button"
+          >
+            <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            View details
+          </button>
+          {!role.isSystem ? (
+            <>
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => openEdit(role)}
+                type="button"
+              >
+                <Pencil
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Edit
+              </button>
+              <button
+                className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={deleteMutation.isPending}
+                onClick={() => void remove(role)}
+                type="button"
+              >
+                <Trash2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Delete
+              </button>
+            </>
+          ) : null}
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -295,6 +327,10 @@ export function RolesManager() {
         pending={createMutation.isPending || updateMutation.isPending}
         permissions={permissions}
         role={editingRole}
+      />
+      <RoleDetailDialog
+        role={viewingRole}
+        onClose={() => setViewingRole(null)}
       />
     </>
   );
