@@ -4,7 +4,11 @@ import { safeReturnUrl } from "@/lib/auth/permissions";
 
 export const metadata: Metadata = { title: "Đăng nhập" };
 
-export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const params = await searchParams;
   const returnUrl = safeReturnUrl(
     typeof params.returnUrl === "string" ? params.returnUrl : undefined,
@@ -26,9 +30,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         </p>
       </div>
       <LoginForm returnUrl={returnUrl} />
-      <p className="border-border text-muted mt-8 border-t pt-5 text-xs leading-5">
-        Không chia sẻ mật khẩu hoặc mã xác thực với bất kỳ ai.
-      </p>
     </section>
   );
 }
