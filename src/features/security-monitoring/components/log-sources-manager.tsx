@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   useCreateLogSource,
   useLogSourceMetrics,
@@ -255,24 +256,28 @@ export function LogSourcesManager() {
             value: metrics.data ? String(metrics.data.total) : "—",
             detail: "Across all log sources",
             tone: "brand",
+            loading: metrics.isPending,
           },
           {
             label: "Active",
             value: metrics.data ? String(metrics.data.active) : "—",
             detail: "Across all log sources",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Receiving logs",
             value: metrics.data ? String(metrics.data.receiving) : "—",
             detail: "Received at least one event",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Errors",
             value: metrics.data ? String(metrics.data.errors) : "—",
             detail: "Across all log sources",
             tone: "danger",
+            loading: metrics.isPending,
           },
         ]}
       />
@@ -280,7 +285,7 @@ export function LogSourcesManager() {
         description={
           sources.data
             ? `${sources.data.pagination.total} log sources found`
-            : "Loading backend data"
+            : "Backend-managed security log sources"
         }
         title="Log source list"
       >
@@ -313,9 +318,7 @@ export function LogSourcesManager() {
         </form>
         <div className="p-4">
           {sources.isPending ? (
-            <p className="text-muted py-10 text-center">
-              Loading log sources...
-            </p>
+            <TableSkeleton columns={6} label="Loading log sources" />
           ) : sources.isError ? (
             <Alert>
               Unable to load log sources. Check your session and backend

@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   useActivateModelConfiguration,
   useCreateModelConfiguration,
@@ -214,24 +215,28 @@ export function ModelConfigurationsManager() {
             value: metrics.data ? String(metrics.data.configurations) : "—",
             detail: "Across all configurations",
             tone: "brand",
+            loading: metrics.isPending,
           },
           {
             label: "Active versions",
             value: metrics.data ? String(metrics.data.activeVersions) : "—",
             detail: "Across all configurations",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Detection rules",
             value: metrics.data ? String(metrics.data.detectionRules) : "—",
             detail: "Across all configurations",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Enabled rules",
             value: metrics.data ? String(metrics.data.enabledRules) : "—",
             detail: "Across all configurations",
             tone: "neutral",
+            loading: metrics.isPending,
           },
         ]}
       />
@@ -240,7 +245,7 @@ export function ModelConfigurationsManager() {
         description={
           configurations.data
             ? `${configurations.data.pagination.total} configurations found`
-            : "Loading backend data"
+            : "Backend-managed model configuration versions"
         }
       >
         <form
@@ -284,9 +289,7 @@ export function ModelConfigurationsManager() {
         </form>
         <div className="p-4">
           {configurations.isPending ? (
-            <p className="text-muted py-10 text-center">
-              Loading configurations...
-            </p>
+            <TableSkeleton columns={7} label="Loading configurations" />
           ) : configurations.isError ? (
             <Alert>
               Unable to load model configurations. Check your session,

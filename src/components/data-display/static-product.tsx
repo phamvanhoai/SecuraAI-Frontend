@@ -2,6 +2,7 @@ import { ChevronDown, Download, Filter, Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SampleNotice() {
   return (
@@ -71,6 +72,7 @@ export type Metric = {
   value: string;
   detail: string;
   tone?: "brand" | "warning" | "danger" | "neutral";
+  loading?: boolean;
 };
 
 export function MetricStrip({
@@ -99,14 +101,18 @@ export function MetricStrip({
           key={metric.label}
         >
           <p className="text-muted text-sm">{metric.label}</p>
-          <p
-            className={cn(
-              "mt-2 text-2xl font-semibold tracking-[-0.03em]",
-              tones[metric.tone ?? "neutral"],
-            )}
-          >
-            {metric.value}
-          </p>
+          {metric.loading ? (
+            <Skeleton className="mt-2 h-8 w-16" />
+          ) : (
+            <p
+              className={cn(
+                "mt-2 text-2xl font-semibold tracking-[-0.03em]",
+                tones[metric.tone ?? "neutral"],
+              )}
+            >
+              {metric.value}
+            </p>
+          )}
           <p className="text-muted mt-1 text-xs">{metric.detail}</p>
         </div>
       ))}
