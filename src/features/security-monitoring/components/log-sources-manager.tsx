@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   useCreateLogSource,
+  useLogSourceMetrics,
   useLogSources,
   useUpdateLogSource,
 } from "../hooks/use-log-sources";
@@ -63,12 +64,9 @@ export function LogSourcesManager() {
     limit: 20,
     ...(query ? { q: query } : {}),
   });
+  const metrics = useLogSourceMetrics();
   const create = useCreateLogSource();
   const update = useUpdateLogSource();
-  const items = sources.data?.items ?? [];
-  const activeCount = items.filter((item) => item.status === "active").length;
-  const errorCount = items.filter((item) => item.status === "error").length;
-  const receivingCount = items.filter((item) => item.lastReceivedAt).length;
 
   const columns: readonly DataTableColumn<LogSource>[] = [
     {
@@ -254,26 +252,26 @@ export function LogSourcesManager() {
         metrics={[
           {
             label: "Total sources",
-            value: sources.data ? String(sources.data.pagination.total) : "—",
-            detail: "Returned by the backend",
+            value: metrics.data ? String(metrics.data.total) : "—",
+            detail: "Across all log sources",
             tone: "brand",
           },
           {
             label: "Active",
-            value: sources.data ? String(activeCount) : "—",
-            detail: "On this page",
+            value: metrics.data ? String(metrics.data.active) : "—",
+            detail: "Across all log sources",
             tone: "neutral",
           },
           {
             label: "Receiving logs",
-            value: sources.data ? String(receivingCount) : "—",
-            detail: "Received at least one event on this page",
+            value: metrics.data ? String(metrics.data.receiving) : "—",
+            detail: "Received at least one event",
             tone: "neutral",
           },
           {
             label: "Errors",
-            value: sources.data ? String(errorCount) : "—",
-            detail: "On this page",
+            value: metrics.data ? String(metrics.data.errors) : "—",
+            detail: "Across all log sources",
             tone: "danger",
           },
         ]}

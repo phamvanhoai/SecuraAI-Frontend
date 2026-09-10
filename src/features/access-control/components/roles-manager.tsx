@@ -24,6 +24,7 @@ import {
   useCreateRole,
   useDeleteRole,
   usePermissions,
+  useRoleMetrics,
   useRoles,
   useUpdateRole,
 } from "../hooks/use-roles";
@@ -61,6 +62,7 @@ export function RolesManager() {
     limit: PAGE_SIZE,
     ...(search ? { search } : {}),
   });
+  const metrics = useRoleMetrics();
   const permissionCatalog = usePermissions();
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
@@ -216,11 +218,6 @@ export function RolesManager() {
   }
 
   const items = roles.data?.items ?? [];
-  const systemCount = items.filter((role) => role.isSystem).length;
-  const assignedCount = items.reduce(
-    (sum, role) => sum + role.assignedUserCount,
-    0,
-  );
 
   return (
     <>
@@ -236,8 +233,10 @@ export function RolesManager() {
         metrics={[
           {
             label: "Total roles",
-            value: String(roles.data?.pagination.total ?? 0),
-            detail: `${systemCount} system roles on this page`,
+            value: metrics.data ? String(metrics.data.total) : "—",
+            detail: metrics.data
+              ? `${metrics.data.system} system roles`
+              : "Across all roles",
             tone: "brand",
           },
           {
@@ -248,8 +247,8 @@ export function RolesManager() {
           },
           {
             label: "Assigned users",
-            value: String(assignedCount),
-            detail: "Across roles on this page",
+            value: metrics.data ? String(metrics.data.assignedUsers) : "—",
+            detail: "Across all roles",
             tone: "neutral",
           },
         ]}

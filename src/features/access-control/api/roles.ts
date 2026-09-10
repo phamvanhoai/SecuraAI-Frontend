@@ -23,6 +23,11 @@ export type ListRolesInput = {
   search?: string;
   signal?: AbortSignal;
 };
+export type RoleMetrics = {
+  total: number;
+  system: number;
+  assignedUsers: number;
+};
 
 async function safeJson(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -87,6 +92,38 @@ export function listRoles(input: ListRolesInput): Promise<RoleList> {
     roleListSchema,
     input.signal ? { signal: input.signal } : undefined,
   );
+}
+
+export async function getRoleMetrics(
+  signal?: AbortSignal,
+): Promise<RoleMetrics> {
+  const firstPage = await listRoles({
+    page: 1,
+    limit: 100,
+    ...(signal ? { signal } : {}),
+  });
+  const remainingPages = await Promise.all(
+    Array.from(
+      { length: Math.max(firstPage.pagination.totalPages - 1, 0) },
+      (_, index) =>
+        listRoles({
+          page: index + 2,
+          limit: 100,
+          ...(signal ? { signal } : {}),
+        }),
+    ),
+  );
+  const items = [firstPage, ...remainingPages].flatMap(
+    (result) => result.items,
+  );
+  return {
+    total: firstPage.pagination.total,
+    system: items.filter((role) => role.isSystem).length,
+    assignedUsers: items.reduce(
+      (total, role) => total + role.assignedUserCount,
+      0,
+    ),
+  };
 }
 
 export function createRole(input: RoleFormValues): Promise<Role> {

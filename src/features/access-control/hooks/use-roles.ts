@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createRole,
   deleteRole,
+  getRoleMetrics,
   listPermissions,
   listRoles,
   updateRole,
@@ -28,6 +29,12 @@ export function useRoles(input: Omit<ListRolesInput, "signal">) {
   return useQuery({
     queryKey: roleKeys.list(input),
     queryFn: ({ signal }) => listRoles({ ...input, signal }),
+  });
+}
+export function useRoleMetrics() {
+  return useQuery({
+    queryKey: [...roleKeys.all, "metrics"],
+    queryFn: ({ signal }) => getRoleMetrics(signal),
   });
 }
 
