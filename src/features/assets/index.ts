@@ -1,4 +1,7 @@
 export { AssetsShell } from "./components/assets-shell";
+export { AssetDetailDialog } from "./components/asset-detail-dialog";
+export { EditAssetDialog } from "./components/edit-asset-dialog";
+export { DeleteAssetDialog } from "./components/delete-asset-dialog";
 export {
   assetListQuerySchema,
   assetListResponseSchema,
@@ -13,3 +16,8 @@ export {
   type CreateAssetRequest,
   type AssetDetail,
 } from "./schemas/create-asset-schema";
+export {
+  updateAssetSchema,
+  type UpdateAssetInput,
+  type UpdateAssetRequest,
+} from "./schemas/update-asset-schema";

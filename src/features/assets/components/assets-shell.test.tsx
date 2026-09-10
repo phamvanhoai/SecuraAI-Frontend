@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { pushMock, useAssetsMock, createMutationMock } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -13,6 +13,15 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("../hooks/use-assets", () => ({ useAssets: useAssetsMock }));
+vi.mock("../hooks/use-asset-detail", () => ({
+  useAssetDetail: () => ({ isPending: false, isError: false, data: undefined }),
+}));
+vi.mock("../hooks/use-update-asset", () => ({
+  useUpdateAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock("../hooks/use-delete-asset", () => ({
+  useDeleteAsset: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 vi.mock("../hooks/use-create-asset", () => ({
   useCreateAsset: () => createMutationMock,
 }));
@@ -21,6 +30,22 @@ vi.mock("@/components/feedback/toast", () => ({
 }));
 
 import { AssetsShell } from "./assets-shell";
+
+beforeAll(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    },
+  });
+});
 
 afterEach(cleanup);
 
@@ -97,5 +122,33 @@ describe("AssetsShell", () => {
       "Không thể tải danh sách tài sản",
     );
     expect(screen.queryByText("Database Server")).not.toBeInTheDocument();
+  });
+
+  it("opens asset details from a table row", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await user.click(screen.getByRole("button", { name: "Xem chi tiết" }));
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("open");
+  });
+
+  it("opens the edit form from a table row", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await user.click(screen.getByRole("button", { name: "Chỉnh sửa" }));
+
+    expect(screen.getByRole("dialog", { name: "Chỉnh sửa tài sản CNTT" })).toHaveAttribute("open");
+  });
+
+  it("opens a confirmation dialog before deleting", async () => {
+    const user = userEvent.setup();
+    render(<AssetsShell />);
+
+    await user.click(screen.getByRole("button", { name: "Xóa" }));
+
+    expect(screen.getByRole("dialog", { name: "Xóa tài sản" })).toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Xóa tài sản" })).toBeDisabled();
   });
 });

@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useAssets } from "../hooks/use-assets";
 import { CreateAssetDialog } from "./create-asset-dialog";
+import { AssetDetailDialog } from "./asset-detail-dialog";
+import { EditAssetDialog } from "./edit-asset-dialog";
+import { DeleteAssetDialog } from "./delete-asset-dialog";
 import {
   assetListQuerySchema,
   type AssetListItem,
@@ -96,6 +99,42 @@ export function AssetsShell() {
   const [assetType, setAssetType] = useState(query.assetType ?? "");
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
+  const [deletingAsset, setDeletingAsset] = useState<AssetListItem | null>(null);
+  const tableColumns = useMemo<readonly DataTableColumn<AssetListItem>[]>(
+    () => [
+      ...columns,
+      {
+        key: "actions",
+        header: "Thao tác",
+        cell: (asset) => (
+          <div className="flex gap-2">
+            <Button
+              className="min-h-9 bg-neutral-soft px-3 text-foreground hover:bg-border"
+              onClick={() => setSelectedAssetId(asset.id)}
+            >
+              Xem chi tiết
+            </Button>
+            <Button
+              className="min-h-9 px-3"
+              disabled={asset.status === "disposed"}
+              onClick={() => setEditingAssetId(asset.id)}
+            >
+              Chỉnh sửa
+            </Button>
+            <Button
+              className="min-h-9 bg-danger px-3 text-white hover:opacity-90"
+              onClick={() => setDeletingAsset(asset)}
+            >
+              Xóa
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const navigate = (next: Partial<AssetListQuery>): void => {
     const parameters = new URLSearchParams();
@@ -215,7 +254,7 @@ export function AssetsShell() {
           ) : null}
           {assets.data ? (
             <DataTable
-              columns={columns}
+              columns={tableColumns}
               rows={assets.data.items}
               getRowKey={(asset) => asset.id}
             />
@@ -231,6 +270,18 @@ export function AssetsShell() {
           </div>
         ) : null}
       </section>
+      <AssetDetailDialog
+        assetId={selectedAssetId}
+        onClose={() => setSelectedAssetId(null)}
+      />
+      <EditAssetDialog
+        assetId={editingAssetId}
+        onClose={() => setEditingAssetId(null)}
+      />
+      <DeleteAssetDialog
+        asset={deletingAsset}
+        onClose={() => setDeletingAsset(null)}
+      />
     </div>
   );
 }
