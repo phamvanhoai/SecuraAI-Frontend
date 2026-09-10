@@ -24,7 +24,7 @@ export function setAuthCookies(
     httpOnly: true,
     secure,
     sameSite: "strict",
-    path: "/api/auth",
+    path: "/",
     maxAge: 7 * 24 * 60 * 60,
   });
 }
@@ -41,7 +41,7 @@ export function clearAuthCookies(response: NextResponse): void {
     httpOnly: true,
     secure,
     sameSite: "strict",
-    path: "/api/auth",
+    path: "/",
     maxAge: 0,
   });
 }

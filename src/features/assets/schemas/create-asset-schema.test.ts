@@ -9,21 +9,48 @@ describe("createAssetSchema", () => {
         name: " Server ",
         assetType: " server ",
         description: "",
-        criticality: "medium",
         hostname: "",
         ipAddress: "",
         location: "",
+        departmentId: "",
+        ownerUserId: "",
       }),
     ).toEqual({
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
       description: undefined,
-      criticality: "medium",
       hostname: undefined,
       ipAddress: undefined,
       location: undefined,
+      departmentId: undefined,
+      ownerUserId: undefined,
     });
+  });
+
+  it("accepts valid optional department and owner IDs", () => {
+    const departmentId = "00000000-0000-4000-8000-000000000010";
+    const ownerUserId = "00000000-0000-4000-8000-000000000020";
+    expect(
+      createAssetSchema.parse({
+        assetCode: "AST-002",
+        name: "Server",
+        assetType: "server",
+        departmentId,
+        ownerUserId,
+      }),
+    ).toMatchObject({ departmentId, ownerUserId });
+  });
+
+  it("rejects invalid department and owner IDs", () => {
+    expect(
+      createAssetSchema.safeParse({
+        assetCode: "AST-002",
+        name: "Server",
+        assetType: "server",
+        departmentId: "not-a-uuid",
+      }).success,
+    ).toBe(false);
   });
 
   it.each([
@@ -31,7 +58,6 @@ describe("createAssetSchema", () => {
       assetCode: "BAD CODE",
       name: "Server",
       assetType: "server",
-      criticality: "medium",
       description: "",
       hostname: "",
       ipAddress: "",
@@ -41,7 +67,6 @@ describe("createAssetSchema", () => {
       assetCode: "AST-002",
       name: "",
       assetType: "server",
-      criticality: "medium",
       description: "",
       hostname: "",
       ipAddress: "",
@@ -51,7 +76,7 @@ describe("createAssetSchema", () => {
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
-      criticality: "urgent",
+      criticality: "critical",
       description: "",
       hostname: "",
       ipAddress: "",
@@ -61,7 +86,6 @@ describe("createAssetSchema", () => {
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
-      criticality: "medium",
       description: "",
       hostname: "",
       ipAddress: "999.1.1.1",

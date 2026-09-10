@@ -60,7 +60,7 @@ describe("AssetDetailDialog", () => {
     useAssetDetailMock.mockReturnValue({ isPending: true, isError: false, data: undefined });
     render(<AssetDetailDialog assetId="00000000-0000-4000-8000-000000000001" onClose={onClose} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Đóng" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
 });

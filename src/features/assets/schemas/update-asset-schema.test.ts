@@ -8,6 +8,7 @@ describe("updateAssetSchema", () => {
         name: " Updated Server ",
         assetType: " server ",
         description: "",
+        departmentId: "",
         hostname: " fe-test-server ",
         ipAddress: "",
         location: " Server Room ",
@@ -17,11 +18,28 @@ describe("updateAssetSchema", () => {
       name: "Updated Server",
       assetType: "server",
       description: null,
+      departmentId: null,
       hostname: "fe-test-server",
       ipAddress: null,
       location: "Server Room",
       status: "active",
     });
+  });
+
+  it("accepts an active department ID for reassignment", () => {
+    const departmentId = "00000000-0000-4000-8000-000000000010";
+    expect(
+      updateAssetSchema.parse({
+        name: "Server",
+        assetType: "server",
+        description: "",
+        departmentId,
+        hostname: "",
+        ipAddress: "",
+        location: "",
+        status: "active",
+      }),
+    ).toMatchObject({ departmentId });
   });
 
   it("rejects invalid IPs, status and direct criticality changes", () => {

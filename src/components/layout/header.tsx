@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import {
   Bell,
   BriefcaseBusiness,
@@ -14,29 +13,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { sessionUserSchema, type AuthSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/auth";
 import { ThemeToggle } from "./theme-toggle";
-
-async function getSessionUser(): Promise<AuthSessionUser | null> {
-  const response = await fetch("/api/auth/session", { cache: "no-store" });
-  if (!response.ok) return null;
-  const payload: unknown = await response.json();
-  if (typeof payload !== "object" || payload === null || !("data" in payload))
-    return null;
-  const data = (payload as { data?: unknown }).data;
-  if (typeof data !== "object" || data === null || !("user" in data))
-    return null;
-  const parsed = sessionUserSchema.safeParse((data as { user?: unknown }).user);
-  return parsed.success ? parsed.data : null;
-}
 
 export function Header() {
   const router = useRouter();
-  const session = useQuery({
-    queryKey: ["auth", "session"],
-    queryFn: getSessionUser,
-    retry: false,
-  });
+  const session = useSessionUser();
   const user = session.data;
   const isAdmin = user?.roles.some((role) => role.code === "ADMIN") ?? false;
 
