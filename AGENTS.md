@@ -61,4 +61,16 @@ Add schema/boundary tests, behavioral component tests and risk-proportionate bro
 
 ## Git workflow
 
-Base integration on `develop`; implement on `feature/*` or `fix/*`. Never code directly on `main` or `develop`. Merge through Pull Requests. Do not commit, push, create a remote/PR, rewrite history or include unrelated changes unless the user explicitly requests it in the current conversation.
+- Use `develop` only as the integration base. Never implement features or fixes directly on `develop` or `main`.
+- Create a dedicated branch from the latest `origin/develop` for each assigned use case. Use names such as `feature/view-assets`, `feature/manage-custom-roles`, or `fix/role-list-visibility`.
+- Do not reuse a branch after its Pull Request has been merged. Fetch the latest remote state and create the next feature branch from the updated `origin/develop`.
+- Integrate changes through GitHub Pull Requests only: `feature/*` or `fix/*` into `develop`, then `develop` into `main`.
+- When the user asks to merge, push the source branch and create the appropriate Pull Request. Wait for required checks to succeed before merging. Never replace the Pull Request workflow with a local merge followed by a direct push to `develop` or `main`.
+- Treat `develop` and `main` as protected branches. Direct pushes require an explicit emergency-bypass request that names the exact target branch and acknowledges that review and branch checks will be bypassed.
+- If a contributor branch is already mergeable, open the Pull Request from that branch as-is. Do not merge `develop` into it merely to synchronize history, and do not add agent-created synchronization commits to the contributor's branch.
+- If a contributor branch conflicts with `develop`, leave the contributor branch unchanged. Create a temporary branch such as `integration/<feature>-to-develop`, merge the latest `origin/develop` into the temporary branch, resolve and test there, then open the Pull Request from the temporary branch into `develop`.
+- Preserve contributor commits and authorship. Never squash, rewrite, force-push, reset, delete, or append commits to another contributor's branch without explicit authorization for that exact branch and action.
+- Commit only when the user explicitly requests a commit. Push only when the user explicitly requests a push and the target branch is clear. Requests to implement, test, review, or fix code do not implicitly authorize committing or pushing.
+- Keep each commit scoped to the requested use case and use Conventional Commits, for example `feat(assets): add asset list filters` or `fix(auth): handle expired sessions`.
+- Preserve unrelated user changes. Never commit `.env`, secrets, `.next/`, `out/`, coverage, test reports, local logs, editor settings, or other generated files.
+- Before committing, inspect `git status`, the staged file list, `git diff --cached`, and `git diff --check`. Before opening or merging a Pull Request, run the checks required by the testing section and report any check that could not run.

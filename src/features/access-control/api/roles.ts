@@ -31,7 +31,7 @@ async function safeJson(response: Response): Promise<unknown> {
     return JSON.parse(text) as unknown;
   } catch {
     throw new ApiError(
-      "Phản hồi máy chủ không hợp lệ.",
+      "The server returned an invalid response.",
       response.status,
       "UNKNOWN_ERROR",
     );
@@ -65,7 +65,7 @@ async function roleRequest<T>(
     !("data" in payload)
   ) {
     throw new ApiError(
-      "Phản hồi máy chủ không đúng contract.",
+      "The server response does not match the expected contract.",
       response.status,
       "UNKNOWN_ERROR",
       payload,

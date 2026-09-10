@@ -88,10 +88,10 @@ export function RoleFormDialog({
     >
       <form className="p-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <h2 className="text-lg font-semibold" id="role-form-title">
-          {role ? "Cập nhật vai trò" : "Tạo vai trò tùy chỉnh"}
+          {role ? "Update role" : "Create custom role"}
         </h2>
         <p className="text-muted mt-1 text-sm">
-          Vai trò hệ thống chỉ có thể xem; vai trò tùy chỉnh có thể thay đổi.
+          System roles are read-only. Custom roles can be modified.
         </p>
         {errorMessage ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">
@@ -99,7 +99,7 @@ export function RoleFormDialog({
           </Alert>
         ) : null}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Mã vai trò" error={errors.code?.message}>
+          <Field label="Role code" error={errors.code?.message}>
             <Input
               autoComplete="off"
               aria-invalid={Boolean(errors.code)}
@@ -110,7 +110,7 @@ export function RoleFormDialog({
               })}
             />
           </Field>
-          <Field label="Tên vai trò" error={errors.name?.message}>
+          <Field label="Role name" error={errors.name?.message}>
             <Input
               autoComplete="off"
               aria-invalid={Boolean(errors.name)}
@@ -119,18 +119,18 @@ export function RoleFormDialog({
           </Field>
           <Field
             className="sm:col-span-2"
-            label="Mô tả"
+            label="Description"
             error={errors.description?.message}
           >
             <Textarea {...register("description")} />
           </Field>
         </div>
         <fieldset className="border-border mt-5 rounded-lg border p-4">
-          <legend className="px-1 text-sm font-semibold">Quyền truy cập</legend>
+          <legend className="px-1 text-sm font-semibold">Permissions</legend>
           {permissionGroups.length === 0 ? (
             <p className="text-muted text-sm">
-              Chưa có permission nào được backend trả về. Có thể tạo vai trò
-              không có quyền.
+              The backend returned no permissions. You can create a role without
+              permissions.
             </p>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
@@ -172,10 +172,10 @@ export function RoleFormDialog({
             onClick={onClose}
             type="button"
           >
-            Hủy
+            Cancel
           </Button>
           <Button disabled={pending} type="submit">
-            {pending ? "Đang lưu..." : role ? "Lưu thay đổi" : "Tạo vai trò"}
+            {pending ? "Saving..." : role ? "Save changes" : "Create role"}
           </Button>
         </div>
       </form>

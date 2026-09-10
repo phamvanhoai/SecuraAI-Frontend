@@ -91,12 +91,12 @@ describe("RolesManager", () => {
     expect(
       screen.queryByText("Dữ liệu mẫu phục vụ thiết kế giao diện"),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Tạo vai trò" }));
+    await user.click(screen.getByRole("button", { name: "Create role" }));
     const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByLabelText("Mã vai trò"), "risk_reviewer");
-    await user.type(dialog.getByLabelText("Tên vai trò"), "Risk Reviewer");
+    await user.type(dialog.getByLabelText("Role code"), "risk_reviewer");
+    await user.type(dialog.getByLabelText("Role name"), "Risk Reviewer");
     await user.click(dialog.getByRole("checkbox", { name: /roles\.read/ }));
-    await user.click(dialog.getByRole("button", { name: "Tạo vai trò" }));
+    await user.click(dialog.getByRole("button", { name: "Create role" }));
 
     await waitFor(() =>
       expect(
@@ -110,6 +110,6 @@ describe("RolesManager", () => {
       code: "RISK_REVIEWER",
       permissionIds: [permissionId],
     });
-    expect(await screen.findByText("Đã tạo vai trò")).toBeVisible();
+    expect(await screen.findByText("Role created")).toBeVisible();
   });
 });

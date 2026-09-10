@@ -89,7 +89,7 @@ test("renders roles returned by the access-control API", async ({ page }) => {
   });
   await page.goto("/admin/roles");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Vai trò và quyền" }),
+    page.getByRole("heading", { level: 1, name: "Roles and permissions" }),
   ).toBeVisible();
   await expect(page.getByText("Administrator")).toBeVisible();
   await expect(
