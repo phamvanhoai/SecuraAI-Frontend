@@ -254,6 +254,15 @@ export function RolesManager() {
             tone: "neutral",
             loading: metrics.isPending,
           },
+          {
+            label: "Custom roles",
+            value: metrics.data
+              ? String(metrics.data.total - metrics.data.system)
+              : "—",
+            detail: "Backend-managed non-system roles",
+            tone: "neutral",
+            loading: metrics.isPending,
+          },
         ]}
       />
       <ProductPanel title="Role list">
