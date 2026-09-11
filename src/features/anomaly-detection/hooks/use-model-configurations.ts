@@ -1,5 +1,10 @@
 "use client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   activateModelConfiguration,
   createModelConfiguration,
@@ -13,6 +18,7 @@ export function useModelConfigurations(query: ModelConfigurationQuery) {
   return useQuery({
     queryKey: [...key, query],
     queryFn: ({ signal }) => listModelConfigurations(query, signal),
+    placeholderData: keepPreviousData,
   });
 }
 

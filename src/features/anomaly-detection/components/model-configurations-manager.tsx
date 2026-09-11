@@ -289,7 +289,19 @@ export function ModelConfigurationsManager() {
         </form>
         <div className="p-4">
           {configurations.isPending ? (
-            <TableSkeleton columns={7} label="Loading configurations" />
+            <TableSkeleton
+              headers={[
+                "Model",
+                "Version",
+                "Algorithm",
+                "Rules",
+                "Status",
+                "Created",
+                "Actions",
+              ]}
+              label="Loading configurations"
+              rows={skeletonRows(metrics.data?.configurations, 2)}
+            />
           ) : configurations.isError ? (
             <Alert>
               Unable to load model configurations. Check your session,
@@ -604,4 +616,8 @@ export function ModelConfigurationsManager() {
       ) : null}
     </>
   );
+}
+
+function skeletonRows(total: number | undefined, fallback = 4): number {
+  return total === undefined ? fallback : Math.max(1, Math.min(total, 20));
 }
