@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,6 +14,7 @@ import { loginSchema, type LoginInput } from "../schemas/login-schema";
 
 export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
   const [message, setMessage] = useState<string>();
+  const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
@@ -44,7 +46,7 @@ export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Không thể đăng nhập. Vui lòng thử lại.",
+          : "Unable to sign in. Please try again.",
       );
     }
   }
@@ -66,28 +68,43 @@ export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
       </FormField>
       <FormField
         id="password"
-        label="Mật khẩu"
+        label="Password"
         error={errors.password?.message}
       >
-        <Input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          aria-invalid={Boolean(errors.password)}
-          aria-describedby={errors.password ? "password-error" : undefined}
-          {...register("password")}
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            className="pr-12"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            aria-invalid={Boolean(errors.password)}
+            aria-describedby={errors.password ? "password-error" : undefined}
+            {...register("password")}
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="text-muted hover:text-foreground focus-visible:outline-brand absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+            onClick={() => setShowPassword((value) => !value)}
+          >
+            {showPassword ? (
+              <EyeOff className="size-5" aria-hidden="true" />
+            ) : (
+              <Eye className="size-5" aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </FormField>
       <div className="flex justify-end">
         <Link
           className="text-brand text-sm font-medium underline-offset-4 hover:underline"
           href="/forgot-password"
         >
-          Quên mật khẩu?
+          Forgot password?
         </Link>
       </div>
       <Button className="w-full" disabled={isSubmitting} type="submit">
-        {isSubmitting ? "Đang xử lý..." : "Đăng nhập"}
+        {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
     </form>
   );
