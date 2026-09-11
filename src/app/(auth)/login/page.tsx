@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/features/auth";
 import { safeReturnUrl } from "@/lib/auth/permissions";
 
-export const metadata: Metadata = { title: "Đăng nhập" };
+export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage({
   searchParams,
@@ -23,10 +23,10 @@ export default async function LoginPage({
           id="login-title"
           className="text-3xl font-semibold tracking-[-0.035em]"
         >
-          Đăng nhập
+          Sign in
         </h2>
         <p className="text-muted mx-auto mt-3 max-w-sm text-sm leading-6">
-          Nhập thông tin tài khoản được tổ chức của bạn cấp.
+          Enter the account information provided by your organization.
         </p>
       </div>
       <LoginForm returnUrl={returnUrl} />

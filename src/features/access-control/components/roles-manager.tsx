@@ -18,12 +18,13 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
 import {
   useCreateRole,
   useDeleteRole,
   usePermissions,
+  useRoleMetrics,
   useRoles,
   useUpdateRole,
 } from "../hooks/use-roles";
@@ -61,6 +62,7 @@ export function RolesManager() {
     limit: PAGE_SIZE,
     ...(search ? { search } : {}),
   });
+  const metrics = useRoleMetrics();
   const permissionCatalog = usePermissions();
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
@@ -216,11 +218,6 @@ export function RolesManager() {
   }
 
   const items = roles.data?.items ?? [];
-  const systemCount = items.filter((role) => role.isSystem).length;
-  const assignedCount = items.reduce(
-    (sum, role) => sum + role.assignedUserCount,
-    0,
-  );
 
   return (
     <>
@@ -236,21 +233,35 @@ export function RolesManager() {
         metrics={[
           {
             label: "Total roles",
-            value: String(roles.data?.pagination.total ?? 0),
-            detail: `${systemCount} system roles on this page`,
+            value: metrics.data ? String(metrics.data.total) : "—",
+            detail: metrics.data
+              ? `${metrics.data.system} system roles`
+              : "Across all roles",
             tone: "brand",
+            loading: metrics.isPending,
           },
           {
             label: "Permissions",
             value: String(permissions.length),
             detail: "Returned by the backend",
             tone: "neutral",
+            loading: permissionCatalog.isPending,
           },
           {
             label: "Assigned users",
-            value: String(assignedCount),
-            detail: "Across roles on this page",
+            value: metrics.data ? String(metrics.data.assignedUsers) : "—",
+            detail: "Across all roles",
             tone: "neutral",
+            loading: metrics.isPending,
+          },
+          {
+            label: "Custom roles",
+            value: metrics.data
+              ? String(metrics.data.total - metrics.data.system)
+              : "—",
+            detail: "Backend-managed non-system roles",
+            tone: "neutral",
+            loading: metrics.isPending,
           },
         ]}
       />
@@ -276,11 +287,7 @@ export function RolesManager() {
         </form>
         <div className="p-4">
           {roles.isPending ? (
-            <div aria-label="Loading roles" className="space-y-3">
-              {[1, 2, 3, 4].map((item) => (
-                <Skeleton className="h-14" key={item} />
-              ))}
-            </div>
+            <TableSkeleton columns={6} label="Loading roles" />
           ) : roles.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {userError(roles.error)}{" "}

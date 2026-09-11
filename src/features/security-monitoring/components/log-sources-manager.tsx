@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   useCreateLogSource,
+  useLogSourceMetrics,
   useLogSources,
   useUpdateLogSource,
 } from "../hooks/use-log-sources";
@@ -63,12 +65,9 @@ export function LogSourcesManager() {
     limit: 20,
     ...(query ? { q: query } : {}),
   });
+  const metrics = useLogSourceMetrics();
   const create = useCreateLogSource();
   const update = useUpdateLogSource();
-  const items = sources.data?.items ?? [];
-  const activeCount = items.filter((item) => item.status === "active").length;
-  const errorCount = items.filter((item) => item.status === "error").length;
-  const receivingCount = items.filter((item) => item.lastReceivedAt).length;
 
   const columns: readonly DataTableColumn<LogSource>[] = [
     {
@@ -254,27 +253,31 @@ export function LogSourcesManager() {
         metrics={[
           {
             label: "Total sources",
-            value: sources.data ? String(sources.data.pagination.total) : "—",
-            detail: "Returned by the backend",
+            value: metrics.data ? String(metrics.data.total) : "—",
+            detail: "Across all log sources",
             tone: "brand",
+            loading: metrics.isPending,
           },
           {
             label: "Active",
-            value: sources.data ? String(activeCount) : "—",
-            detail: "On this page",
+            value: metrics.data ? String(metrics.data.active) : "—",
+            detail: "Across all log sources",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Receiving logs",
-            value: sources.data ? String(receivingCount) : "—",
-            detail: "Received at least one event on this page",
+            value: metrics.data ? String(metrics.data.receiving) : "—",
+            detail: "Received at least one event",
             tone: "neutral",
+            loading: metrics.isPending,
           },
           {
             label: "Errors",
-            value: sources.data ? String(errorCount) : "—",
-            detail: "On this page",
+            value: metrics.data ? String(metrics.data.errors) : "—",
+            detail: "Across all log sources",
             tone: "danger",
+            loading: metrics.isPending,
           },
         ]}
       />
@@ -282,7 +285,7 @@ export function LogSourcesManager() {
         description={
           sources.data
             ? `${sources.data.pagination.total} log sources found`
-            : "Loading backend data"
+            : "Backend-managed security log sources"
         }
         title="Log source list"
       >
@@ -315,9 +318,18 @@ export function LogSourcesManager() {
         </form>
         <div className="p-4">
           {sources.isPending ? (
-            <p className="text-muted py-10 text-center">
-              Loading log sources...
-            </p>
+            <TableSkeleton
+              headers={[
+                "Log source",
+                "Format",
+                "Status",
+                "Asset",
+                "Last received",
+                "Actions",
+              ]}
+              label="Loading log sources"
+              rows={skeletonRows(metrics.data?.total)}
+            />
           ) : sources.isError ? (
             <Alert>
               Unable to load log sources. Check your session and backend
@@ -559,4 +571,8 @@ export function LogSourcesManager() {
       ) : null}
     </>
   );
+}
+
+function skeletonRows(total: number | undefined): number {
+  return total === undefined ? 4 : Math.max(1, Math.min(total, 20));
 }

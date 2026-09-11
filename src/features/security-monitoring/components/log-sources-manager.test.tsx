@@ -8,6 +8,9 @@ const { createMock, updateMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("../hooks/use-log-sources", () => ({
+  useLogSourceMetrics: () => ({
+    data: { total: 0, active: 0, receiving: 0, errors: 0 },
+  }),
   useLogSources: () => ({
     data: {
       items: [],

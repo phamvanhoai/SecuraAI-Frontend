@@ -1,8 +1,14 @@
 "use client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createLogSource,
   deleteLogSource,
+  getLogSourceMetrics,
   listLogSources,
   updateLogSource,
   type LogSourceQuery,
@@ -14,6 +20,13 @@ export function useLogSources(query: LogSourceQuery) {
   return useQuery({
     queryKey: [...key, query],
     queryFn: ({ signal }) => listLogSources(query, signal),
+    placeholderData: keepPreviousData,
+  });
+}
+export function useLogSourceMetrics() {
+  return useQuery({
+    queryKey: [...key, "metrics"],
+    queryFn: ({ signal }) => getLogSourceMetrics(signal),
   });
 }
 export function useCreateLogSource() {

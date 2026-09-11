@@ -3,33 +3,30 @@
 import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
-import { PolicyDraftsManager } from "@/features/policies";
+import { PolicyDraftsManager, PolicyPublicationManager } from "@/features/policies";
 
 export default function Page() {
   const session = useSessionUser();
-  const canCreateDrafts =
-    session.data?.permissions.includes("policies.create") ?? false;
+  const canCreateDrafts = session.data?.permissions.includes("policies.create") ?? false;
+  const canPublish = session.data?.permissions.includes("policies.publish") ?? false;
 
   if (session.isPending) {
-    return (
-      <div
-        aria-label="Đang tải chức năng chính sách"
-        className="bg-neutral-soft h-56 animate-pulse rounded-xl"
-      />
-    );
+    return <div aria-label="Loading policy management" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />;
   }
 
   if (canCreateDrafts) return <PolicyDraftsManager />;
+  if (canPublish) return <PolicyPublicationManager />;
 
   return (
     <div className="space-y-5">
       <ProductPageHeader
-        title="Phê duyệt và xuất bản chính sách"
-        description="Xem xét các bản nháp do Chuyên viên ATTT gửi và phát hành phiên bản chính thức."
+        description="This function is restricted to accounts with policy management permission."
+        showSampleNotice={false}
+        title="Information security policies"
       />
       <EmptyState
-        title="Chưa triển khai"
-        description="Giao diện phê duyệt và xuất bản sẽ được kết nối trong chức năng Publish Official Policy Version."
+        description="The current account does not have permission to create or publish policies."
+        title="You do not have permission to manage policies"
       />
     </div>
   );
