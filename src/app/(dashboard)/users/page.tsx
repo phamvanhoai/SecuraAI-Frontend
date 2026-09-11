@@ -1,4 +1,7 @@
+"use client";
+
 import { MoreHorizontal } from "lucide-react";
+import { useState } from "react";
 import {
   MetricStrip,
   PaginationBar,
@@ -8,94 +11,21 @@ import {
   StaticTable,
   StatusBadge,
 } from "@/components/data-display/static-product";
+import { EmptyState } from "@/components/feedback/empty-state";
+import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeletons";
+import { useSessionUser } from "@/features/auth";
+import { CreateUserDialog, useUsers } from "@/features/users";
+import type { UserListResponse } from "@/features/users/schemas/user-schema";
 
-const rows = [
-  [
-    <UserCell
-      key="u1"
-      initials="NA"
-      name="Nguyễn Minh Anh"
-      email="minh.anh@secura.vn"
-    />,
-    "SEC-0241",
-    "An toàn thông tin",
-    "Security Analyst",
-    <StatusBadge tone="success" key="s1">
-      Đang hoạt động
-    </StatusBadge>,
-    <RowMenu key="m1" />,
-  ],
-  [
-    <UserCell
-      key="u2"
-      initials="TH"
-      name="Trần Quốc Huy"
-      email="quoc.huy@secura.vn"
-    />,
-    "SEC-0187",
-    "Hạ tầng",
-    "System Owner",
-    <StatusBadge tone="success" key="s2">
-      Đang hoạt động
-    </StatusBadge>,
-    <RowMenu key="m2" />,
-  ],
-  [
-    <UserCell
-      key="u3"
-      initials="LP"
-      name="Lê Hoàng Phương"
-      email="hoang.phuong@secura.vn"
-    />,
-    "SEC-0318",
-    "Kiểm toán nội bộ",
-    "Internal Auditor",
-    <StatusBadge tone="warning" key="s3">
-      Chờ xác minh
-    </StatusBadge>,
-    <RowMenu key="m3" />,
-  ],
-  [
-    <UserCell
-      key="u4"
-      initials="VT"
-      name="Võ Thanh Tâm"
-      email="thanh.tam@secura.vn"
-    />,
-    "SEC-0129",
-    "Pháp chế",
-    "Compliance Manager",
-    <StatusBadge tone="success" key="s4">
-      Đang hoạt động
-    </StatusBadge>,
-    <RowMenu key="m4" />,
-  ],
-  [
-    <UserCell
-      key="u5"
-      initials="DN"
-      name="Đặng Khánh Ngân"
-      email="khanh.ngan@secura.vn"
-    />,
-    "SEC-0352",
-    "Vận hành",
-    "Asset Owner",
-    <StatusBadge tone="neutral" key="s5">
-      Tạm khóa
-    </StatusBadge>,
-    <RowMenu key="m5" />,
-  ],
-] as const;
+function UserCell({ name, email }: { name: string; email: string }) {
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(-2)
+    .join("")
+    .toUpperCase();
 
-function UserCell({
-  initials,
-  name,
-  email,
-}: {
-  initials: string;
-  name: string;
-  email: string;
-}) {
   return (
     <div className="flex items-center gap-3">
       <span className="bg-brand-soft text-brand grid size-9 shrink-0 place-items-center rounded-lg text-xs font-semibold">
@@ -108,76 +38,178 @@ function UserCell({
     </div>
   );
 }
+
 function RowMenu() {
   return (
     <button
-      aria-label="Tùy chọn người dùng"
+      aria-label="User options"
       className="text-muted hover:bg-neutral-soft grid size-8 place-items-center rounded-md"
+      type="button"
     >
       <MoreHorizontal className="size-4" />
     </button>
   );
 }
 
+function statusLabel(status: UserListResponse["items"][number]["status"]): string {
+  return {
+    active: "Active",
+    inactive: "Inactive",
+    locked: "Locked",
+    disabled: "Disabled",
+  }[status];
+}
+
+function statusTone(
+  status: UserListResponse["items"][number]["status"],
+): "success" | "warning" | "danger" | "neutral" {
+  if (status === "active") return "success";
+  if (status === "locked") return "warning";
+  if (status === "disabled") return "danger";
+  return "neutral";
+}
+
+function userRows(data: UserListResponse) {
+  return data.items.map((user) => [
+    <UserCell email={user.email} key={`${user.id}-user`} name={user.fullName} />,
+    user.employeeCode,
+    user.department?.name ?? "Not assigned",
+    user.roles.map((role) => role.name).join(", ") || "No role assigned",
+    <StatusBadge key={`${user.id}-status`} tone={statusTone(user.status)}>
+      {statusLabel(user.status)}
+    </StatusBadge>,
+    <RowMenu key={`${user.id}-menu`} />,
+  ]);
+}
+
 export default function UsersPage() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const session = useSessionUser();
+  const isAdmin = session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+  const users = useUsers({ page: 1, limit: 20 }, session.isSuccess);
+
+  if (session.isPending) return <DashboardLoadingSkeleton variant="table" />;
+
+  if (session.isError || !session.data) {
+    return (
+      <>
+        <ProductPageHeader
+          title="User Management"
+          description="Manage user accounts, departments, roles, and access status across the organization."
+          showSampleNotice={false}
+        />
+        <EmptyState
+          title="Session expired"
+          description="Your session is no longer valid. Please sign in again and try again."
+        />
+      </>
+    );
+  }
+
+  if (users.isPending) return <DashboardLoadingSkeleton variant="table" />;
+
+  if (users.isError) {
+    return (
+      <>
+        <ProductPageHeader
+          title="User Management"
+          description="Manage user accounts, departments, roles, and access status across the organization."
+          showSampleNotice={false}
+        />
+        <EmptyState
+          title="Unable to load users"
+          description={
+            users.error instanceof Error
+              ? users.error.message
+              : "The user list could not be loaded from the backend. Please refresh and try again."
+          }
+        />
+      </>
+    );
+  }
+
+  const data = users.data;
+  const firstItem = data.pagination.total === 0
+    ? 0
+    : (data.pagination.page - 1) * data.pagination.limit + 1;
+  const lastItem = Math.min(
+    data.pagination.page * data.pagination.limit,
+    data.pagination.total,
+  );
+
   return (
     <>
       <ProductPageHeader
-        title="Quản lý người dùng"
-        description="Quản lý tài khoản, phòng ban, vai trò và trạng thái truy cập trong tổ chức."
-        primaryAction="Thêm người dùng"
-        secondaryAction="Xuất danh sách"
+        title="User Management"
+        description="Manage user accounts, departments, roles, and access status across the organization."
+        secondaryAction="Export list"
+        showSampleNotice={false}
+        {...(isAdmin
+          ? {
+              primaryAction: "Add user",
+              onPrimaryAction: () => setCreateOpen(true),
+            }
+          : {})}
       />
       <MetricStrip
+        ariaLabel="User summary"
         metrics={[
           {
-            label: "Tổng người dùng",
-            value: "248",
-            detail: "Dữ liệu mẫu",
+            label: "Total users",
+            value: String(data.pagination.total),
+            detail: "All accounts",
             tone: "brand",
           },
           {
-            label: "Đang hoạt động",
-            value: "231",
-            detail: "93,1% tài khoản",
+            label: "Active users",
+            value: String(data.summary.active),
+            detail: "Currently active",
             tone: "brand",
           },
           {
-            label: "Chờ xác minh",
-            value: "11",
-            detail: "Cần xử lý",
+            label: "Locked users",
+            value: String(data.summary.locked),
+            detail: "Needs attention",
             tone: "warning",
           },
           {
-            label: "Tạm khóa",
-            value: "6",
-            detail: "Theo chính sách",
+            label: "Disabled users",
+            value: String(data.summary.disabled),
+            detail: "Disabled accounts",
             tone: "neutral",
           },
         ]}
       />
       <ProductPanel
-        title="Danh sách người dùng"
-        description="Thông tin hiển thị chỉ dùng để duyệt thiết kế."
+        title="User list"
+        description="User accounts returned by the administration service."
       >
         <ProductToolbar
-          searchPlaceholder="Tìm theo tên, email, mã nhân viên"
-          filters={["Phòng ban", "Vai trò", "Trạng thái"]}
+          searchPlaceholder="Search by name, email, or employee code"
+          filters={["Department", "Role", "Status"]}
         />
-        <StaticTable
-          caption="Danh sách người dùng mẫu"
-          headers={[
-            "Người dùng",
-            "Mã nhân viên",
-            "Phòng ban",
-            "Vai trò",
-            "Trạng thái",
-            "",
-          ]}
-          rows={rows}
+        {data.items.length === 0 ? (
+          <EmptyState
+            title="No users found"
+            description="There are no user accounts matching the current request."
+          />
+        ) : (
+          <StaticTable
+            caption="User list"
+            headers={["User", "Employee code", "Department", "Role", "Status", ""]}
+            rows={userRows(data)}
+          />
+        )}
+        <PaginationBar
+          label={`Showing ${firstItem}-${lastItem} of ${data.pagination.total} users`}
         />
-        <PaginationBar label="Hiển thị 1-5 trong 248 người dùng mẫu" />
       </ProductPanel>
+      {isAdmin ? (
+        <CreateUserDialog
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
