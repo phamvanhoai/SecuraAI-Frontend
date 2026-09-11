@@ -65,6 +65,7 @@ export function PolicyPublicationManager() {
   const [effectiveDate, setEffectiveDate] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const policies = usePublishablePolicies(query);
+  const metricPolicies = usePublishablePolicies(initialQuery);
   const review = usePolicyReview(
     selected?.policyId ?? null,
     selected?.versionId ?? null,
@@ -178,11 +179,11 @@ export function PolicyPublicationManager() {
     }
   }
 
-  const total = policies.data?.pagination.total ?? 0;
-  const pageItems = policies.data?.items ?? [];
-  const describedCount = pageItems.filter((item) => item.description).length;
+  const total = metricPolicies.data?.pagination.total ?? 0;
+  const metricItems = metricPolicies.data?.items ?? [];
+  const describedCount = metricItems.filter((item) => item.description).length;
   const ownerCount = new Set(
-    pageItems.flatMap((item) => (item.ownerUserId ? [item.ownerUserId] : [])),
+    metricItems.flatMap((item) => (item.ownerUserId ? [item.ownerUserId] : [])),
   ).size;
   return (
     <>
@@ -199,28 +200,28 @@ export function PolicyPublicationManager() {
             value: String(total),
             detail: "Draft versions ready for review",
             tone: "warning",
-            loading: policies.isPending,
+            loading: metricPolicies.isPending,
           },
           {
             label: "On this page",
-            value: String(pageItems.length),
-            detail: `Up to ${query.limit} policy drafts`,
+            value: String(metricItems.length),
+            detail: `Up to ${initialQuery.limit} unfiltered policy drafts`,
             tone: "neutral",
-            loading: policies.isPending,
+            loading: metricPolicies.isPending,
           },
           {
             label: "With description",
             value: String(describedCount),
-            detail: "On the current page",
+            detail: "On the unfiltered overview",
             tone: "neutral",
-            loading: policies.isPending,
+            loading: metricPolicies.isPending,
           },
           {
             label: "Draft owners",
             value: String(ownerCount),
-            detail: "Unique owners on this page",
+            detail: "Unique owners in the unfiltered overview",
             tone: "neutral",
-            loading: policies.isPending,
+            loading: metricPolicies.isPending,
           },
         ]}
       />
