@@ -17,41 +17,54 @@ export function Skeleton({
 export function TableSkeleton({
   rows = 4,
   columns = 5,
+  headers,
   label = "Loading data",
 }: {
   rows?: number;
   columns?: number;
+  headers?: readonly string[];
   label?: string;
 }) {
+  const columnHeaders = headers ?? Array.from({ length: columns }, () => "");
   return (
     <div
       aria-label={label}
       aria-busy="true"
       role="status"
-      className="border-border overflow-hidden rounded-xl border"
+      className="border-border overflow-x-auto rounded-xl border"
     >
       <span className="sr-only">{label}</span>
-      <div
-        className="bg-neutral-soft grid h-11 gap-4 px-4"
-        style={{ gridTemplateColumns: `repeat(${columns}, minmax(6rem, 1fr))` }}
-      >
-        {Array.from({ length: columns }, (_, index) => (
-          <Skeleton className="bg-surface/70 my-3 h-4" key={index} />
-        ))}
-      </div>
-      {Array.from({ length: rows }, (_, row) => (
-        <div
-          className="border-border grid h-16 gap-4 border-t px-4"
-          style={{
-            gridTemplateColumns: `repeat(${columns}, minmax(6rem, 1fr))`,
-          }}
-          key={row}
-        >
-          {Array.from({ length: columns }, (_, column) => (
-            <Skeleton className="my-auto h-4" key={column} />
+      <table className="w-full border-collapse text-left text-sm">
+        <thead className="bg-neutral-soft">
+          <tr>
+            {columnHeaders.map((header, index) => (
+              <th
+                className="px-4 py-3 font-semibold"
+                key={`${header}-${index}`}
+                scope="col"
+              >
+                {header || <Skeleton className="bg-surface/70 h-4" />}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }, (_, row) => (
+            <tr className="border-border h-16 border-t" key={row}>
+              {columnHeaders.map((header, column) => (
+                <td
+                  className="px-4 py-3 align-middle"
+                  key={`${header}-${column}`}
+                >
+                  <Skeleton
+                    className={column === 0 ? "h-8 min-w-40" : "h-4 min-w-16"}
+                  />
+                </td>
+              ))}
+            </tr>
           ))}
-        </div>
-      ))}
+        </tbody>
+      </table>
     </div>
   );
 }

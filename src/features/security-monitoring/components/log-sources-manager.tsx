@@ -318,7 +318,18 @@ export function LogSourcesManager() {
         </form>
         <div className="p-4">
           {sources.isPending ? (
-            <TableSkeleton columns={6} label="Loading log sources" />
+            <TableSkeleton
+              headers={[
+                "Log source",
+                "Format",
+                "Status",
+                "Asset",
+                "Last received",
+                "Actions",
+              ]}
+              label="Loading log sources"
+              rows={skeletonRows(metrics.data?.total)}
+            />
           ) : sources.isError ? (
             <Alert>
               Unable to load log sources. Check your session and backend
@@ -560,4 +571,8 @@ export function LogSourcesManager() {
       ) : null}
     </>
   );
+}
+
+function skeletonRows(total: number | undefined): number {
+  return total === undefined ? 4 : Math.max(1, Math.min(total, 20));
 }
