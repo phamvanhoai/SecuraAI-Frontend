@@ -25,7 +25,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const panel = getPanelKind(pathname);
   const session = useSessionUser();
-  const canReadAssets = session.data?.permissions.includes("assets.read") ?? false;
+  const canReadAssets =
+    session.data?.permissions.includes("assets.read") ?? false;
   const navigation = getPanelNavigation(panel).filter(
     (item) => !item.href.endsWith("/assets") || canReadAssets,
   );
