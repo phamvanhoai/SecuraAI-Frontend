@@ -44,7 +44,7 @@ function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("vi-VN", {
+  return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -98,7 +98,7 @@ export function PolicyDraftsManager() {
     () => [
       {
         key: "policy",
-        header: "Chính sách",
+        header: "Policy",
         cell: (draft) => (
           <span className="block min-w-56">
             <strong className="block">{draft.title}</strong>
@@ -108,19 +108,19 @@ export function PolicyDraftsManager() {
       },
       {
         key: "version",
-        header: "Phiên bản",
+        header: "Version",
         cell: (draft) => (
           <span className="tabular-nums">v{draft.version.versionNumber}</span>
         ),
       },
       {
         key: "status",
-        header: "Trạng thái",
-        cell: () => <StatusBadge tone="neutral">Bản nháp</StatusBadge>,
+        header: "Status",
+        cell: () => <StatusBadge tone="neutral">Draft</StatusBadge>,
       },
       {
         key: "updated",
-        header: "Cập nhật",
+        header: "Updated",
         cell: (draft) => (
           <span className="whitespace-nowrap">
             {formatDate(draft.updatedAt)}
@@ -129,13 +129,13 @@ export function PolicyDraftsManager() {
       },
       {
         key: "actions",
-        header: "Thao tác",
+        header: "Actions",
         cell: (draft) => (
           <DropdownMenu
             className="w-fit"
             label={
               <span className="grid size-6 place-items-center">
-                <span className="sr-only">Thao tác cho {draft.title}</span>
+                <span className="sr-only">Actions for {draft.title}</span>
                 <Ellipsis
                   className="size-5"
                   strokeWidth={1.8}
@@ -156,7 +156,7 @@ export function PolicyDraftsManager() {
               type="button"
             >
               <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Xem chi tiết
+              View details
             </button>
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
@@ -167,7 +167,7 @@ export function PolicyDraftsManager() {
               type="button"
             >
               <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Chỉnh sửa
+              Edit
             </button>
           </DropdownMenu>
         ),
@@ -179,16 +179,18 @@ export function PolicyDraftsManager() {
   if (session.isPending)
     return (
       <p className="text-muted py-10 text-center">
-        Đang kiểm tra quyền truy cập…
+        Checking access permissions…
       </p>
     );
   if (!canManageDrafts) {
     return (
       <Alert>
         <strong className="block">
-          Bạn không có quyền quản lý bản nháp chính sách
+          You do not have permission to manage policy drafts
         </strong>
-        <span>Liên hệ quản trị viên để được cấp quyền policies.create.</span>
+        <span>
+          Contact an administrator to request the policies.create permission.
+        </span>
       </Alert>
     );
   }
@@ -196,37 +198,37 @@ export function PolicyDraftsManager() {
   return (
     <>
       <ProductPageHeader
-        description="Soạn thảo và cập nhật các chính sách do bạn phụ trách trước khi gửi xuất bản."
+        description="Create and update the policies you own before they are submitted for publication."
         onPrimaryAction={() => setCreateOpen(true)}
-        primaryAction="Tạo bản nháp"
+        primaryAction="Create draft"
         showSampleNotice={false}
-        title="Bản nháp chính sách ATTT"
+        title="Information Security Policy Drafts"
       />
       <MetricStrip
-        ariaLabel="Chỉ số bản nháp chính sách"
+        ariaLabel="Policy draft metrics"
         metrics={[
           {
-            label: "Tổng bản nháp",
+            label: "Total drafts",
             value: drafts.data ? String(drafts.data.pagination.total) : "—",
-            detail: "Trả về từ backend",
+            detail: "Returned by the backend",
             tone: "brand",
           },
           {
-            label: "Trên trang này",
+            label: "On this page",
             value: drafts.data ? String(items.length) : "—",
-            detail: `Tối đa ${query.limit} bản nháp`,
+            detail: `Up to ${query.limit} drafts`,
             tone: "neutral",
           },
           {
-            label: "Có mô tả",
+            label: "With description",
             value: drafts.data ? String(describedCount) : "—",
-            detail: "Trên trang này",
+            detail: "On this page",
             tone: "neutral",
           },
           {
-            label: "Có ghi chú thay đổi",
+            label: "With change summary",
             value: drafts.data ? String(documentedChangesCount) : "—",
-            detail: "Trên trang này",
+            detail: "On this page",
             tone: "neutral",
           },
         ]}
@@ -234,18 +236,18 @@ export function PolicyDraftsManager() {
       <ProductPanel
         description={
           drafts.data
-            ? `${drafts.data.pagination.total} bản nháp được tìm thấy`
-            : "Đang tải dữ liệu backend"
+            ? `${drafts.data.pagination.total} drafts found`
+            : "Loading backend data"
         }
-        title="Danh sách bản nháp"
+        title="Draft list"
       >
         <form
-          aria-label="Bộ lọc bản nháp"
+          aria-label="Draft filters"
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submitSearch}
         >
           <label className="relative block w-full sm:max-w-md">
-            <span className="sr-only">Tìm theo mã hoặc tên chính sách</span>
+            <span className="sr-only">Search by policy code or title</span>
             <Search
               className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
               strokeWidth={1.8}
@@ -254,13 +256,13 @@ export function PolicyDraftsManager() {
             <Input
               className="bg-background min-h-10 pl-9"
               maxLength={100}
-              placeholder="Tìm theo mã hoặc tên chính sách"
+              placeholder="Search by policy code or title"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
           <Select
-            aria-label="Thứ tự cập nhật"
+            aria-label="Updated date order"
             className="min-h-10 sm:w-48"
             value={query.sortOrder}
             onChange={(event) =>
@@ -270,37 +272,35 @@ export function PolicyDraftsManager() {
               })
             }
           >
-            <option value="desc">Mới cập nhật trước</option>
-            <option value="asc">Cũ cập nhật trước</option>
+            <option value="desc">Recently updated first</option>
+            <option value="asc">Oldest updated first</option>
           </Select>
           <Button className="min-h-10" type="submit">
-            Tìm kiếm
+            Search
           </Button>
         </form>
         <div className="p-4">
           {drafts.isPending ? <DraftTableSkeleton /> : null}
           {drafts.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
-              <strong className="block">
-                Không thể tải danh sách bản nháp
-              </strong>
+              <strong className="block">Unable to load policy drafts</strong>
               <span>
                 {drafts.error instanceof Error
                   ? drafts.error.message
-                  : "Kiểm tra kết nối backend rồi thử lại."}
+                  : "Check the backend connection and try again."}
               </span>
               <Button
                 className="mt-3"
                 variant="secondary"
                 onClick={() => void drafts.refetch()}
               >
-                Thử lại
+                Try again
               </Button>
             </Alert>
           ) : null}
           {drafts.data && drafts.data.items.length === 0 ? (
             <p className="text-muted py-10 text-center">
-              Không tìm thấy bản nháp chính sách.
+              No policy drafts found.
             </p>
           ) : null}
           {drafts.data && drafts.data.items.length > 0 ? (
@@ -349,11 +349,7 @@ export function PolicyDraftsManager() {
 
 function DraftTableSkeleton() {
   return (
-    <div
-      aria-label="Đang tải danh sách bản nháp"
-      className="space-y-3"
-      role="status"
-    >
+    <div aria-label="Loading policy drafts" className="space-y-3" role="status">
       {[1, 2, 3].map((row) => (
         <div
           className="bg-neutral-soft h-14 animate-pulse rounded-lg motion-reduce:animate-none"
@@ -390,7 +386,7 @@ function PolicyDraftDetailDialog({
     <Dialog
       dialogRef={dialogRef}
       className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
-      title="Chi tiết bản nháp"
+      title="Draft details"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -398,11 +394,13 @@ function PolicyDraftDetailDialog({
       onClose={onClose}
     >
       {pending ? (
-        <p className="text-muted py-10 text-center">Đang tải nội dung…</p>
+        <p className="text-muted py-10 text-center">Loading content…</p>
       ) : null}
       {error ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">
-          {error instanceof Error ? error.message : "Không thể tải bản nháp."}
+          {error instanceof Error
+            ? error.message
+            : "Unable to load the policy draft."}
         </Alert>
       ) : null}
       {draft ? (
@@ -414,26 +412,25 @@ function PolicyDraftDetailDialog({
                 {draft.policyCode}
               </p>
             </div>
-            <StatusBadge tone="neutral">Bản nháp</StatusBadge>
+            <StatusBadge tone="neutral">Draft</StatusBadge>
           </div>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            <Detail label="Mã chính sách" value={draft.policyCode} />
-            <Detail
-              label="Phiên bản"
-              value={`v${draft.version.versionNumber}`}
-            />
-            <Detail label="Ngày tạo" value={formatDate(draft.createdAt)} />
-            <Detail label="Cập nhật" value={formatDate(draft.updatedAt)} />
+            <Detail label="Policy code" value={draft.policyCode} />
+            <Detail label="Version" value={`v${draft.version.versionNumber}`} />
+            <Detail label="Created" value={formatDate(draft.createdAt)} />
+            <Detail label="Updated" value={formatDate(draft.updatedAt)} />
           </dl>
           <div>
-            <p className="text-muted text-xs font-semibold uppercase">Mô tả</p>
+            <p className="text-muted text-xs font-semibold uppercase">
+              Description
+            </p>
             <p className="mt-1 text-sm leading-6">
-              {draft.description || "Không có mô tả"}
+              {draft.description || "No description"}
             </p>
           </div>
           <div>
             <p className="text-muted text-xs font-semibold uppercase">
-              Nội dung
+              Content
             </p>
             <pre className="border-border bg-background mt-2 max-h-80 overflow-auto rounded-lg border p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
               {draft.version.content}
@@ -443,12 +440,12 @@ function PolicyDraftDetailDialog({
       ) : null}
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>
-          Đóng
+          Close
         </Button>
         {draft ? (
           <Button onClick={() => onEdit(draft)}>
             <Pencil className="size-4" aria-hidden="true" />
-            Chỉnh sửa
+            Edit
           </Button>
         ) : null}
       </div>

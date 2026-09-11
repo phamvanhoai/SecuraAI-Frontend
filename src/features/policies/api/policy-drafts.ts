@@ -45,7 +45,7 @@ export async function listPolicyDrafts(
   return parseContract(
     policyDraftListSchema,
     data,
-    "Phản hồi danh sách bản nháp không đúng định dạng.",
+    "The policy draft list response has an invalid format.",
   );
 }
 
@@ -61,7 +61,7 @@ export async function getPolicyDraft(
   return parseContract(
     ownedPolicyDraftSchema,
     data,
-    "Phản hồi chi tiết bản nháp không đúng định dạng.",
+    "The policy draft detail response has an invalid format.",
   );
 }
 
@@ -76,7 +76,7 @@ export async function createPolicyDraft(
   return parseContract(
     createdPolicyDraftSchema,
     data,
-    "Phản hồi tạo bản nháp không đúng định dạng.",
+    "The create policy draft response has an invalid format.",
   );
 }
 
@@ -92,6 +92,6 @@ export async function updatePolicyDraft(
   return parseContract(
     ownedPolicyDraftSchema,
     data,
-    "Phản hồi cập nhật bản nháp không đúng định dạng.",
+    "The update policy draft response has an invalid format.",
   );
 }

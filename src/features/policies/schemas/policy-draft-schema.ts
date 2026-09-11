@@ -3,11 +3,11 @@ import { z } from "zod";
 const policyCodeSchema = z
   .string()
   .trim()
-  .min(2, "Mã chính sách phải có ít nhất 2 ký tự.")
-  .max(50, "Mã chính sách không được vượt quá 50 ký tự.")
+  .min(2, "Policy code must contain at least 2 characters.")
+  .max(50, "Policy code must not exceed 50 characters.")
   .regex(
     /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
-    "Mã chỉ được chứa chữ, số, dấu chấm, gạch dưới và gạch ngang.",
+    "Policy code may only contain letters, numbers, periods, underscores, and hyphens.",
   )
   .transform((value) => value.toUpperCase());
 
@@ -16,23 +16,23 @@ export const createPolicyDraftSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(3, "Tên chính sách phải có ít nhất 3 ký tự.")
-    .max(255, "Tên chính sách không được vượt quá 255 ký tự."),
+    .min(3, "Policy title must contain at least 3 characters.")
+    .max(255, "Policy title must not exceed 255 characters."),
   description: z
     .string()
     .trim()
-    .max(2_000, "Mô tả không được vượt quá 2.000 ký tự.")
+    .max(2_000, "Description must not exceed 2,000 characters.")
     .optional(),
   versionNumber: z
     .string()
     .trim()
-    .min(1, "Phiên bản là bắt buộc.")
-    .max(30, "Phiên bản không được vượt quá 30 ký tự."),
+    .min(1, "Version is required.")
+    .max(30, "Version must not exceed 30 characters."),
   content: z
     .string()
     .trim()
-    .min(1, "Nội dung chính sách là bắt buộc.")
-    .max(500_000, "Nội dung chính sách quá dài."),
+    .min(1, "Policy content is required.")
+    .max(500_000, "Policy content is too long."),
 });
 
 export const updatePolicyDraftSchema = createPolicyDraftSchema
@@ -41,13 +41,13 @@ export const updatePolicyDraftSchema = createPolicyDraftSchema
     description: z
       .string()
       .trim()
-      .max(2_000, "Mô tả không được vượt quá 2.000 ký tự.")
+      .max(2_000, "Description must not exceed 2,000 characters.")
       .nullable()
       .optional(),
     changeSummary: z
       .string()
       .trim()
-      .max(5_000, "Tóm tắt thay đổi không được vượt quá 5.000 ký tự.")
+      .max(5_000, "Change summary must not exceed 5,000 characters.")
       .nullable()
       .optional(),
   });

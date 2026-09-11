@@ -73,7 +73,7 @@ function CreateDraftDialog({
     if (
       isDirty &&
       !mutation.isPending &&
-      !window.confirm("Bỏ các nội dung chưa lưu?")
+      !window.confirm("Discard unsaved content?")
     )
       return;
     reset(createDefaults);
@@ -87,14 +87,14 @@ function CreateDraftDialog({
       reset(createDefaults);
       onClose();
       toast.success(
-        "Đã tạo bản nháp",
+        "Policy draft created",
         `${created.policyCode} – ${created.title}`,
       );
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Không thể tạo bản nháp. Vui lòng thử lại.",
+          : "Unable to create the policy draft. Please try again.",
       );
     }
   };
@@ -103,7 +103,7 @@ function CreateDraftDialog({
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
-      title="Tạo bản nháp chính sách"
+      title="Create policy draft"
       onCancel={(event) => {
         event.preventDefault();
         close();
@@ -119,7 +119,7 @@ function CreateDraftDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             id="policyCode"
-            label="Mã chính sách"
+            label="Policy code"
             error={errors.policyCode?.message}
           >
             <Input
@@ -134,7 +134,7 @@ function CreateDraftDialog({
           </FormField>
           <FormField
             id="versionNumber"
-            label="Phiên bản"
+            label="Version"
             error={errors.versionNumber?.message}
           >
             <Input
@@ -150,7 +150,7 @@ function CreateDraftDialog({
         </div>
         <FormField
           id="title"
-          label="Tên chính sách"
+          label="Policy title"
           error={errors.title?.message}
         >
           <Input
@@ -162,7 +162,7 @@ function CreateDraftDialog({
         </FormField>
         <FormField
           id="description"
-          label="Mô tả"
+          label="Description"
           error={errors.description?.message}
         >
           <Textarea
@@ -174,7 +174,7 @@ function CreateDraftDialog({
         </FormField>
         <FormField
           id="content"
-          label="Nội dung chính sách"
+          label="Policy content"
           error={errors.content?.message}
         >
           <Textarea
@@ -192,10 +192,10 @@ function CreateDraftDialog({
             disabled={mutation.isPending}
             onClick={close}
           >
-            Hủy
+            Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Đang tạo…" : "Tạo bản nháp"}
+            {mutation.isPending ? "Creating…" : "Create draft"}
           </Button>
         </div>
       </form>
@@ -251,7 +251,7 @@ function EditDraftDialog({
     if (
       isDirty &&
       !mutation.isPending &&
-      !window.confirm("Bỏ các thay đổi chưa lưu?")
+      !window.confirm("Discard unsaved changes?")
     )
       return;
     setMessage(undefined);
@@ -267,12 +267,12 @@ function EditDraftDialog({
       });
       reset(values);
       onClose();
-      toast.success("Đã cập nhật bản nháp", draft.policyCode);
+      toast.success("Policy draft updated", draft.policyCode);
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Không thể cập nhật bản nháp. Vui lòng thử lại.",
+          : "Unable to update the policy draft. Please try again.",
       );
     }
   };
@@ -281,7 +281,7 @@ function EditDraftDialog({
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
-      title={`Chỉnh sửa ${draft.policyCode}`}
+      title={`Edit ${draft.policyCode}`}
       onCancel={(event) => {
         event.preventDefault();
         close();
@@ -296,7 +296,7 @@ function EditDraftDialog({
         ) : null}
         <FormField
           id="edit-versionNumber"
-          label="Phiên bản"
+          label="Version"
           error={errors.versionNumber?.message}
         >
           <Input
@@ -308,7 +308,7 @@ function EditDraftDialog({
         </FormField>
         <FormField
           id="edit-title"
-          label="Tên chính sách"
+          label="Policy title"
           error={errors.title?.message}
         >
           <Input
@@ -320,7 +320,7 @@ function EditDraftDialog({
         </FormField>
         <FormField
           id="edit-description"
-          label="Mô tả"
+          label="Description"
           error={errors.description?.message}
         >
           <Textarea
@@ -332,7 +332,7 @@ function EditDraftDialog({
         </FormField>
         <FormField
           id="edit-content"
-          label="Nội dung chính sách"
+          label="Policy content"
           error={errors.content?.message}
         >
           <Textarea
@@ -345,7 +345,7 @@ function EditDraftDialog({
         </FormField>
         <FormField
           id="edit-changeSummary"
-          label="Tóm tắt thay đổi"
+          label="Change summary"
           error={errors.changeSummary?.message}
         >
           <Textarea
@@ -362,10 +362,10 @@ function EditDraftDialog({
             disabled={mutation.isPending}
             onClick={close}
           >
-            Hủy
+            Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Đang lưu…" : "Lưu thay đổi"}
+            {mutation.isPending ? "Saving…" : "Save changes"}
           </Button>
         </div>
       </form>

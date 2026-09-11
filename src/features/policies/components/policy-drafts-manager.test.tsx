@@ -71,14 +71,16 @@ describe("PolicyDraftsManager", () => {
     render(<PolicyDraftsManager />);
 
     expect(
-      screen.getByRole("heading", { name: "Bản nháp chính sách ATTT" }),
+      screen.getByRole("heading", {
+        name: "Information Security Policy Drafts",
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("POL-SEC-001")).toBeInTheDocument();
     expect(
       screen.getByText("Chính sách an toàn thông tin"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Tạo bản nháp" }),
+      screen.getByRole("button", { name: "Create draft" }),
     ).toBeInTheDocument();
   });
 
@@ -91,7 +93,7 @@ describe("PolicyDraftsManager", () => {
     render(<PolicyDraftsManager />);
 
     expect(
-      screen.getByText("Bạn không có quyền quản lý bản nháp chính sách"),
+      screen.getByText("You do not have permission to manage policy drafts"),
     ).toBeInTheDocument();
     expect(screen.queryByText("POL-SEC-001")).not.toBeInTheDocument();
     expect(mocks.usePolicyDrafts).toHaveBeenCalledWith(
