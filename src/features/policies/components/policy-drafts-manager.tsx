@@ -43,6 +43,8 @@ function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
   return parsed.success ? parsed.data : policyDraftQuerySchema.parse({});
 }
 
+const overviewQuery = policyDraftQuerySchema.parse({});
+
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
@@ -59,6 +61,7 @@ export function PolicyDraftsManager() {
   const canManageDrafts =
     session.data?.permissions.includes("policies.create") ?? false;
   const drafts = usePolicyDrafts(query, canManageDrafts);
+  const metricDrafts = usePolicyDrafts(overviewQuery, canManageDrafts);
   const [search, setSearch] = useState(query.q ?? "");
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<{
@@ -70,9 +73,11 @@ export function PolicyDraftsManager() {
     selected?.policyId ?? null,
     selected?.versionId ?? null,
   );
-  const items = drafts.data?.items ?? [];
-  const describedCount = items.filter((draft) => draft.description).length;
-  const documentedChangesCount = items.filter(
+  const metricItems = metricDrafts.data?.items ?? [];
+  const describedCount = metricItems.filter(
+    (draft) => draft.description,
+  ).length;
+  const documentedChangesCount = metricItems.filter(
     (draft) => draft.version.changeSummary,
   ).length;
 
@@ -209,26 +214,28 @@ export function PolicyDraftsManager() {
         metrics={[
           {
             label: "Total drafts",
-            value: drafts.data ? String(drafts.data.pagination.total) : "—",
+            value: metricDrafts.data
+              ? String(metricDrafts.data.pagination.total)
+              : "—",
             detail: "Returned by the backend",
             tone: "brand",
           },
           {
             label: "On this page",
-            value: drafts.data ? String(items.length) : "—",
-            detail: `Up to ${query.limit} drafts`,
+            value: metricDrafts.data ? String(metricItems.length) : "—",
+            detail: `Up to ${overviewQuery.limit} unfiltered drafts`,
             tone: "neutral",
           },
           {
             label: "With description",
-            value: drafts.data ? String(describedCount) : "—",
-            detail: "On this page",
+            value: metricDrafts.data ? String(describedCount) : "—",
+            detail: "On the unfiltered overview",
             tone: "neutral",
           },
           {
             label: "With change summary",
-            value: drafts.data ? String(documentedChangesCount) : "—",
-            detail: "On this page",
+            value: metricDrafts.data ? String(documentedChangesCount) : "—",
+            detail: "On the unfiltered overview",
             tone: "neutral",
           },
         ]}

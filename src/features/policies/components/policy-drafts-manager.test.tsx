@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolicyDraftsManager } from "./policy-drafts-manager";
 
@@ -6,12 +6,13 @@ const mocks = vi.hoisted(() => ({
   useSessionUser: vi.fn(),
   usePolicyDrafts: vi.fn(),
   usePolicyDraft: vi.fn(),
+  searchParams: "",
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/policies",
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(mocks.searchParams),
 }));
 vi.mock("@/features/auth", () => ({ useSessionUser: mocks.useSessionUser }));
 vi.mock("../hooks/use-policy-drafts", () => ({
@@ -26,6 +27,7 @@ afterEach(cleanup);
 
 describe("PolicyDraftsManager", () => {
   beforeEach(() => {
+    mocks.searchParams = "";
     mocks.usePolicyDraft.mockReturnValue({
       data: undefined,
       isPending: false,
@@ -38,14 +40,14 @@ describe("PolicyDraftsManager", () => {
             policyId: "00000000-0000-4000-8000-000000000010",
             policyCode: "POL-SEC-001",
             title: "Chính sách an toàn thông tin",
-            description: null,
+            description: "Corporate security requirements",
             ownerUserId: null,
             policyStatus: "draft",
             version: {
               id: "00000000-0000-4000-8000-000000000020",
               versionNumber: "1.0",
               content: "Nội dung",
-              changeSummary: null,
+              changeSummary: "Initial draft",
               status: "draft",
               createdByUserId: null,
               createdAt: "2026-09-11T00:00:00.000Z",
@@ -100,5 +102,34 @@ describe("PolicyDraftsManager", () => {
       { page: 1, limit: 20, sortOrder: "desc" },
       false,
     );
+  });
+
+  it("keeps overview metrics when filtered drafts are empty", () => {
+    mocks.searchParams = "q=does-not-exist";
+    mocks.useSessionUser.mockReturnValue({
+      data: { permissions: ["policies.create"] },
+      isPending: false,
+    });
+    const overviewResult = mocks.usePolicyDrafts();
+    mocks.usePolicyDrafts
+      .mockReset()
+      .mockReturnValueOnce({
+        data: {
+          items: [],
+          pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        },
+        isPending: false,
+        isError: false,
+        refetch: vi.fn(),
+      })
+      .mockReturnValue(overviewResult);
+
+    render(<PolicyDraftsManager />);
+
+    expect(screen.getByText("No policy drafts found.")).toBeInTheDocument();
+    const metrics = screen.getByRole("region", {
+      name: "Policy draft metrics",
+    });
+    expect(within(metrics).getAllByText("1")).toHaveLength(4);
   });
 });
