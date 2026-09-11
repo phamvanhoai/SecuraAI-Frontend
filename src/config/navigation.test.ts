@@ -23,6 +23,7 @@ describe("panel navigation", () => {
 
   it("limits modules exposed by each specialist panel", () => {
     expect(panelHasModule("security-officer", "risks")).toBe(true);
+    expect(panelHasModule("security-officer", "policies")).toBe(true);
     expect(panelHasModule("security-officer", "users")).toBe(false);
     expect(panelHasModule("executive-auditor", "audits")).toBe(true);
     expect(panelHasModule("executive-auditor", "ai-models")).toBe(false);

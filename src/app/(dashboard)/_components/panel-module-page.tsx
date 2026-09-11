@@ -50,6 +50,7 @@ export function PanelModulePage({
   module: string;
 }) {
   if (!panelHasModule(panel, module) || !(module in modulePages)) notFound();
+
   const Page = modulePages[module as keyof typeof modulePages];
   return <Page />;
 }
