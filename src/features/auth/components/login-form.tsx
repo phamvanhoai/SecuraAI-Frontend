@@ -26,7 +26,20 @@ export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
     setMessage(undefined);
     try {
       await login(values);
-      window.location.assign(returnUrl);
+      const response = await fetch("/api/auth/session", { cache: "no-store" });
+      const payload = (await response.json().catch(() => undefined)) as
+        | { data?: { user?: { roles?: Array<{ code: string }> } } }
+        | undefined;
+      const roles = payload?.data?.user?.roles ?? [];
+      const defaultPanel = roles.some((role) => role.code === "ADMIN")
+        ? "/admin"
+        : roles.some((role) => role.code === "SECURITY_OFFICER")
+          ? "/security-officer"
+          : roles.some((role) => role.code === "EXECUTIVE_AUDITOR")
+            ? "/executive-auditor"
+            : "/employee";
+      const destination = returnUrl === "/admin" ? defaultPanel : returnUrl;
+      window.location.assign(destination);
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
