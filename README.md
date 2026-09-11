@@ -14,13 +14,13 @@ Copy-Item .env.example .env.local
 pnpm dev
 ```
 
-Mở `http://localhost:3000`. Các lệnh kiểm tra: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`.
+Mở `http://localhost:3001`. Backend API mặc định chạy tại `http://localhost:3000/api/v1`. Các lệnh kiểm tra: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`.
 
 ## Environment
 
 ```dotenv
 NEXT_PUBLIC_APP_NAME=SecuraAI
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
 ```
 
 Chỉ cấu hình công khai mới được đặt trong `NEXT_PUBLIC_*`; không đặt token hoặc secret tại đây.
