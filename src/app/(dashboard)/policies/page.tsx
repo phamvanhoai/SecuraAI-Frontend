@@ -3,15 +3,25 @@
 import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
-import { PolicyDraftsManager, PolicyPublicationManager } from "@/features/policies";
+import {
+  PolicyDraftsManager,
+  PolicyPublicationManager,
+} from "@/features/policies";
 
 export default function Page() {
   const session = useSessionUser();
-  const canCreateDrafts = session.data?.permissions.includes("policies.create") ?? false;
-  const canPublish = session.data?.permissions.includes("policies.publish") ?? false;
+  const canCreateDrafts =
+    session.data?.permissions.includes("policies.create") ?? false;
+  const canPublish =
+    session.data?.permissions.includes("policies.publish") ?? false;
 
   if (session.isPending) {
-    return <div aria-label="Loading policy management" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />;
+    return (
+      <div
+        aria-label="Loading policy management"
+        className="bg-neutral-soft h-56 animate-pulse rounded-xl"
+      />
+    );
   }
 
   if (canCreateDrafts) return <PolicyDraftsManager />;
