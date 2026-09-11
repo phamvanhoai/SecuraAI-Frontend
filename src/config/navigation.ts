@@ -176,6 +176,7 @@ export const panelModules = {
     modules.risks,
     modules.incidents,
     modules.controls,
+    modules.policies,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,
@@ -238,16 +239,12 @@ export function getPanelNavigation(
 
   // Add direct-href items that are not panel-scoped
   if (panel === "admin") {
-    base.splice(
-      base.findIndex((i) => i.title === "Mô hình AI") + 1,
-      0,
-      {
-        title: "Sync Schedules",
-        href: "/integrations/schedules",
-        icon: CalendarClock,
-        section: "AI & Giám sát",
-      },
-    );
+    base.splice(base.findIndex((i) => i.title === "Mô hình AI") + 1, 0, {
+      title: "Sync Schedules",
+      href: "/integrations/schedules",
+      icon: CalendarClock,
+      section: "AI & Giám sát",
+    });
   }
 
   return base;
