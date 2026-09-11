@@ -13,7 +13,7 @@ export default function Page() {
   if (session.isPending) {
     return (
       <div
-        aria-label="Đang tải chức năng chính sách"
+        aria-label="Loading policy publication"
         className="bg-neutral-soft h-56 animate-pulse rounded-xl"
       />
     );
@@ -24,13 +24,13 @@ export default function Page() {
   return (
     <div className="space-y-5">
       <ProductPageHeader
-        description="Chức năng được giới hạn cho tài khoản có quyền xuất bản chính sách."
+        description="This function is restricted to accounts with policy publication permission."
         showSampleNotice={false}
-        title="Phê duyệt và xuất bản chính sách"
+        title="Publish official policy versions"
       />
       <EmptyState
-        description="Tài khoản hiện tại không có quyền policies.publish."
-        title="Bạn không có quyền xuất bản chính sách"
+        description="The current account does not have the policies.publish permission."
+        title="You do not have permission to publish policies"
       />
     </div>
   );
