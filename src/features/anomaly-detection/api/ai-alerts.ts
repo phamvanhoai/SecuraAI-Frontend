@@ -1,8 +1,14 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  aiAlertFeedbackSchema,
+  aiAlertFeedbackListSchema,
   aiAlertListSchema,
+  evaluateAiAlertReliabilitySchema,
+  type AiAlertFeedback,
+  type AiAlertFeedbackList,
   type AiAlertList,
   type AiAlertStatus,
+  type EvaluateAiAlertReliabilityRequest,
 } from "../schemas/ai-alert-schema";
 
 export type AiAlertQuery = {
@@ -29,6 +35,34 @@ export async function listAiAlerts(
     await apiRequest<unknown>("/api/ai-alerts", {
       target: "same-origin",
       query,
+      ...(signal ? { signal } : {}),
+    }),
+  );
+}
+
+export async function evaluateAiAlertReliability(
+  alertId: string,
+  input: EvaluateAiAlertReliabilityRequest,
+): Promise<AiAlertFeedback> {
+  const body = evaluateAiAlertReliabilitySchema.parse(input);
+  return aiAlertFeedbackSchema.parse(
+    await apiRequest<unknown>(`/api/ai-alerts/${alertId}/feedback`, {
+      method: "POST",
+      target: "same-origin",
+      body,
+    }),
+  );
+}
+
+export async function listAiAlertFeedback(
+  alertId: string,
+  page: number,
+  signal?: AbortSignal,
+): Promise<AiAlertFeedbackList> {
+  return aiAlertFeedbackListSchema.parse(
+    await apiRequest<unknown>(`/api/ai-alerts/${alertId}/feedback`, {
+      target: "same-origin",
+      query: { page, limit: 10, sortOrder: "desc" },
       ...(signal ? { signal } : {}),
     }),
   );

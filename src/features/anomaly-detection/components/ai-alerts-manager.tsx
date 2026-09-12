@@ -1,6 +1,13 @@
 "use client";
 
-import { Eye, RefreshCw, Search } from "lucide-react";
+import {
+  Ellipsis,
+  Eye,
+  History,
+  MessageSquareText,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   DataTable,
@@ -15,9 +22,11 @@ import {
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/auth";
 import { useAiAlertMetrics, useAiAlerts } from "../hooks/use-ai-alerts";
 import {
   aiAlertStatuses,
@@ -30,6 +39,8 @@ import {
   formatStatus,
   statusTone,
 } from "./ai-alert-detail-dialog";
+import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dialog";
+import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -40,6 +51,11 @@ export function AiAlertsManager() {
   const [status, setStatus] = useState<AiAlertStatus | "all">("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [viewing, setViewing] = useState<AiAlert | null>(null);
+  const [evaluating, setEvaluating] = useState<AiAlert | null>(null);
+  const [viewingFeedback, setViewingFeedback] = useState<AiAlert | null>(null);
+  const session = useSessionUser();
+  const canEvaluate =
+    session.data?.permissions.includes("ai-alerts.feedback") ?? false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
   const alerts = useAiAlerts({
     page,
@@ -99,15 +115,56 @@ export function AiAlertsManager() {
       key: "actions",
       header: "Actions",
       cell: (item) => (
-        <Button
-          aria-label={`View details for ${item.alertCode}`}
-          className="min-h-10 px-3"
-          onClick={() => setViewing(item)}
-          variant="secondary"
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-6 place-items-center">
+              <span className="sr-only">Actions for {item.alertCode}</span>
+              <Ellipsis
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.8}
+              />
+            </span>
+          }
         >
-          <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
-          <span className="sr-only sm:not-sr-only">View</span>
-        </Button>
+          <button
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={() => setViewing(item)}
+            type="button"
+          >
+            <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            View details
+          </button>
+          {canEvaluate ? (
+            <>
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setEvaluating(item)}
+                type="button"
+              >
+                <MessageSquareText
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Evaluate reliability
+              </button>
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setViewingFeedback(item)}
+                type="button"
+              >
+                <History
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                View feedback history
+              </button>
+            </>
+          ) : null}
+        </DropdownMenu>
       ),
     },
   ];
@@ -286,6 +343,14 @@ export function AiAlertsManager() {
         ) : null}
       </ProductPanel>
       <AiAlertDetailDialog alert={viewing} onClose={() => setViewing(null)} />
+      <EvaluateAlertReliabilityDialog
+        alert={evaluating}
+        onClose={() => setEvaluating(null)}
+      />
+      <AlertFeedbackHistoryDialog
+        alert={viewingFeedback}
+        onClose={() => setViewingFeedback(null)}
+      />
     </>
   );
 }
