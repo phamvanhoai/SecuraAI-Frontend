@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { aiAlertListSchema } from "./ai-alert-schema";
+import {
+  aiAlertFeedbackSchema,
+  aiAlertFeedbackListSchema,
+  aiAlertListSchema,
+  evaluateAiAlertReliabilitySchema,
+} from "./ai-alert-schema";
 
 const response = {
   items: [
@@ -46,5 +51,56 @@ describe("aiAlertListSchema", () => {
         items: [{ ...response.items[0], status: "open" }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("evaluateAiAlertReliabilitySchema", () => {
+  it("normalizes an empty optional comment", () => {
+    expect(
+      evaluateAiAlertReliabilitySchema.parse({
+        feedbackLabel: "confirmed_incident",
+        comment: "   ",
+      }),
+    ).toEqual({ feedbackLabel: "confirmed_incident", comment: undefined });
+  });
+
+  it("rejects a missing assessment and an oversized comment", () => {
+    expect(
+      evaluateAiAlertReliabilitySchema.safeParse({
+        feedbackLabel: "",
+        comment: "x".repeat(2001),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts the backend feedback response", () => {
+    expect(
+      aiAlertFeedbackSchema.safeParse({
+        id: "55555555-5555-4555-8555-555555555555",
+        alertId: "11111111-1111-4111-8111-111111111111",
+        reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+        feedbackLabel: "needs_review",
+        comment: null,
+        createdAt: "2026-09-13T03:00:00.000Z",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts paginated feedback including a system reviewer", () => {
+    expect(
+      aiAlertFeedbackListSchema.safeParse({
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            alertId: "11111111-1111-4111-8111-111111111111",
+            reviewedByUserId: null,
+            feedbackLabel: "false_positive",
+            comment: "Automated review",
+            createdAt: "2026-09-13T03:00:00.000Z",
+          },
+        ],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      }).success,
+    ).toBe(true);
   });
 });
