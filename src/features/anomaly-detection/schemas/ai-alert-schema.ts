@@ -87,7 +87,7 @@ export const aiAlertFeedbackListSchema = z.object({
   }),
 });
 
-export const markFalsePositiveSchema = z.object({
+export const confirmAiAlertSchema = z.object({
   comment: z
     .string()
     .trim()
@@ -95,6 +95,17 @@ export const markFalsePositiveSchema = z.object({
     .optional()
     .transform((value) => value || undefined),
 });
+
+export const confirmAiAlertResultSchema = z.object({
+  id: z.uuid(),
+  alertCode: z.string(),
+  status: z.literal("confirmed"),
+  reviewedByUserId: z.uuid().nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
+  changed: z.boolean(),
+});
+
+export const markFalsePositiveSchema = confirmAiAlertSchema;
 
 export const markFalsePositiveResultSchema = z.object({
   id: z.uuid(),
@@ -117,6 +128,9 @@ export type EvaluateAiAlertReliabilityRequest = z.output<
 >;
 export type AiAlertFeedback = z.infer<typeof aiAlertFeedbackSchema>;
 export type AiAlertFeedbackList = z.infer<typeof aiAlertFeedbackListSchema>;
+export type ConfirmAiAlertInput = z.input<typeof confirmAiAlertSchema>;
+export type ConfirmAiAlertRequest = z.output<typeof confirmAiAlertSchema>;
+export type ConfirmAiAlertResult = z.infer<typeof confirmAiAlertResultSchema>;
 export type MarkFalsePositiveInput = z.input<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveRequest = z.output<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveResult = z.infer<

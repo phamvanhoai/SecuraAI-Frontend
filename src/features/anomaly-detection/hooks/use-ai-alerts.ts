@@ -7,6 +7,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  confirmAiAlertAsIncident,
   evaluateAiAlertReliability,
   getAiAlertMetrics,
   listAiAlertFeedback,
@@ -15,6 +16,7 @@ import {
   type AiAlertQuery,
 } from "../api/ai-alerts";
 import type {
+  ConfirmAiAlertRequest,
   EvaluateAiAlertReliabilityRequest,
   MarkFalsePositiveRequest,
 } from "../schemas/ai-alert-schema";
@@ -67,6 +69,26 @@ export function useAiAlertMetrics() {
     queryFn: ({ signal }) => getAiAlertMetrics(signal),
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
+  });
+}
+
+export function useConfirmAiAlertAsIncident(alertId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ConfirmAiAlertRequest) => {
+      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      return confirmAiAlertAsIncident(alertId, input);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["ai-alerts", "feedback", alertId],
+        }),
+      ]);
+    },
+    retry: false,
   });
 }
 

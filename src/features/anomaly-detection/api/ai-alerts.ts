@@ -3,6 +3,8 @@ import {
   aiAlertFeedbackSchema,
   aiAlertFeedbackListSchema,
   aiAlertListSchema,
+  confirmAiAlertResultSchema,
+  confirmAiAlertSchema,
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveResultSchema,
   markFalsePositiveSchema,
@@ -10,6 +12,8 @@ import {
   type AiAlertFeedbackList,
   type AiAlertList,
   type AiAlertStatus,
+  type ConfirmAiAlertRequest,
+  type ConfirmAiAlertResult,
   type EvaluateAiAlertReliabilityRequest,
   type MarkFalsePositiveRequest,
   type MarkFalsePositiveResult,
@@ -69,6 +73,22 @@ export async function listAiAlertFeedback(
       query: { page, limit: 10, sortOrder: "desc" },
       ...(signal ? { signal } : {}),
     }),
+  );
+}
+
+export async function confirmAiAlertAsIncident(
+  alertId: string,
+  input: ConfirmAiAlertRequest,
+): Promise<ConfirmAiAlertResult> {
+  return confirmAiAlertResultSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/confirm-incident`,
+      {
+        method: "POST",
+        target: "same-origin",
+        body: confirmAiAlertSchema.parse(input),
+      },
+    ),
   );
 }
 
