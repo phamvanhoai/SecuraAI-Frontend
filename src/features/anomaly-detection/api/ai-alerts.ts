@@ -6,6 +6,8 @@ import {
   confirmAiAlertResultSchema,
   confirmAiAlertSchema,
   evaluateAiAlertReliabilitySchema,
+  markFalsePositiveResultSchema,
+  markFalsePositiveSchema,
   type AiAlertFeedback,
   type AiAlertFeedbackList,
   type AiAlertList,
@@ -13,6 +15,8 @@ import {
   type ConfirmAiAlertRequest,
   type ConfirmAiAlertResult,
   type EvaluateAiAlertReliabilityRequest,
+  type MarkFalsePositiveRequest,
+  type MarkFalsePositiveResult,
 } from "../schemas/ai-alert-schema";
 
 export type AiAlertQuery = {
@@ -83,6 +87,22 @@ export async function confirmAiAlertAsIncident(
         method: "POST",
         target: "same-origin",
         body: confirmAiAlertSchema.parse(input),
+      },
+    ),
+  );
+}
+
+export async function markAiAlertFalsePositive(
+  alertId: string,
+  input: MarkFalsePositiveRequest,
+): Promise<MarkFalsePositiveResult> {
+  return markFalsePositiveResultSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/false-positive`,
+      {
+        method: "POST",
+        target: "same-origin",
+        body: markFalsePositiveSchema.parse(input),
       },
     ),
   );

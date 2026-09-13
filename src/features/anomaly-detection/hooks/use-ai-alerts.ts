@@ -12,11 +12,13 @@ import {
   getAiAlertMetrics,
   listAiAlertFeedback,
   listAiAlerts,
+  markAiAlertFalsePositive,
   type AiAlertQuery,
 } from "../api/ai-alerts";
 import type {
   ConfirmAiAlertRequest,
   EvaluateAiAlertReliabilityRequest,
+  MarkFalsePositiveRequest,
 } from "../schemas/ai-alert-schema";
 
 export function useAiAlerts(query: AiAlertQuery) {
@@ -76,6 +78,26 @@ export function useConfirmAiAlertAsIncident(alertId: string | null) {
     mutationFn: (input: ConfirmAiAlertRequest) => {
       if (!alertId) throw new Error("The selected AI alert is unavailable.");
       return confirmAiAlertAsIncident(alertId, input);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["ai-alerts", "feedback", alertId],
+        }),
+      ]);
+    },
+    retry: false,
+  });
+}
+
+export function useMarkAiAlertFalsePositive(alertId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: MarkFalsePositiveRequest) => {
+      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      return markAiAlertFalsePositive(alertId, input);
     },
     onSuccess: async () => {
       await Promise.all([
