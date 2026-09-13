@@ -3,6 +3,7 @@ import {
   aiAlertFeedbackSchema,
   aiAlertFeedbackListSchema,
   aiAlertListSchema,
+  aiAlertExplanationSchema,
   confirmAiAlertResultSchema,
   confirmAiAlertSchema,
   evaluateAiAlertReliabilitySchema,
@@ -11,6 +12,7 @@ import {
   type AiAlertFeedback,
   type AiAlertFeedbackList,
   type AiAlertList,
+  type AiAlertExplanation,
   type AiAlertStatus,
   type ConfirmAiAlertRequest,
   type ConfirmAiAlertResult,
@@ -45,6 +47,18 @@ export async function listAiAlerts(
       query,
       ...(signal ? { signal } : {}),
     }),
+  );
+}
+
+export async function getAiAlertExplanation(
+  alertId: string,
+  signal?: AbortSignal,
+): Promise<AiAlertExplanation | null> {
+  return aiAlertExplanationSchema.nullable().parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
   );
 }
 

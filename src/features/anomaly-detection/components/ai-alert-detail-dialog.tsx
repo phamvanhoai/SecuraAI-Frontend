@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAiAlertExplanation } from "../hooks/use-ai-alerts";
 import type { AiAlert } from "../schemas/ai-alert-schema";
 
 export function AiAlertDetailDialog({
@@ -14,6 +17,7 @@ export function AiAlertDetailDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const explanation = useAiAlertExplanation(alert?.id ?? null);
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -49,11 +53,19 @@ export function AiAlertDetailDialog({
             />
             <Detail
               label="AI-suggested risk level"
-              value={alert.riskLevel ? formatRiskLevel(alert.riskLevel) : "Not available"}
+              value={
+                alert.riskLevel
+                  ? formatRiskLevel(alert.riskLevel)
+                  : "Not available"
+              }
             />
             <Detail
               label="AI risk score"
-              value={alert.riskScore === null ? "Not available" : String(alert.riskScore)}
+              value={
+                alert.riskScore === null
+                  ? "Not available"
+                  : String(alert.riskScore)
+              }
             />
             <Detail label="Detected" value={formatDate(alert.detectedAt)} />
             <Detail label="Event type" value={alert.event.eventType} />
@@ -76,6 +88,54 @@ export function AiAlertDetailDialog({
             <Detail label="Alert ID" value={alert.id} />
             <Detail label="Event ID" value={alert.event.id} />
           </dl>
+          <section
+            aria-labelledby="ai-decision-explanation"
+            className="border-border space-y-3 border-t pt-5"
+          >
+            <h4 className="font-semibold" id="ai-decision-explanation">
+              AI decision explanation
+            </h4>
+            {explanation.isPending ? (
+              <div
+                aria-label="Loading AI explanation"
+                className="space-y-2"
+                role="status"
+              >
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+              </div>
+            ) : explanation.isError ? (
+              <Alert>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>Unable to load the AI explanation.</span>
+                  <Button
+                    onClick={() => void explanation.refetch()}
+                    variant="secondary"
+                  >
+                    Try again
+                  </Button>
+                </div>
+              </Alert>
+            ) : explanation.data === null ? (
+              <p className="text-muted text-sm">
+                No AI explanation has been recorded for this alert.
+              </p>
+            ) : explanation.data ? (
+              <div className="space-y-4 text-sm">
+                <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  {explanation.data.explanationText}
+                </p>
+                <ExplanationData
+                  label="Feature contributions"
+                  value={explanation.data.featureContributions}
+                />
+                <ExplanationData
+                  label="Baseline data"
+                  value={explanation.data.baselineData}
+                />
+              </div>
+            ) : null}
+          </section>
           <div className="flex justify-end">
             <Button
               onClick={() => dialogRef.current?.close()}
@@ -87,6 +147,18 @@ export function AiAlertDetailDialog({
         </div>
       ) : null}
     </Dialog>
+  );
+}
+
+function ExplanationData({ label, value }: { label: string; value: unknown }) {
+  if (value === null) return null;
+  return (
+    <div className="space-y-1">
+      <h5 className="text-muted text-xs font-medium tracking-wide uppercase">{label}</h5>
+      <pre className="bg-neutral-soft max-h-48 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {JSON.stringify(value, null, 2)}
+      </pre>
+    </div>
   );
 }
 
