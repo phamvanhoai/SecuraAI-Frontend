@@ -27,8 +27,12 @@ export function Sidebar() {
   const session = useSessionUser();
   const canReadAssets =
     session.data?.permissions.includes("assets.read") ?? false;
+  const canReadAiAlerts =
+    session.data?.permissions.includes("ai-alerts.read") ?? false;
   const navigation = getPanelNavigation(panel).filter(
-    (item) => !item.href.endsWith("/assets") || canReadAssets,
+    (item) =>
+      (!item.href.endsWith("/assets") || canReadAssets) &&
+      (!item.href.endsWith("/anomaly-monitoring") || canReadAiAlerts),
   );
   const sections = sectionOrder
     .map((label) => ({

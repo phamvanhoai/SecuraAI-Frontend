@@ -26,6 +26,7 @@ describe("panel navigation", () => {
     expect(panelHasModule("security-officer", "policies")).toBe(true);
     expect(panelHasModule("security-officer", "users")).toBe(false);
     expect(panelHasModule("executive-auditor", "audits")).toBe(true);
+    expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(true);
     expect(panelHasModule("executive-auditor", "ai-models")).toBe(false);
   });
 });

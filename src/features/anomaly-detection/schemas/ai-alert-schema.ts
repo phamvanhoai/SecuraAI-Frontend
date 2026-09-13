@@ -52,6 +52,15 @@ export const aiAlertListSchema = z.object({
   }),
 });
 
+export const aiAlertExplanationSchema = z.object({
+  id: z.uuid(),
+  alertId: z.uuid(),
+  explanationText: z.string(),
+  featureContributions: z.json().nullable(),
+  baselineData: z.json().nullable(),
+  createdAt: z.iso.datetime(),
+});
+
 export const aiAlertFeedbackLabels = [
   "confirmed_incident",
   "false_positive",
@@ -119,6 +128,7 @@ export const markFalsePositiveResultSchema = z.object({
 });
 
 export type AiAlert = z.infer<typeof aiAlertSchema>;
+export type AiAlertExplanation = z.infer<typeof aiAlertExplanationSchema>;
 export type AiAlertList = z.infer<typeof aiAlertListSchema>;
 export type AiAlertStatus = (typeof aiAlertStatuses)[number];
 export type AiAlertFeedbackLabel = (typeof aiAlertFeedbackLabels)[number];

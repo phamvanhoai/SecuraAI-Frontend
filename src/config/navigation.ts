@@ -194,6 +194,7 @@ export const panelModules = {
   ],
   "executive-auditor": [
     modules.assets,
+    modules.anomalyMonitoring,
     modules.risks,
     modules.compliance,
     modules.audits,

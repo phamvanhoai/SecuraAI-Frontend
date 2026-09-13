@@ -10,6 +10,7 @@ import {
   confirmAiAlertAsIncident,
   evaluateAiAlertReliability,
   getAiAlertMetrics,
+  getAiAlertExplanation,
   listAiAlertFeedback,
   listAiAlerts,
   markAiAlertFalsePositive,
@@ -28,6 +29,17 @@ export function useAiAlerts(query: AiAlertQuery) {
     placeholderData: keepPreviousData,
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
+  });
+}
+
+export function useAiAlertExplanation(alertId: string | null) {
+  return useQuery({
+    queryKey: ["ai-alerts", "explanation", alertId],
+    queryFn: ({ signal }) => {
+      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      return getAiAlertExplanation(alertId, signal);
+    },
+    enabled: alertId !== null,
   });
 }
 
