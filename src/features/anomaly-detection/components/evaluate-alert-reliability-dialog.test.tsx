@@ -31,6 +31,8 @@ const alert = {
   id: "11111111-1111-4111-8111-111111111111",
   alertCode: "AI-2026-001",
   anomalyScore: 0.92,
+  riskScore: null,
+  riskLevel: null,
   title: "Unusual authentication activity",
   description: "Multiple failed sign-ins were detected.",
   status: "new" as const,

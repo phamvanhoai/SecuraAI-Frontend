@@ -47,6 +47,14 @@ export function AiAlertDetailDialog({
               label="Anomaly score"
               value={formatScore(alert.anomalyScore)}
             />
+            <Detail
+              label="AI-suggested risk level"
+              value={alert.riskLevel ? formatRiskLevel(alert.riskLevel) : "Not available"}
+            />
+            <Detail
+              label="AI risk score"
+              value={alert.riskScore === null ? "Not available" : String(alert.riskScore)}
+            />
             <Detail label="Detected" value={formatDate(alert.detectedAt)} />
             <Detail label="Event type" value={alert.event.eventType} />
             <Detail
@@ -93,6 +101,10 @@ function Detail({ label, value }: { label: string; value: string }) {
       </dd>
     </div>
   );
+}
+
+function formatRiskLevel(level: string): string {
+  return level.replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
 }
 
 export function formatStatus(status: AiAlert["status"]): string {

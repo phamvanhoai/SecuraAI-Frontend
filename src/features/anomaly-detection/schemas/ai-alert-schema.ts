@@ -13,6 +13,8 @@ export const aiAlertSchema = z.object({
   id: z.uuid(),
   alertCode: z.string(),
   anomalyScore: z.number(),
+  riskScore: z.number().nullable(),
+  riskLevel: z.string().nullable(),
   title: z.string(),
   description: z.string(),
   status: z.enum(aiAlertStatuses),

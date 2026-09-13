@@ -7,6 +7,8 @@ const alert = {
   id: "11111111-1111-4111-8111-111111111111",
   alertCode: "AI-2026-001",
   anomalyScore: 0.92,
+  riskScore: 8.5,
+  riskLevel: "high",
   title: "Unusual authentication activity",
   description: "Multiple failed sign-ins were detected.",
   status: "new" as const,
@@ -55,9 +57,18 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
     expect(screen.getByText(alert.title)).toBeInTheDocument();
     expect(screen.getByText("92%")).toBeInTheDocument();
+    expect(screen.getByText("AI-suggested risk level")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.getByText("8.5")).toBeInTheDocument();
     expect(screen.getByText("authentication.failed")).toBeInTheDocument();
     expect(screen.getByText("Windows Authentication")).toBeInTheDocument();
     expect(screen.getByText("anomaly-detector 1.0.0")).toBeInTheDocument();
+  });
+
+  it("identifies alerts without an AI risk suggestion", () => {
+    render(<AiAlertDetailDialog alert={{ ...alert, riskScore: null, riskLevel: null }} onClose={vi.fn()} />);
+    expect(screen.getByText("AI-suggested risk level").parentElement).toHaveTextContent("Not available");
+    expect(screen.getByText("AI risk score").parentElement).toHaveTextContent("Not available");
   });
 
   it("closes through the secondary action", async () => {
