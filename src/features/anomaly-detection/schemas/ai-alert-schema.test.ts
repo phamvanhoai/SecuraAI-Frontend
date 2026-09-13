@@ -3,7 +3,11 @@ import {
   aiAlertFeedbackSchema,
   aiAlertFeedbackListSchema,
   aiAlertListSchema,
+  confirmAiAlertResultSchema,
+  confirmAiAlertSchema,
   evaluateAiAlertReliabilitySchema,
+  markFalsePositiveSchema,
+  markFalsePositiveResultSchema,
 } from "./ai-alert-schema";
 
 const response = {
@@ -50,6 +54,66 @@ describe("aiAlertListSchema", () => {
         ...response,
         items: [{ ...response.items[0], status: "open" }],
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("confirmAiAlertSchema", () => {
+  it("omits empty optional comments and trims a review comment", () => {
+    expect(confirmAiAlertSchema.parse({ comment: "  " })).toEqual({
+      comment: undefined,
+    });
+    expect(
+      confirmAiAlertSchema.parse({ comment: "  Verified activity  " }),
+    ).toEqual({ comment: "Verified activity" });
+  });
+
+  it("rejects oversized comments and validates the changed status", () => {
+    expect(
+      confirmAiAlertSchema.safeParse({ comment: "x".repeat(2001) }).success,
+    ).toBe(false);
+    expect(
+      confirmAiAlertResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "AI-2026-001",
+        status: "confirmed",
+        reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+        reviewedAt: "2026-09-13T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      confirmAiAlertResultSchema.safeParse({ status: "new" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("mark false positive", () => {
+  it("omits empty optional comments and trims a reason", () => {
+    expect(markFalsePositiveSchema.parse({ comment: "  " })).toEqual({
+      comment: undefined,
+    });
+    expect(
+      markFalsePositiveSchema.parse({ comment: "  Known scanner  " }),
+    ).toEqual({ comment: "Known scanner" });
+  });
+
+  it("enforces the comment limit and validates the status-changing response", () => {
+    expect(
+      markFalsePositiveSchema.safeParse({ comment: "x".repeat(2001) }).success,
+    ).toBe(false);
+    expect(
+      markFalsePositiveResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "AI-2026-001",
+        status: "false_positive",
+        reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+        reviewedAt: "2026-09-13T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      markFalsePositiveResultSchema.safeParse({ status: "new" }).success,
     ).toBe(false);
   });
 });
