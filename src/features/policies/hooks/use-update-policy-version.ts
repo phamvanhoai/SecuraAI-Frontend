@@ -1,8 +1,19 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updatePolicyAndCreateVersion } from "../api/update-policy-version";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  listPublishedPoliciesForNewVersion,
+  updatePolicyAndCreateVersion,
+} from "../api/update-policy-version";
 import type { UpdatePolicyVersionRequest } from "../schemas/update-policy-version-schema";
+
+export function usePublishedPoliciesForNewVersion(enabled: boolean) {
+  return useQuery({
+    queryKey: ["policies", "published", "mine"],
+    queryFn: ({ signal }) => listPublishedPoliciesForNewVersion(signal),
+    enabled,
+  });
+}
 
 export function useUpdatePolicyVersion() {
   const queryClient = useQueryClient();

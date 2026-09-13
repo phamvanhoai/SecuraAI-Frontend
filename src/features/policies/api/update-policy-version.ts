@@ -2,9 +2,21 @@ import { ApiError } from "@/lib/api/api-error";
 import { apiRequest } from "@/lib/api/api-client";
 import {
   newPolicyVersionSchema,
+  publishedPoliciesForNewVersionSchema,
   type NewPolicyVersion,
+  type PublishedPolicyForNewVersion,
   type UpdatePolicyVersionRequest,
 } from "../schemas/update-policy-version-schema";
+
+export async function listPublishedPoliciesForNewVersion(
+  signal?: AbortSignal,
+): Promise<PublishedPolicyForNewVersion[]> {
+  const data = await apiRequest<unknown>(
+    "/api/compliance/policies/published/mine",
+    { target: "same-origin", ...(signal ? { signal } : {}) },
+  );
+  return publishedPoliciesForNewVersionSchema.parse(data);
+}
 
 export async function updatePolicyAndCreateVersion(
   policyId: string,

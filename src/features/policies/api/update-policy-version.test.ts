@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/api-error";
-import { updatePolicyAndCreateVersion } from "./update-policy-version";
+import {
+  listPublishedPoliciesForNewVersion,
+  updatePolicyAndCreateVersion,
+} from "./update-policy-version";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -76,5 +79,32 @@ describe("updatePolicyAndCreateVersion", () => {
         changeSummary: "Updated access controls",
       }),
     ).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("listPublishedPoliciesForNewVersion", () => {
+  it("loads eligible policies through the authenticated BFF", async () => {
+    const policy = {
+      id: policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      description: null,
+      currentVersion: "1.0",
+      updatedAt: "2026-09-13T00:00:00.000Z",
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: [policy] }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listPublishedPoliciesForNewVersion()).resolves.toEqual([
+      policy,
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/compliance/policies/published/mine",
+      expect.objectContaining({ credentials: "include" }),
+    );
   });
 });

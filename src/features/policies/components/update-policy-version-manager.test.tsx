@@ -18,6 +18,20 @@ vi.mock("@/features/auth", () => ({
   useSessionUser: mocks.session,
 }));
 vi.mock("../hooks/use-update-policy-version", () => ({
+  usePublishedPoliciesForNewVersion: () => ({
+    data: [
+      {
+        id: "00000000-0000-4000-8000-000000000010",
+        policyCode: "ISP-001",
+        title: "Information Security Policy",
+        description: null,
+        currentVersion: "1.0",
+        updatedAt: "2026-09-13T00:00:00.000Z",
+      },
+    ],
+    isPending: false,
+    isError: false,
+  }),
   useUpdatePolicyVersion: () => ({
     isPending: false,
     mutateAsync: mocks.mutateAsync,
@@ -54,6 +68,12 @@ afterEach(cleanup);
 describe("UpdatePolicyVersionManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute("open");
+    };
     mocks.session.mockReturnValue({
       data: { permissions: ["policies.update"] },
       isPending: false,
@@ -66,16 +86,16 @@ describe("UpdatePolicyVersionManager", () => {
     render(<UpdatePolicyVersionManager />);
 
     await user.click(
+      screen.getByRole("button", { name: "Create new version" }),
+    );
+    await user.click(
       screen.getByRole("button", { name: "Create draft version" }),
     );
 
     expect(
-      await screen.findByText("Enter a valid policy ID."),
+      await screen.findByText("New version number is required."),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Policy ID")).toHaveAttribute(
-      "aria-invalid",
-      "true",
-    );
+    expect(screen.queryByLabelText("Policy ID")).not.toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
   });
 
@@ -84,9 +104,9 @@ describe("UpdatePolicyVersionManager", () => {
     mocks.mutateAsync.mockResolvedValue(createdVersion);
     render(<UpdatePolicyVersionManager />);
 
-    fireEvent.change(screen.getByLabelText("Policy ID"), {
-      target: { value: policyId },
-    });
+    await user.click(
+      screen.getByRole("button", { name: "Create new version" }),
+    );
     fireEvent.change(screen.getByLabelText("New version number"), {
       target: { value: "1.1" },
     });
@@ -110,8 +130,6 @@ describe("UpdatePolicyVersionManager", () => {
         },
       }),
     );
-    expect(await screen.findByText("ISP-001")).toBeInTheDocument();
-    expect(screen.getByText("1.1")).toBeInTheDocument();
     expect(mocks.success).toHaveBeenCalledWith(
       "New policy version created",
       "ISP-001 version 1.1 is ready for review as a draft.",

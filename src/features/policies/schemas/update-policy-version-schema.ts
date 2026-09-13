@@ -69,6 +69,21 @@ export const newPolicyVersionSchema = z
   })
   .strict();
 
+export const publishedPolicyForNewVersionSchema = z
+  .object({
+    id: z.uuid(),
+    policyCode: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    currentVersion: z.string().nullable(),
+    updatedAt: z.string(),
+  })
+  .strict();
+
+export const publishedPoliciesForNewVersionSchema = z.array(
+  publishedPolicyForNewVersionSchema,
+);
+
 export type UpdatePolicyVersionFormInput = z.input<
   typeof updatePolicyVersionFormSchema
 >;
@@ -79,3 +94,6 @@ export type UpdatePolicyVersionRequest = z.infer<
   typeof updatePolicyVersionRequestSchema
 >;
 export type NewPolicyVersion = z.infer<typeof newPolicyVersionSchema>;
+export type PublishedPolicyForNewVersion = z.infer<
+  typeof publishedPolicyForNewVersionSchema
+>;
