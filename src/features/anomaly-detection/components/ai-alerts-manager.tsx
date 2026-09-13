@@ -7,6 +7,7 @@ import {
   MessageSquareText,
   RefreshCw,
   Search,
+  ShieldX,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -41,6 +42,7 @@ import {
 } from "./ai-alert-detail-dialog";
 import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dialog";
 import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
+import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -53,9 +55,14 @@ export function AiAlertsManager() {
   const [viewing, setViewing] = useState<AiAlert | null>(null);
   const [evaluating, setEvaluating] = useState<AiAlert | null>(null);
   const [viewingFeedback, setViewingFeedback] = useState<AiAlert | null>(null);
+  const [markingFalsePositive, setMarkingFalsePositive] =
+    useState<AiAlert | null>(null);
   const session = useSessionUser();
   const canEvaluate =
     session.data?.permissions.includes("ai-alerts.feedback") ?? false;
+  const canMarkFalsePositive =
+    session.data?.permissions.includes("ai-alerts.mark-false-positive") ??
+    false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
   const alerts = useAiAlerts({
     page,
@@ -163,6 +170,21 @@ export function AiAlertsManager() {
                 View feedback history
               </button>
             </>
+          ) : null}
+          {canMarkFalsePositive &&
+          (item.status === "new" || item.status === "reviewing") ? (
+            <button
+              className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => setMarkingFalsePositive(item)}
+              type="button"
+            >
+              <ShieldX
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              Mark false positive
+            </button>
           ) : null}
         </DropdownMenu>
       ),
@@ -350,6 +372,10 @@ export function AiAlertsManager() {
       <AlertFeedbackHistoryDialog
         alert={viewingFeedback}
         onClose={() => setViewingFeedback(null)}
+      />
+      <MarkFalsePositiveDialog
+        alert={markingFalsePositive}
+        onClose={() => setMarkingFalsePositive(null)}
       />
     </>
   );

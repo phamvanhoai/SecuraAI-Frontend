@@ -4,11 +4,15 @@ import {
   aiAlertFeedbackListSchema,
   aiAlertListSchema,
   evaluateAiAlertReliabilitySchema,
+  markFalsePositiveResultSchema,
+  markFalsePositiveSchema,
   type AiAlertFeedback,
   type AiAlertFeedbackList,
   type AiAlertList,
   type AiAlertStatus,
   type EvaluateAiAlertReliabilityRequest,
+  type MarkFalsePositiveRequest,
+  type MarkFalsePositiveResult,
 } from "../schemas/ai-alert-schema";
 
 export type AiAlertQuery = {
@@ -65,6 +69,22 @@ export async function listAiAlertFeedback(
       query: { page, limit: 10, sortOrder: "desc" },
       ...(signal ? { signal } : {}),
     }),
+  );
+}
+
+export async function markAiAlertFalsePositive(
+  alertId: string,
+  input: MarkFalsePositiveRequest,
+): Promise<MarkFalsePositiveResult> {
+  return markFalsePositiveResultSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/false-positive`,
+      {
+        method: "POST",
+        target: "same-origin",
+        body: markFalsePositiveSchema.parse(input),
+      },
+    ),
   );
 }
 
