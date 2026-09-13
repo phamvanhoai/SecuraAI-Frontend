@@ -18,6 +18,8 @@ export function ProductPageHeader({
   primaryAction,
   secondaryAction,
   onPrimaryAction,
+  onSecondaryAction,
+  secondaryActionIcon,
   showSampleNotice = true,
 }: {
   title: string;
@@ -25,6 +27,8 @@ export function ProductPageHeader({
   primaryAction?: string;
   secondaryAction?: string;
   onPrimaryAction?: () => void;
+  onSecondaryAction?: () => void;
+  secondaryActionIcon?: ReactNode;
   showSampleNotice?: boolean;
 }) {
   return (
@@ -41,8 +45,18 @@ export function ProductPageHeader({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {secondaryAction ? (
-            <button className="border-border bg-surface hover:bg-neutral-soft inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium whitespace-nowrap transition-colors active:translate-y-px">
-              <Download className="size-4" strokeWidth={1.8} />
+            <button
+              className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
+              onClick={onSecondaryAction}
+              type="button"
+            >
+              {secondaryActionIcon ?? (
+                <Download
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              )}
               {secondaryAction}
             </button>
           ) : null}
@@ -52,7 +66,7 @@ export function ProductPageHeader({
               onClick={onPrimaryAction}
               type="button"
             >
-              <Plus className="size-4" strokeWidth={1.8} />
+              <Plus aria-hidden="true" className="size-4" strokeWidth={1.8} />
               {primaryAction}
             </button>
           ) : null}

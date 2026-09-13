@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Pencil, Search } from "lucide-react";
+import { Ellipsis, Eye, FilePenLine, Pencil, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
@@ -52,7 +52,11 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-export function PolicyDraftsManager() {
+export function PolicyDraftsManager({
+  onCreateNewVersion,
+}: {
+  onCreateNewVersion?: () => void;
+} = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -208,6 +212,19 @@ export function PolicyDraftsManager() {
         primaryAction="Create draft"
         showSampleNotice={false}
         title="Information Security Policy Drafts"
+        {...(onCreateNewVersion
+          ? {
+              onSecondaryAction: onCreateNewVersion,
+              secondaryAction: "Create new version",
+              secondaryActionIcon: (
+                <FilePenLine
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              ),
+            }
+          : {})}
       />
       <MetricStrip
         ariaLabel="Policy draft metrics"

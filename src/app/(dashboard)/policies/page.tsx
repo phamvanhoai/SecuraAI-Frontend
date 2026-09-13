@@ -1,19 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
 import {
   PolicyDraftsManager,
   PolicyPublicationManager,
+  UpdatePolicyVersionManager,
 } from "@/features/policies";
 
 export default function Page() {
   const session = useSessionUser();
+  const [view, setView] = useState<"default" | "new-version">("default");
   const canCreateDrafts =
     session.data?.permissions.includes("policies.create") ?? false;
   const canPublish =
     session.data?.permissions.includes("policies.publish") ?? false;
+  const canUpdate =
+    session.data?.permissions.includes("policies.update") ?? false;
 
   if (session.isPending) {
     return (
@@ -24,7 +29,23 @@ export default function Page() {
     );
   }
 
-  if (canCreateDrafts) return <PolicyDraftsManager />;
+  if (view === "new-version" && canUpdate) {
+    return (
+      <UpdatePolicyVersionManager
+        {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
+      />
+    );
+  }
+  if (canCreateDrafts) {
+    return (
+      <PolicyDraftsManager
+        {...(canUpdate
+          ? { onCreateNewVersion: () => setView("new-version") }
+          : {})}
+      />
+    );
+  }
+  if (canUpdate) return <UpdatePolicyVersionManager />;
   if (canPublish) return <PolicyPublicationManager />;
 
   return (
@@ -35,7 +56,7 @@ export default function Page() {
         title="Information security policies"
       />
       <EmptyState
-        description="The current account does not have permission to create or publish policies."
+        description="The current account does not have permission to create, update, or publish policies."
         title="You do not have permission to manage policies"
       />
     </div>
