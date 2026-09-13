@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolicyDraftsManager } from "./policy-drafts-manager";
 
@@ -84,6 +85,22 @@ describe("PolicyDraftsManager", () => {
     expect(
       screen.getByRole("button", { name: "Create draft" }),
     ).toBeInTheDocument();
+  });
+
+  it("opens the new-version workflow for a user with update permission", async () => {
+    const user = userEvent.setup();
+    const onCreateNewVersion = vi.fn();
+    mocks.useSessionUser.mockReturnValue({
+      data: { permissions: ["policies.create", "policies.update"] },
+      isPending: false,
+    });
+
+    render(<PolicyDraftsManager onCreateNewVersion={onCreateNewVersion} />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Create new version" }),
+    );
+    expect(onCreateNewVersion).toHaveBeenCalledOnce();
   });
 
   it("does not expose draft data without policies.create", () => {
