@@ -16,6 +16,8 @@ const response = {
       id: "11111111-1111-4111-8111-111111111111",
       alertCode: "AI-2026-001",
       anomalyScore: 0.92,
+      riskScore: 8.5,
+      riskLevel: "high",
       title: "Unusual authentication activity",
       description: "Multiple failed sign-ins were detected.",
       status: "new",
@@ -47,6 +49,12 @@ const response = {
 describe("aiAlertListSchema", () => {
   it("accepts the backend alert list contract", () => {
     expect(aiAlertListSchema.safeParse(response).success).toBe(true);
+  });
+  it("accepts alerts without an AI risk suggestion", () => {
+    expect(aiAlertListSchema.safeParse({
+      ...response,
+      items: [{ ...response.items[0], riskScore: null, riskLevel: null }],
+    }).success).toBe(true);
   });
   it("rejects an unsupported alert status", () => {
     expect(
