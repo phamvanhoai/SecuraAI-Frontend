@@ -1,6 +1,13 @@
 "use client";
 
-import { Ellipsis, Eye, FilePenLine, Pencil, Search } from "lucide-react";
+import {
+  Building2,
+  Ellipsis,
+  Eye,
+  FilePenLine,
+  Pencil,
+  Search,
+} from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
@@ -53,8 +60,10 @@ function formatDate(value: string): string {
 }
 
 export function PolicyDraftsManager({
+  onAssignDepartments,
   onCreateNewVersion,
 }: {
+  onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
 } = {}) {
   const router = useRouter();
@@ -207,6 +216,24 @@ export function PolicyDraftsManager({
   return (
     <>
       <ProductPageHeader
+        {...(onAssignDepartments
+          ? {
+              additionalActions: (
+                <Button
+                  className="min-h-10 px-3.5 font-medium"
+                  onClick={onAssignDepartments}
+                  variant="secondary"
+                >
+                  <Building2
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={1.8}
+                  />
+                  Assign departments
+                </Button>
+              ),
+            }
+          : {})}
         description="Create and update the policies you own before they are submitted for publication."
         onPrimaryAction={() => setCreateOpen(true)}
         primaryAction="Create draft"

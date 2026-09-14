@@ -15,6 +15,7 @@ export function SampleNotice() {
 export function ProductPageHeader({
   title,
   description,
+  additionalActions,
   primaryAction,
   secondaryAction,
   onPrimaryAction,
@@ -24,6 +25,7 @@ export function ProductPageHeader({
 }: {
   title: string;
   description: string;
+  additionalActions?: ReactNode;
   primaryAction?: string;
   secondaryAction?: string;
   onPrimaryAction?: () => void;
@@ -44,6 +46,7 @@ export function ProductPageHeader({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {additionalActions}
           {secondaryAction ? (
             <button
               className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
