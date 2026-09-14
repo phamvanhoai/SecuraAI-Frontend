@@ -114,6 +114,12 @@ export const confirmAiAlertResultSchema = z.object({
   reviewedByUserId: z.uuid().nullable(),
   reviewedAt: z.iso.datetime().nullable(),
   changed: z.boolean(),
+  incident: z.object({
+    id: z.uuid(),
+    code: z.string(),
+    status: z.string(),
+    created: z.boolean(),
+  }),
 });
 
 export const markFalsePositiveSchema = confirmAiAlertSchema;
