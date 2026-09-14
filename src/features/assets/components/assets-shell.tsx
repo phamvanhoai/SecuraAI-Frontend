@@ -2,7 +2,7 @@
 
 import { Download, Eye, History, MoreHorizontal, Pencil, Search, Server, Tags, Trash2, UserRound } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -10,6 +10,7 @@ import {
 import { Pagination } from "@/components/data-display/pagination";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/feedback/toast";
 import { useSessionUser } from "@/features/auth";
@@ -235,7 +236,7 @@ export function AssetsShell() {
         </div>
         <form
           aria-label="Asset filters"
-          className="border-border grid gap-3 border-b p-4 md:grid-cols-5"
+          className="border-border grid gap-3 border-b p-4 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]"
           onSubmit={submitFilters}
         >
           <label className="relative md:col-span-2">
@@ -364,67 +365,29 @@ function AssetActionMenu({
   onAssignOwner: () => void;
   onHistory: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const disposed = asset.status === "disposed";
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOnOutsideClick = (event: MouseEvent): void => {
-      if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", closeOnOutsideClick);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open]);
-
-  const run = (action: () => void): void => {
-    setOpen(false);
-    action();
-  };
   return (
-    <div className="relative" ref={menuRef}>
-      <Button
-        type="button"
-        className="min-h-9 min-w-9 bg-neutral-soft px-2 text-foreground hover:bg-border"
-        aria-label={`Actions for ${asset.assetCode}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-      >
-        <MoreHorizontal className="size-5" aria-hidden="true" />
-      </Button>
-      {open ? (
-        <div
-          role="menu"
-          aria-label={`Actions for ${asset.assetCode}`}
-          className="border-border bg-surface absolute right-0 z-20 mt-2 grid min-w-48 gap-1 rounded-lg border p-1 shadow-lg"
-        >
-          <MenuAction icon={<Eye className="size-4" aria-hidden="true" />} label="View details" onClick={() => run(onView)} />
+    <DropdownMenu
+      className="w-fit"
+      label={<span className="grid size-6 place-items-center"><span className="sr-only">Actions for {asset.assetCode}</span><MoreHorizontal className="size-5" aria-hidden="true" /></span>}
+    >
+          <MenuAction icon={<Eye className="size-4" aria-hidden="true" />} label="View details" onClick={onView} />
           {canUpdate ? (
-            <MenuAction icon={<Pencil className="size-4" aria-hidden="true" />} label="Edit" disabled={disposed} onClick={() => run(onEdit)} />
+            <MenuAction icon={<Pencil className="size-4" aria-hidden="true" />} label="Edit" disabled={disposed} onClick={onEdit} />
           ) : null}
           {canClassify ? (
-            <MenuAction icon={<Tags className="size-4" aria-hidden="true" />} label="Classify criticality" disabled={disposed} onClick={() => run(onClassify)} />
+            <MenuAction icon={<Tags className="size-4" aria-hidden="true" />} label="Classify criticality" disabled={disposed} onClick={onClassify} />
           ) : null}
           {canAssignOwner ? (
-            <MenuAction icon={<UserRound className="size-4" aria-hidden="true" />} label="Assign owner" disabled={disposed} onClick={() => run(onAssignOwner)} />
+            <MenuAction icon={<UserRound className="size-4" aria-hidden="true" />} label="Assign owner" disabled={disposed} onClick={onAssignOwner} />
           ) : null}
           {canReadHistory ? (
-            <MenuAction icon={<History className="size-4" aria-hidden="true" />} label="Change history" onClick={() => run(onHistory)} />
+            <MenuAction icon={<History className="size-4" aria-hidden="true" />} label="Change history" onClick={onHistory} />
           ) : null}
           {canDelete ? (
-            <MenuAction icon={<Trash2 className="size-4" aria-hidden="true" />} label="Delete" className="text-danger hover:bg-danger-soft" onClick={() => run(onDelete)} />
+            <MenuAction icon={<Trash2 className="size-4" aria-hidden="true" />} label="Delete" className="text-danger hover:bg-danger-soft" onClick={onDelete} />
           ) : null}
-        </div>
-      ) : null}
-    </div>
+    </DropdownMenu>
   );
 }
 
