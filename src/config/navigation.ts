@@ -88,13 +88,19 @@ const modules = {
     slug: "policies",
     icon: ScrollText,
     section: "Quản lý",
-    requiredAnyPermission: ["policies.create", "policies.update", "policies.publish"],
+    requiredAnyPermission: [
+      "policies.create",
+      "policies.update",
+      "policies.publish",
+      "policies.acknowledge",
+    ],
   },
   training: {
     title: "Đào tạo",
     slug: "training",
     icon: GraduationCap,
     section: "Quản lý",
+    requiredAnyPermission: ["training-courses.read"],
   },
   anomalyMonitoring: {
     title: "Giám sát bất thường",
@@ -185,6 +191,7 @@ export const panelModules = {
     modules.incidents,
     modules.controls,
     modules.policies,
+    modules.training,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,

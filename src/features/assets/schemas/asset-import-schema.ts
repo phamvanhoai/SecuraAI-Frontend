@@ -8,6 +8,14 @@ const importErrorSchema = z.object({
   assetCode: z.string().nullable().optional(),
 });
 
+const importSummarySchema = z.object({
+  totalRows: z.number().int().nonnegative(),
+  importedRows: z.number().int().nonnegative(),
+  duplicateRows: z.number().int().nonnegative(),
+  invalidRows: z.number().int().nonnegative(),
+  message: z.string(),
+});
+
 export const assetImportResultSchema = z.object({
   id: z.uuid(),
   importType: z.literal("assets"),
@@ -15,6 +23,7 @@ export const assetImportResultSchema = z.object({
   totalRows: z.number().int().nonnegative(),
   successRows: z.number().int().nonnegative(),
   failedRows: z.number().int().nonnegative(),
+  summary: importSummarySchema,
   errors: z.array(importErrorSchema),
   createdAt: z.string(),
   completedAt: z.string().nullable(),
