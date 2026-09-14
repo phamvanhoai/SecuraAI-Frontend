@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getPanelNavigation, panelHasModule } from "./navigation";
+import {
+  allowedPanels,
+  canAccessNavigationItem,
+  canAccessPanel,
+  defaultPanelPath,
+  getPanelNavigation,
+  panelHasModule,
+} from "./navigation";
 
 describe("panel navigation", () => {
   it("gives the admin every management module under the admin prefix", () => {
@@ -28,5 +35,31 @@ describe("panel navigation", () => {
     expect(panelHasModule("executive-auditor", "audits")).toBe(true);
     expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(true);
     expect(panelHasModule("executive-auditor", "ai-models")).toBe(false);
+  });
+
+  it("allows only panels backed by assigned system roles", () => {
+    expect(allowedPanels(["ADMIN"])).toEqual(["admin"]);
+    expect(allowedPanels(["SECURITY_OFFICER", "EMPLOYEE"])).toEqual([
+      "security-officer",
+      "employee",
+    ]);
+    expect(canAccessPanel(["ADMIN"], "security-officer")).toBe(false);
+  });
+
+  it("chooses a deterministic default panel for multi-role users", () => {
+    expect(defaultPanelPath(["EMPLOYEE", "SECURITY_OFFICER"])).toBe(
+      "/security-officer",
+    );
+    expect(defaultPanelPath(["CUSTOM_ROLE"])).toBe("/profile");
+  });
+
+  it("filters permission-bound navigation items", () => {
+    const assets = getPanelNavigation("admin").find((item) =>
+      item.href.endsWith("/assets"),
+    );
+    expect(assets).toBeDefined();
+    if (!assets) return;
+    expect(canAccessNavigationItem([], assets)).toBe(false);
+    expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
   });
 });

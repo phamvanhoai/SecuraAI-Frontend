@@ -15,12 +15,13 @@ import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSessionUser } from "@/features/auth";
 import { ThemeToggle } from "./theme-toggle";
+import { allowedPanels, panelLabels, type PanelKind } from "@/config/navigation";
 
 export function Header() {
   const router = useRouter();
   const session = useSessionUser();
   const user = session.data;
-  const isAdmin = user?.roles.some((role) => role.code === "ADMIN") ?? false;
+  const panels = allowedPanels(user?.roles.map((role) => role.code) ?? []);
 
   async function logout(): Promise<void> {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -71,31 +72,19 @@ export function Header() {
                     "Chưa có vai trò"}
                 </p>
               </div>
-              {isAdmin ? (
+              {panels.length > 1 ? (
                 <div className="border-border border-b py-1">
                   <p className="text-muted px-2 py-1 text-xs font-semibold uppercase">
                     Chuyển panel
                   </p>
-                  <PanelLink
-                    href="/admin"
-                    icon={<LayoutDashboard />}
-                    label="Admin"
-                  />
-                  <PanelLink
-                    href="/security-officer"
-                    icon={<ShieldCheck />}
-                    label="Chuyên viên ATTT"
-                  />
-                  <PanelLink
-                    href="/employee"
-                    icon={<UserRound />}
-                    label="Nhân viên"
-                  />
-                  <PanelLink
-                    href="/executive-auditor"
-                    icon={<BriefcaseBusiness />}
-                    label="Lãnh đạo / Kiểm toán"
-                  />
+                  {panels.map((panel) => (
+                    <PanelLink
+                      href={`/${panel}`}
+                      icon={panelIcon(panel)}
+                      key={panel}
+                      label={panelLabels[panel]}
+                    />
+                  ))}
                 </div>
               ) : null}
               <button
@@ -115,6 +104,13 @@ export function Header() {
       </DropdownMenu>
     </header>
   );
+}
+
+function panelIcon(panel: PanelKind): ReactNode {
+  if (panel === "admin") return <LayoutDashboard />;
+  if (panel === "security-officer") return <ShieldCheck />;
+  if (panel === "executive-auditor") return <BriefcaseBusiness />;
+  return <UserRound />;
 }
 
 function PanelLink({

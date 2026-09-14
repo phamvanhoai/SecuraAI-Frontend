@@ -27,6 +27,7 @@ export type NavigationItem = {
   href: string;
   icon: LucideIcon;
   section: "Tổng quan" | "Quản lý" | "AI & Giám sát" | "Báo cáo" | "Cài đặt";
+  requiredAnyPermission?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
@@ -42,14 +43,16 @@ const modules = {
     slug: "users",
     icon: Users,
     section: "Quản lý",
+    requiredAnyPermission: ["users.read"],
   },
   roles: {
     title: "Vai trò & quyền",
     slug: "roles",
     icon: KeyRound,
     section: "Quản lý",
+    requiredAnyPermission: ["roles.read"],
   },
-  assets: { title: "Tài sản", slug: "assets", icon: Boxes, section: "Quản lý" },
+  assets: { title: "Tài sản", slug: "assets", icon: Boxes, section: "Quản lý", requiredAnyPermission: ["assets.read"] },
   risks: {
     title: "Rủi ro",
     slug: "risks",
@@ -85,6 +88,7 @@ const modules = {
     slug: "policies",
     icon: ScrollText,
     section: "Quản lý",
+    requiredAnyPermission: ["policies.create", "policies.update", "policies.publish"],
   },
   training: {
     title: "Đào tạo",
@@ -97,24 +101,28 @@ const modules = {
     slug: "anomaly-monitoring",
     icon: Activity,
     section: "AI & Giám sát",
+    requiredAnyPermission: ["ai-alerts.read"],
   },
   aiModels: {
     title: "Mô hình AI",
     slug: "ai-models",
     icon: BrainCircuit,
     section: "AI & Giám sát",
+    requiredAnyPermission: ["ai-models.read"],
   },
   eventLogs: {
     title: "Log & Sự kiện",
     slug: "event-logs",
     icon: FileStack,
     section: "AI & Giám sát",
+    requiredAnyPermission: ["log-sources.read"],
   },
   integrationSchedules: {
     title: "Sync Schedules",
     slug: "integrations/schedules",
     icon: CalendarClock,
     section: "AI & Giám sát",
+    requiredAnyPermission: ["integrations.read"],
   },
   reports: {
     title: "Báo cáo",
@@ -213,6 +221,47 @@ export const panelLabels: Record<PanelKind, string> = {
   "executive-auditor": "Lãnh đạo / Kiểm toán",
 };
 
+export const panelRoleCodes: Record<PanelKind, string> = {
+  admin: "ADMIN",
+  "security-officer": "SECURITY_OFFICER",
+  employee: "EMPLOYEE",
+  "executive-auditor": "EXECUTIVE_AUDITOR",
+};
+
+const panelPriority: readonly PanelKind[] = [
+  "admin",
+  "security-officer",
+  "executive-auditor",
+  "employee",
+];
+
+export function allowedPanels(roleCodes: readonly string[]): readonly PanelKind[] {
+  const assigned = new Set(roleCodes);
+  return panelPriority.filter((panel) => assigned.has(panelRoleCodes[panel]));
+}
+
+export function defaultPanelPath(roleCodes: readonly string[]): string {
+  const panel = allowedPanels(roleCodes)[0];
+  return panel ? `/${panel}` : "/profile";
+}
+
+export function panelFromPath(pathname: string): PanelKind | null {
+  const segment = pathname.split("/")[1];
+  return panelPriority.find((panel) => panel === segment) ?? null;
+}
+
+export function canAccessPanel(roleCodes: readonly string[], panel: PanelKind): boolean {
+  return roleCodes.includes(panelRoleCodes[panel]);
+}
+
+export function canAccessNavigationItem(
+  permissions: readonly string[],
+  item: NavigationItem,
+): boolean {
+  return !item.requiredAnyPermission?.length ||
+    item.requiredAnyPermission.some((permission) => permissions.includes(permission));
+}
+
 export function getPanelKind(pathname: string | null): PanelKind {
   const segment = pathname?.split("/")[1];
   return segment === "security-officer" ||
@@ -245,6 +294,7 @@ export function getPanelNavigation(
       href: "/integrations/schedules",
       icon: CalendarClock,
       section: "AI & Giám sát",
+      requiredAnyPermission: ["integrations.read"],
     });
   }
 
