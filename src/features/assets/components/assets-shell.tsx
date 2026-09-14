@@ -1,6 +1,18 @@
 "use client";
 
-import { Download, Eye, History, MoreHorizontal, Pencil, Search, Server, Tags, Trash2, UserRound } from "lucide-react";
+import {
+  Download,
+  Eye,
+  History,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Server,
+  Tags,
+  Trash2,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
@@ -37,7 +49,10 @@ const criticalityLabels = {
   critical: "Critical",
 } as const;
 const statusLabels = {
-  active: "Active", inactive: "Inactive", retired: "Retired", disposed: "Disposed",
+  active: "Active",
+  inactive: "Inactive",
+  retired: "Retired",
+  disposed: "Disposed",
 } as const;
 
 const columns: readonly DataTableColumn<AssetListItem>[] = [
@@ -59,11 +74,13 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
   { key: "type", header: "Type", cell: (asset) => asset.assetType },
   {
     key: "department",
-    header: "Department", cell: (asset) => asset.department?.name ?? "Unassigned",
+    header: "Department",
+    cell: (asset) => asset.department?.name ?? "Unassigned",
   },
   {
     key: "owner",
-    header: "Owner", cell: (asset) => asset.owner?.fullName ?? "Unassigned",
+    header: "Owner",
+    cell: (asset) => asset.owner?.fullName ?? "Unassigned",
   },
   {
     key: "criticality",
@@ -117,9 +134,13 @@ export function AssetsShell() {
   const [status, setStatus] = useState(query.status ?? "");
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [deletingAsset, setDeletingAsset] = useState<AssetListItem | null>(null);
-  const [classifyingAsset, setClassifyingAsset] = useState<AssetListItem | null>(null);
-  const [assigningOwnerAsset, setAssigningOwnerAsset] = useState<AssetListItem | null>(null);
+  const [deletingAsset, setDeletingAsset] = useState<AssetListItem | null>(
+    null,
+  );
+  const [classifyingAsset, setClassifyingAsset] =
+    useState<AssetListItem | null>(null);
+  const [assigningOwnerAsset, setAssigningOwnerAsset] =
+    useState<AssetListItem | null>(null);
   const [historyAssetId, setHistoryAssetId] = useState<string | null>(null);
   const tableColumns = useMemo<readonly DataTableColumn<AssetListItem>[]>(
     () => [
@@ -174,6 +195,23 @@ export function AssetsShell() {
       status: selectedStatus,
     });
   };
+  const clearSearch = (): void => {
+    setSearch("");
+    navigate({ page: 1, q: undefined });
+  };
+  const clearFilters = (): void => {
+    setSearch("");
+    setAssetType("");
+    setCriticality("");
+    setStatus("");
+    navigate({
+      page: 1,
+      q: undefined,
+      assetType: undefined,
+      criticality: undefined,
+      status: undefined,
+    });
+  };
   const exportList = async (): Promise<void> => {
     try {
       await exportMutation.mutateAsync(query);
@@ -187,13 +225,21 @@ export function AssetsShell() {
   };
 
   if (session.isPending) {
-    return <p className="text-muted py-10 text-center">Checking access permissions…</p>;
+    return (
+      <p className="text-muted py-10 text-center">
+        Checking access permissions…
+      </p>
+    );
   }
   if (!canRead) {
     return (
       <Alert>
-        <strong className="block">You do not have permission to view the asset list</strong>
-        <span>Contact an administrator if you need the assets.read permission.</span>
+        <strong className="block">
+          You do not have permission to view the asset list
+        </strong>
+        <span>
+          Contact an administrator if you need the assets.read permission.
+        </span>
       </Alert>
     );
   }
@@ -236,23 +282,36 @@ export function AssetsShell() {
         </div>
         <form
           aria-label="Asset filters"
-          className="border-border grid gap-3 border-b p-4 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto]"
+          className="border-border grid gap-3 border-b p-4 md:grid-cols-[minmax(12rem,1.25fr)_minmax(12rem,1fr)_minmax(10rem,0.8fr)_11rem_auto]"
           onSubmit={submitFilters}
         >
-          <label className="relative md:col-span-2">
-            <span className="sr-only">Search assets</span>
+          <div className="relative md:col-span-2">
+            <label className="sr-only" htmlFor="asset-search">
+              Search assets
+            </label>
             <Search
               className="text-muted absolute top-3 left-3 size-4"
               aria-hidden="true"
             />
             <input
-              className="border-border bg-background min-h-10 w-full rounded-lg border pr-3 pl-9 text-sm"
+              id="asset-search"
+              className="border-border bg-background min-h-10 w-full rounded-lg border pr-10 pl-9 text-sm"
               maxLength={100}
               placeholder="Name, code, hostname, or location"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-          </label>
+            {search ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="text-muted hover:bg-neutral-soft hover:text-foreground focus-visible:outline-brand absolute top-1 right-1 grid size-8 place-items-center rounded-md transition-colors focus-visible:outline-2"
+                onClick={clearSearch}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
           <input
             aria-label="Asset type"
             className="border-border bg-background min-h-10 rounded-lg border px-3 text-sm"
@@ -266,7 +325,9 @@ export function AssetsShell() {
             value={criticality}
             onChange={(event) => setCriticality(event.target.value)}
           >
-            <option value="">All criticality levels</option><option value="low">Low</option><option value="medium">Medium</option>
+            <option value="">All criticality levels</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
             <option value="high">High</option>
             <option value="critical">Critical</option>
           </Select>
@@ -276,16 +337,21 @@ export function AssetsShell() {
               value={status}
               onChange={(event) => setStatus(event.target.value)}
             >
-              <option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="retired">Retired</option><option value="disposed">Disposed</option>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="retired">Retired</option>
+              <option value="disposed">Disposed</option>
             </Select>
             <Button type="submit">Filter</Button>
+            <Button type="button" variant="secondary" onClick={clearFilters}>
+              Clear
+            </Button>
           </div>
         </form>
         <div className="p-4">
           {assets.isPending ? (
-            <p className="text-muted py-10 text-center">
-              Loading asset list…
-            </p>
+            <p className="text-muted py-10 text-center">Loading asset list…</p>
           ) : null}
           {assets.isError ? (
             <Alert>
@@ -333,7 +399,10 @@ export function AssetsShell() {
         asset={assigningOwnerAsset}
         onClose={() => setAssigningOwnerAsset(null)}
       />
-      <AssetHistoryDialog assetId={historyAssetId} onClose={() => setHistoryAssetId(null)} />
+      <AssetHistoryDialog
+        assetId={historyAssetId}
+        onClose={() => setHistoryAssetId(null)}
+      />
     </div>
   );
 }
@@ -369,24 +438,57 @@ function AssetActionMenu({
   return (
     <DropdownMenu
       className="w-fit"
-      label={<span className="grid size-6 place-items-center"><span className="sr-only">Actions for {asset.assetCode}</span><MoreHorizontal className="size-5" aria-hidden="true" /></span>}
+      label={
+        <span className="grid size-6 place-items-center">
+          <span className="sr-only">Actions for {asset.assetCode}</span>
+          <MoreHorizontal className="size-5" aria-hidden="true" />
+        </span>
+      }
     >
-          <MenuAction icon={<Eye className="size-4" aria-hidden="true" />} label="View details" onClick={onView} />
-          {canUpdate ? (
-            <MenuAction icon={<Pencil className="size-4" aria-hidden="true" />} label="Edit" disabled={disposed} onClick={onEdit} />
-          ) : null}
-          {canClassify ? (
-            <MenuAction icon={<Tags className="size-4" aria-hidden="true" />} label="Classify criticality" disabled={disposed} onClick={onClassify} />
-          ) : null}
-          {canAssignOwner ? (
-            <MenuAction icon={<UserRound className="size-4" aria-hidden="true" />} label="Assign owner" disabled={disposed} onClick={onAssignOwner} />
-          ) : null}
-          {canReadHistory ? (
-            <MenuAction icon={<History className="size-4" aria-hidden="true" />} label="Change history" onClick={onHistory} />
-          ) : null}
-          {canDelete ? (
-            <MenuAction icon={<Trash2 className="size-4" aria-hidden="true" />} label="Delete" className="text-danger hover:bg-danger-soft" onClick={onDelete} />
-          ) : null}
+      <MenuAction
+        icon={<Eye className="size-4" aria-hidden="true" />}
+        label="View details"
+        onClick={onView}
+      />
+      {canUpdate ? (
+        <MenuAction
+          icon={<Pencil className="size-4" aria-hidden="true" />}
+          label="Edit"
+          disabled={disposed}
+          onClick={onEdit}
+        />
+      ) : null}
+      {canClassify ? (
+        <MenuAction
+          icon={<Tags className="size-4" aria-hidden="true" />}
+          label="Classify criticality"
+          disabled={disposed}
+          onClick={onClassify}
+        />
+      ) : null}
+      {canAssignOwner ? (
+        <MenuAction
+          icon={<UserRound className="size-4" aria-hidden="true" />}
+          label="Assign owner"
+          disabled={disposed}
+          onClick={onAssignOwner}
+        />
+      ) : null}
+      {canReadHistory ? (
+        <MenuAction
+          icon={<History className="size-4" aria-hidden="true" />}
+          label="Change history"
+          onClick={onHistory}
+        />
+      ) : null}
+      {canDelete ? (
+        <MenuAction
+          icon={<Trash2 className="size-4" aria-hidden="true" />}
+          label="Delete"
+          className="text-danger hover:bg-danger-soft"
+          onClick={onDelete}
+        />
+      ) : null}
     </DropdownMenu>
   );
 }
@@ -409,7 +511,7 @@ function MenuAction({
       type="button"
       role="menuitem"
       disabled={disabled}
-      className={`flex min-h-9 items-center gap-2 rounded-md px-3 text-left text-sm font-medium hover:bg-neutral-soft disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`hover:bg-neutral-soft flex min-h-9 items-center gap-2 rounded-md px-3 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       onClick={onClick}
     >
       {icon}
