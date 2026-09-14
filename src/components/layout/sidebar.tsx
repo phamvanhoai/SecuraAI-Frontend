@@ -7,6 +7,7 @@ import { useState } from "react";
 import {
   getPanelKind,
   getPanelNavigation,
+  canAccessNavigationItem,
   panelLabels,
   type NavigationItem,
 } from "@/config/navigation";
@@ -25,14 +26,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const panel = getPanelKind(pathname);
   const session = useSessionUser();
-  const canReadAssets =
-    session.data?.permissions.includes("assets.read") ?? false;
-  const canReadAiAlerts =
-    session.data?.permissions.includes("ai-alerts.read") ?? false;
+  const permissions = session.data?.permissions ?? [];
   const navigation = getPanelNavigation(panel).filter(
-    (item) =>
-      (!item.href.endsWith("/assets") || canReadAssets) &&
-      (!item.href.endsWith("/anomaly-monitoring") || canReadAiAlerts),
+    (item) => canAccessNavigationItem(permissions, item),
   );
   const sections = sectionOrder
     .map((label) => ({

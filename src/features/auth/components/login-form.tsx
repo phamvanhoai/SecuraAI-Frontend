@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { login } from "../api/login";
 import { loginSchema, type LoginInput } from "../schemas/login-schema";
+import { canAccessPanel, defaultPanelPath, panelFromPath } from "@/config/navigation";
 
-export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
+export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) {
   const [message, setMessage] = useState<string>();
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -29,18 +30,19 @@ export function LoginForm({ returnUrl = "/admin" }: { returnUrl?: string }) {
     try {
       await login(values);
       const response = await fetch("/api/auth/session", { cache: "no-store" });
+      if (!response.ok) throw new Error("Unable to verify your session. Please try again.");
       const payload = (await response.json().catch(() => undefined)) as
         | { data?: { user?: { roles?: Array<{ code: string }> } } }
         | undefined;
       const roles = payload?.data?.user?.roles ?? [];
-      const defaultPanel = roles.some((role) => role.code === "ADMIN")
-        ? "/admin"
-        : roles.some((role) => role.code === "SECURITY_OFFICER")
-          ? "/security-officer"
-          : roles.some((role) => role.code === "EXECUTIVE_AUDITOR")
-            ? "/executive-auditor"
-            : "/employee";
-      const destination = returnUrl === "/admin" ? defaultPanel : returnUrl;
+      const roleCodes = roles.map((role) => role.code);
+      const defaultPanel = defaultPanelPath(roleCodes);
+      const requestedPanel = panelFromPath(returnUrl);
+      const destination =
+        returnUrl === "/dashboard" ||
+        (requestedPanel !== null && !canAccessPanel(roleCodes, requestedPanel))
+          ? defaultPanel
+          : returnUrl;
       window.location.assign(destination);
     } catch (error: unknown) {
       setMessage(

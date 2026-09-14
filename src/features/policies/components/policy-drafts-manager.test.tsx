@@ -103,6 +103,26 @@ describe("PolicyDraftsManager", () => {
     expect(onCreateNewVersion).toHaveBeenCalledOnce();
   });
 
+  it("opens department assignment when the action is available", async () => {
+    const user = userEvent.setup();
+    const onAssignDepartments = vi.fn();
+    mocks.useSessionUser.mockReturnValue({
+      data: {
+        permissions: ["policies.create", "policies.assign-department"],
+      },
+      isPending: false,
+    });
+
+    render(<PolicyDraftsManager onAssignDepartments={onAssignDepartments} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Assign departments",
+      }),
+    );
+    expect(onAssignDepartments).toHaveBeenCalledOnce();
+  });
+
   it("does not expose draft data without policies.create", () => {
     mocks.useSessionUser.mockReturnValue({
       data: { permissions: [] },
