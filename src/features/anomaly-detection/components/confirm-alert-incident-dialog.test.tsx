@@ -70,7 +70,15 @@ beforeAll(() => {
 beforeEach(() => {
   mocks.mutateAsync.mockReset();
   mocks.success.mockReset();
-  mocks.mutateAsync.mockResolvedValue({ changed: true });
+  mocks.mutateAsync.mockResolvedValue({
+    changed: true,
+    incident: {
+      id: "55555555-5555-4555-8555-555555555555",
+      code: "INC-11111111-1111-4111-8111-111111111111",
+      status: "draft",
+      created: true,
+    },
+  });
 });
 afterEach(cleanup);
 
@@ -80,7 +88,7 @@ describe("ConfirmAlertIncidentDialog", () => {
     render(<ConfirmAlertIncidentDialog alert={alert} onClose={onClose} />);
     const user = userEvent.setup();
     expect(
-      screen.getByText(/does not create an incident draft/i),
+      screen.getByText(/automatically creates a linked incident draft/i),
     ).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
@@ -95,8 +103,8 @@ describe("ConfirmAlertIncidentDialog", () => {
     );
     expect(onClose).toHaveBeenCalledOnce();
     expect(mocks.success).toHaveBeenCalledWith(
-      "Alert confirmed as incident",
-      expect.stringContaining(alert.alertCode),
+      "Incident draft created",
+      expect.stringContaining("INC-11111111-1111-4111-8111-111111111111"),
     );
   });
 
