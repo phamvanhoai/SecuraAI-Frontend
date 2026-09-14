@@ -5,6 +5,7 @@ import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
 import {
+  EmployeePolicyAcknowledgementManager,
   PolicyDraftsManager,
   PolicyDepartmentAssignmentManager,
   PolicyPublicationManager,
@@ -24,6 +25,8 @@ export default function Page() {
     session.data?.permissions.includes("policies.update") ?? false;
   const canAssignDepartments =
     session.data?.permissions.includes("policies.assign-department") ?? false;
+  const canAcknowledge =
+    session.data?.permissions.includes("policies.acknowledge") ?? false;
 
   if (session.isPending) {
     return (
@@ -60,6 +63,7 @@ export default function Page() {
       />
     );
   }
+  if (canAcknowledge) return <EmployeePolicyAcknowledgementManager />;
   if (canAssignDepartments) return <PolicyDepartmentAssignmentManager />;
   if (canUpdate) return <UpdatePolicyVersionManager />;
   if (canPublish) return <PolicyPublicationManager />;
@@ -72,7 +76,7 @@ export default function Page() {
         title="Information security policies"
       />
       <EmptyState
-        description="The current account does not have permission to create, update, publish, or assign policies."
+        description="The current account does not have permission to manage or acknowledge policies."
         title="You do not have permission to manage policies"
       />
     </div>

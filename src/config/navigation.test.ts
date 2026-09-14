@@ -64,6 +64,19 @@ describe("panel navigation", () => {
     expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
   });
 
+  it("shows policy navigation to employees who can acknowledge policies", () => {
+    const policies = getPanelNavigation("employee").find((item) =>
+      item.href.endsWith("/policies"),
+    );
+    expect(policies).toBeDefined();
+    if (!policies) return;
+
+    expect(canAccessNavigationItem([], policies)).toBe(false);
+    expect(
+      canAccessNavigationItem(["policies.acknowledge"], policies),
+    ).toBe(true);
+  });
+
   it("shows Security Officer training only with course read permission", () => {
     const training = getPanelNavigation("security-officer").find(
       (item) => item.href === "/security-officer/training",

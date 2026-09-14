@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({ session: vi.fn() }));
 
 vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
 vi.mock("@/features/policies", () => ({
+  EmployeePolicyAcknowledgementManager: () => (
+    <p>Employee policy acknowledgement</p>
+  ),
   PolicyDraftsManager: ({
     onAssignDepartments,
     onCreateNewVersion,
@@ -125,5 +128,16 @@ describe("PoliciesPage", () => {
     expect(
       screen.queryByRole("button", { name: "Back to drafts" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows policy acknowledgement for an employee", () => {
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.acknowledge"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+    expect(
+      screen.getByText("Employee policy acknowledgement"),
+    ).toBeInTheDocument();
   });
 });
