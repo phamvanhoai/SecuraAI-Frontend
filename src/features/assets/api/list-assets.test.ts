@@ -11,7 +11,7 @@ describe("listAssets", () => {
           success: true,
           data: {
             items: [],
-            pagination: { page: 2, limit: 20, total: 0, totalPages: 0 },
+            pagination: { page: 2, limit: 10, total: 0, totalPages: 0 },
           },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
@@ -20,10 +20,18 @@ describe("listAssets", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(
-      listAssets({ page: 2, limit: 20, sortBy: "assetCode", sortOrder: "asc" }),
+      listAssets({
+        page: 2,
+        limit: 10,
+        q: "server",
+        criticality: "high",
+        status: "active",
+        sortBy: "assetCode",
+        sortOrder: "asc",
+      }),
     ).resolves.toMatchObject({ pagination: { page: 2 } });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/assets?page=2&limit=20&sortBy=assetCode&sortOrder=asc",
+      "/api/assets?page=2&limit=10&q=server&criticality=high&status=active&sortBy=assetCode&sortOrder=asc",
       expect.objectContaining({ credentials: "include", method: "GET" }),
     );
   });
@@ -43,7 +51,7 @@ describe("listAssets", () => {
     );
 
     await expect(
-      listAssets({ page: 1, limit: 20, sortBy: "assetCode", sortOrder: "asc" }),
+      listAssets({ page: 1, limit: 10, sortBy: "assetCode", sortOrder: "asc" }),
     ).rejects.toMatchObject({ status: 502, code: "UNKNOWN_ERROR" });
   });
 });

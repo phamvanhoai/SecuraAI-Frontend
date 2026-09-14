@@ -14,7 +14,7 @@ describe("asset list contracts", () => {
       }),
     ).toEqual({
       page: 2,
-      limit: 20,
+      limit: 10,
       q: "server",
       status: "active",
       sortBy: "assetCode",
@@ -47,7 +47,7 @@ describe("asset list contracts", () => {
           updatedAt: "2026-09-10T00:00:00.000Z",
         },
       ],
-      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
     };
     expect(assetListResponseSchema.safeParse(response).success).toBe(true);
     expect(
