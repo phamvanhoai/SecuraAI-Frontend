@@ -12,6 +12,7 @@ export default async function LoginPage({
   const params = await searchParams;
   const returnUrl = safeReturnUrl(
     typeof params.returnUrl === "string" ? params.returnUrl : undefined,
+    "/dashboard",
   );
   return (
     <section

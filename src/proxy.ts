@@ -47,10 +47,6 @@ export function proxy(request: NextRequest): NextResponse {
     }
   }
 
-  if (pathname === "/login" && hasSession) {
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
   return NextResponse.next();
 }
 
