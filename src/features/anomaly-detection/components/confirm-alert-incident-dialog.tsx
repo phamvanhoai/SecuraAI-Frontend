@@ -61,10 +61,10 @@ export function ConfirmAlertIncidentDialog({
       const result = await mutation.mutateAsync(values);
       resetAndClose();
       toast.success(
-        result.changed
-          ? "Alert confirmed as incident"
-          : "Alert already confirmed",
-        `${alert.alertCode} is marked as a confirmed incident.`,
+        result.incident.created
+          ? "Incident draft created"
+          : "Linked incident already exists",
+        `${result.incident.code} is linked to ${alert.alertCode}.`,
       );
     } catch (error: unknown) {
       setMessage(
@@ -89,8 +89,8 @@ export function ConfirmAlertIncidentDialog({
             <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
           </div>
           <p className="text-muted text-sm leading-6">
-            This changes the alert status to confirmed and records your review.
-            It does not create an incident draft.
+            This confirms the alert, records your review, and automatically
+            creates a linked incident draft for investigation.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
