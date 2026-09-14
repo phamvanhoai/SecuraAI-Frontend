@@ -6,19 +6,24 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
 import {
   PolicyDraftsManager,
+  PolicyDepartmentAssignmentManager,
   PolicyPublicationManager,
   UpdatePolicyVersionManager,
 } from "@/features/policies";
 
 export default function Page() {
   const session = useSessionUser();
-  const [view, setView] = useState<"default" | "new-version">("default");
+  const [view, setView] = useState<
+    "default" | "new-version" | "assign-departments"
+  >("default");
   const canCreateDrafts =
     session.data?.permissions.includes("policies.create") ?? false;
   const canPublish =
     session.data?.permissions.includes("policies.publish") ?? false;
   const canUpdate =
     session.data?.permissions.includes("policies.update") ?? false;
+  const canAssignDepartments =
+    session.data?.permissions.includes("policies.assign-department") ?? false;
 
   if (session.isPending) {
     return (
@@ -36,15 +41,26 @@ export default function Page() {
       />
     );
   }
+  if (view === "assign-departments" && canAssignDepartments) {
+    return (
+      <PolicyDepartmentAssignmentManager
+        {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
+      />
+    );
+  }
   if (canCreateDrafts) {
     return (
       <PolicyDraftsManager
+        {...(canAssignDepartments
+          ? { onAssignDepartments: () => setView("assign-departments") }
+          : {})}
         {...(canUpdate
           ? { onCreateNewVersion: () => setView("new-version") }
           : {})}
       />
     );
   }
+  if (canAssignDepartments) return <PolicyDepartmentAssignmentManager />;
   if (canUpdate) return <UpdatePolicyVersionManager />;
   if (canPublish) return <PolicyPublicationManager />;
 
@@ -56,7 +72,7 @@ export default function Page() {
         title="Information security policies"
       />
       <EmptyState
-        description="The current account does not have permission to create, update, or publish policies."
+        description="The current account does not have permission to create, update, publish, or assign policies."
         title="You do not have permission to manage policies"
       />
     </div>
