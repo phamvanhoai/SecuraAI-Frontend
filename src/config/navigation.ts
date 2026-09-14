@@ -100,6 +100,7 @@ const modules = {
     slug: "training",
     icon: GraduationCap,
     section: "Quản lý",
+    requiredAnyPermission: ["training-courses.read"],
   },
   anomalyMonitoring: {
     title: "Giám sát bất thường",
@@ -190,6 +191,7 @@ export const panelModules = {
     modules.incidents,
     modules.controls,
     modules.policies,
+    modules.training,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,

@@ -31,6 +31,7 @@ describe("panel navigation", () => {
   it("limits modules exposed by each specialist panel", () => {
     expect(panelHasModule("security-officer", "risks")).toBe(true);
     expect(panelHasModule("security-officer", "policies")).toBe(true);
+    expect(panelHasModule("security-officer", "training")).toBe(true);
     expect(panelHasModule("security-officer", "users")).toBe(false);
     expect(panelHasModule("executive-auditor", "audits")).toBe(true);
     expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(true);
@@ -74,5 +75,15 @@ describe("panel navigation", () => {
     expect(
       canAccessNavigationItem(["policies.acknowledge"], policies),
     ).toBe(true);
+  });
+
+  it("shows Security Officer training only with course read permission", () => {
+    const training = getPanelNavigation("security-officer").find(
+      (item) => item.href === "/security-officer/training",
+    );
+    expect(training).toBeDefined();
+    if (!training) return;
+    expect(canAccessNavigationItem([], training)).toBe(false);
+    expect(canAccessNavigationItem(["training-courses.read"], training)).toBe(true);
   });
 });
