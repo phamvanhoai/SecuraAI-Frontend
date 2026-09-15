@@ -6,6 +6,8 @@ import {
   createSyncSchedule,
   deleteSyncSchedule,
   getIntegrationById,
+  getIntegrationLogStats,
+  listAllIntegrationLogs,
   listIntegrationLogs,
   listIntegrations,
   listSyncJobs,
@@ -47,6 +49,10 @@ export const integrationKeys = {
     [...integrationKeys.all, "jobs", input] as const,
   logs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
     [...integrationKeys.all, "logs", input] as const,
+  allLogs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
+    [...integrationKeys.all, "all-logs", input] as const,
+  logStats: (params?: { integrationId?: string; startDate?: string; endDate?: string }) =>
+    [...integrationKeys.all, "log-stats", params] as const,
 };
 
 export function useIntegrations(
@@ -219,7 +225,7 @@ export function useSyncJobs(input: Omit<ListSyncJobsInput, "signal">) {
 }
 
 export function useIntegrationLogs(
-  input: Omit<ListIntegrationLogsInput, "signal">,
+  input: Omit<ListIntegrationLogsInput, "signal"> & { integrationId: string },
 ) {
   return useQuery({
     queryKey: integrationKeys.logs(input),
@@ -337,3 +343,20 @@ export function useRevokeApiKey() {
   });
 }
 
+export function useAllIntegrationLogs(
+  input: Omit<ListIntegrationLogsInput, "signal">,
+) {
+  return useQuery({
+    queryKey: integrationKeys.allLogs(input),
+    queryFn: ({ signal }) => listAllIntegrationLogs({ ...input, signal }),
+  });
+}
+
+export function useIntegrationLogStats(
+  params?: { integrationId?: string; startDate?: string; endDate?: string },
+) {
+  return useQuery({
+    queryKey: integrationKeys.logStats(params),
+    queryFn: ({ signal }) => getIntegrationLogStats({ ...params, signal }),
+  });
+}

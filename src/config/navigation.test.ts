@@ -21,35 +21,32 @@ describe("panel navigation", () => {
     expect(panelLinks.every((href) => href.startsWith("/admin"))).toBe(true);
   });
 
-  it("limits employee navigation to employee functions", () => {
-    const links = getPanelNavigation("employee").map((item) => item.href);
-    expect(links).toContain("/employee/training");
-    expect(links).toContain("/employee/policies");
-    expect(links).not.toContain("/employee/users");
+  it("uses one shared navigation for every non-admin role", () => {
+    const links = getPanelNavigation("dashboard").map((item) => item.href);
+    expect(links).toContain("/training");
+    expect(links).toContain("/policies");
+    expect(links).not.toContain("/users");
   });
 
-  it("limits modules exposed by each specialist panel", () => {
-    expect(panelHasModule("security-officer", "risks")).toBe(true);
-    expect(panelHasModule("security-officer", "policies")).toBe(true);
-    expect(panelHasModule("security-officer", "training")).toBe(true);
-    expect(panelHasModule("security-officer", "users")).toBe(false);
-    expect(panelHasModule("executive-auditor", "audits")).toBe(true);
-    expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(true);
-    expect(panelHasModule("executive-auditor", "ai-models")).toBe(false);
+  it("combines every module assigned to non-admin roles", () => {
+    expect(panelHasModule("dashboard", "risks")).toBe(true);
+    expect(panelHasModule("dashboard", "policies")).toBe(true);
+    expect(panelHasModule("dashboard", "training")).toBe(true);
+    expect(panelHasModule("dashboard", "audits")).toBe(true);
+    expect(panelHasModule("dashboard", "users")).toBe(false);
   });
 
   it("allows only panels backed by assigned system roles", () => {
     expect(allowedPanels(["ADMIN"])).toEqual(["admin"]);
     expect(allowedPanels(["SECURITY_OFFICER", "EMPLOYEE"])).toEqual([
-      "security-officer",
-      "employee",
+      "dashboard",
     ]);
-    expect(canAccessPanel(["ADMIN"], "security-officer")).toBe(false);
+    expect(canAccessPanel(["ADMIN"], "dashboard")).toBe(false);
   });
 
   it("chooses a deterministic default panel for multi-role users", () => {
     expect(defaultPanelPath(["EMPLOYEE", "SECURITY_OFFICER"])).toBe(
-      "/security-officer",
+      "/dashboard",
     );
     expect(defaultPanelPath(["CUSTOM_ROLE"])).toBe("/profile");
   });
@@ -65,25 +62,27 @@ describe("panel navigation", () => {
   });
 
   it("shows policy navigation to employees who can acknowledge policies", () => {
-    const policies = getPanelNavigation("employee").find((item) =>
-      item.href.endsWith("/policies"),
+    const policies = getPanelNavigation("dashboard").find(
+      (item) => item.href === "/policies",
     );
     expect(policies).toBeDefined();
     if (!policies) return;
 
     expect(canAccessNavigationItem([], policies)).toBe(false);
-    expect(
-      canAccessNavigationItem(["policies.acknowledge"], policies),
-    ).toBe(true);
+    expect(canAccessNavigationItem(["policies.acknowledge"], policies)).toBe(
+      true,
+    );
   });
 
   it("shows Security Officer training only with course read permission", () => {
-    const training = getPanelNavigation("security-officer").find(
-      (item) => item.href === "/security-officer/training",
+    const training = getPanelNavigation("dashboard").find(
+      (item) => item.href === "/training",
     );
     expect(training).toBeDefined();
     if (!training) return;
     expect(canAccessNavigationItem([], training)).toBe(false);
-    expect(canAccessNavigationItem(["training-courses.read"], training)).toBe(true);
+    expect(canAccessNavigationItem(["training-courses.read"], training)).toBe(
+      true,
+    );
   });
 });

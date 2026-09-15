@@ -10,3 +10,4 @@ export { TestConnectionDialog } from "./components/test-connection-dialog";
 export { ApiKeysTab } from "./components/api-keys-tab";
 export { ApiKeyModal } from "./components/api-key-modal";
 export { OneTimeSecretDialog } from "./components/one-time-secret-dialog";
+export { SyncErrorLogsView } from "./components/sync-error-logs-view";

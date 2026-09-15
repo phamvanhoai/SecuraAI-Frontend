@@ -162,6 +162,27 @@ export const integrationLogSchema = z.object({
   message: z.string(),
   details: z.unknown().optional(),
   createdAt: z.string(),
+  // Nested relations returned by the global /logs endpoint
+  integration: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      type: z.string().optional(),
+      integrationType: z.string().optional(),
+      status: z.string().optional(),
+    })
+    .optional()
+    .nullable(),
+  syncJob: z
+    .object({
+      id: z.string(),
+      status: z.string(),
+      recordsProcessed: z.number().optional().nullable(),
+      recordsFailed: z.number().optional().nullable(),
+      errorMessage: z.string().nullable().optional(),
+    })
+    .optional()
+    .nullable(),
 });
 export type IntegrationLog = z.infer<typeof integrationLogSchema>;
 
@@ -247,3 +268,10 @@ export const rotateApiKeyFormSchema = z.object({
 });
 export type RotateApiKeyInput = z.infer<typeof rotateApiKeyFormSchema>;
 
+export const integrationLogStatsSchema = z.object({
+  totalErrors: z.number(),
+  totalWarnings: z.number(),
+  failedJobsCount: z.number(),
+  affectedIntegrationsCount: z.number(),
+});
+export type IntegrationLogStats = z.infer<typeof integrationLogStatsSchema>;
