@@ -2,11 +2,9 @@
 
 import {
   Bell,
-  BriefcaseBusiness,
   ChevronDown,
   LayoutDashboard,
   LogOut,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +13,11 @@ import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSessionUser } from "@/features/auth";
 import { ThemeToggle } from "./theme-toggle";
-import { allowedPanels, panelLabels, type PanelKind } from "@/config/navigation";
+import {
+  allowedPanels,
+  panelLabels,
+  type PanelKind,
+} from "@/config/navigation";
 
 export function Header() {
   const router = useRouter();
@@ -108,8 +110,6 @@ export function Header() {
 
 function panelIcon(panel: PanelKind): ReactNode {
   if (panel === "admin") return <LayoutDashboard />;
-  if (panel === "security-officer") return <ShieldCheck />;
-  if (panel === "executive-auditor") return <BriefcaseBusiness />;
   return <UserRound />;
 }
 
