@@ -7,3 +7,4 @@ export { IntegrationCard } from "./components/integration-card";
 export { ConnectIntegrationModal } from "./components/connect-integration-modal";
 export { IntegrationDetailDrawer } from "./components/integration-detail-drawer";
 export { TestConnectionDialog } from "./components/test-connection-dialog";
+export { SyncErrorLogsView } from "./components/sync-error-logs-view";
