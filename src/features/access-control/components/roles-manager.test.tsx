@@ -26,6 +26,13 @@ const systemRole = {
   createdAt: "2026-09-10T00:00:00.000Z",
   updatedAt: "2026-09-10T00:00:00.000Z",
 };
+const securityOfficerRole = {
+  ...systemRole,
+  id: "33333333-3333-4333-8333-333333333333",
+  code: "SECURITY_OFFICER",
+  name: "Security Officer",
+  isSystem: false,
+};
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function showModal() {
@@ -39,8 +46,11 @@ beforeAll(() => {
 describe("RolesManager", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("shows fixed roles as a read-only access overview", async () => {
-    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+  it("keeps Admin read-only and updates permissions for another fixed role", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      if (init?.method === "PATCH") {
+        return Response.json({ success: true, data: securityOfficerRole });
+      }
       if (String(input).includes("/api/access-control/permissions")) {
         return Response.json({
           success: true,
@@ -53,8 +63,8 @@ describe("RolesManager", () => {
       return Response.json({
         success: true,
         data: {
-          items: [systemRole],
-          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+          items: [systemRole, securityOfficerRole],
+          pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
         },
       });
     });
@@ -86,19 +96,34 @@ describe("RolesManager", () => {
       screen.getByRole("dialog", { name: "Role details" }),
     );
     expect(detailDialog.getByText("roles.read")).toBeVisible();
-    expect(detailDialog.getByText("Fixed")).toBeVisible();
+    expect(detailDialog.getByText("System role")).toBeVisible();
     await user.click(detailDialog.getByRole("button", { name: "Close" }));
     expect(
       screen.queryByRole("button", { name: "Create role" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Edit" }),
+      screen.queryByRole("button", { name: "Edit permissions" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Delete" }),
     ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Security Officer" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Edit permissions" }));
+    const permissionDialog = within(
+      screen.getByRole("dialog", { name: "Edit permissions" }),
+    );
+    expect(permissionDialog.getByText("SECURITY_OFFICER")).toBeVisible();
+    await user.click(
+      permissionDialog.getByRole("checkbox", { name: /roles\.read/ }),
+    );
+    await user.click(
+      permissionDialog.getByRole("button", { name: "Save permissions" }),
+    );
+    expect(await screen.findByText("Permissions updated")).toBeVisible();
     expect(
-      fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
-    ).toBe(false);
+      fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH"),
+    ).toBe(true);
   });
 });

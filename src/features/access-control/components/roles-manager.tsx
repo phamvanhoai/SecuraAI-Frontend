@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Search } from "lucide-react";
+import { Ellipsis, Eye, Pencil, Search } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -14,15 +14,22 @@ import {
   StatusBadge,
 } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
-import { usePermissions, useRoleMetrics, useRoles } from "../hooks/use-roles";
+import {
+  usePermissions,
+  useRoleMetrics,
+  useRoles,
+  useUpdateRole,
+} from "../hooks/use-roles";
 import { isFixedRoleCode } from "../lib/fixed-roles";
-import type { Permission, Role } from "../schemas/role-schema";
+import type { Permission, Role, RoleFormValues } from "../schemas/role-schema";
 import { RoleDetailDialog } from "./role-detail-dialog";
+import { RoleFormDialog } from "./role-form-dialog";
 
 const PAGE_SIZE = 20;
 function userError(error: unknown): string {
@@ -40,10 +47,13 @@ function userError(error: unknown): string {
 }
 
 export function RolesManager() {
+  const toast = useToast();
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [viewingRole, setViewingRole] = useState<Role | null>(null);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const roles = useRoles({
     page,
     limit: PAGE_SIZE,
@@ -51,6 +61,7 @@ export function RolesManager() {
   });
   const metrics = useRoleMetrics();
   const permissionCatalog = usePermissions();
+  const updateMutation = useUpdateRole();
 
   const permissions: readonly Permission[] =
     permissionCatalog.data?.items ?? [];
@@ -88,7 +99,7 @@ export function RolesManager() {
       header: "Type",
       cell: (role) => (
         <StatusBadge tone={isFixedRoleCode(role.code) ? "success" : "info"}>
-          {isFixedRoleCode(role.code) ? "Fixed" : "Legacy custom"}
+          {isFixedRoleCode(role.code) ? "System role" : "Legacy role"}
         </StatusBadge>
       ),
     },
@@ -117,6 +128,19 @@ export function RolesManager() {
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
             View details
           </button>
+          {isFixedRoleCode(role.code) && role.code !== "ADMIN" ? (
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => {
+                setFormError(null);
+                setEditingRole(role);
+              }}
+              type="button"
+            >
+              <Pencil aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Edit permissions
+            </button>
+          ) : null}
         </DropdownMenu>
       ),
     },
@@ -128,13 +152,28 @@ export function RolesManager() {
     setSearch(searchDraft.trim());
   }
 
+  async function savePermissions(values: RoleFormValues): Promise<void> {
+    if (!editingRole || editingRole.code === "ADMIN") return;
+    setFormError(null);
+    try {
+      await updateMutation.mutateAsync({ id: editingRole.id, input: values });
+      setEditingRole(null);
+      toast.success(
+        "Permissions updated",
+        `${editingRole.name} now uses the selected permissions.`,
+      );
+    } catch (error: unknown) {
+      setFormError(userError(error));
+    }
+  }
+
   const items = roles.data?.items ?? [];
 
   return (
     <>
       <ProductPageHeader
         title="Roles and permissions"
-        description="Review fixed system roles and the permissions enforced by the backend."
+        description="Review system roles and manage permission assignments for non-admin roles."
         showSampleNotice={false}
       />
       <MetricStrip
@@ -144,7 +183,7 @@ export function RolesManager() {
             label: "Total roles",
             value: metrics.data ? String(metrics.data.total) : "—",
             detail: metrics.data
-              ? `${metrics.data.fixed} fixed roles`
+              ? `${metrics.data.fixed} system roles`
               : "Across all roles",
             tone: "brand",
             loading: metrics.isPending,
@@ -164,7 +203,7 @@ export function RolesManager() {
             loading: metrics.isPending,
           },
           {
-            label: "Legacy custom roles",
+            label: "Legacy roles",
             value: metrics.data
               ? String(metrics.data.total - metrics.data.fixed)
               : "—",
@@ -238,6 +277,15 @@ export function RolesManager() {
       <RoleDetailDialog
         role={viewingRole}
         onClose={() => setViewingRole(null)}
+      />
+      <RoleFormDialog
+        errorMessage={formError}
+        onClose={() => setEditingRole(null)}
+        onSubmit={savePermissions}
+        open={editingRole !== null}
+        pending={updateMutation.isPending}
+        permissions={permissions}
+        role={editingRole}
       />
     </>
   );
