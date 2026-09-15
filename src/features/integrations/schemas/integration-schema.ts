@@ -192,6 +192,82 @@ export const integrationLogListSchema = z.object({
 });
 export type IntegrationLogList = z.infer<typeof integrationLogListSchema>;
 
+export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED"]);
+export type ApiKeyStatus = z.infer<typeof apiKeyStatusEnum>;
+
+export const integrationApiKeySchema = z.object({
+  id: z.string().uuid(),
+  integrationId: z.string().uuid(),
+  keyName: z.string(),
+  keyFingerprint: z.string().nullable().optional(),
+  expiresAt: z.string().nullable().optional(),
+  isActive: z.boolean(),
+  status: apiKeyStatusEnum,
+  createdAt: z.string(),
+});
+export type IntegrationApiKey = z.infer<typeof integrationApiKeySchema>;
+
+export const integrationApiKeyListSchema = z.array(integrationApiKeySchema);
+export type IntegrationApiKeyList = z.infer<typeof integrationApiKeyListSchema>;
+
+export const createdApiKeyResponseSchema = integrationApiKeySchema.extend({
+  secret: z.string(),
+});
+export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;
+
+export const createApiKeyFormSchema = z.object({
+  keyName: z
+    .string()
+    .trim()
+    .min(1, "Tên khóa không được để trống")
+    .max(100, "Tên khóa không được vượt quá 100 ký tự"),
+  secret: z
+    .string()
+    .trim()
+    .max(1000, "Secret không được vượt quá 1000 ký tự")
+    .optional()
+    .or(z.literal("")),
+  expiresAt: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => !val || new Date(val).getTime() > Date.now(),
+      { message: "Ngày hết hạn phải ở tương lai" },
+    ),
+  isActive: z.boolean().default(true),
+});
+export type CreateApiKeyInput = z.infer<typeof createApiKeyFormSchema>;
+
+export const updateApiKeyFormSchema = z.object({
+  keyName: z
+    .string()
+    .trim()
+    .min(1, "Tên khóa không được để trống")
+    .max(100, "Tên khóa không được vượt quá 100 ký tự")
+    .optional(),
+  expiresAt: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => !val || new Date(val).getTime() > Date.now(),
+      { message: "Ngày hết hạn phải ở tương lai" },
+    ),
+  isActive: z.boolean().optional(),
+});
+export type UpdateApiKeyInput = z.infer<typeof updateApiKeyFormSchema>;
+
+export const rotateApiKeyFormSchema = z.object({
+  secret: z
+    .string()
+    .trim()
+    .max(1000, "Secret không được vượt quá 1000 ký tự")
+    .optional()
+    .or(z.literal("")),
+});
+export type RotateApiKeyInput = z.infer<typeof rotateApiKeyFormSchema>;
+
 export const integrationLogStatsSchema = z.object({
   totalErrors: z.number(),
   totalWarnings: z.number(),
