@@ -273,52 +273,81 @@ function PasswordForm({
   } = useForm<ConfirmPasswordResetInput>({
     resolver: zodResolver(confirmPasswordResetSchema),
     defaultValues: { token, newPassword: "", confirmPassword: "" },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
   return (
     <form
-      className="mx-auto mt-8 max-w-xl space-y-4"
       autoComplete="off"
+      className="mx-auto mt-8 max-w-xl space-y-4"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
       <input type="hidden" {...register("token")} />
-      <label className="block text-sm font-medium">
-        New password
+      <div>
+        <label className="block text-sm font-medium" htmlFor="new-password">
+          New password
+        </label>
         <div className="relative mt-2">
           <Input
+            id="new-password"
             className="pr-12"
             type={showPassword ? "text" : "password"}
             autoComplete="off"
+            aria-invalid={Boolean(errors.newPassword)}
+            aria-describedby={
+              errors.newPassword ? "new-password-error" : "new-password-help"
+            }
             {...register("newPassword")}
           />
           <button
             aria-label={
               showPassword ? "Hide new password" : "Show new password"
             }
-            className="text-muted hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+            aria-pressed={showPassword}
+            className="text-muted hover:text-foreground absolute top-1/2 right-1 grid size-10 -translate-y-1/2 place-items-center rounded-lg"
             type="button"
             onClick={() => setShowPassword((value) => !value)}
           >
             {showPassword ? (
-              <EyeOff className="size-5" />
+              <EyeOff aria-hidden="true" className="size-5" />
             ) : (
-              <Eye className="size-5" />
+              <Eye aria-hidden="true" className="size-5" />
             )}
           </button>
         </div>
         {errors.newPassword ? (
-          <span className="text-danger mt-1 block text-sm">
+          <span
+            id="new-password-error"
+            className="text-danger mt-1 block text-sm"
+            role="alert"
+          >
             {errors.newPassword.message}
           </span>
-        ) : null}
-      </label>
-      <label className="block text-sm font-medium">
-        Confirm new password
+        ) : (
+          <span
+            id="new-password-help"
+            className="text-muted mt-1 block text-sm"
+          >
+            Use 8–128 characters with at least one uppercase letter and one
+            special character.
+          </span>
+        )}
+      </div>
+      <div>
+        <label className="block text-sm font-medium" htmlFor="confirm-password">
+          Confirm new password
+        </label>
         <div className="relative mt-2">
           <Input
+            id="confirm-password"
             className="pr-12"
             type={showConfirmation ? "text" : "password"}
             autoComplete="off"
+            aria-invalid={Boolean(errors.confirmPassword)}
+            aria-describedby={
+              errors.confirmPassword ? "confirm-password-error" : undefined
+            }
             {...register("confirmPassword")}
           />
           <button
@@ -327,23 +356,28 @@ function PasswordForm({
                 ? "Hide password confirmation"
                 : "Show password confirmation"
             }
-            className="text-muted hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+            aria-pressed={showConfirmation}
+            className="text-muted hover:text-foreground absolute top-1/2 right-1 grid size-10 -translate-y-1/2 place-items-center rounded-lg"
             type="button"
             onClick={() => setShowConfirmation((value) => !value)}
           >
             {showConfirmation ? (
-              <EyeOff className="size-5" />
+              <EyeOff aria-hidden="true" className="size-5" />
             ) : (
-              <Eye className="size-5" />
+              <Eye aria-hidden="true" className="size-5" />
             )}
           </button>
         </div>
         {errors.confirmPassword ? (
-          <span className="text-danger mt-1 block text-sm">
+          <span
+            id="confirm-password-error"
+            className="text-danger mt-1 block text-sm"
+            role="alert"
+          >
             {errors.confirmPassword.message}
           </span>
         ) : null}
-      </label>
+      </div>
       <Button className="mt-2 w-full" disabled={pending} type="submit">
         {pending ? "Resetting..." : "Reset password"}
       </Button>

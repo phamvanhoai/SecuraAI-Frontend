@@ -2,16 +2,21 @@ import { ApiError, normalizeApiError } from "@/lib/api/api-error";
 import {
   integrationListSchema,
   integrationLogListSchema,
+  integrationLogStatsSchema,
   integrationSchema,
   syncJobListSchema,
   syncScheduleListSchema,
   syncScheduleSchema,
   testConnectionResultSchema,
+  integrationApiKeySchema,
+  integrationApiKeyListSchema,
+  createdApiKeyResponseSchema,
   type CreateIntegrationInput,
   type CreateSyncScheduleInput,
   type Integration,
   type IntegrationList,
   type IntegrationLogList,
+  type IntegrationLogStats,
   type IntegrationStatus,
   type IntegrationType,
   type SyncJob,
@@ -21,6 +26,12 @@ import {
   type TestConnectionResult,
   type UpdateIntegrationInput,
   type UpdateSyncScheduleInput,
+  type CreateApiKeyInput,
+  type UpdateApiKeyInput,
+  type RotateApiKeyInput,
+  type IntegrationApiKey,
+  type IntegrationApiKeyList,
+  type CreatedApiKeyResponse,
 } from "../schemas/integration-schema";
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -256,16 +267,19 @@ export function listSyncJobs(
 }
 
 export type ListIntegrationLogsInput = {
-  integrationId: string;
+  integrationId?: string | undefined;
   page?: number | undefined;
   limit?: number | undefined;
   level?: string | undefined;
   syncJobId?: string | undefined;
+  search?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
   signal?: AbortSignal | undefined;
 };
 
 export function listIntegrationLogs(
-  input: ListIntegrationLogsInput,
+  input: ListIntegrationLogsInput & { integrationId: string },
 ): Promise<IntegrationLogList> {
   const query = new URLSearchParams({
     page: String(input.page ?? 1),
@@ -278,5 +292,146 @@ export function listIntegrationLogs(
     `/api/integrations/${encodeURIComponent(input.integrationId)}/logs?${query.toString()}`,
     integrationLogListSchema,
     input.signal ? { signal: input.signal } : undefined,
+  );
+}
+
+// -------------------------------------------------------------
+// Integration API Keys API Client
+// -------------------------------------------------------------
+export type ListApiKeysInput = {
+  integrationId: string;
+  isActive?: boolean | undefined;
+  search?: string | undefined;
+  signal?: AbortSignal | undefined;
+};
+
+export function listApiKeys(
+  input: ListApiKeysInput,
+): Promise<IntegrationApiKeyList> {
+  const query = new URLSearchParams();
+  if (input.isActive !== undefined) query.set("isActive", String(input.isActive));
+  if (input.search) query.set("search", input.search);
+
+  const qs = query.toString();
+  const path = `/api/integrations/${encodeURIComponent(input.integrationId)}/api-keys${qs ? `?${qs}` : ""}`;
+
+  return integrationRequest(
+    path,
+    integrationApiKeyListSchema,
+    input.signal ? { signal: input.signal } : undefined,
+  );
+}
+
+export function listAllIntegrationLogs(
+  input: ListIntegrationLogsInput,
+): Promise<IntegrationLogList> {
+  const query = new URLSearchParams({
+    page: String(input.page ?? 1),
+    limit: String(input.limit ?? 50),
+  });
+  if (input.integrationId) query.set("integrationId", input.integrationId);
+  if (input.level) query.set("level", input.level);
+  if (input.search) query.set("search", input.search);
+  if (input.startDate) query.set("startDate", input.startDate);
+  if (input.endDate) query.set("endDate", input.endDate);
+  if (input.syncJobId) query.set("syncJobId", input.syncJobId);
+
+  return integrationRequest(
+    `/api/integrations/logs?${query.toString()}`,
+    integrationLogListSchema,
+    input.signal ? { signal: input.signal } : undefined,
+  );
+}
+
+export function getApiKeyById(
+  integrationId: string,
+  keyId: string,
+  signal?: AbortSignal,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
+    integrationApiKeySchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function createApiKey(
+  integrationId: string,
+  input: CreateApiKeyInput,
+): Promise<CreatedApiKeyResponse> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys`,
+    createdApiKeyResponseSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateApiKey(
+  integrationId: string,
+  keyId: string,
+  input: UpdateApiKeyInput,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
+    integrationApiKeySchema,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function rotateApiKey(
+  integrationId: string,
+  keyId: string,
+  input?: RotateApiKeyInput,
+): Promise<CreatedApiKeyResponse> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/rotate`,
+    createdApiKeyResponseSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input ?? {}),
+    },
+  );
+}
+
+export function revokeApiKey(
+  integrationId: string,
+  keyId: string,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/revoke`,
+    integrationApiKeySchema,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function getIntegrationLogStats(
+  params?: {
+    integrationId?: string | undefined;
+    startDate?: string | undefined;
+    endDate?: string | undefined;
+    signal?: AbortSignal | undefined;
+  },
+): Promise<IntegrationLogStats> {
+  const query = new URLSearchParams();
+  if (params?.integrationId) query.set("integrationId", params.integrationId);
+  if (params?.startDate) query.set("startDate", params.startDate);
+  if (params?.endDate) query.set("endDate", params.endDate);
+  const qs = query.toString();
+
+  return integrationRequest(
+    `/api/integrations/logs/stats${qs ? `?${qs}` : ""}`,
+    integrationLogStatsSchema,
+    params?.signal ? { signal: params.signal } : undefined,
   );
 }

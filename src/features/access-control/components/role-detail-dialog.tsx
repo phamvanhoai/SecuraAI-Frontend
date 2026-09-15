@@ -41,7 +41,7 @@ export function RoleDetailDialog({
               </p>
             </div>
             <StatusBadge tone={isFixedRoleCode(role.code) ? "success" : "info"}>
-              {isFixedRoleCode(role.code) ? "Fixed" : "Legacy custom"}
+              {isFixedRoleCode(role.code) ? "System role" : "Legacy role"}
             </StatusBadge>
           </div>
 
