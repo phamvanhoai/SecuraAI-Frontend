@@ -7,6 +7,9 @@ import {
   syncScheduleListSchema,
   syncScheduleSchema,
   testConnectionResultSchema,
+  integrationApiKeySchema,
+  integrationApiKeyListSchema,
+  createdApiKeyResponseSchema,
   type CreateIntegrationInput,
   type CreateSyncScheduleInput,
   type Integration,
@@ -21,6 +24,12 @@ import {
   type TestConnectionResult,
   type UpdateIntegrationInput,
   type UpdateSyncScheduleInput,
+  type CreateApiKeyInput,
+  type UpdateApiKeyInput,
+  type RotateApiKeyInput,
+  type IntegrationApiKey,
+  type IntegrationApiKeyList,
+  type CreatedApiKeyResponse,
 } from "../schemas/integration-schema";
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -280,3 +289,103 @@ export function listIntegrationLogs(
     input.signal ? { signal: input.signal } : undefined,
   );
 }
+
+// -------------------------------------------------------------
+// Integration API Keys API Client
+// -------------------------------------------------------------
+export type ListApiKeysInput = {
+  integrationId: string;
+  isActive?: boolean | undefined;
+  search?: string | undefined;
+  signal?: AbortSignal | undefined;
+};
+
+export function listApiKeys(
+  input: ListApiKeysInput,
+): Promise<IntegrationApiKeyList> {
+  const query = new URLSearchParams();
+  if (input.isActive !== undefined) query.set("isActive", String(input.isActive));
+  if (input.search) query.set("search", input.search);
+
+  const qs = query.toString();
+  const path = `/api/integrations/${encodeURIComponent(input.integrationId)}/api-keys${qs ? `?${qs}` : ""}`;
+
+  return integrationRequest(
+    path,
+    integrationApiKeyListSchema,
+    input.signal ? { signal: input.signal } : undefined,
+  );
+}
+
+export function getApiKeyById(
+  integrationId: string,
+  keyId: string,
+  signal?: AbortSignal,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
+    integrationApiKeySchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function createApiKey(
+  integrationId: string,
+  input: CreateApiKeyInput,
+): Promise<CreatedApiKeyResponse> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys`,
+    createdApiKeyResponseSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateApiKey(
+  integrationId: string,
+  keyId: string,
+  input: UpdateApiKeyInput,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
+    integrationApiKeySchema,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function rotateApiKey(
+  integrationId: string,
+  keyId: string,
+  input?: RotateApiKeyInput,
+): Promise<CreatedApiKeyResponse> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/rotate`,
+    createdApiKeyResponseSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input ?? {}),
+    },
+  );
+}
+
+export function revokeApiKey(
+  integrationId: string,
+  keyId: string,
+): Promise<IntegrationApiKey> {
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/revoke`,
+    integrationApiKeySchema,
+    {
+      method: "POST",
+    },
+  );
+}
+

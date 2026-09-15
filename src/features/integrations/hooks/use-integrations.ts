@@ -14,15 +14,25 @@ import {
   triggerIntegrationSync,
   updateIntegration,
   updateSyncSchedule,
+  listApiKeys,
+  getApiKeyById,
+  createApiKey,
+  updateApiKey,
+  rotateApiKey,
+  revokeApiKey,
   type ListIntegrationLogsInput,
   type ListIntegrationsInput,
   type ListSyncJobsInput,
+  type ListApiKeysInput,
 } from "../api/integrations";
 import type {
   CreateIntegrationInput,
   CreateSyncScheduleInput,
   UpdateIntegrationInput,
   UpdateSyncScheduleInput,
+  CreateApiKeyInput,
+  UpdateApiKeyInput,
+  RotateApiKeyInput,
 } from "../schemas/integration-schema";
 
 export const integrationKeys = {
@@ -31,6 +41,8 @@ export const integrationKeys = {
     [...integrationKeys.all, "list", input] as const,
   detail: (id: string) => [...integrationKeys.all, "detail", id] as const,
   schedules: (id: string) => [...integrationKeys.all, "schedules", id] as const,
+  apiKeys: (integrationId: string) =>
+    [...integrationKeys.all, "api-keys", integrationId] as const,
   jobs: (input: Omit<ListSyncJobsInput, "signal">) =>
     [...integrationKeys.all, "jobs", input] as const,
   logs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
@@ -215,3 +227,113 @@ export function useIntegrationLogs(
     enabled: Boolean(input.integrationId),
   });
 }
+
+// -------------------------------------------------------------
+// API Key Hooks
+// -------------------------------------------------------------
+export function useApiKeys(
+  input: Omit<ListApiKeysInput, "signal">,
+) {
+  return useQuery({
+    queryKey: [...integrationKeys.apiKeys(input.integrationId), input.isActive, input.search],
+    queryFn: ({ signal }) => listApiKeys({ ...input, signal }),
+    enabled: Boolean(input.integrationId),
+  });
+}
+
+export function useApiKey(integrationId: string, keyId: string) {
+  return useQuery({
+    queryKey: [...integrationKeys.apiKeys(integrationId), keyId],
+    queryFn: ({ signal }) => getApiKeyById(integrationId, keyId, signal),
+    enabled: Boolean(integrationId && keyId),
+  });
+}
+
+export function useCreateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      integrationId,
+      input,
+    }: {
+      integrationId: string;
+      input: CreateApiKeyInput;
+    }) => createApiKey(integrationId, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+      });
+    },
+  });
+}
+
+export function useUpdateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      integrationId,
+      keyId,
+      input,
+    }: {
+      integrationId: string;
+      keyId: string;
+      input: UpdateApiKeyInput;
+    }) => updateApiKey(integrationId, keyId, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+      });
+    },
+  });
+}
+
+export function useRotateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      integrationId,
+      keyId,
+      input,
+    }: {
+      integrationId: string;
+      keyId: string;
+      input?: RotateApiKeyInput;
+    }) => rotateApiKey(integrationId, keyId, input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+      });
+    },
+  });
+}
+
+export function useRevokeApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      integrationId,
+      keyId,
+    }: {
+      integrationId: string;
+      keyId: string;
+    }) => revokeApiKey(integrationId, keyId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+      });
+    },
+  });
+}
+
