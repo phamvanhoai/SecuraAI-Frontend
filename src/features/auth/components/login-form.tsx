@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/forms/form-field";
@@ -11,9 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { login } from "../api/login";
 import { loginSchema, type LoginInput } from "../schemas/login-schema";
-import { canAccessPanel, defaultPanelPath, panelFromPath } from "@/config/navigation";
+import {
+  canAccessPanel,
+  defaultPanelPath,
+  panelFromPath,
+} from "@/config/navigation";
 
-export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) {
+export function LoginForm({
+  returnUrl = "/dashboard",
+  passwordChanged = false,
+}: {
+  returnUrl?: string;
+  passwordChanged?: boolean;
+}) {
+  const router = useRouter();
   const [message, setMessage] = useState<string>();
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -30,10 +42,22 @@ export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) 
     try {
       await login(values);
       const response = await fetch("/api/auth/session", { cache: "no-store" });
-      if (!response.ok) throw new Error("Unable to verify your session. Please try again.");
+      if (!response.ok)
+        throw new Error("Unable to verify your session. Please try again.");
       const payload = (await response.json().catch(() => undefined)) as
-        | { data?: { user?: { roles?: Array<{ code: string }> } } }
+        | {
+            data?: {
+              user?: {
+                roles?: Array<{ code: string }>;
+                mustChangePassword?: boolean;
+              };
+            };
+          }
         | undefined;
+      if (payload?.data?.user?.mustChangePassword === true) {
+        router.replace("/change-password?required=1");
+        return;
+      }
       const roles = payload?.data?.user?.roles ?? [];
       const roleCodes = roles.map((role) => role.code);
       const defaultPanel = defaultPanelPath(roleCodes);
@@ -55,6 +79,11 @@ export function LoginForm({ returnUrl = "/dashboard" }: { returnUrl?: string }) 
 
   return (
     <form className="space-y-5" noValidate onSubmit={handleSubmit(onSubmit)}>
+      {passwordChanged ? (
+        <Alert className="border-success/25 bg-success-soft text-success">
+          Password changed successfully. Sign in again with your new password.
+        </Alert>
+      ) : null}
       {message ? <Alert>{message}</Alert> : null}
       <FormField id="email" label="Email" error={errors.email?.message}>
         <Input
