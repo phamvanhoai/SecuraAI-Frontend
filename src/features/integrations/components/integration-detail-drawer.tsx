@@ -5,6 +5,7 @@ import {
   Edit2,
   Flame,
   Globe,
+  Key,
   ListOrdered,
   RefreshCw,
   Save,
@@ -34,12 +35,13 @@ import {
   IntegrationStatusBadge,
   IntegrationTypeBadge,
 } from "./integration-status-badge";
+import { ApiKeysTab } from "./api-keys-tab";
 import { IntegrationLogsTab } from "./integration-logs-tab";
 import { SyncJobsTab } from "./sync-jobs-tab";
 import { SyncSchedulesTab } from "./sync-schedules-tab";
 import { TestConnectionDialog } from "./test-connection-dialog";
 
-type DetailTab = "overview" | "schedules" | "jobs" | "logs";
+type DetailTab = "overview" | "api-keys" | "schedules" | "jobs" | "logs";
 
 function IntegrationOverviewTab({
   integration,
@@ -364,6 +366,18 @@ export function IntegrationDetailDrawer({
             </button>
             <button
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === "api-keys"
+                  ? "bg-brand-soft text-brand"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab("api-keys")}
+              type="button"
+            >
+              <Key className="size-3.5" />
+              API Keys
+            </button>
+            <button
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 activeTab === "schedules"
                   ? "bg-brand-soft text-brand"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground"
@@ -411,6 +425,10 @@ export function IntegrationDetailDrawer({
               onCancelEdit={() => setIsEditing(false)}
               onSaved={() => setIsEditing(false)}
             />
+          )}
+
+          {activeTab === "api-keys" && integration && (
+            <ApiKeysTab integrationId={integration.id} />
           )}
 
           {activeTab === "schedules" && integration && (

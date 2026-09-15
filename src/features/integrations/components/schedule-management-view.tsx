@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  FileWarning,
   PauseCircle,
   Play,
   RefreshCw,
@@ -24,6 +25,7 @@ import {
 } from "../hooks/use-integrations";
 import type { Integration } from "../schemas/integration-schema";
 import { IntegrationStatusBadge } from "./integration-status-badge";
+import { SyncErrorLogsView } from "./sync-error-logs-view";
 import { SyncSchedulesTab } from "./sync-schedules-tab";
 
 // ── Metric strip ──────────────────────────────────────────────────────────────
@@ -249,13 +251,21 @@ function EmptySelection() {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
+type Tab = "schedules" | "error-logs";
+
 export function ScheduleManagementView() {
   const integrationsQuery = useIntegrations({ limit: 100 });
   const integrations = integrationsQuery.data?.items ?? [];
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("schedules");
   const selectedIntegration =
     integrations.find((i) => i.id === selectedId) ?? null;
+
+  const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "schedules", label: "Lịch đồng bộ", icon: CalendarClock },
+    { id: "error-logs", label: "Nhật ký lỗi", icon: FileWarning },
+  ];
 
   return (
     <div className="space-y-6">
@@ -285,62 +295,95 @@ export function ScheduleManagementView() {
         <MetricStrip integrations={integrations} />
       )}
 
-      {/* Main 2-column layout */}
-      <div className="border-border grid gap-4 rounded-xl border lg:grid-cols-[280px_1fr]">
-        {/* Left: integration list */}
-        <div className="border-border flex flex-col gap-1 border-b p-3 lg:border-b-0 lg:border-r">
-          <p className="text-muted mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider">
-            Integrations
-          </p>
-
-          {integrationsQuery.isLoading ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton className="h-14 rounded-lg" key={i} />
-              ))}
-            </div>
-          ) : integrations.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted">
-              No integrations configured.
-            </div>
-          ) : (
-            integrations.map((integration) => (
-              <IntegrationRow
-                integration={integration}
-                key={integration.id}
-                onClick={() =>
-                  setSelectedId((prev) =>
-                    prev === integration.id ? null : integration.id,
-                  )
-                }
-                selected={selectedId === integration.id}
-              />
-            ))
-          )}
-        </div>
-
-        {/* Right: schedule panel */}
-        <div className="min-w-0 p-5">
-          {selectedIntegration ? (
-            <SchedulePanel integration={selectedIntegration} />
-          ) : (
-            <EmptySelection />
-          )}
+      {/* Tabs */}
+      <div className="border-border border-b">
+        <div className="flex gap-0.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                className={cn(
+                  "flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                  activeTab === tab.id
+                    ? "border-brand text-brand"
+                    : "border-transparent text-muted hover:text-foreground",
+                )}
+                id={`sync-tab-${tab.id}`}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                type="button"
+              >
+                <Icon className="size-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Bottom info bar */}
-      <div className="border-border bg-neutral-soft/50 flex items-center gap-2 rounded-lg border px-4 py-2.5">
-        <Clock className="text-muted size-3.5 shrink-0" />
-        <p className="text-muted text-xs">
-          Schedules run automatically in UTC. Use cron expressions (5 fields) or
-          aliases like{" "}
-          <span className="font-mono font-medium">@hourly</span>,{" "}
-          <span className="font-mono font-medium">@daily</span>. Click{" "}
-          <strong>Run Now</strong> to trigger an immediate sync for any active
-          integration.
-        </p>
-      </div>
+      {/* Tab content */}
+      {activeTab === "schedules" ? (
+        <>
+          {/* Main 2-column layout */}
+          <div className="border-border grid gap-4 rounded-xl border lg:grid-cols-[280px_1fr]">
+            {/* Left: integration list */}
+            <div className="border-border flex flex-col gap-1 border-b p-3 lg:border-b-0 lg:border-r">
+              <p className="text-muted mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider">
+                Integrations
+              </p>
+
+              {integrationsQuery.isLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton className="h-14 rounded-lg" key={i} />
+                  ))}
+                </div>
+              ) : integrations.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted">
+                  No integrations configured.
+                </div>
+              ) : (
+                integrations.map((integration) => (
+                  <IntegrationRow
+                    integration={integration}
+                    key={integration.id}
+                    onClick={() =>
+                      setSelectedId((prev) =>
+                        prev === integration.id ? null : integration.id,
+                      )
+                    }
+                    selected={selectedId === integration.id}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Right: schedule panel */}
+            <div className="min-w-0 p-5">
+              {selectedIntegration ? (
+                <SchedulePanel integration={selectedIntegration} />
+              ) : (
+                <EmptySelection />
+              )}
+            </div>
+          </div>
+
+          {/* Bottom info bar */}
+          <div className="border-border bg-neutral-soft/50 flex items-center gap-2 rounded-lg border px-4 py-2.5">
+            <Clock className="text-muted size-3.5 shrink-0" />
+            <p className="text-muted text-xs">
+              Schedules run automatically in UTC. Use cron expressions (5 fields) or
+              aliases like{" "}
+              <span className="font-mono font-medium">@hourly</span>,{" "}
+              <span className="font-mono font-medium">@daily</span>. Click{" "}
+              <strong>Run Now</strong> to trigger an immediate sync for any active
+              integration.
+            </p>
+          </div>
+        </>
+      ) : (
+        <SyncErrorLogsView />
+      )}
     </div>
   );
 }

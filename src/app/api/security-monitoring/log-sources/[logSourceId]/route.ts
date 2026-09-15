@@ -1,7 +1,7 @@
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 export async function PATCH(
   request: Request,
-  context: RouteContext<"/api/security-monitoring/log-sources/[logSourceId]">,
+  context: { params: Promise<{ logSourceId: string }> },
 ): Promise<Response> {
   const { logSourceId } = await context.params;
   return proxyAuthenticatedRequest(
@@ -16,7 +16,7 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  context: RouteContext<"/api/security-monitoring/log-sources/[logSourceId]">,
+  context: { params: Promise<{ logSourceId: string }> },
 ): Promise<Response> {
   const { logSourceId } = await context.params;
   return proxyAuthenticatedRequest(
