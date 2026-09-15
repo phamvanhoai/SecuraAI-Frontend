@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
@@ -39,21 +39,8 @@ beforeAll(() => {
 describe("RolesManager", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("loads backend roles and creates a custom role with selected permissions", async () => {
-    const createdRole = {
-      ...systemRole,
-      id: "33333333-3333-4333-8333-333333333333",
-      code: "RISK_REVIEWER",
-      name: "Risk Reviewer",
-      isSystem: false,
-    };
-    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
-      if (init?.method === "POST") {
-        return Response.json(
-          { success: true, data: createdRole },
-          { status: 201 },
-        );
-      }
+  it("shows fixed roles as a read-only access overview", async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
       if (String(input).includes("/api/access-control/permissions")) {
         return Response.json({
           success: true,
@@ -99,28 +86,19 @@ describe("RolesManager", () => {
       screen.getByRole("dialog", { name: "Role details" }),
     );
     expect(detailDialog.getByText("roles.read")).toBeVisible();
-    expect(detailDialog.getByText("System")).toBeVisible();
+    expect(detailDialog.getByText("Fixed")).toBeVisible();
     await user.click(detailDialog.getByRole("button", { name: "Close" }));
-
-    await user.click(screen.getByRole("button", { name: "Create role" }));
-    const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByLabelText("Role code"), "risk_reviewer");
-    await user.type(dialog.getByLabelText("Role name"), "Risk Reviewer");
-    await user.click(dialog.getByRole("checkbox", { name: /roles\.read/ }));
-    await user.click(dialog.getByRole("button", { name: "Create role" }));
-
-    await waitFor(() =>
-      expect(
-        fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
-      ).toBe(true),
-    );
-    const postCall = fetchMock.mock.calls.find(
-      ([, init]) => init?.method === "POST",
-    );
-    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({
-      code: "RISK_REVIEWER",
-      permissionIds: [permissionId],
-    });
-    expect(await screen.findByText("Role created")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Create role" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
+    ).toBe(false);
   });
 });
