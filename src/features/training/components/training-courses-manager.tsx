@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Send, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
@@ -212,7 +212,15 @@ function AssignCourseDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const options = useAssignmentOptions(Boolean(course));
+  const [userSearch, setUserSearch] = useState("");
+  const [departmentSearch, setDepartmentSearch] = useState("");
+  const deferredUserSearch = useDeferredValue(userSearch.trim());
+  const deferredDepartmentSearch = useDeferredValue(departmentSearch.trim());
+  const options = useAssignmentOptions(
+    deferredUserSearch,
+    deferredDepartmentSearch,
+    Boolean(course),
+  );
   const mutation = useAssignCourse();
   const toast = useToast();
   const [message, setMessage] = useState<string>();
@@ -247,6 +255,8 @@ function AssignCourseDialog({
         departmentIds: [],
       });
       setMessage(undefined);
+      setUserSearch("");
+      setDepartmentSearch("");
       dialog.showModal();
     } else if (!course && dialog?.open) dialog.close();
   }, [course, reset]);
@@ -352,35 +362,43 @@ function AssignCourseDialog({
           <Alert>Unable to load active employees and departments.</Alert>
         ) : options.data ? (
           <>
-            {options.data.truncated.users ||
-            options.data.truncated.departments ? (
-              <Alert>
-                Only the first 200 active options in each group are shown.
-              </Alert>
-            ) : null}
             <div className="grid gap-4 md:grid-cols-2">
               <TargetList
                 title="Departments"
-                empty="No active departments available"
+                empty="No matching active departments"
+                search={departmentSearch}
+                searchLabel="Search departments"
+                hasMore={options.data.hasMore.departments}
                 items={options.data.departments.map((item) => ({
                   id: item.id,
                   label: item.name,
                   detail: item.code,
                 }))}
                 selected={departmentIds}
+                onClear={() =>
+                  setValue("departmentIds", [], { shouldValidate: true })
+                }
+                onSearchChange={setDepartmentSearch}
                 onToggle={(id) =>
                   toggle("departmentIds", id, departmentIds.includes(id))
                 }
               />
               <TargetList
                 title="Employees"
-                empty="No active employees available"
+                empty="No matching active employees"
+                search={userSearch}
+                searchLabel="Search employees by name, email, or code"
+                hasMore={options.data.hasMore.users}
                 items={options.data.users.map((item) => ({
                   id: item.id,
                   label: item.name,
                   detail: item.email,
                 }))}
                 selected={userIds}
+                onClear={() =>
+                  setValue("userIds", [], { shouldValidate: true })
+                }
+                onSearchChange={setUserSearch}
                 onToggle={(id) => toggle("userIds", id, userIds.includes(id))}
               />
             </div>
@@ -419,17 +437,46 @@ function TargetList({
   empty,
   items,
   selected,
+  search,
+  searchLabel,
+  hasMore,
+  onSearchChange,
+  onClear,
   onToggle,
 }: {
   title: string;
   empty: string;
   items: readonly { id: string; label: string; detail: string }[];
   selected: readonly string[];
+  search: string;
+  searchLabel: string;
+  hasMore: boolean;
+  onSearchChange: (value: string) => void;
+  onClear: () => void;
   onToggle: (id: string) => void;
 }) {
   return (
     <fieldset className="min-w-0 space-y-2">
-      <legend className="font-medium">{title}</legend>
+      <legend className="sr-only">{title}</legend>
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <span className="font-medium">{title}</span>
+        <span className="text-muted text-xs">{selected.length} selected</span>
+      </div>
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          strokeWidth={1.8}
+        />
+        <Input
+          className="pl-9"
+          aria-label={searchLabel}
+          placeholder={searchLabel}
+          maxLength={100}
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+        />
+      </div>
       <div className="border-border max-h-56 overflow-y-auto rounded-lg border p-2">
         {items.length === 0 ? (
           <p className="text-muted p-3 text-sm">{empty}</p>
@@ -457,6 +504,22 @@ function TargetList({
             </label>
           ))
         )}
+      </div>
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <span className="text-muted text-xs">
+          {hasMore
+            ? "More matches available—refine your search."
+            : "All matching results shown."}
+        </span>
+        {selected.length ? (
+          <button
+            type="button"
+            className="text-brand text-xs font-medium hover:underline"
+            onClick={onClear}
+          >
+            Clear selected
+          </button>
+        ) : null}
       </div>
     </fieldset>
   );

@@ -43,7 +43,7 @@ export const assignmentOptionsSchema = z.object({
   departments: z.array(
     z.object({ id: z.uuid(), code: z.string(), name: z.string() }),
   ),
-  truncated: z.object({ users: z.boolean(), departments: z.boolean() }),
+  hasMore: z.object({ users: z.boolean(), departments: z.boolean() }),
 });
 
 export const assignCourseSchema = z

@@ -39,10 +39,15 @@ export async function createCourse(input: CreateCourseInput) {
   );
 }
 
-export async function getAssignmentOptions(signal?: AbortSignal) {
+export async function getAssignmentOptions(
+  userQ: string,
+  departmentQ: string,
+  signal?: AbortSignal,
+) {
   return assignmentOptionsSchema.parse(
     await apiRequest<unknown>("/api/training/assignment-options", {
       target: "same-origin",
+      query: { userQ, departmentQ, limit: 20 },
       ...(signal ? { signal } : {}),
     }),
   );

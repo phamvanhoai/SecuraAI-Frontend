@@ -30,11 +30,16 @@ export function useCreateCourse() {
   });
 }
 
-export function useAssignmentOptions(enabled: boolean) {
+export function useAssignmentOptions(
+  userQ: string,
+  departmentQ: string,
+  enabled: boolean,
+) {
   return useQuery({
-    queryKey: ["training", "assignment-options"],
-    queryFn: ({ signal }) => getAssignmentOptions(signal),
+    queryKey: ["training", "assignment-options", userQ, departmentQ],
+    queryFn: ({ signal }) => getAssignmentOptions(userQ, departmentQ, signal),
     enabled,
+    placeholderData: (previous) => previous,
   });
 }
 
