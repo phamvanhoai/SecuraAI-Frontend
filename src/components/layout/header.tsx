@@ -89,6 +89,11 @@ export function Header() {
                   ))}
                 </div>
               ) : null}
+              <PanelLink
+                href="/profile"
+                icon={<UserRound />}
+                label="Hồ sơ cá nhân"
+              />
               <button
                 className="hover:bg-neutral-soft mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors"
                 onClick={logout}

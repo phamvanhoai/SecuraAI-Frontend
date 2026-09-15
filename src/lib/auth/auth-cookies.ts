@@ -5,6 +5,7 @@ import type { NextResponse } from "next/server";
 export const authCookieNames = {
   access: "securaai_access",
   refresh: "securaai_refresh",
+  mfaChallenge: "securaai_mfa_challenge",
 } as const;
 
 const secure = process.env.NODE_ENV === "production";
@@ -26,6 +27,30 @@ export function setAuthCookies(
     sameSite: "strict",
     path: "/",
     maxAge: 7 * 24 * 60 * 60,
+  });
+}
+
+export function setMfaChallengeCookie(
+  response: NextResponse,
+  challengeToken: string,
+  expiresIn: number,
+): void {
+  response.cookies.set(authCookieNames.mfaChallenge, challengeToken, {
+    httpOnly: true,
+    secure,
+    sameSite: "strict",
+    path: "/api/auth/mfa/challenge",
+    maxAge: Math.min(expiresIn, 5 * 60),
+  });
+}
+
+export function clearMfaChallengeCookie(response: NextResponse): void {
+  response.cookies.set(authCookieNames.mfaChallenge, "", {
+    httpOnly: true,
+    secure,
+    sameSite: "strict",
+    path: "/api/auth/mfa/challenge",
+    maxAge: 0,
   });
 }
 
