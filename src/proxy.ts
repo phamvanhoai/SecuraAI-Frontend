@@ -27,6 +27,7 @@ const protectedPrefixes = [
   "/event-logs",
   "/custom-dashboard",
   "/profile",
+  "/change-password",
 ] as const;
 
 export function proxy(request: NextRequest): NextResponse {
@@ -78,5 +79,6 @@ export const config = {
     "/event-logs/:path*",
     "/custom-dashboard/:path*",
     "/profile/:path*",
+    "/change-password/:path*",
   ],
 };
