@@ -1,4 +1,5 @@
 import { ApiError, normalizeApiError } from "@/lib/api/api-error";
+import { isFixedRoleCode } from "../lib/fixed-roles";
 import {
   permissionListSchema,
   roleListSchema,
@@ -25,7 +26,7 @@ export type ListRolesInput = {
 };
 export type RoleMetrics = {
   total: number;
-  system: number;
+  fixed: number;
   assignedUsers: number;
 };
 
@@ -118,7 +119,7 @@ export async function getRoleMetrics(
   );
   return {
     total: firstPage.pagination.total,
-    system: items.filter((role) => role.isSystem).length,
+    fixed: items.filter((role) => isFixedRoleCode(role.code)).length,
     assignedUsers: items.reduce(
       (total, role) => total + role.assignedUserCount,
       0,

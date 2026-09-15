@@ -20,8 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type PanelKind =
-  "admin" | "security-officer" | "employee" | "executive-auditor";
+export type PanelKind = "admin" | "dashboard";
 export type NavigationItem = {
   title: string;
   href: string;
@@ -52,7 +51,13 @@ const modules = {
     section: "Quản lý",
     requiredAnyPermission: ["roles.read"],
   },
-  assets: { title: "Tài sản", slug: "assets", icon: Boxes, section: "Quản lý", requiredAnyPermission: ["assets.read"] },
+  assets: {
+    title: "Tài sản",
+    slug: "assets",
+    icon: Boxes,
+    section: "Quản lý",
+    requiredAnyPermission: ["assets.read"],
+  },
   risks: {
     title: "Rủi ro",
     slug: "risks",
@@ -184,36 +189,20 @@ export const panelModules = {
     modules.files,
     modules.settings,
   ],
-  "security-officer": [
+  dashboard: [
     modules.alerts,
     modules.assets,
     modules.risks,
     modules.incidents,
     modules.controls,
+    modules.compliance,
+    modules.audits,
     modules.policies,
     modules.training,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,
-    modules.reports,
-    modules.notifications,
-    modules.files,
-  ],
-  employee: [
-    modules.assets,
-    modules.training,
-    modules.policies,
-    modules.incidents,
-    modules.notifications,
-    modules.files,
-  ],
-  "executive-auditor": [
-    modules.assets,
-    modules.anomalyMonitoring,
-    modules.risks,
-    modules.compliance,
-    modules.audits,
-    modules.policies,
+    modules.integrationSchedules,
     modules.reports,
     modules.customDashboard,
     modules.notifications,
@@ -223,28 +212,24 @@ export const panelModules = {
 
 export const panelLabels: Record<PanelKind, string> = {
   admin: "Quản trị hệ thống",
-  "security-officer": "Chuyên viên ATTT",
-  employee: "Nhân viên",
-  "executive-auditor": "Lãnh đạo / Kiểm toán",
+  dashboard: "Không gian làm việc",
 };
 
-export const panelRoleCodes: Record<PanelKind, string> = {
-  admin: "ADMIN",
-  "security-officer": "SECURITY_OFFICER",
-  employee: "EMPLOYEE",
-  "executive-auditor": "EXECUTIVE_AUDITOR",
-};
+const nonAdminRoleCodes = new Set([
+  "SECURITY_OFFICER",
+  "EMPLOYEE",
+  "EXECUTIVE",
+  "EXECUTIVE_AUDITOR",
+]);
 
-const panelPriority: readonly PanelKind[] = [
-  "admin",
-  "security-officer",
-  "executive-auditor",
-  "employee",
-];
-
-export function allowedPanels(roleCodes: readonly string[]): readonly PanelKind[] {
-  const assigned = new Set(roleCodes);
-  return panelPriority.filter((panel) => assigned.has(panelRoleCodes[panel]));
+export function allowedPanels(
+  roleCodes: readonly string[],
+): readonly PanelKind[] {
+  const panels: PanelKind[] = [];
+  if (roleCodes.includes("ADMIN")) panels.push("admin");
+  if (roleCodes.some((roleCode) => nonAdminRoleCodes.has(roleCode)))
+    panels.push("dashboard");
+  return panels;
 }
 
 export function defaultPanelPath(roleCodes: readonly string[]): string {
@@ -254,28 +239,33 @@ export function defaultPanelPath(roleCodes: readonly string[]): string {
 
 export function panelFromPath(pathname: string): PanelKind | null {
   const segment = pathname.split("/")[1];
-  return panelPriority.find((panel) => panel === segment) ?? null;
+  if (segment === "admin") return "admin";
+  if (segment === "dashboard") return "dashboard";
+  return null;
 }
 
-export function canAccessPanel(roleCodes: readonly string[], panel: PanelKind): boolean {
-  return roleCodes.includes(panelRoleCodes[panel]);
+export function canAccessPanel(
+  roleCodes: readonly string[],
+  panel: PanelKind,
+): boolean {
+  return allowedPanels(roleCodes).includes(panel);
 }
 
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
 ): boolean {
-  return !item.requiredAnyPermission?.length ||
-    item.requiredAnyPermission.some((permission) => permissions.includes(permission));
+  return (
+    !item.requiredAnyPermission?.length ||
+    item.requiredAnyPermission.some((permission) =>
+      permissions.includes(permission),
+    )
+  );
 }
 
 export function getPanelKind(pathname: string | null): PanelKind {
   const segment = pathname?.split("/")[1];
-  return segment === "security-officer" ||
-    segment === "employee" ||
-    segment === "executive-auditor"
-    ? segment
-    : "admin";
+  return segment === "admin" ? "admin" : "dashboard";
 }
 
 export function getPanelNavigation(
@@ -284,13 +274,13 @@ export function getPanelNavigation(
   const base: NavigationItem[] = [
     {
       title: "Tổng quan",
-      href: `/${panel}`,
+      href: panel === "admin" ? "/admin" : "/dashboard",
       icon: Gauge,
       section: "Tổng quan",
     },
     ...panelModules[panel].map((item) => ({
       ...item,
-      href: `/${panel}/${item.slug}`,
+      href: panel === "admin" ? `/admin/${item.slug}` : `/${item.slug}`,
     })),
   ];
 
