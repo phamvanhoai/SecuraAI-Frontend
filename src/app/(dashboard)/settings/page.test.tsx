@@ -24,7 +24,7 @@ describe("SettingsPage", () => {
       ["Tổ chức", "Thông tin tổ chức"],
       ["Bảo mật", "Chính sách phiên đăng nhập"],
       ["Thông báo", "Quy tắc thông báo"],
-      ["Tích hợp", "Tích hợp SIEM & Firewall"],
+      ["Tích hợp", "Third-Party SIEM & Firewall Integrations"],
       ["API và khóa", "Khóa API"],
     ] as const) {
       await user.click(page.getByRole("button", { name: tab }));
