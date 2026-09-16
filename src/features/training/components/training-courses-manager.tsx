@@ -40,7 +40,11 @@ import {
 
 const defaults: CreateCourseInput = { title: "", description: "", content: "" };
 
-export function TrainingCoursesManager() {
+export function TrainingCoursesManager({
+  onTrackCompletion,
+}: {
+  onTrackCompletion?: () => void;
+}) {
   const session = useSessionUser();
   const canRead =
     session.data?.permissions.includes("training-courses.read") ?? false;
@@ -112,6 +116,15 @@ export function TrainingCoursesManager() {
         title="Security awareness courses"
         description="Create draft training content for security awareness programs. Publishing and assignment are separate workflows."
         showSampleNotice={false}
+        {...(onTrackCompletion
+          ? {
+              additionalActions: (
+                <Button variant="secondary" onClick={onTrackCompletion}>
+                  Track completion
+                </Button>
+              ),
+            }
+          : {})}
         {...(canCreate
           ? {
               primaryAction: "Create course",

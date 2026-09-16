@@ -74,7 +74,7 @@ describe("panel navigation", () => {
     );
   });
 
-  it("shows training for course managers and employees taking assessments", () => {
+  it("shows training for course managers, completion viewers, and employees", () => {
     const training = getPanelNavigation("dashboard").find(
       (item) => item.href === "/training",
     );
@@ -86,6 +86,9 @@ describe("panel navigation", () => {
     );
     expect(
       canAccessNavigationItem(["training-assessments.take"], training),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["training-completion.read"], training),
     ).toBe(true);
   });
 });
