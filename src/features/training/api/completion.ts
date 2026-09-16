@@ -37,3 +37,9 @@ export async function getCompletionCampaign(
     ),
   );
 }
+export async function withdrawEnrollment(enrollmentId: string, reason: string) {
+  return apiRequest<unknown>(
+    `/api/training/enrollments/${encodeURIComponent(enrollmentId)}/withdraw`,
+    { target: "same-origin", method: "POST", body: { reason } },
+  );
+}
