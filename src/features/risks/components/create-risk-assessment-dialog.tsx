@@ -37,9 +37,9 @@ export function CreateRiskAssessmentDialog() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string>();
   const [targetSearch, setTargetSearch] = useState("");
+  const [debouncedTargetSearch, setDebouncedTargetSearch] = useState("");
   const [threatSearch, setThreatSearch] = useState("");
   const [vulnerabilitySearch, setVulnerabilitySearch] = useState("");
-  const [targetPage, setTargetPage] = useState(1);
   const [threatPage, setThreatPage] = useState(1);
   const [vulnerabilityPage, setVulnerabilityPage] = useState(1);
   const [threatNotes, setThreatNotes] = useState<Record<string, string>>({});
@@ -50,14 +50,14 @@ export function CreateRiskAssessmentDialog() {
   const assetOptions = useRiskCreateOptions(
     "assets",
     open,
-    targetSearch,
-    targetPage,
+    debouncedTargetSearch,
+    1,
   );
   const processOptions = useRiskCreateOptions(
     "businessProcesses",
     open,
-    targetSearch,
-    targetPage,
+    debouncedTargetSearch,
+    1,
   );
   const threatOptions = useRiskCreateOptions(
     "threats",
@@ -77,6 +77,7 @@ export function CreateRiskAssessmentDialog() {
     register,
     handleSubmit,
     reset,
+    setValue,
     control,
     formState: { errors },
   } = useForm<CreateRiskAssessmentInput, unknown, CreateRiskAssessmentForm>({
@@ -99,6 +100,10 @@ export function CreateRiskAssessmentDialog() {
       "vulnerabilityIds",
     ],
   });
+  const [selectedAssetId, selectedBusinessProcessId] = useWatch({
+    control,
+    name: ["assetId", "businessProcessId"],
+  });
   const likelihood = Number(likelihoodValue);
   const impact = Number(impactValue);
   const score = likelihood * impact;
@@ -116,6 +121,13 @@ export function CreateRiskAssessmentDialog() {
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
   }, [open]);
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () => setDebouncedTargetSearch(targetSearch),
+      300,
+    );
+    return () => window.clearTimeout(timer);
+  }, [targetSearch]);
   const close = (): void => {
     setOpen(false);
     setMessage(undefined);
@@ -194,93 +206,116 @@ export function CreateRiskAssessmentDialog() {
             <h3 className="font-semibold">Assessment target</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField id="targetType" label="Target type">
-                <Select id="targetType" {...register("targetType")}>
+                <Select
+                  id="targetType"
+                  {...register("targetType", {
+                    onChange: () => {
+                      setTargetSearch("");
+                      setValue("assetId", "");
+                      setValue("businessProcessId", "");
+                    },
+                  })}
+                >
                   <option value="asset">Asset</option>
                   <option value="business_process">Business process</option>
                 </Select>
               </FormField>
               <div className="space-y-2 sm:col-span-2">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor="assessmentTargetSearch"
+                >
+                  {targetType === "asset" ? "Asset" : "Business process"}
+                </label>
                 <Input
-                  aria-label="Search assessment targets"
-                  placeholder="Search targets by code or name"
+                  id="assessmentTargetSearch"
+                  autoComplete="off"
+                  placeholder={`Search ${targetType === "asset" ? "assets" : "business processes"} by code or name`}
                   value={targetSearch}
-                  onChange={(event) => {
-                    setTargetSearch(event.target.value);
-                    setTargetPage(1);
-                  }}
+                  onChange={(event) => setTargetSearch(event.target.value)}
                 />
-                <div className="flex items-center justify-between text-xs">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={targetPage <= 1}
-                    onClick={() => setTargetPage((page) => page - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <span>
-                    Page {targetPage} of{" "}
-                    {Math.max(
+                <div className="border-border max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2">
+                  {(targetType === "asset"
+                    ? assetOptions.data?.items
+                    : processOptions.data?.items
+                  )?.map((item) => {
+                    const checked =
+                      item.id ===
                       (targetType === "asset"
-                        ? assetOptions.data?.pagination.totalPages
-                        : processOptions.data?.pagination.totalPages) ?? 0,
-                      1,
-                    )}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={
-                      targetPage >=
-                      ((targetType === "asset"
-                        ? assetOptions.data?.pagination.totalPages
-                        : processOptions.data?.pagination.totalPages) ?? 0)
-                    }
-                    onClick={() => setTargetPage((page) => page + 1)}
-                  >
-                    Next
-                  </Button>
+                        ? selectedAssetId
+                        : selectedBusinessProcessId);
+                    return (
+                      <label
+                        className={`flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm ${checked ? "bg-brand/10 text-brand" : "hover:bg-neutral-soft"}`}
+                        key={item.id}
+                      >
+                        <input
+                          className="mt-0.5 size-4"
+                          type="radio"
+                          name="assessmentTargetSelection"
+                          checked={checked}
+                          onChange={() => {
+                            if (targetType === "asset") {
+                              setValue("assetId", item.id, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
+                              setValue("businessProcessId", "");
+                            } else {
+                              setValue("businessProcessId", item.id, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              });
+                              setValue("assetId", "");
+                            }
+                          }}
+                        />
+                        <span>
+                          <span className="font-medium">{item.code}</span> —{" "}
+                          {item.name}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
+                {(
+                  targetType === "asset"
+                    ? errors.assetId?.message
+                    : errors.businessProcessId?.message
+                ) ? (
+                  <p className="text-danger text-xs" role="alert">
+                    {targetType === "asset"
+                      ? errors.assetId?.message
+                      : errors.businessProcessId?.message}
+                  </p>
+                ) : null}
+                {(targetType === "asset" ? assetOptions : processOptions)
+                  .isPending ? (
+                  <p className="text-muted text-xs">Loading targets...</p>
+                ) : null}
+                {(targetType === "asset" ? assetOptions : processOptions)
+                  .data ? (
+                  <p className="text-muted text-xs">
+                    Showing{" "}
+                    {(targetType === "asset" ? assetOptions : processOptions)
+                      .data?.items.length ?? 0}{" "}
+                    of{" "}
+                    {(targetType === "asset" ? assetOptions : processOptions)
+                      .data?.pagination.total ?? 0}{" "}
+                    results. Search by code or name to narrow the list.
+                  </p>
+                ) : null}
+                {!(targetType === "asset" ? assetOptions : processOptions)
+                  .isPending &&
+                (targetType === "asset" ? assetOptions : processOptions).data
+                  ?.items.length === 0 ? (
+                  <p className="text-muted text-xs">
+                    {targetSearch
+                      ? "No targets match your search."
+                      : "No active targets are available."}
+                  </p>
+                ) : null}
               </div>
-              {targetType === "asset" ? (
-                <FormField
-                  id="assetId"
-                  label="Asset"
-                  error={errors.assetId?.message}
-                >
-                  <Select
-                    id="assetId"
-                    disabled={assetOptions.isPending}
-                    {...register("assetId")}
-                  >
-                    <option value="">Select an active asset</option>
-                    {assetOptions.data?.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} — {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              ) : (
-                <FormField
-                  id="businessProcessId"
-                  label="Business process"
-                  error={errors.businessProcessId?.message}
-                >
-                  <Select
-                    id="businessProcessId"
-                    disabled={processOptions.isPending}
-                    {...register("businessProcessId")}
-                  >
-                    <option value="">Select an active business process</option>
-                    {processOptions.data?.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} — {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              )}
             </div>
           </section>
           <section className="space-y-3">

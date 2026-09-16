@@ -29,7 +29,10 @@ export function CancelRiskAssessmentDialog({
   const [message, setMessage] = useState<string>();
   const mutation = useCancelRiskAssessment();
   const toast = useToast();
-  const trimmed = reason.trim();
+  const normalizedReason = reason
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -45,12 +48,12 @@ export function CancelRiskAssessmentDialog({
   }
 
   async function submit(): Promise<void> {
-    if (!risk || trimmed.length < 10) return;
+    if (!risk || normalizedReason.length < 10) return;
     setMessage(undefined);
     try {
       await mutation.mutateAsync({
         id: risk.id,
-        input: { reason: trimmed, expectedUpdatedAt: risk.updatedAt },
+        input: { reason: normalizedReason, expectedUpdatedAt: risk.updatedAt },
       });
       onClose();
       toast.success("Risk assessment cancelled", risk.riskCode);
@@ -60,6 +63,18 @@ export function CancelRiskAssessmentDialog({
       if (code === "RISK_HAS_TREATMENT_PLAN")
         setMessage(
           "This assessment has a treatment plan and cannot be cancelled.",
+        );
+      else if (code === "RISK_LINKED_TO_INCIDENT")
+        setMessage(
+          "This assessment is linked to an incident and cannot be cancelled.",
+        );
+      else if (code === "RISK_HAS_SUCCESSOR")
+        setMessage(
+          "A later assessment references this assessment, so it cannot be cancelled.",
+        );
+      else if (code === "ACTOR_INACTIVE")
+        setMessage(
+          "Your account is no longer active. Sign in again or contact an administrator.",
         );
       else if (code === "RISK_ASSESSMENT_CHANGED")
         setMessage(
@@ -115,12 +130,12 @@ export function CancelRiskAssessmentDialog({
             <span
               id="risk-cancellation-help"
               className={
-                trimmed.length > 0 && trimmed.length < 10
+                normalizedReason.length > 0 && normalizedReason.length < 10
                   ? "text-danger block text-xs"
                   : "text-muted block text-xs"
               }
             >
-              {trimmed.length > 0 && trimmed.length < 10
+              {normalizedReason.length > 0 && normalizedReason.length < 10
                 ? "Enter at least 10 characters."
                 : `${reason.length}/1000 characters`}
             </span>
@@ -140,7 +155,7 @@ export function CancelRiskAssessmentDialog({
             </Button>
             <Button
               variant="danger"
-              disabled={trimmed.length < 10 || mutation.isPending}
+              disabled={normalizedReason.length < 10 || mutation.isPending}
               onClick={submit}
             >
               {mutation.isPending ? "Cancelling..." : "Cancel assessment"}
