@@ -61,6 +61,16 @@ describe("panel navigation", () => {
     expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
   });
 
+  it("shows policies navigation for the framework mapping permission", () => {
+    const policies = getPanelNavigation("dashboard").find((item) =>
+      item.href.endsWith("/policies"),
+    );
+    expect(policies).toBeDefined();
+    if (!policies) return;
+    expect(canAccessNavigationItem(["compliance.map-controls"], policies)).toBe(
+      true,
+    );
+  });
   it("shows policy navigation to employees who can acknowledge policies", () => {
     const policies = getPanelNavigation("dashboard").find(
       (item) => item.href === "/policies",

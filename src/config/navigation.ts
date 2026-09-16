@@ -105,6 +105,8 @@ const modules = {
       "policies.create",
       "policies.update",
       "policies.publish",
+      "policies.assign-department",
+      "compliance.map-controls",
       "policies.acknowledge",
     ],
   },
