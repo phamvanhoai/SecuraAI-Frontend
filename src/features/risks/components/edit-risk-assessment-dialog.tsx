@@ -113,19 +113,11 @@ export function EditRiskAssessmentDialog({
       ),
       expectedUpdatedAt: data.assessment.updatedAt,
     });
-    setThreatNotes(
-      Object.fromEntries(
-        data.threats.map((item) => [item.id, item.notes ?? ""]),
-      ),
-    );
-    setVulnerabilityNotes(
-      Object.fromEntries(
-        data.vulnerabilities.map((item) => [item.id, item.notes ?? ""]),
-      ),
-    );
   }, [detail.data, reset]);
   const close = (): void => {
     setMessage(undefined);
+    setThreatNotes({});
+    setVulnerabilityNotes({});
     onClose();
   };
   const submit = async (values: UpdateRiskAssessmentForm): Promise<void> => {
@@ -139,11 +131,19 @@ export function EditRiskAssessmentDialog({
       expectedUpdatedAt: values.expectedUpdatedAt,
       threats: values.threatIds.map((threatId) => ({
         threatId,
-        notes: threatNotes[threatId]?.trim() || null,
+        notes: Object.hasOwn(threatNotes, threatId)
+          ? threatNotes[threatId]?.trim() || null
+          : detail.data.threats
+              .find(({ id: linkedId }) => linkedId === threatId)
+              ?.notes?.trim() || null,
       })),
       vulnerabilities: values.vulnerabilityIds.map((vulnerabilityId) => ({
         vulnerabilityId,
-        notes: vulnerabilityNotes[vulnerabilityId]?.trim() || null,
+        notes: Object.hasOwn(vulnerabilityNotes, vulnerabilityId)
+          ? vulnerabilityNotes[vulnerabilityId]?.trim() || null
+          : detail.data.vulnerabilities
+              .find(({ id: linkedId }) => linkedId === vulnerabilityId)
+              ?.notes?.trim() || null,
       })),
       ...(values.targetType === "asset" && values.assetId
         ? { assetId: values.assetId }
@@ -300,7 +300,12 @@ export function EditRiskAssessmentDialog({
               page={threatPage}
               pageCount={threatOptions.data?.pagination.totalPages ?? 0}
               onPage={setThreatPage}
-              notes={threatNotes}
+              notes={{
+                ...Object.fromEntries(
+                  detail.data.threats.map((item) => [item.id, item.notes ?? ""]),
+                ),
+                ...threatNotes,
+              }}
               onNote={(optionId, value) =>
                 setThreatNotes((current) => ({ ...current, [optionId]: value }))
               }
@@ -321,7 +326,15 @@ export function EditRiskAssessmentDialog({
               page={vulnerabilityPage}
               pageCount={vulnerabilityOptions.data?.pagination.totalPages ?? 0}
               onPage={setVulnerabilityPage}
-              notes={vulnerabilityNotes}
+              notes={{
+                ...Object.fromEntries(
+                  detail.data.vulnerabilities.map((item) => [
+                    item.id,
+                    item.notes ?? "",
+                  ]),
+                ),
+                ...vulnerabilityNotes,
+              }}
               onNote={(optionId, value) =>
                 setVulnerabilityNotes((current) => ({
                   ...current,

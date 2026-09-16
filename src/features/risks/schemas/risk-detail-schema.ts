@@ -91,12 +91,28 @@ export const riskDetailSchema = z.object({
       strategy: z.string(),
       description: z.string(),
       owner: person,
+      createdBy: person,
       targetDate: date.nullable(),
       status: z.string(),
       submittedAt: date.nullable(),
       completedAt: date.nullable(),
       createdAt: date,
       updatedAt: date,
+      approval: z
+        .object({
+          id: z.uuid(),
+          status: z.string(),
+          currentStep: z.number().int().positive(),
+          currentStepName: z.string().nullable(),
+          approverRole: z
+            .object({ code: z.string(), name: z.string() })
+            .nullable(),
+          submissionNote: z.string().nullable(),
+          submittedAt: date,
+          completedAt: date.nullable(),
+          submittedBy: person,
+        })
+        .nullable(),
       actions: z.array(action),
     }),
   ),
