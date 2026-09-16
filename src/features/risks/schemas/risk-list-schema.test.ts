@@ -76,6 +76,24 @@ describe("cancel risk assessment schema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("normalizes whitespace before validating the reason", () => {
+    const parsed = cancelRiskAssessmentRequestSchema.safeParse({
+      reason: "  Created\n  by mistake and no longer required.  ",
+      expectedUpdatedAt: "2026-09-15T10:00:00.000Z",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success)
+      expect(parsed.data.reason).toBe(
+        "Created by mistake and no longer required.",
+      );
+    expect(
+      cancelRiskAssessmentRequestSchema.safeParse({
+        reason: "a         b",
+        expectedUpdatedAt: "2026-09-15T10:00:00.000Z",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("risk detail schema", () => {
