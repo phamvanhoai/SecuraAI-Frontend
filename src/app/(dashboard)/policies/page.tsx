@@ -7,6 +7,7 @@ import { useSessionUser } from "@/features/auth";
 import {
   PolicyDraftsManager,
   PolicyDepartmentAssignmentManager,
+  PolicyControlMappingManager,
   PolicyPublicationManager,
   UpdatePolicyVersionManager,
 } from "@/features/policies";
@@ -14,7 +15,7 @@ import {
 export default function Page() {
   const session = useSessionUser();
   const [view, setView] = useState<
-    "default" | "new-version" | "assign-departments"
+    "default" | "new-version" | "assign-departments" | "map-controls"
   >("default");
   const canCreateDrafts =
     session.data?.permissions.includes("policies.create") ?? false;
@@ -24,6 +25,8 @@ export default function Page() {
     session.data?.permissions.includes("policies.update") ?? false;
   const canAssignDepartments =
     session.data?.permissions.includes("policies.assign-department") ?? false;
+  const canMapControls =
+    session.data?.permissions.includes("compliance.map-controls") ?? false;
 
   if (session.isPending) {
     return (
@@ -48,6 +51,9 @@ export default function Page() {
       />
     );
   }
+  if (view === "map-controls" && canMapControls) {
+    return <PolicyControlMappingManager onBack={() => setView("default")} />;
+  }
   if (canCreateDrafts) {
     return (
       <PolicyDraftsManager
@@ -57,10 +63,14 @@ export default function Page() {
         {...(canUpdate
           ? { onCreateNewVersion: () => setView("new-version") }
           : {})}
+        {...(canMapControls
+          ? { onMapControls: () => setView("map-controls") }
+          : {})}
       />
     );
   }
   if (canAssignDepartments) return <PolicyDepartmentAssignmentManager />;
+  if (canMapControls) return <PolicyControlMappingManager />;
   if (canUpdate) return <UpdatePolicyVersionManager />;
   if (canPublish) return <PolicyPublicationManager />;
 
@@ -72,7 +82,7 @@ export default function Page() {
         title="Information security policies"
       />
       <EmptyState
-        description="The current account does not have permission to create, update, publish, or assign policies."
+        description="The current account does not have permission to manage policies or framework mappings."
         title="You do not have permission to manage policies"
       />
     </div>

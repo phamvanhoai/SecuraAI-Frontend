@@ -52,7 +52,13 @@ const modules = {
     section: "Quản lý",
     requiredAnyPermission: ["roles.read"],
   },
-  assets: { title: "Tài sản", slug: "assets", icon: Boxes, section: "Quản lý", requiredAnyPermission: ["assets.read"] },
+  assets: {
+    title: "Tài sản",
+    slug: "assets",
+    icon: Boxes,
+    section: "Quản lý",
+    requiredAnyPermission: ["assets.read"],
+  },
   risks: {
     title: "Rủi ro",
     slug: "risks",
@@ -88,7 +94,13 @@ const modules = {
     slug: "policies",
     icon: ScrollText,
     section: "Quản lý",
-    requiredAnyPermission: ["policies.create", "policies.update", "policies.publish"],
+    requiredAnyPermission: [
+      "policies.create",
+      "policies.update",
+      "policies.publish",
+      "policies.assign-department",
+      "compliance.map-controls",
+    ],
   },
   training: {
     title: "Đào tạo",
@@ -235,7 +247,9 @@ const panelPriority: readonly PanelKind[] = [
   "employee",
 ];
 
-export function allowedPanels(roleCodes: readonly string[]): readonly PanelKind[] {
+export function allowedPanels(
+  roleCodes: readonly string[],
+): readonly PanelKind[] {
   const assigned = new Set(roleCodes);
   return panelPriority.filter((panel) => assigned.has(panelRoleCodes[panel]));
 }
@@ -250,7 +264,10 @@ export function panelFromPath(pathname: string): PanelKind | null {
   return panelPriority.find((panel) => panel === segment) ?? null;
 }
 
-export function canAccessPanel(roleCodes: readonly string[], panel: PanelKind): boolean {
+export function canAccessPanel(
+  roleCodes: readonly string[],
+  panel: PanelKind,
+): boolean {
   return roleCodes.includes(panelRoleCodes[panel]);
 }
 
@@ -258,8 +275,12 @@ export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
 ): boolean {
-  return !item.requiredAnyPermission?.length ||
-    item.requiredAnyPermission.some((permission) => permissions.includes(permission));
+  return (
+    !item.requiredAnyPermission?.length ||
+    item.requiredAnyPermission.some((permission) =>
+      permissions.includes(permission),
+    )
+  );
 }
 
 export function getPanelKind(pathname: string | null): PanelKind {

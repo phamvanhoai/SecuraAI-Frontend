@@ -33,7 +33,9 @@ describe("panel navigation", () => {
     expect(panelHasModule("security-officer", "policies")).toBe(true);
     expect(panelHasModule("security-officer", "users")).toBe(false);
     expect(panelHasModule("executive-auditor", "audits")).toBe(true);
-    expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(true);
+    expect(panelHasModule("executive-auditor", "anomaly-monitoring")).toBe(
+      true,
+    );
     expect(panelHasModule("executive-auditor", "ai-models")).toBe(false);
   });
 
@@ -61,5 +63,16 @@ describe("panel navigation", () => {
     if (!assets) return;
     expect(canAccessNavigationItem([], assets)).toBe(false);
     expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
+  });
+
+  it("shows policies navigation for the framework mapping permission", () => {
+    const policies = getPanelNavigation("security-officer").find((item) =>
+      item.href.endsWith("/policies"),
+    );
+    expect(policies).toBeDefined();
+    if (!policies) return;
+    expect(canAccessNavigationItem(["compliance.map-controls"], policies)).toBe(
+      true,
+    );
   });
 });
