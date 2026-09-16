@@ -108,6 +108,7 @@ const modules = {
     requiredAnyPermission: [
       "training-courses.read",
       "training-assessments.take",
+      "training-completion.read",
     ],
   },
   anomalyMonitoring: {
