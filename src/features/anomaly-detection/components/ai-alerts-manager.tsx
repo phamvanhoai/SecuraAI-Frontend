@@ -7,6 +7,7 @@ import {
   MessageSquareText,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   ShieldCheck,
   ShieldX,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dia
 import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
+import { AlertThresholdsDialog } from "./alert-thresholds-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -60,6 +62,7 @@ export function AiAlertsManager() {
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
     useState<AiAlert | null>(null);
+  const [thresholdsOpen, setThresholdsOpen] = useState(false);
   const session = useSessionUser();
   const canEvaluate =
     session.data?.permissions.includes("ai-alerts.feedback") ?? false;
@@ -68,6 +71,8 @@ export function AiAlertsManager() {
   const canMarkFalsePositive =
     session.data?.permissions.includes("ai-alerts.mark-false-positive") ??
     false;
+  const canManageThresholds =
+    session.data?.permissions.includes("ai-alerts.thresholds.manage") ?? false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
   const alerts = useAiAlerts({
     page,
@@ -215,6 +220,15 @@ export function AiAlertsManager() {
     <>
       <ProductPageHeader
         description="Monitor AI-generated anomaly alerts from connected security log sources."
+        {...(canManageThresholds
+          ? {
+              onSecondaryAction: () => setThresholdsOpen(true),
+              secondaryAction: "Alert thresholds",
+              secondaryActionIcon: (
+                <SlidersHorizontal aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              ),
+            }
+          : {})}
         showSampleNotice={false}
         title="AI alerts"
       />
@@ -401,6 +415,7 @@ export function AiAlertsManager() {
         alert={markingFalsePositive}
         onClose={() => setMarkingFalsePositive(null)}
       />
+      <AlertThresholdsDialog open={thresholdsOpen} onClose={() => setThresholdsOpen(false)} />
     </>
   );
 }
