@@ -29,6 +29,7 @@ import {
   useAssignmentOptions,
   useCourses,
   useCreateCourse,
+  useLatestCourseAssignment,
 } from "../hooks/use-courses";
 import {
   assignCourseSchema,
@@ -235,6 +236,7 @@ function AssignCourseDialog({
     Boolean(course),
   );
   const mutation = useAssignCourse();
+  const currentAssignment = useLatestCourseAssignment(course?.id);
   const toast = useToast();
   const [message, setMessage] = useState<string>();
   const {
@@ -252,6 +254,7 @@ function AssignCourseDialog({
       dueDate: localDate(14),
       userIds: [],
       departmentIds: [],
+      changeReason: "",
     },
   });
   const userIds = useWatch({ control, name: "userIds" });
@@ -260,22 +263,27 @@ function AssignCourseDialog({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (course && dialog && !dialog.open) {
+      if (currentAssignment.isPending) return;
+      const assignment = currentAssignment.data;
       reset({
-        title: `${course.title} campaign`,
-        startDate: localDate(),
-        dueDate: localDate(14),
-        userIds: [],
-        departmentIds: [],
+        title: assignment?.title ?? `${course.title} campaign`,
+        startDate: assignment?.startDate.slice(0, 10) ?? localDate(),
+        dueDate: assignment?.dueDate.slice(0, 10) ?? localDate(14),
+        userIds: assignment?.userIds ?? [],
+        departmentIds: assignment?.departmentIds ?? [],
+        changeReason: "",
       });
+      dialog.showModal();
+    } else if (!course && dialog?.open) dialog.close();
+  }, [course, currentAssignment.data, currentAssignment.isPending, reset]);
+
+  const close = () => {
+    if (!mutation.isPending) {
       setMessage(undefined);
       setUserSearch("");
       setDepartmentSearch("");
-      dialog.showModal();
-    } else if (!course && dialog?.open) dialog.close();
-  }, [course, reset]);
-
-  const close = () => {
-    if (!mutation.isPending) onClose();
+      onClose();
+    }
   };
   const toggle = (
     field: "userIds" | "departmentIds",
@@ -292,12 +300,18 @@ function AssignCourseDialog({
   const submit = async (input: AssignCourseInput) => {
     if (!course) return;
     setMessage(undefined);
+    if (currentAssignment.data && !input.changeReason?.trim()) {
+      setMessage("Enter a reason for changing this assignment.");
+      return;
+    }
     try {
       const result = await mutation.mutateAsync({ courseId: course.id, input });
       onClose();
       toast.success(
-        "Course assigned",
-        `${result.enrollmentCount} employee${result.enrollmentCount === 1 ? "" : "s"} enrolled.`,
+        currentAssignment.data ? "Assignment updated" : "Course assigned",
+        currentAssignment.data
+          ? `${result.removedCount} removed; ${result.retainedStartedCount} started and ${result.retainedCompletedCount} completed enrollments retained. Use Withdraw in Track completion to stop assessment access.`
+          : `${result.enrollmentCount} employee${result.enrollmentCount === 1 ? "" : "s"} enrolled.`,
       );
     } catch (error: unknown) {
       setMessage(
@@ -310,9 +324,13 @@ function AssignCourseDialog({
 
   return (
     <Dialog
-      title={course ? `Assign ${course.title}` : "Assign training course"}
+      title={
+        course
+          ? `${currentAssignment.data ? "Manage" : "Assign"} ${course.title}`
+          : "Assign training course"
+      }
       dialogRef={dialogRef}
-      onClose={onClose}
+      onClose={close}
       onCancel={(event) => {
         event.preventDefault();
         close();
@@ -320,6 +338,12 @@ function AssignCourseDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
     >
       <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+        {currentAssignment.isError ? (
+          <Alert>
+            Unable to load the existing assignment. Close this form and try
+            again before saving.
+          </Alert>
+        ) : null}
         {message ? (
           <Alert
             className="border-danger/25 bg-danger-soft text-danger"
@@ -366,6 +390,21 @@ function AssignCourseDialog({
             />
           </FormField>
         </div>
+        {currentAssignment.data ? (
+          <FormField
+            id="assignment-change-reason"
+            label="Reason for change"
+            error={errors.changeReason?.message}
+          >
+            <Textarea
+              id="assignment-change-reason"
+              maxLength={500}
+              rows={3}
+              placeholder="Explain why targets or dates are changing"
+              {...register("changeReason")}
+            />
+          </FormField>
+        ) : null}
         {options.isPending ? (
           <div
             aria-label="Loading assignment targets"
@@ -434,10 +473,17 @@ function AssignCourseDialog({
           <Button
             type="submit"
             disabled={
-              mutation.isPending || options.isPending || options.isError
+              mutation.isPending ||
+              options.isPending ||
+              options.isError ||
+              currentAssignment.isError
             }
           >
-            {mutation.isPending ? "Assigning…" : "Assign course"}
+            {mutation.isPending
+              ? "Saving…"
+              : currentAssignment.data
+                ? "Save assignment"
+                : "Assign course"}
           </Button>
         </div>
       </form>

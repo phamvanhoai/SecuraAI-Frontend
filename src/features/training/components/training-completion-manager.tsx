@@ -19,9 +19,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/feedback/toast";
+import { useSessionUser } from "@/features/auth";
 import {
   useCompletionCampaign,
   useCompletionCampaigns,
+  useWithdrawEnrollment,
 } from "../hooks/use-completion";
 import type {
   CompletionCampaign,
@@ -243,11 +247,26 @@ function CompletionDetailDialog({
   const [draftQuery, setDraftQuery] = useState("");
   const [status, setStatus] = useState<CompletionStatus>("all");
   const detail = useCompletionCampaign(campaignId, page, query, status);
+  const session = useSessionUser();
+  const canWithdraw =
+    session.data?.permissions.includes("training-courses.assign") ?? false;
+  const withdraw = useWithdrawEnrollment();
+  const toast = useToast();
+  const [withdrawTarget, setWithdrawTarget] = useState<{
+    id: string;
+    name: string;
+  }>();
+  const [reason, setReason] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
   useEffect(() => {
     const dialog = dialogRef.current;
     if (campaignId && dialog && !dialog.open) dialog.showModal();
   }, [campaignId]);
   const close = () => {
+    if (withdraw.isPending) return;
+    setWithdrawTarget(undefined);
+    setReason("");
+    setWithdrawError("");
     dialogRef.current?.close();
     setPage(1);
     setQuery("");
@@ -270,6 +289,74 @@ function CompletionDetailDialog({
       }}
       title={detail.data?.campaign.title ?? "Campaign completion details"}
     >
+      {withdrawTarget ? (
+        <form
+          className="border-border mb-4 space-y-3 rounded-lg border p-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (reason.trim().length < 3) {
+              setWithdrawError("Enter at least 3 characters for the reason.");
+              return;
+            }
+            try {
+              await withdraw.mutateAsync({
+                id: withdrawTarget.id,
+                reason: reason.trim(),
+              });
+              setWithdrawTarget(undefined);
+              setReason("");
+              setWithdrawError("");
+              toast.success(
+                "Assignment withdrawn",
+                "Assessment access is blocked. History and results are preserved.",
+              );
+            } catch {
+              setWithdrawError(
+                "Unable to withdraw this assignment. Refresh and try again.",
+              );
+            }
+          }}
+        >
+          <h3 className="font-semibold">
+            Withdraw assignment: {withdrawTarget.name}
+          </h3>
+          <p className="text-muted text-sm">
+            This employee will no longer be able to take the assessment.
+            Existing history and results will remain.
+          </p>
+          <label className="block text-sm" htmlFor="withdraw-reason">
+            Reason for withdrawal
+          </label>
+          <Textarea
+            id="withdraw-reason"
+            value={reason}
+            maxLength={500}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          {withdrawError ? <Alert>{withdrawError}</Alert> : null}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={withdraw.isPending}
+              onClick={() => {
+                setWithdrawTarget(undefined);
+                setReason("");
+                setWithdrawError("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              disabled={withdraw.isPending}
+            >
+              {withdraw.isPending ? "Withdrawing…" : "Confirm withdrawal"}
+            </Button>
+          </div>
+        </form>
+      ) : null}
       <form
         className="mb-4 flex flex-col gap-2 sm:flex-row"
         onSubmit={(event) => {
@@ -297,12 +384,19 @@ function CompletionDetailDialog({
           <option value="in_progress">In progress</option>
           <option value="completed">Completed</option>
           <option value="overdue">Overdue</option>
+          <option value="withdrawn">Withdrawn</option>
         </Select>
         <Button type="submit">Search</Button>
       </form>
       {detail.isPending ? (
         <TableSkeleton
-          headers={["Employee", "Status", "Progress", "Last activity"]}
+          headers={[
+            "Employee",
+            "Status",
+            "Progress",
+            "Last activity",
+            ...(canWithdraw ? ["Actions"] : []),
+          ]}
           rows={5}
           label="Loading employee completion"
         />
@@ -360,6 +454,32 @@ function CompletionDetailDialog({
               cell: (item) =>
                 item.lastAccessedAt ? date(item.lastAccessedAt) : "Never",
             },
+            ...(canWithdraw
+              ? [
+                  {
+                    key: "actions",
+                    header: "Actions",
+                    cell: (item: (typeof rows)[number]) =>
+                      item.status !== "completed" &&
+                      item.status !== "withdrawn" ? (
+                        <Button
+                          variant="secondary"
+                          disabled={withdraw.isPending}
+                          onClick={() => {
+                            setWithdrawTarget({
+                              id: item.id,
+                              name: item.user.name,
+                            });
+                            setReason("");
+                            setWithdrawError("");
+                          }}
+                        >
+                          Withdraw
+                        </Button>
+                      ) : null,
+                  },
+                ]
+              : []),
           ]}
         />
       )}

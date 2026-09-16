@@ -53,9 +53,14 @@ export const assignCourseSchema = z
     dueDate: z.iso.date(),
     userIds: z.array(z.uuid()).max(200),
     departmentIds: z.array(z.uuid()).max(200),
+    changeReason: z.string().trim().max(500).optional(),
   })
   .superRefine((value, context) => {
-    if (value.userIds.length === 0 && value.departmentIds.length === 0) {
+    if (
+      value.userIds.length === 0 &&
+      value.departmentIds.length === 0 &&
+      !value.changeReason?.trim()
+    ) {
       context.addIssue({
         code: "custom",
         path: ["userIds"],
@@ -77,8 +82,22 @@ export const courseAssignmentSchema = z.object({
   startDate: z.iso.datetime({ offset: true }),
   dueDate: z.iso.datetime({ offset: true }),
   enrollmentCount: z.number().int().min(0),
+  removedCount: z.number().int().min(0),
+  retainedStartedCount: z.number().int().min(0),
+  retainedCompletedCount: z.number().int().min(0),
   createdAt: z.iso.datetime({ offset: true }),
 });
+
+export const courseAssignmentDetailSchema = z
+  .object({
+    id: z.uuid(),
+    title: z.string(),
+    startDate: z.iso.datetime({ offset: true }),
+    dueDate: z.iso.datetime({ offset: true }),
+    userIds: z.array(z.uuid()),
+    departmentIds: z.array(z.uuid()),
+  })
+  .nullable();
 
 export type Course = z.infer<typeof courseSchema>;
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;

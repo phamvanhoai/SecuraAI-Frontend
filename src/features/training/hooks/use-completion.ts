@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { withdrawEnrollment } from "../api/completion";
 import {
   getCompletionCampaign,
   listCompletionCampaigns,
@@ -31,5 +32,16 @@ export function useCompletionCampaign(
       getCompletionCampaign(campaignId ?? "", page, q, status, signal),
     enabled: Boolean(campaignId),
     placeholderData: (previous) => previous,
+  });
+}
+export function useWithdrawEnrollment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      withdrawEnrollment(id, reason),
+    retry: false,
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["training"] });
+    },
   });
 }

@@ -45,7 +45,7 @@ export const completionCampaignDetailSchema = z.object({
         email: z.email(),
         employeeCode: z.string().nullable(),
       }),
-      status: z.enum(["assigned", "in_progress", "completed", "overdue"]),
+      status: z.enum(["assigned", "in_progress", "completed", "overdue", "withdrawn"]),
       progressPercent: z.number().int().min(0).max(100),
       startedAt: z.iso.datetime({ offset: true }).nullable(),
       completedAt: z.iso.datetime({ offset: true }).nullable(),
@@ -57,4 +57,4 @@ export const completionCampaignDetailSchema = z.object({
 
 export type CompletionCampaign = z.infer<typeof completionCampaignSchema>;
 export type CompletionStatus =
-  "all" | "assigned" | "in_progress" | "completed" | "overdue";
+  "all" | "assigned" | "in_progress" | "completed" | "overdue" | "withdrawn";
