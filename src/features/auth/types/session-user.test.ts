@@ -9,6 +9,7 @@ describe("sessionUserSchema", () => {
       fullName: "Security Officer",
       status: "active",
       mustChangePassword: false,
+      mfaEnabled: false,
       roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
       permissions: ["assets.read", "assets.create"],
     });

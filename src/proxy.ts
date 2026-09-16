@@ -27,6 +27,7 @@ const protectedPrefixes = [
   "/event-logs",
   "/custom-dashboard",
   "/profile",
+  "/authenticator-mfa",
   "/change-password",
 ] as const;
 
@@ -79,6 +80,7 @@ export const config = {
     "/event-logs/:path*",
     "/custom-dashboard/:path*",
     "/profile/:path*",
+    "/authenticator-mfa/:path*",
     "/change-password/:path*",
   ],
 };
