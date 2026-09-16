@@ -1,7 +1,10 @@
 import "server-only";
 
 import { z } from "zod";
-import { sessionUserSchema, type AuthSessionUser } from "@/features/auth/types/session-user";
+import {
+  sessionUserSchema,
+  type AuthSessionUser,
+} from "@/features/auth/types/session-user";
 import { env } from "@/lib/env";
 
 const tokenPairSchema = z.object({
@@ -10,18 +13,62 @@ const tokenPairSchema = z.object({
   expiresIn: z.string().min(1),
 });
 
-const tokenEnvelopeSchema = z.object({ success: z.literal(true), data: tokenPairSchema });
+const tokenEnvelopeSchema = z.object({
+  success: z.literal(true),
+  data: tokenPairSchema,
+});
+const mfaChallengeEnvelopeSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    mfaRequired: z.literal(true),
+    challengeToken: z.string().min(32).max(256),
+    expiresIn: z.number().int().positive().max(300),
+  }),
+});
 
-const userEnvelopeSchema = z.object({ success: z.literal(true), data: sessionUserSchema });
+const userEnvelopeSchema = z.object({
+  success: z.literal(true),
+  data: sessionUserSchema,
+});
 
 export type AuthTokenPair = z.infer<typeof tokenPairSchema>;
+export type MfaChallenge = z.infer<typeof mfaChallengeEnvelopeSchema>["data"];
 
 function backendUrl(path: string): string {
   return `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}${path}`;
 }
 
+export async function requestLogin(
+  body: unknown,
+  request: Request,
+): Promise<{
+  response: Response;
+  tokens?: AuthTokenPair;
+  challenge?: MfaChallenge;
+}> {
+  const userAgent = request.headers.get("user-agent");
+  const response = await fetch(backendUrl("/auth/login"), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(userAgent ? { "User-Agent": userAgent } : {}),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!response.ok) return { response };
+  const payload: unknown = await response.json();
+  const tokens = tokenEnvelopeSchema.safeParse(payload);
+  if (tokens.success) return { response, tokens: tokens.data.data };
+  const challenge = mfaChallengeEnvelopeSchema.safeParse(payload);
+  return challenge.success
+    ? { response, challenge: challenge.data.data }
+    : { response };
+}
+
 export async function requestTokenPair(
-  path: "/auth/login" | "/auth/refresh",
+  path: "/auth/login" | "/auth/refresh" | "/auth/mfa/challenge/verify",
   body: unknown,
   request: Request,
 ): Promise<{ response: Response; tokens?: AuthTokenPair }> {
@@ -41,9 +88,14 @@ export async function requestTokenPair(
   return parsed.success ? { response, tokens: parsed.data.data } : { response };
 }
 
-export async function requestCurrentUser(accessToken: string): Promise<AuthSessionUser | null> {
+export async function requestCurrentUser(
+  accessToken: string,
+): Promise<AuthSessionUser | null> {
   const response = await fetch(backendUrl("/users/me"), {
-    headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
     cache: "no-store",
   });
   if (!response.ok) return null;
@@ -51,8 +103,19 @@ export async function requestCurrentUser(accessToken: string): Promise<AuthSessi
   return parsed.success ? parsed.data.data : null;
 }
 
-export function publicAuthError(status: number): { code: string; message: string } {
-  if (status === 429) return { code: "RATE_LIMITED", message: "Quá nhiều lần thử. Vui lòng thử lại sau." };
-  if (status === 403) return { code: "ACCESS_DENIED", message: "Tài khoản không thể đăng nhập." };
-  return { code: "INVALID_CREDENTIALS", message: "Email hoặc mật khẩu không đúng." };
+export function publicAuthError(status: number): {
+  code: string;
+  message: string;
+} {
+  if (status === 429)
+    return {
+      code: "RATE_LIMITED",
+      message: "Quá nhiều lần thử. Vui lòng thử lại sau.",
+    };
+  if (status === 403)
+    return { code: "ACCESS_DENIED", message: "Tài khoản không thể đăng nhập." };
+  return {
+    code: "INVALID_CREDENTIALS",
+    message: "Email hoặc mật khẩu không đúng.",
+  };
 }

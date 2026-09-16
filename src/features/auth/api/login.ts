@@ -1,15 +1,18 @@
 import type { LoginInput } from "../schemas/login-schema";
 
-type LoginResult = { success: true; data: { authenticated: true } };
+export type LoginResult =
+  { authenticated: true } | { mfaRequired: true; expiresIn: number };
+type LoginSuccess = { success: true; data: LoginResult };
 type LoginError = { success: false; error?: { message?: string } };
 
-export async function login(input: LoginInput): Promise<void> {
-  const response = await fetch("/api/auth/login", {
+async function post<T>(url: string, input: unknown): Promise<T> {
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const payload = (await response.json().catch(() => undefined)) as LoginResult | LoginError | undefined;
+  const payload = (await response.json().catch(() => undefined)) as
+    LoginSuccess | LoginError | undefined;
   if (!response.ok || !payload?.success) {
     throw new Error(
       payload && !payload.success && typeof payload.error?.message === "string"
@@ -17,4 +20,17 @@ export async function login(input: LoginInput): Promise<void> {
         : "Không thể đăng nhập. Vui lòng thử lại.",
     );
   }
+  return payload.data as T;
+}
+
+export function login(input: LoginInput): Promise<LoginResult> {
+  return post<LoginResult>("/api/auth/login", input);
+}
+
+export function verifyMfaChallenge(
+  code: string,
+): Promise<{ authenticated: true }> {
+  return post<{ authenticated: true }>("/api/auth/mfa/challenge/verify", {
+    code,
+  });
 }

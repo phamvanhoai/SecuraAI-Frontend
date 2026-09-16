@@ -5,6 +5,7 @@ import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useSessionUser } from "@/features/auth";
 import {
+  EmployeePolicyAcknowledgementManager,
   PolicyDraftsManager,
   PolicyDepartmentAssignmentManager,
   PolicyControlMappingManager,
@@ -27,6 +28,8 @@ export default function Page() {
     session.data?.permissions.includes("policies.assign-department") ?? false;
   const canMapControls =
     session.data?.permissions.includes("compliance.map-controls") ?? false;
+  const canAcknowledge =
+    session.data?.permissions.includes("policies.acknowledge") ?? false;
 
   if (session.isPending) {
     return (
@@ -69,6 +72,7 @@ export default function Page() {
       />
     );
   }
+  if (canAcknowledge) return <EmployeePolicyAcknowledgementManager />;
   if (canAssignDepartments) return <PolicyDepartmentAssignmentManager />;
   if (canMapControls) return <PolicyControlMappingManager />;
   if (canUpdate) return <UpdatePolicyVersionManager />;
@@ -82,7 +86,7 @@ export default function Page() {
         title="Information security policies"
       />
       <EmptyState
-        description="The current account does not have permission to manage policies or framework mappings."
+        description="The current account does not have permission to manage, acknowledge policies or map framework controls."
         title="You do not have permission to manage policies"
       />
     </div>

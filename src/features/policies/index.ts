@@ -1,4 +1,5 @@
 export { PolicyDraftsManager } from "./components/policy-drafts-manager";
+export { EmployeePolicyAcknowledgementManager } from "./components/employee-policy-acknowledgement-manager";
 export { PolicyDepartmentAssignmentManager } from "./components/policy-department-assignment-manager";
 export { PolicyControlMappingManager } from "./components/policy-control-mapping-manager";
 export { PolicyPublicationManager } from "./components/policy-publication-manager";

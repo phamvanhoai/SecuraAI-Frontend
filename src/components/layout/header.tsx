@@ -2,11 +2,10 @@
 
 import {
   Bell,
-  BriefcaseBusiness,
   ChevronDown,
   LayoutDashboard,
+  KeyRound,
   LogOut,
-  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +14,11 @@ import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSessionUser } from "@/features/auth";
 import { ThemeToggle } from "./theme-toggle";
-import { allowedPanels, panelLabels, type PanelKind } from "@/config/navigation";
+import {
+  allowedPanels,
+  panelLabels,
+  type PanelKind,
+} from "@/config/navigation";
 
 export function Header() {
   const router = useRouter();
@@ -87,6 +90,18 @@ export function Header() {
                   ))}
                 </div>
               ) : null}
+              <div className="border-border border-b py-1">
+                <PanelLink
+                  href="/profile"
+                  icon={<UserRound />}
+                  label="Hồ sơ cá nhân"
+                />
+                <PanelLink
+                  href="/change-password"
+                  icon={<KeyRound />}
+                  label="Đổi mật khẩu"
+                />
+              </div>
               <button
                 className="hover:bg-neutral-soft mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors"
                 onClick={logout}
@@ -108,8 +123,6 @@ export function Header() {
 
 function panelIcon(panel: PanelKind): ReactNode {
   if (panel === "admin") return <LayoutDashboard />;
-  if (panel === "security-officer") return <ShieldCheck />;
-  if (panel === "executive-auditor") return <BriefcaseBusiness />;
   return <UserRound />;
 }
 
@@ -124,7 +137,7 @@ function PanelLink({
 }) {
   return (
     <Link
-      className="hover:bg-neutral-soft flex items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors"
+      className="hover:bg-neutral-soft flex min-h-10 items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors"
       href={href}
     >
       <span className="text-brand [&>svg]:size-4">{icon}</span>

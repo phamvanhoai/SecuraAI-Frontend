@@ -14,6 +14,7 @@ export default async function LoginPage({
     typeof params.returnUrl === "string" ? params.returnUrl : undefined,
     "/dashboard",
   );
+  const passwordChanged = params.passwordChanged === "1";
   return (
     <section
       className="border-border bg-surface w-full max-w-[30rem] rounded-[12px] border p-7 shadow-[0_20px_55px_rgba(28,55,100,0.08)] sm:p-10"
@@ -30,7 +31,7 @@ export default async function LoginPage({
           Enter the account information provided by your organization.
         </p>
       </div>
-      <LoginForm returnUrl={returnUrl} />
+      <LoginForm returnUrl={returnUrl} passwordChanged={passwordChanged} />
     </section>
   );
 }

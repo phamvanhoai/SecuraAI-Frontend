@@ -1,14 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   roleFormSchema,
   type Permission,
@@ -37,12 +35,11 @@ export function RoleFormDialog({
   onSubmit,
 }: RoleFormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const {
-    register,
-    reset,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RoleFormInput, unknown, RoleFormValues>({
+  const { register, reset, handleSubmit } = useForm<
+    RoleFormInput,
+    unknown,
+    RoleFormValues
+  >({
     resolver: zodResolver(roleFormSchema),
     defaultValues: { code: "", name: "", description: "", permissionIds: [] },
   });
@@ -88,49 +85,31 @@ export function RoleFormDialog({
     >
       <form className="p-6" noValidate onSubmit={handleSubmit(onSubmit)}>
         <h2 className="text-lg font-semibold" id="role-form-title">
-          {role ? "Update role" : "Create custom role"}
+          Edit permissions
         </h2>
         <p className="text-muted mt-1 text-sm">
-          System roles are read-only. Custom roles can be modified.
+          Update access for {role?.name}. The role identity cannot be changed.
         </p>
         {errorMessage ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">
             {errorMessage}
           </Alert>
         ) : null}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Role code" error={errors.code?.message}>
-            <Input
-              autoComplete="off"
-              aria-invalid={Boolean(errors.code)}
-              {...register("code", {
-                onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
-                  event.target.value = event.target.value.toUpperCase();
-                },
-              })}
-            />
-          </Field>
-          <Field label="Role name" error={errors.name?.message}>
-            <Input
-              autoComplete="off"
-              aria-invalid={Boolean(errors.name)}
-              {...register("name")}
-            />
-          </Field>
-          <Field
-            className="sm:col-span-2"
-            label="Description"
-            error={errors.description?.message}
-          >
-            <Textarea {...register("description")} />
-          </Field>
+        <div className="bg-neutral-soft mt-5 grid gap-3 rounded-lg p-4 sm:grid-cols-2">
+          <div>
+            <p className="text-muted text-xs font-medium uppercase">Role</p>
+            <p className="mt-1 text-sm font-semibold">{role?.name}</p>
+          </div>
+          <div>
+            <p className="text-muted text-xs font-medium uppercase">Code</p>
+            <code className="mt-1 block text-sm">{role?.code}</code>
+          </div>
         </div>
         <fieldset className="border-border mt-5 rounded-lg border p-4">
           <legend className="px-1 text-sm font-semibold">Permissions</legend>
           {permissionGroups.length === 0 ? (
             <p className="text-muted text-sm">
-              The backend returned no permissions. You can create a role without
-              permissions.
+              The backend returned no permissions to assign.
             </p>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
@@ -175,32 +154,10 @@ export function RoleFormDialog({
             Cancel
           </Button>
           <Button disabled={pending} type="submit">
-            {pending ? "Saving..." : role ? "Save changes" : "Create role"}
+            {pending ? "Saving..." : "Save permissions"}
           </Button>
         </div>
       </form>
     </dialog>
-  );
-}
-
-function Field({
-  label,
-  error,
-  className,
-  children,
-}: {
-  label: string;
-  error?: string | undefined;
-  className?: string | undefined;
-  children: ReactNode;
-}) {
-  return (
-    <label className={`space-y-2 text-sm font-medium ${className ?? ""}`}>
-      <span>{label}</span>
-      {children}
-      {error ? (
-        <span className="text-danger block text-sm">{error}</span>
-      ) : null}
-    </label>
   );
 }

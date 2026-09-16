@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Pencil, Search, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, Pencil, Search } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -21,19 +21,17 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
 import {
-  useCreateRole,
-  useDeleteRole,
   usePermissions,
   useRoleMetrics,
   useRoles,
   useUpdateRole,
 } from "../hooks/use-roles";
+import { isFixedRoleCode } from "../lib/fixed-roles";
 import type { Permission, Role, RoleFormValues } from "../schemas/role-schema";
-import { RoleFormDialog } from "./role-form-dialog";
 import { RoleDetailDialog } from "./role-detail-dialog";
+import { RoleFormDialog } from "./role-form-dialog";
 
 const PAGE_SIZE = 20;
-
 function userError(error: unknown): string {
   if (!(error instanceof ApiError))
     return "Unable to complete the request. Please try again.";
@@ -53,9 +51,8 @@ export function RolesManager() {
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [viewingRole, setViewingRole] = useState<Role | null>(null);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const roles = useRoles({
     page,
@@ -64,9 +61,7 @@ export function RolesManager() {
   });
   const metrics = useRoleMetrics();
   const permissionCatalog = usePermissions();
-  const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
-  const deleteMutation = useDeleteRole();
 
   const permissions: readonly Permission[] =
     permissionCatalog.data?.items ?? [];
@@ -103,8 +98,8 @@ export function RolesManager() {
       key: "type",
       header: "Type",
       cell: (role) => (
-        <StatusBadge tone={role.isSystem ? "success" : "info"}>
-          {role.isSystem ? "System" : "Custom"}
+        <StatusBadge tone={isFixedRoleCode(role.code) ? "success" : "info"}>
+          {isFixedRoleCode(role.code) ? "System role" : "Legacy role"}
         </StatusBadge>
       ),
     },
@@ -133,51 +128,23 @@ export function RolesManager() {
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
             View details
           </button>
-          {!role.isSystem ? (
-            <>
-              <button
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                onClick={() => openEdit(role)}
-                type="button"
-              >
-                <Pencil
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Edit
-              </button>
-              <button
-                className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={deleteMutation.isPending}
-                onClick={() => void remove(role)}
-                type="button"
-              >
-                <Trash2
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Delete
-              </button>
-            </>
+          {isFixedRoleCode(role.code) && role.code !== "ADMIN" ? (
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => {
+                setFormError(null);
+                setEditingRole(role);
+              }}
+              type="button"
+            >
+              <Pencil aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Edit permissions
+            </button>
           ) : null}
         </DropdownMenu>
       ),
     },
   ];
-
-  function openCreate(): void {
-    setEditingRole(null);
-    setFormError(null);
-    setDialogOpen(true);
-  }
-
-  function openEdit(role: Role): void {
-    setEditingRole(role);
-    setFormError(null);
-    setDialogOpen(true);
-  }
 
   function submitSearch(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -185,35 +152,18 @@ export function RolesManager() {
     setSearch(searchDraft.trim());
   }
 
-  async function save(values: RoleFormValues): Promise<void> {
+  async function savePermissions(values: RoleFormValues): Promise<void> {
+    if (!editingRole || editingRole.code === "ADMIN") return;
     setFormError(null);
     try {
-      if (editingRole) {
-        await updateMutation.mutateAsync({ id: editingRole.id, input: values });
-        toast.success("Role updated");
-      } else {
-        await createMutation.mutateAsync(values);
-        toast.success("Role created");
-      }
-      setDialogOpen(false);
+      await updateMutation.mutateAsync({ id: editingRole.id, input: values });
+      setEditingRole(null);
+      toast.success(
+        "Permissions updated",
+        `${editingRole.name} now uses the selected permissions.`,
+      );
     } catch (error: unknown) {
       setFormError(userError(error));
-    }
-  }
-
-  async function remove(role: Role): Promise<void> {
-    if (
-      !window.confirm(
-        `Delete role “${role.name}”? This action cannot be undone.`,
-      )
-    )
-      return;
-    try {
-      await deleteMutation.mutateAsync(role.id);
-      toast.success("Role deleted");
-      if (roles.data?.items.length === 1 && page > 1) setPage(page - 1);
-    } catch (error: unknown) {
-      toast.error("Unable to delete role", userError(error));
     }
   }
 
@@ -223,9 +173,7 @@ export function RolesManager() {
     <>
       <ProductPageHeader
         title="Roles and permissions"
-        description="Manage custom roles and backend-enforced permission scopes."
-        onPrimaryAction={openCreate}
-        primaryAction="Create role"
+        description="Review system roles and manage permission assignments for non-admin roles."
         showSampleNotice={false}
       />
       <MetricStrip
@@ -235,7 +183,7 @@ export function RolesManager() {
             label: "Total roles",
             value: metrics.data ? String(metrics.data.total) : "—",
             detail: metrics.data
-              ? `${metrics.data.system} system roles`
+              ? `${metrics.data.fixed} system roles`
               : "Across all roles",
             tone: "brand",
             loading: metrics.isPending,
@@ -255,11 +203,11 @@ export function RolesManager() {
             loading: metrics.isPending,
           },
           {
-            label: "Custom roles",
+            label: "Legacy roles",
             value: metrics.data
-              ? String(metrics.data.total - metrics.data.system)
+              ? String(metrics.data.total - metrics.data.fixed)
               : "—",
-            detail: "Backend-managed non-system roles",
+            detail: "Read-only until removed from the access model",
             tone: "neutral",
             loading: metrics.isPending,
           },
@@ -326,18 +274,18 @@ export function RolesManager() {
           ) : null}
         </div>
       </ProductPanel>
-      <RoleFormDialog
-        errorMessage={formError}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={save}
-        open={dialogOpen}
-        pending={createMutation.isPending || updateMutation.isPending}
-        permissions={permissions}
-        role={editingRole}
-      />
       <RoleDetailDialog
         role={viewingRole}
         onClose={() => setViewingRole(null)}
+      />
+      <RoleFormDialog
+        errorMessage={formError}
+        onClose={() => setEditingRole(null)}
+        onSubmit={savePermissions}
+        open={editingRole !== null}
+        pending={updateMutation.isPending}
+        permissions={permissions}
+        role={editingRole}
       />
     </>
   );
