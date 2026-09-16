@@ -113,7 +113,11 @@ const modules = {
     slug: "training",
     icon: GraduationCap,
     section: "Quản lý",
-    requiredAnyPermission: ["training-courses.read"],
+    requiredAnyPermission: [
+      "training-courses.read",
+      "training-assessments.take",
+      "training-completion.read",
+    ],
   },
   anomalyMonitoring: {
     title: "Giám sát bất thường",

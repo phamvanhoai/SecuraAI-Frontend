@@ -1,6 +1,13 @@
 export { LoginForm } from "./components/login-form";
 export { MfaSetupCard } from "./components/mfa-setup-card";
 export { RecoveryCard } from "./components/recovery-card";
+export { ChangePasswordForm } from "./components/change-password-form";
+export { changePassword } from "./api/change-password";
+export { useChangePassword } from "./hooks/use-change-password";
+export {
+  changePasswordSchema,
+  type ChangePasswordInput,
+} from "./schemas/change-password-schema";
 export { loginSchema, type LoginInput } from "./schemas/login-schema";
 export {
   confirmPasswordReset,

@@ -74,7 +74,7 @@ describe("panel navigation", () => {
     );
   });
 
-  it("shows Security Officer training only with course read permission", () => {
+  it("shows training for course managers, completion viewers, and employees", () => {
     const training = getPanelNavigation("dashboard").find(
       (item) => item.href === "/training",
     );
@@ -84,5 +84,11 @@ describe("panel navigation", () => {
     expect(canAccessNavigationItem(["training-courses.read"], training)).toBe(
       true,
     );
+    expect(
+      canAccessNavigationItem(["training-assessments.take"], training),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["training-completion.read"], training),
+    ).toBe(true);
   });
 });

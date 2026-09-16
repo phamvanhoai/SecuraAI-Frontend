@@ -76,6 +76,8 @@ Add schema/boundary tests, behavioral component tests and risk-proportionate bro
 ## Git workflow
 
 - Use `develop` only as the integration base. Never implement features or fixes directly on `develop` or `main`.
+- By default, work in the primary repository directory: fetch the latest `origin/develop`, then switch that directory to a dedicated `feature/*`, `fix/*`, or other appropriately named task branch. This keeps the code being edited and the local development server in the location the user already opened.
+- Create a separate Git worktree only when the primary repository has uncommitted changes that cannot be preserved safely while switching branches, another active task must remain running unchanged, or the user explicitly requests one. Explain why before creating it, and remove temporary worktrees after their branches are merged when they are no longer needed.
 - Create a dedicated branch from the latest `origin/develop` for each assigned use case. Use names such as `feature/view-assets`, `feature/manage-custom-roles`, or `fix/role-list-visibility`.
 - Do not reuse a branch after its Pull Request has been merged. Fetch the latest remote state and create the next feature branch from the updated `origin/develop`.
 - Integrate changes through GitHub Pull Requests only: `feature/*` or `fix/*` into `develop`, then `develop` into `main`.
