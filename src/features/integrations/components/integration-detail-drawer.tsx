@@ -7,6 +7,7 @@ import {
   Globe,
   Key,
   ListOrdered,
+  Radio,
   RefreshCw,
   Save,
   Server,
@@ -36,12 +37,14 @@ import {
   IntegrationTypeBadge,
 } from "./integration-status-badge";
 import { ApiKeysTab } from "./api-keys-tab";
+import { ConnectionDiagnosticsTab } from "./connection-diagnostics-tab";
 import { IntegrationLogsTab } from "./integration-logs-tab";
 import { SyncJobsTab } from "./sync-jobs-tab";
 import { SyncSchedulesTab } from "./sync-schedules-tab";
 import { TestConnectionDialog } from "./test-connection-dialog";
 
-type DetailTab = "overview" | "api-keys" | "schedules" | "jobs" | "logs";
+type DetailTab = "overview" | "diagnostics" | "api-keys" | "schedules" | "jobs" | "logs";
+
 
 function IntegrationOverviewTab({
   integration,
@@ -366,6 +369,18 @@ export function IntegrationDetailDrawer({
             </button>
             <button
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                activeTab === "diagnostics"
+                  ? "bg-brand-soft text-brand"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab("diagnostics")}
+              type="button"
+            >
+              <Radio className="size-3.5" />
+              Kết nối & Chẩn đoán
+            </button>
+            <button
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 activeTab === "api-keys"
                   ? "bg-brand-soft text-brand"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground"
@@ -427,9 +442,14 @@ export function IntegrationDetailDrawer({
             />
           )}
 
+          {activeTab === "diagnostics" && integration && (
+            <ConnectionDiagnosticsTab integration={integration} />
+          )}
+
           {activeTab === "api-keys" && integration && (
             <ApiKeysTab integrationId={integration.id} />
           )}
+
 
           {activeTab === "schedules" && integration && (
             <SyncSchedulesTab integrationId={integration.id} />

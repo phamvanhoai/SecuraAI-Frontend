@@ -10,3 +10,7 @@ export { TestConnectionDialog } from "./components/test-connection-dialog";
 export { ApiKeysTab } from "./components/api-keys-tab";
 export { ApiKeyModal } from "./components/api-key-modal";
 export { OneTimeSecretDialog } from "./components/one-time-secret-dialog";
+export { ConnectionMonitoringHeader } from "./components/connection-monitoring-header";
+export { ConnectionStatusTable } from "./components/connection-status-table";
+export { ConnectionDiagnosticsTab } from "./components/connection-diagnostics-tab";
+
