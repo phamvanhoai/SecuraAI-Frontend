@@ -4,6 +4,8 @@ import {
   classifyIncidentSeverity,
   assignIncidentHandler,
   updateIncidentHandlingProgress,
+  listIncidentEvidence,
+  uploadIncidentEvidence,
   getMyIncident,
   listIncidentsForClassification,
   listIncidentAssignmentOptions,
@@ -79,5 +81,23 @@ export function useUpdateIncidentHandlingProgress() {
     mutationFn: updateIncidentHandlingProgress,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export const useIncidentEvidence = (id: string | undefined, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "evidence", id, page],
+    queryFn: ({ signal }) => listIncidentEvidence(id ?? "", page, signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useUploadIncidentEvidence() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: uploadIncidentEvidence,
+    retry: false,
+    onSuccess: (_data, input) =>
+      client.invalidateQueries({
+        queryKey: ["incidents", "evidence", input.id],
+      }),
   });
 }

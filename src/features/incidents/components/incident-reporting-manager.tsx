@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Ellipsis,
   Activity,
+  Download,
+  Paperclip,
   Eye,
   Plus,
   RotateCcw,
@@ -38,6 +40,8 @@ import {
   useAssignIncidentHandler,
   useIncidentAssignmentOptions,
   useIncidentClassificationQueue,
+  useIncidentEvidence,
+  useUploadIncidentEvidence,
   useUpdateIncidentHandlingProgress,
   useMyIncident,
   useMyIncidents,
@@ -116,6 +120,12 @@ const incidentStatus = (status: string) =>
     label: status.replaceAll("_", " "),
     tone: "neutral" as const,
   };
+const formatBytes = (value: number | null) => {
+  if (value === null) return "Unknown size";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+};
 export function IncidentReportingManager() {
   const session = useSessionUser();
   const allowed =
@@ -126,6 +136,8 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.assign") ?? false;
   const canUpdateProgress =
     session.data?.permissions.includes("incidents.update-progress") ?? false;
+  const canManageEvidence =
+    session.data?.permissions.includes("incidents.evidence.manage") ?? false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -139,6 +151,11 @@ export function IncidentReportingManager() {
   const [classificationTarget, setClassificationTarget] = useState<Incident>();
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
   const [progressTarget, setProgressTarget] = useState<Incident>();
+  const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
+  const [evidencePage, setEvidencePage] = useState(1);
+  const [evidenceFile, setEvidenceFile] = useState<File>();
+  const [evidenceDescription, setEvidenceDescription] = useState("");
+  const [evidenceError, setEvidenceError] = useState<string>();
   const [handlerSearch, setHandlerSearch] = useState("");
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -146,6 +163,7 @@ export function IncidentReportingManager() {
   const classificationDialogRef = useRef<HTMLDialogElement>(null);
   const assignmentDialogRef = useRef<HTMLDialogElement>(null);
   const progressDialogRef = useRef<HTMLDialogElement>(null);
+  const evidenceDialogRef = useRef<HTMLDialogElement>(null);
   const list = useMyIncidents(page, allowed && !canClassify);
   const classificationQueue = useIncidentClassificationQueue(
     page,
@@ -159,6 +177,8 @@ export function IncidentReportingManager() {
   const assignmentOptions = useIncidentAssignmentOptions(canAssign);
   const assignmentMutation = useAssignIncidentHandler();
   const progressMutation = useUpdateIncidentHandlingProgress();
+  const evidence = useIncidentEvidence(evidenceTarget?.id, evidencePage);
+  const evidenceMutation = useUploadIncidentEvidence();
   const toast = useToast();
   const {
     register,
@@ -224,6 +244,12 @@ export function IncidentReportingManager() {
     if (progressTarget && !dialog.open) dialog.showModal();
     if (!progressTarget && dialog.open) dialog.close();
   }, [progressTarget]);
+  useEffect(() => {
+    const dialog = evidenceDialogRef.current;
+    if (!dialog) return;
+    if (evidenceTarget && !dialog.open) dialog.showModal();
+    if (!evidenceTarget && dialog.open) dialog.close();
+  }, [evidenceTarget]);
   const close = () => {
     setOpen(false);
     setMessage(undefined);
@@ -332,6 +358,51 @@ export function IncidentReportingManager() {
       );
     } catch {
       // Persistent error is rendered in the dialog.
+    }
+  };
+  const openEvidence = (incident: Incident) => {
+    setEvidencePage(1);
+    setEvidenceTarget(incident);
+    setEvidenceFile(undefined);
+    setEvidenceDescription("");
+    setEvidenceError(undefined);
+    evidenceMutation.reset();
+  };
+  const closeEvidence = () => {
+    setEvidenceTarget(undefined);
+    setEvidenceFile(undefined);
+    setEvidenceDescription("");
+    setEvidenceError(undefined);
+    evidenceMutation.reset();
+  };
+  const submitEvidence = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!evidenceTarget || !evidenceFile) {
+      setEvidenceError("Choose an evidence or log file before uploading.");
+      return;
+    }
+    if (evidenceFile.size > 20 * 1024 * 1024) {
+      setEvidenceError("Incident evidence may not exceed 20 MB.");
+      return;
+    }
+    setEvidenceError(undefined);
+    try {
+      await evidenceMutation.mutateAsync({
+        id: evidenceTarget.id,
+        file: evidenceFile,
+        description: evidenceDescription,
+      });
+      toast.success(
+        "Evidence attached",
+        `${evidenceFile.name} is linked to ${evidenceTarget.incidentCode}.`,
+      );
+      setEvidenceFile(undefined);
+      setEvidenceDescription("");
+      setEvidencePage(1);
+    } catch (error) {
+      setEvidenceError(
+        error instanceof Error ? error.message : "Unable to upload evidence.",
+      );
     }
   };
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
@@ -473,6 +544,20 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Update progress
+              </button>
+            ) : null}
+            {canManageEvidence ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => openEvidence(item)}
+                type="button"
+              >
+                <Paperclip
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Evidence and logs
               </button>
             ) : null}
           </DropdownMenu>
@@ -927,6 +1012,185 @@ export function IncidentReportingManager() {
               </Button>
             </div>
           </form>
+        ) : null}
+      </Dialog>
+      <Dialog
+        dialogRef={evidenceDialogRef}
+        title="Incident evidence and logs"
+        className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
+        onClose={closeEvidence}
+      >
+        {evidenceTarget ? (
+          <div className="space-y-5">
+            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+              <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                {evidenceTarget.incidentCode}
+              </p>
+              <p className="mt-1 font-semibold break-words">
+                {evidenceTarget.title}
+              </p>
+            </div>
+            <section aria-labelledby="incident-evidence-list-title">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3
+                  id="incident-evidence-list-title"
+                  className="text-sm font-semibold"
+                >
+                  Attached files
+                </h3>
+                <span className="text-muted text-xs">
+                  {evidence.data?.pagination.total ?? 0} files
+                </span>
+              </div>
+              {evidence.isPending ? (
+                <div
+                  className="bg-neutral-soft h-24 animate-pulse rounded-lg"
+                  aria-label="Loading incident evidence"
+                />
+              ) : evidence.isError ? (
+                <Alert>Unable to load incident evidence.</Alert>
+              ) : evidence.data?.items.length ? (
+                <ul className="border-border divide-border divide-y rounded-lg border">
+                  {evidence.data.items.map((item) => (
+                    <li
+                      className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      key={item.id}
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-medium break-all">
+                          {item.file.name}
+                        </span>
+                        <span className="text-muted mt-1 block text-xs">
+                          {formatBytes(item.file.sizeBytes)} ·{" "}
+                          {item.uploadedBy?.name ?? "Unknown user"} ·{" "}
+                          {formatDate(item.createdAt)}
+                        </span>
+                        {item.description ? (
+                          <span className="text-muted mt-1 block text-sm break-words">
+                            {item.description}
+                          </span>
+                        ) : null}
+                        <span className="text-muted mt-2 block text-xs break-all">
+                          SHA-256: {item.file.checksum ?? "Unavailable"}
+                        </span>
+                      </span>
+                      <a
+                        className="border-border hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium focus-visible:outline-2"
+                        href={`/api/incidents/evidence/${item.id}/download`}
+                      >
+                        <Download
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                        Download
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="border-border text-muted rounded-lg border border-dashed p-5 text-sm">
+                  No evidence or logs have been attached.
+                </div>
+              )}
+              {evidence.data && evidence.data.pagination.totalPages > 1 ? (
+                <div className="border-border mt-3 border-t pt-3">
+                  <Pagination
+                    page={evidence.data.pagination.page}
+                    pageCount={evidence.data.pagination.totalPages}
+                    onPageChange={setEvidencePage}
+                  />
+                </div>
+              ) : null}
+            </section>
+            {evidenceTarget.status !== "closed" &&
+            (canAssign ||
+              evidenceTarget.currentAssignment?.assignee.id ===
+                session.data?.id) ? (
+              <form
+                className="border-border space-y-4 border-t pt-5"
+                onSubmit={submitEvidence}
+              >
+                <h3 className="text-sm font-semibold">Attach a file</h3>
+                {evidenceError ? (
+                  <Alert className="border-danger/25 bg-danger-soft text-danger">
+                    {evidenceError}
+                  </Alert>
+                ) : null}
+                <FormField
+                  id="incident-evidence-file"
+                  label="Evidence or log file"
+                >
+                  <Input
+                    id="incident-evidence-file"
+                    key={`${evidenceTarget.id}-${evidenceMutation.data?.id ?? "new"}`}
+                    type="file"
+                    required
+                    accept=".pdf,.png,.jpg,.jpeg,.txt,.log,.csv,.json"
+                    className="file:mr-3"
+                    onChange={(event) =>
+                      setEvidenceFile(event.target.files?.[0])
+                    }
+                  />
+                  <p className="text-muted text-xs">
+                    PDF, PNG, JPEG, TXT, LOG, CSV or JSON; maximum 20 MB.
+                  </p>
+                </FormField>
+                <FormField
+                  id="incident-evidence-description"
+                  label="Description (optional)"
+                >
+                  <Textarea
+                    id="incident-evidence-description"
+                    className="min-h-24"
+                    maxLength={2000}
+                    value={evidenceDescription}
+                    onChange={(event) =>
+                      setEvidenceDescription(event.target.value)
+                    }
+                    placeholder="Describe the source, collection time and relevance of this evidence."
+                  />
+                </FormField>
+                <Alert>
+                  Files are checksum-protected and retained with uploader and
+                  audit information.
+                </Alert>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={closeEvidence}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={!evidenceFile || evidenceMutation.isPending}
+                  >
+                    <Paperclip
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    {evidenceMutation.isPending ? "Uploading…" : "Attach file"}
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <Alert>
+                  {evidenceTarget.status === "closed"
+                    ? "Closed incidents are read-only. Existing evidence remains available for download."
+                    : "Only the active incident handler or an incident coordinator can attach files. Existing evidence remains available for download."}
+                </Alert>
+                <div className="flex justify-end">
+                  <Button variant="secondary" onClick={closeEvidence}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : null}
       </Dialog>
       <Dialog

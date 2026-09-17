@@ -83,6 +83,28 @@ export const updateIncidentProgressFormSchema = z.object({
     .min(10, "Describe the progress in at least 10 characters")
     .max(5000),
 });
+export const incidentEvidenceSchema = z.object({
+  id: z.uuid(),
+  description: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  uploadedBy: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+  file: z.object({
+    id: z.uuid(),
+    name: z.string(),
+    mimeType: z.string().nullable(),
+    sizeBytes: z.number().nullable(),
+    checksum: z.string().nullable(),
+  }),
+});
+export const incidentEvidenceListSchema = z.object({
+  items: z.array(incidentEvidenceSchema),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(1),
+  }),
+});
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
