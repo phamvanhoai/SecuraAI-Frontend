@@ -1,6 +1,7 @@
 "use client";
 
-import { ClipboardCheck } from "lucide-react";
+import { Bell, ClipboardCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   DataTable,
@@ -34,6 +35,7 @@ const formatDate = (value: string) =>
   );
 
 export function MyAssessmentsManager() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string>();
   const assessments = useMyAssessments(page, true);
@@ -130,6 +132,9 @@ export function MyAssessmentsManager() {
     <>
       <ProductPageHeader
         title="My training assessments"
+        secondaryAction="Deadline reminders"
+        secondaryActionIcon={<Bell aria-hidden="true" className="size-4" />}
+        onSecondaryAction={() => router.push("/notifications")}
         description="Complete the post-training assessment for courses assigned to you. Answers are scored securely after submission."
         showSampleNotice={false}
       />
