@@ -13,6 +13,7 @@ export const integrationStatusEnum = z.enum([
   "inactive",
   "error",
   "pending",
+  "disabled",
 ]);
 export type IntegrationStatus = z.infer<typeof integrationStatusEnum>;
 
@@ -267,6 +268,88 @@ export const rotateApiKeyFormSchema = z.object({
     .or(z.literal("")),
 });
 export type RotateApiKeyInput = z.infer<typeof rotateApiKeyFormSchema>;
+
+// -------------------------------------------------------------
+// Connection Monitoring Schemas
+// -------------------------------------------------------------
+export const connectionLogEntrySchema = z.object({
+  id: z.string().uuid(),
+  integrationId: z.string().uuid(),
+  integrationName: z.string().optional(),
+  level: z.string(),
+  message: z.string(),
+  createdAt: z.string(),
+  latencyMs: z.number().nullable().optional(),
+  httpStatus: z.number().nullable().optional(),
+  success: z.boolean().nullable().optional(),
+  errorCode: z.string().nullable().optional(),
+});
+export type ConnectionLogEntry = z.infer<typeof connectionLogEntrySchema>;
+
+export const failingIntegrationSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  integrationType: z.string(),
+  baseUrl: z.string().nullable(),
+  status: z.string(),
+  lastConnectedAt: z.string().nullable(),
+  lastErrorMessage: z.string().nullable(),
+  lastCheckedAt: z.string().nullable(),
+});
+export type FailingIntegration = z.infer<typeof failingIntegrationSchema>;
+
+export const connectionStatusSummarySchema = z.object({
+  totalIntegrations: z.number(),
+  activeCount: z.number(),
+  errorCount: z.number(),
+  inactiveCount: z.number(),
+  pendingCount: z.number(),
+  timeWindow: z.string(),
+  checks24h: z.number(),
+  successfulChecks24h: z.number(),
+  failedChecks24h: z.number(),
+  availability24h: z.number().nullable(),
+  averageLatency24h: z.number().nullable(),
+  failingIntegrations: z.array(failingIntegrationSchema),
+  recentLogs: z.array(connectionLogEntrySchema),
+});
+export type ConnectionStatusSummary = z.infer<typeof connectionStatusSummarySchema>;
+
+export const singleCheckProbeResultSchema = z.object({
+  integrationId: z.string().uuid(),
+  name: z.string(),
+  connected: z.boolean(),
+  statusCode: z.number().nullable().optional(),
+  latencyMs: z.number(),
+  message: z.string(),
+});
+export type SingleCheckProbeResult = z.infer<typeof singleCheckProbeResultSchema>;
+
+export const batchConnectionCheckResultSchema = z.object({
+  totalTested: z.number(),
+  successful: z.number(),
+  failed: z.number(),
+  results: z.array(singleCheckProbeResultSchema),
+});
+export type BatchConnectionCheckResult = z.infer<typeof batchConnectionCheckResultSchema>;
+
+export const integrationConnectionStatusSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  integrationType: z.string(),
+  baseUrl: z.string().nullable(),
+  status: z.string(),
+  lastConnectedAt: z.string().nullable(),
+  timeWindow: z.string(),
+  checks24h: z.number(),
+  successfulChecks24h: z.number(),
+  failedChecks24h: z.number(),
+  availability24h: z.number().nullable(),
+  averageLatency24h: z.number().nullable(),
+  recentLogs: z.array(connectionLogEntrySchema),
+});
+export type IntegrationConnectionStatus = z.infer<typeof integrationConnectionStatusSchema>;
+
 
 export const integrationLogStatsSchema = z.object({
   totalErrors: z.number(),

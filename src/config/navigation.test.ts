@@ -61,6 +61,16 @@ describe("panel navigation", () => {
     expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
   });
 
+  it("shows policies navigation for the framework mapping permission", () => {
+    const policies = getPanelNavigation("dashboard").find((item) =>
+      item.href.endsWith("/policies"),
+    );
+    expect(policies).toBeDefined();
+    if (!policies) return;
+    expect(canAccessNavigationItem(["compliance.map-controls"], policies)).toBe(
+      true,
+    );
+  });
   it("shows policy navigation to employees who can acknowledge policies", () => {
     const policies = getPanelNavigation("dashboard").find(
       (item) => item.href === "/policies",
@@ -74,7 +84,7 @@ describe("panel navigation", () => {
     );
   });
 
-  it("shows training for course managers and employees taking assessments", () => {
+  it("shows training for course managers, completion viewers, and employees", () => {
     const training = getPanelNavigation("dashboard").find(
       (item) => item.href === "/training",
     );
@@ -86,6 +96,9 @@ describe("panel navigation", () => {
     );
     expect(
       canAccessNavigationItem(["training-assessments.take"], training),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["training-completion.read"], training),
     ).toBe(true);
   });
 });

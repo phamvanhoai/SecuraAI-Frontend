@@ -1,4 +1,5 @@
 export { AssetsShell } from "./components/assets-shell";
+export { useAssets } from "./hooks/use-assets";
 export { AssetDetailDialog } from "./components/asset-detail-dialog";
 export { EditAssetDialog } from "./components/edit-asset-dialog";
 export { DeleteAssetDialog } from "./components/delete-asset-dialog";

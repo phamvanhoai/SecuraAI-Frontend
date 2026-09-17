@@ -1,27 +1,30 @@
 "use client";
 
 import {
+  LayoutGrid,
   RefreshCw,
   Search,
+  Table as TableIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Pagination } from "@/components/data-display/pagination";
-import {
-  MetricStrip,
-  ProductPageHeader,
-  type Metric,
-} from "@/components/data-display/static-product";
+import { ProductPageHeader } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIntegrations } from "../hooks/use-integrations";
+import {
+  useConnectionStatusSummary,
+  useIntegrations,
+} from "../hooks/use-integrations";
 import type {
   IntegrationStatus,
   IntegrationType,
 } from "../schemas/integration-schema";
 import { ConnectIntegrationModal } from "./connect-integration-modal";
+import { ConnectionMonitoringHeader } from "./connection-monitoring-header";
+import { ConnectionStatusTable } from "./connection-status-table";
 import { IntegrationCard } from "./integration-card";
 import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 
@@ -30,6 +33,8 @@ export function IntegrationManagementView() {
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("table");
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number | false>(30000);
 
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<
@@ -37,67 +42,57 @@ export function IntegrationManagementView() {
   >(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const integrationsQuery = useIntegrations({
-    page,
-    limit: 12,
-    search: search.trim() || undefined,
-    type: selectedType
-      ? (selectedType as IntegrationType)
-      : undefined,
-    status: selectedStatus ? (selectedStatus as IntegrationStatus) : undefined,
+  // Live Connection Status Summary
+  const summaryQuery = useConnectionStatusSummary({
+    timeWindow: "24h",
+    refetchInterval: autoRefreshInterval,
   });
+
+  // Integrations List
+  const integrationsQuery = useIntegrations(
+    {
+      page,
+      limit: 12,
+      search: search.trim() || undefined,
+      type: selectedType
+        ? (selectedType as IntegrationType)
+        : undefined,
+      status: selectedStatus ? (selectedStatus as IntegrationStatus) : undefined,
+    },
+    { refetchInterval: autoRefreshInterval },
+  );
 
   const items = integrationsQuery.data?.items ?? [];
   const pagination = integrationsQuery.data?.pagination;
-
-  const totalCount = pagination?.total ?? items.length;
-  const activeCount = items.filter((i) => i.status === "active").length;
-  const firewallCount = items.filter(
-    (i) => i.integrationType === "firewall",
-  ).length;
-  const siemCount = items.filter(
-    (i) => i.integrationType === "siem" || i.integrationType === "log_source",
-  ).length;
-
-  const metrics: readonly Metric[] = [
-    {
-      label: "Total Connections",
-      value: String(totalCount),
-      detail: "Security endpoints configured",
-    },
-    {
-      label: "Active Connections",
-      value: String(activeCount),
-      detail: "Live and responsive",
-    },
-    {
-      label: "Firewalls",
-      value: String(firewallCount),
-      detail: "Fortinet, Palo Alto, pfSense...",
-    },
-    {
-      label: "SIEM & SOC Collectors",
-      value: String(siemCount),
-      detail: "Splunk, Wazuh, Elastic...",
-    },
-  ];
 
   function handleOpenDetails(id: string) {
     setSelectedIntegrationId(id);
     setDrawerOpen(true);
   }
 
+  function handleRefreshAll() {
+    integrationsQuery.refetch();
+    summaryQuery.refetch();
+  }
+
   return (
     <div className="space-y-6">
       <ProductPageHeader
-        description="Connect, test, and manage automated log ingestion from external SIEM and Next-Gen Firewall platforms."
+        description="Connect, monitor live connection health, test latency, and manage automated log ingestion from external SIEM and Next-Gen Firewall platforms."
         onPrimaryAction={() => setConnectModalOpen(true)}
         primaryAction="Connect SIEM / Firewall"
         showSampleNotice={false}
         title="Third-Party SIEM & Firewall Integrations"
       />
 
-      <MetricStrip metrics={metrics} />
+      {/* Connection Monitoring Live Header & Metrics */}
+      <ConnectionMonitoringHeader
+        autoRefreshInterval={autoRefreshInterval}
+        isLoading={summaryQuery.isLoading || summaryQuery.isFetching}
+        onAutoRefreshChange={setAutoRefreshInterval}
+        onRefresh={handleRefreshAll}
+        summary={summaryQuery.data}
+      />
 
       {/* Filter and Search Bar */}
       <div className="border-border bg-surface flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between shadow-xs">
@@ -148,10 +143,39 @@ export function IntegrationManagementView() {
             <option value="pending">Pending</option>
           </Select>
 
+
+          {/* View Mode Toggle */}
+          <div className="border-border bg-neutral-soft/50 flex items-center rounded-lg border p-0.5">
+            <button
+              aria-label="Xem dạng bảng"
+              className={`flex size-7.5 items-center justify-center rounded-md text-xs transition-colors ${
+                viewMode === "table"
+                  ? "bg-surface text-foreground shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+              onClick={() => setViewMode("table")}
+              type="button"
+            >
+              <TableIcon className="size-3.5" />
+            </button>
+            <button
+              aria-label="Xem dạng thẻ"
+              className={`flex size-7.5 items-center justify-center rounded-md text-xs transition-colors ${
+                viewMode === "grid"
+                  ? "bg-surface text-foreground shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+              onClick={() => setViewMode("grid")}
+              type="button"
+            >
+              <LayoutGrid className="size-3.5" />
+            </button>
+          </div>
+
           <Button
-            aria-label="Refresh list"
-            className="min-h-9 px-2.5 bg-surface text-muted ring-border hover:text-foreground hover:bg-neutral-soft ring-1"
-            onClick={() => integrationsQuery.refetch()}
+            aria-label="Tải lại danh sách"
+            className="min-h-8 px-2.5 bg-surface text-muted ring-border hover:text-foreground hover:bg-neutral-soft ring-1"
+            onClick={handleRefreshAll}
             type="button"
           >
             <RefreshCw
@@ -163,27 +187,34 @@ export function IntegrationManagementView() {
 
       {/* Content Area */}
       {integrationsQuery.isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <Skeleton className="h-48 w-full rounded-xl" key={idx} />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <Skeleton className="h-16 w-full rounded-xl" key={idx} />
           ))}
         </div>
       ) : items.length === 0 ? (
         <EmptyState
-          description="No security integrations match your search criteria or none have been registered yet."
-          title="No Integrations Found"
+          description="Không tìm thấy hệ thống tích hợp nào phù hợp với điều kiện tìm kiếm hoặc chưa có hệ thống nào được thiết lập."
+          title="Không tìm thấy kết nối nào"
         />
       ) : (
         <div className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((integration) => (
-              <IntegrationCard
-                integration={integration}
-                key={integration.id}
-                onOpenDetails={handleOpenDetails}
-              />
-            ))}
-          </div>
+          {viewMode === "table" ? (
+            <ConnectionStatusTable
+              integrations={items}
+              onOpenDetails={handleOpenDetails}
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((integration) => (
+                <IntegrationCard
+                  integration={integration}
+                  key={integration.id}
+                  onOpenDetails={handleOpenDetails}
+                />
+              ))}
+            </div>
+          )}
 
           {pagination && pagination.totalPages > 1 ? (
             <div className="flex justify-center pt-2">

@@ -6,6 +6,7 @@ export const sessionUserSchema = z.object({
   fullName: z.string(),
   status: z.string(),
   mustChangePassword: z.boolean(),
+  mfaEnabled: z.boolean(),
   roles: z.array(z.object({ code: z.string(), name: z.string() })),
   permissions: z.array(z.string()),
 });

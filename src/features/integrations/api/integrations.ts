@@ -11,6 +11,9 @@ import {
   integrationApiKeySchema,
   integrationApiKeyListSchema,
   createdApiKeyResponseSchema,
+  connectionStatusSummarySchema,
+  batchConnectionCheckResultSchema,
+  integrationConnectionStatusSchema,
   type CreateIntegrationInput,
   type CreateSyncScheduleInput,
   type Integration,
@@ -32,7 +35,11 @@ import {
   type IntegrationApiKey,
   type IntegrationApiKeyList,
   type CreatedApiKeyResponse,
+  type ConnectionStatusSummary,
+  type BatchConnectionCheckResult,
+  type IntegrationConnectionStatus,
 } from "../schemas/integration-schema";
+
 
 async function safeJson(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -414,6 +421,75 @@ export function revokeApiKey(
     },
   );
 }
+
+// -------------------------------------------------------------
+// Connection Monitoring API Methods
+// -------------------------------------------------------------
+export type GetConnectionStatusSummaryInput = {
+  timeWindow?: "24h" | "7d" | undefined;
+  signal?: AbortSignal | undefined;
+};
+
+export function getConnectionStatusSummary(
+  input: GetConnectionStatusSummaryInput = {},
+): Promise<ConnectionStatusSummary> {
+  const params = new URLSearchParams();
+  if (input.timeWindow) {
+    params.set("timeWindow", input.timeWindow);
+  }
+  const qs = params.toString();
+  const path = `/api/integrations/monitoring/connection-status${qs ? `?${qs}` : ""}`;
+
+  return integrationRequest(path, connectionStatusSummarySchema, {
+    method: "GET",
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+}
+
+export type BatchConnectionCheckInput = {
+  integrationIds?: string[] | undefined;
+  timeoutMs?: number | undefined;
+  signal?: AbortSignal | undefined;
+};
+
+export function checkAllConnections(
+  input: BatchConnectionCheckInput = {},
+): Promise<BatchConnectionCheckResult> {
+  const { signal, ...body } = input;
+  return integrationRequest(
+    "/api/integrations/monitoring/check-all",
+    batchConnectionCheckResultSchema,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      ...(signal ? { signal } : {}),
+    },
+  );
+}
+
+export type GetIntegrationConnectionStatusInput = {
+  timeWindow?: "24h" | "7d" | undefined;
+  signal?: AbortSignal | undefined;
+};
+
+export function getIntegrationConnectionStatus(
+  id: string,
+  input: GetIntegrationConnectionStatusInput = {},
+): Promise<IntegrationConnectionStatus> {
+  const params = new URLSearchParams();
+  if (input.timeWindow) {
+    params.set("timeWindow", input.timeWindow);
+  }
+  const qs = params.toString();
+  const path = `/api/integrations/${encodeURIComponent(id)}/connection-status${qs ? `?${qs}` : ""}`;
+
+  return integrationRequest(path, integrationConnectionStatusSchema, {
+    method: "GET",
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+}
+
 
 export function getIntegrationLogStats(
   params?: {

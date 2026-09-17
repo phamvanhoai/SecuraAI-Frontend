@@ -11,6 +11,7 @@ import {
   GraduationCap,
   History,
   KeyRound,
+  LifeBuoy,
   LayoutDashboard,
   Library,
   ScrollText,
@@ -50,6 +51,13 @@ const modules = {
     icon: KeyRound,
     section: "Quản lý",
     requiredAnyPermission: ["roles.read"],
+  },
+  mfaRecovery: {
+    title: "Khôi phục MFA",
+    slug: "mfa-recovery",
+    icon: LifeBuoy,
+    section: "Quản lý",
+    requiredAnyPermission: ["mfa-recovery.manage"],
   },
   assets: {
     title: "Tài sản",
@@ -97,6 +105,8 @@ const modules = {
       "policies.create",
       "policies.update",
       "policies.publish",
+      "policies.assign-department",
+      "compliance.map-controls",
       "policies.acknowledge",
     ],
   },
@@ -108,6 +118,7 @@ const modules = {
     requiredAnyPermission: [
       "training-courses.read",
       "training-assessments.take",
+      "training-completion.read",
     ],
   },
   anomalyMonitoring: {
@@ -175,6 +186,7 @@ export const panelModules = {
     modules.alerts,
     modules.users,
     modules.roles,
+    modules.mfaRecovery,
     modules.assets,
     modules.risks,
     modules.incidents,

@@ -1,5 +1,10 @@
 "use client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { createRiskAssessment } from "../api/create-risk-assessment";
 import { getRiskCreateOptions } from "../api/get-risk-create-options";
 export function useCreateRiskAssessment() {
@@ -23,6 +28,33 @@ export function useRiskCreateOptions(
         { type, ...(q.trim() ? { q: q.trim() } : {}), page, limit: 20 },
         signal,
       ),
+    enabled,
+    staleTime: 60_000,
+  });
+}
+
+export function useInfiniteRiskCreateOptions(
+  type: "assets" | "businessProcesses" | "threats" | "vulnerabilities",
+  enabled: boolean,
+  q = "",
+) {
+  return useInfiniteQuery({
+    queryKey: ["risks", "create-options", "infinite", type, q],
+    queryFn: ({ signal, pageParam }) =>
+      getRiskCreateOptions(
+        {
+          type,
+          ...(q.trim() ? { q: q.trim() } : {}),
+          page: pageParam,
+          limit: 20,
+        },
+        signal,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages
+        ? lastPage.pagination.page + 1
+        : undefined,
     enabled,
     staleTime: 60_000,
   });

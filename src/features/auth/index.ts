@@ -1,4 +1,5 @@
 export { LoginForm } from "./components/login-form";
+export { MfaSetupCard } from "./components/mfa-setup-card";
 export { RecoveryCard } from "./components/recovery-card";
 export { ChangePasswordForm } from "./components/change-password-form";
 export { changePassword } from "./api/change-password";
@@ -21,3 +22,4 @@ export {
 export { sessionUserSchema, type AuthSessionUser } from "./types/session-user";
 export { getSessionUser } from "./api/get-session-user";
 export { useSessionUser } from "./hooks/use-session-user";
+export { MfaRecoveryAdmin } from "./components/mfa-recovery-admin";

@@ -17,3 +17,5 @@ export {
 } from "./schemas/create-risk-assessment-schema";
 export { updateRiskAssessmentRequestSchema } from "./schemas/update-risk-assessment-schema";
 export { cancelRiskAssessmentRequestSchema } from "./schemas/cancel-risk-assessment-schema";
+export { submitTreatmentPlanRequestSchema } from "./schemas/submit-treatment-plan-schema";
+export { approveTreatmentPlanRequestSchema } from "./schemas/approve-treatment-plan-schema";
