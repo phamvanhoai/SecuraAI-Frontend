@@ -4,6 +4,7 @@ export { PolicyDepartmentAssignmentManager } from "./components/policy-departmen
 export { PolicyControlMappingManager } from "./components/policy-control-mapping-manager";
 export { PolicyPublicationManager } from "./components/policy-publication-manager";
 export { UpdatePolicyVersionManager } from "./components/update-policy-version-manager";
+export { PolicyVersionHistoryManager } from "./components/policy-version-history-manager";
 export {
   newPolicyVersionSchema,
   updatePolicyVersionFormSchema,

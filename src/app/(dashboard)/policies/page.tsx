@@ -1,8 +1,7 @@
 "use client";
-
-import { useState } from "react";
-import { ProductPageHeader } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
+import { History } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import { useSessionUser } from "@/features/auth";
 import {
   EmployeePolicyAcknowledgementManager,
@@ -10,55 +9,56 @@ import {
   PolicyDepartmentAssignmentManager,
   PolicyControlMappingManager,
   PolicyPublicationManager,
+  PolicyVersionHistoryManager,
   UpdatePolicyVersionManager,
 } from "@/features/policies";
 
+type View =
+  "default" | "new-version" | "assign-departments" | "map-controls" | "history";
+
 export default function Page() {
   const session = useSessionUser();
-  const [view, setView] = useState<
-    "default" | "new-version" | "assign-departments" | "map-controls"
-  >("default");
-  const canCreateDrafts =
-    session.data?.permissions.includes("policies.create") ?? false;
-  const canPublish =
-    session.data?.permissions.includes("policies.publish") ?? false;
-  const canUpdate =
-    session.data?.permissions.includes("policies.update") ?? false;
-  const canAssignDepartments =
-    session.data?.permissions.includes("policies.assign-department") ?? false;
-  const canMapControls =
-    session.data?.permissions.includes("compliance.map-controls") ?? false;
-  const canAcknowledge =
-    session.data?.permissions.includes("policies.acknowledge") ?? false;
+  const [view, setView] = useState<View>("default");
+  const permissions = session.data?.permissions ?? [];
+  const canCreateDrafts = permissions.includes("policies.create");
+  const canPublish = permissions.includes("policies.publish");
+  const canUpdate = permissions.includes("policies.update");
+  const canAssignDepartments = permissions.includes(
+    "policies.assign-department",
+  );
+  const canMapControls = permissions.includes("compliance.map-controls");
+  const canAcknowledge = permissions.includes("policies.acknowledge");
 
-  if (session.isPending) {
+  if (session.isPending)
     return (
       <div
         aria-label="Loading policy management"
         className="bg-neutral-soft h-56 animate-pulse rounded-xl"
       />
     );
-  }
+  if (view === "history")
+    return <PolicyVersionHistoryManager onBack={() => setView("default")} />;
 
-  if (view === "new-version" && canUpdate) {
-    return (
+  let workspace: ReactNode;
+  let historyActionIntegrated = false;
+  if (view === "new-version" && canUpdate)
+    workspace = (
       <UpdatePolicyVersionManager
         {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
       />
     );
-  }
-  if (view === "assign-departments" && canAssignDepartments) {
-    return (
+  else if (view === "assign-departments" && canAssignDepartments)
+    workspace = (
       <PolicyDepartmentAssignmentManager
         {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
       />
     );
-  }
-  if (view === "map-controls" && canMapControls) {
-    return <PolicyControlMappingManager onBack={() => setView("default")} />;
-  }
-  if (canCreateDrafts) {
-    return (
+  else if (view === "map-controls" && canMapControls)
+    workspace = (
+      <PolicyControlMappingManager onBack={() => setView("default")} />
+    );
+  else if (canCreateDrafts)
+    workspace = (
       <PolicyDraftsManager
         {...(canAssignDepartments
           ? { onAssignDepartments: () => setView("assign-departments") }
@@ -71,24 +71,31 @@ export default function Page() {
           : {})}
       />
     );
-  }
-  if (canAcknowledge) return <EmployeePolicyAcknowledgementManager />;
-  if (canAssignDepartments) return <PolicyDepartmentAssignmentManager />;
-  if (canMapControls) return <PolicyControlMappingManager />;
-  if (canUpdate) return <UpdatePolicyVersionManager />;
-  if (canPublish) return <PolicyPublicationManager />;
+  else if (canAcknowledge) {
+    historyActionIntegrated = true;
+    workspace = (
+      <EmployeePolicyAcknowledgementManager
+        onViewHistory={() => setView("history")}
+      />
+    );
+  } else if (canAssignDepartments)
+    workspace = <PolicyDepartmentAssignmentManager />;
+  else if (canMapControls) workspace = <PolicyControlMappingManager />;
+  else if (canUpdate) workspace = <UpdatePolicyVersionManager />;
+  else if (canPublish) workspace = <PolicyPublicationManager />;
+  else return <PolicyVersionHistoryManager />;
 
   return (
-    <div className="space-y-5">
-      <ProductPageHeader
-        description="This function is restricted to accounts with policy management permission."
-        showSampleNotice={false}
-        title="Information security policies"
-      />
-      <EmptyState
-        description="The current account does not have permission to manage, acknowledge policies or map framework controls."
-        title="You do not have permission to manage policies"
-      />
+    <div className="space-y-3">
+      {!historyActionIntegrated ? (
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={() => setView("history")}>
+            <History aria-hidden="true" className="size-4" />
+            View version history
+          </Button>
+        </div>
+      ) : null}
+      {workspace}
     </div>
   );
 }
