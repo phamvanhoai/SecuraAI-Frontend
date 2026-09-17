@@ -105,6 +105,17 @@ export const incidentEvidenceListSchema = z.object({
     totalPages: z.number().int().min(1),
   }),
 });
+export const removeIncidentEvidenceFormSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Explain why this evidence is incorrect in at least 10 characters")
+    .max(2000),
+});
+export const removedIncidentEvidenceSchema = z.object({
+  id: z.uuid(),
+  removed: z.literal(true),
+});
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
@@ -112,4 +123,8 @@ export type IncidentSeverity = z.infer<typeof severitySchema>;
 export type AssignIncidentForm = z.infer<typeof assignIncidentFormSchema>;
 export type UpdateIncidentProgressForm = z.infer<
   typeof updateIncidentProgressFormSchema
+>;
+export type IncidentEvidence = z.infer<typeof incidentEvidenceSchema>;
+export type RemoveIncidentEvidenceForm = z.infer<
+  typeof removeIncidentEvidenceFormSchema
 >;

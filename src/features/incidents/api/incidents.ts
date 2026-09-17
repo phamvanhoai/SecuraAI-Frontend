@@ -4,12 +4,14 @@ import {
   incidentSchema,
   incidentEvidenceListSchema,
   incidentEvidenceSchema,
+  removedIncidentEvidenceSchema,
   assignmentOptionsSchema,
   myIncidentsSchema,
   type ClassifyIncidentForm,
   type AssignIncidentForm,
   type UpdateIncidentProgressForm,
   type ReportIncidentForm,
+  type RemoveIncidentEvidenceForm,
 } from "../schemas/report-incident-schema";
 export async function reportIncident(input: ReportIncidentForm) {
   return incidentSchema.parse(
@@ -178,5 +180,21 @@ export async function uploadIncidentEvidence(input: {
     typeof payload === "object" && payload !== null && "data" in payload
       ? payload.data
       : undefined,
+  );
+}
+export async function removeIncidentEvidence(input: {
+  id: string;
+  incidentId: string;
+  values: RemoveIncidentEvidenceForm;
+}) {
+  return removedIncidentEvidenceSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/evidence/${encodeURIComponent(input.id)}`,
+      {
+        target: "same-origin",
+        method: "DELETE",
+        body: { reason: input.values.reason.trim() },
+      },
+    ),
   );
 }
