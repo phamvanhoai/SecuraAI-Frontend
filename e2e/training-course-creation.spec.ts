@@ -68,28 +68,43 @@ test("creates a course draft with a post-training assessment", async ({
   await page.setViewportSize({ width: 375, height: 900 });
   await page.goto("/training");
   await page.getByRole("button", { name: "Create course" }).click();
+  await expect(
+    page.getByText(
+      "Save a draft while you prepare the training material and assessment.",
+    ),
+  ).toBeVisible();
+  await page.getByLabel("Status", { exact: true }).selectOption("published");
+  await expect(
+    page.getByText(
+      "Publishing makes this course ready to assign and requires a valid post-training assessment.",
+    ),
+  ).toBeVisible();
+  await page.getByLabel("Status", { exact: true }).selectOption("draft");
   await page.getByLabel("Title", { exact: true }).fill("Phishing essentials");
   await page
     .getByLabel("Description (optional)")
     .fill("Recognize phishing attempts");
   await page
-    .getByLabel("Course content")
+    .getByLabel("Learning objectives and training material")
     .fill("Learn how to identify and report suspicious messages.");
   await page
     .getByLabel("Question", { exact: true })
     .fill("Which message is suspicious?");
+  await page.getByLabel("Answer type").selectOption("multiple_choice");
   await page
     .getByRole("textbox", { name: "Answer 1" })
     .fill("An unexpected password reset link");
   await page
     .getByRole("textbox", { name: "Answer 2" })
-    .fill("A requested internal report");
+    .fill("An unexpected MFA approval request");
   await page
     .getByRole("textbox", { name: "Answer 3" })
     .fill("A scheduled team meeting");
   await page
     .getByRole("textbox", { name: "Answer 4" })
     .fill("An expected payroll notice");
+  await page.getByRole("checkbox", { name: "Answer 1 is correct" }).check();
+  await page.getByRole("checkbox", { name: "Answer 2 is correct" }).check();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
@@ -104,10 +119,15 @@ test("creates a course draft with a post-training assessment", async ({
       maxAttempts: 3,
       questions: expect.arrayContaining([
         expect.objectContaining({
+          type: "multiple_choice",
           text: "Which message is suspicious?",
           options: expect.arrayContaining([
             expect.objectContaining({
               text: "An unexpected password reset link",
+              isCorrect: true,
+            }),
+            expect.objectContaining({
+              text: "An unexpected MFA approval request",
               isCorrect: true,
             }),
           ]),
