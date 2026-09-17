@@ -1,7 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Send, Search } from "lucide-react";
+import { ClipboardList, Ellipsis, Eye, Send, Search } from "lucide-react";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { TrainingCompletionManager } from "./training-completion-manager";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import {
@@ -42,9 +44,9 @@ import {
 const defaults: CreateCourseInput = { title: "", description: "", content: "" };
 
 export function TrainingCoursesManager({
-  onTrackCompletion,
+  onAssessments,
 }: {
-  onTrackCompletion?: () => void;
+  onAssessments?: () => void;
 }) {
   const session = useSessionUser();
   const canRead =
@@ -53,11 +55,17 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.create") ?? false;
   const canAssign =
     session.data?.permissions.includes("training-courses.assign") ?? false;
+  const canTrack =
+    session.data?.permissions.includes("training-completion.read") ?? false;
+  const [courseToTrack, setCourseToTrack] = useState<Course>();
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [courseToAssign, setCourseToAssign] = useState<Course>();
+  const [assignmentDialog, setAssignmentDialog] = useState<{
+    course: Course;
+    mode: "create" | "edit";
+  }>();
   const courses = useCourses(page, query, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
@@ -91,20 +99,71 @@ export function TrainingCoursesManager({
           new Date(course.createdAt),
         ),
     },
-    ...(canAssign
+    ...(canAssign || canTrack
       ? [
           {
             key: "actions",
             header: "Actions",
             cell: (course: Course) => (
-              <Button
-                className="min-h-10 px-3"
-                variant="secondary"
-                onClick={() => setCourseToAssign(course)}
+              <DropdownMenu
+                label={
+                  <span>
+                    <span className="sr-only">Actions for {course.title}</span>
+                    <Ellipsis
+                      aria-hidden="true"
+                      className="size-5"
+                      strokeWidth={1.8}
+                    />
+                  </span>
+                }
               >
-                <Send aria-hidden="true" className="size-4" strokeWidth={1.8} />
-                Assign
-              </Button>
+                {canAssign ? (
+                  <>
+                    <button
+                      type="button"
+                      className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                      onClick={() =>
+                        setAssignmentDialog({ course, mode: "create" })
+                      }
+                    >
+                      <Send
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
+                      Create assignment campaign
+                    </button>
+                    <button
+                      type="button"
+                      className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                      onClick={() =>
+                        setAssignmentDialog({ course, mode: "edit" })
+                      }
+                    >
+                      <ClipboardList
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
+                      Edit latest campaign
+                    </button>
+                  </>
+                ) : null}
+                {canTrack ? (
+                  <button
+                    type="button"
+                    className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                    onClick={() => setCourseToTrack(course)}
+                  >
+                    <Eye
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    View training progress
+                  </button>
+                ) : null}
+              </DropdownMenu>
             ),
           },
         ]
@@ -113,101 +172,124 @@ export function TrainingCoursesManager({
 
   return (
     <>
-      <ProductPageHeader
-        title="Security awareness courses"
-        description="Create draft training content for security awareness programs. Publishing and assignment are separate workflows."
-        showSampleNotice={false}
-        {...(onTrackCompletion
-          ? {
-              additionalActions: (
-                <Button variant="secondary" onClick={onTrackCompletion}>
-                  Track completion
-                </Button>
-              ),
-            }
-          : {})}
-        {...(canCreate
-          ? {
-              primaryAction: "Create course",
-              onPrimaryAction: () => setFormOpen(true),
-            }
-          : {})}
-      />
-      <ProductPanel
-        title="Courses"
-        description={
-          courses.data
-            ? `${courses.data.pagination.total} courses found`
-            : "Courses returned by the backend"
-        }
-      >
-        <form
-          className="border-border flex flex-wrap gap-2 border-b p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setQuery(draftQuery.trim());
-            setPage(1);
-          }}
+      {courseToTrack ? (
+        <TrainingCompletionManager
+          key={courseToTrack.id}
+          course={courseToTrack}
+          onViewCourses={() => setCourseToTrack(undefined)}
+        />
+      ) : null}
+      <div hidden={Boolean(courseToTrack)} className="space-y-5">
+        <ProductPageHeader
+          title="Security awareness courses"
+          description="Manage courses, assign employees, and review training progress and completion certificates from each course's actions."
+          showSampleNotice={false}
+          {...(onAssessments
+            ? {
+                secondaryAction: "My assessments",
+                secondaryActionIcon: (
+                  <ClipboardList
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={1.8}
+                  />
+                ),
+                onSecondaryAction: onAssessments,
+              }
+            : {})}
+          {...(canCreate
+            ? {
+                primaryAction: "Create course",
+                onPrimaryAction: () => setFormOpen(true),
+              }
+            : {})}
+        />
+        <ProductPanel
+          title="Courses"
+          description={
+            courses.data
+              ? `${courses.data.pagination.total} courses found`
+              : "Courses returned by the backend"
+          }
         >
-          <label className="relative block w-full max-w-md">
-            <span className="sr-only">Search courses</span>
-            <Search
-              aria-hidden="true"
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            />
-            <Input
-              className="pl-9"
-              maxLength={100}
-              placeholder="Search courses"
-              value={draftQuery}
-              onChange={(event) => setDraftQuery(event.target.value)}
-            />
-          </label>
-          <Button type="submit">Search</Button>
-        </form>
-        <div className="p-4">
-          {session.isPending || (canRead && courses.isPending) ? (
-            <TableSkeleton
-              headers={["Course", "Status", "Created"]}
-              label="Loading courses"
-              rows={5}
-            />
-          ) : !canRead ? (
-            <Alert>You do not have permission to view courses.</Alert>
-          ) : courses.isError ? (
-            <Alert>
-              Unable to load courses. Check your connection and try again.
-            </Alert>
-          ) : courses.data?.items.length === 0 ? (
-            <p className="text-muted py-10 text-center text-sm">
-              No courses found.{" "}
-              {canCreate
-                ? "Create a draft to get started."
-                : "Try a different search."}
-            </p>
-          ) : courses.data ? (
-            <DataTable
-              columns={columns}
-              getRowKey={(course) => course.id}
-              rows={courses.data.items}
-            />
-          ) : null}
-        </div>
-        {courses.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              page={courses.data.pagination.page}
-              pageCount={courses.data.pagination.totalPages}
-              onPageChange={setPage}
-            />
+          <form
+            className="border-border flex flex-wrap gap-2 border-b p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setQuery(draftQuery.trim());
+              setPage(1);
+            }}
+          >
+            <label className="relative block w-full max-w-md">
+              <span className="sr-only">Search courses</span>
+              <Search
+                aria-hidden="true"
+                className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              />
+              <Input
+                className="pl-9"
+                type="search"
+                maxLength={100}
+                placeholder="Search courses"
+                value={draftQuery}
+                onChange={(event) => setDraftQuery(event.target.value)}
+              />
+            </label>
+            <Button type="submit">Search</Button>
+          </form>
+          <div className="p-4">
+            {session.isPending || (canRead && courses.isPending) ? (
+              <TableSkeleton
+                headers={[
+                  "Course",
+                  "Status",
+                  "Created",
+                  ...(canAssign || canTrack ? ["Actions"] : []),
+                ]}
+                label="Loading courses"
+                rows={5}
+              />
+            ) : !canRead ? (
+              <Alert>You do not have permission to view courses.</Alert>
+            ) : courses.isError ? (
+              <Alert>
+                Unable to load courses. Check your connection and try again.
+              </Alert>
+            ) : courses.data?.items.length === 0 ? (
+              <p className="text-muted py-10 text-center text-sm">
+                No courses found.{" "}
+                {canCreate
+                  ? "Create a draft to get started."
+                  : "Try a different search."}
+              </p>
+            ) : courses.data ? (
+              <DataTable
+                columns={columns}
+                getRowKey={(course) => course.id}
+                rows={courses.data.items}
+              />
+            ) : null}
           </div>
-        ) : null}
-      </ProductPanel>
-      <CreateCourseDialog open={formOpen} onClose={() => setFormOpen(false)} />
-      <AssignCourseDialog
-        course={courseToAssign}
-        onClose={() => setCourseToAssign(undefined)}
-      />
+          {courses.data ? (
+            <div className="border-border border-t p-4">
+              <Pagination
+                page={courses.data.pagination.page}
+                pageCount={courses.data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          ) : null}
+        </ProductPanel>
+        <CreateCourseDialog
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+        />
+        <AssignCourseDialog
+          course={assignmentDialog?.course}
+          mode={assignmentDialog?.mode ?? "create"}
+          onClose={() => setAssignmentDialog(undefined)}
+        />
+      </div>
     </>
   );
 }
@@ -220,9 +302,11 @@ function localDate(offsetDays = 0): string {
 
 function AssignCourseDialog({
   course,
+  mode,
   onClose,
 }: {
   course: Course | undefined;
+  mode: "create" | "edit";
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -236,7 +320,9 @@ function AssignCourseDialog({
     Boolean(course),
   );
   const mutation = useAssignCourse();
-  const currentAssignment = useLatestCourseAssignment(course?.id);
+  const currentAssignment = useLatestCourseAssignment(
+    mode === "edit" ? course?.id : undefined,
+  );
   const toast = useToast();
   const [message, setMessage] = useState<string>();
   const {
@@ -263,8 +349,8 @@ function AssignCourseDialog({
   useEffect(() => {
     const dialog = dialogRef.current;
     if (course && dialog && !dialog.open) {
-      if (currentAssignment.isPending) return;
-      const assignment = currentAssignment.data;
+      if (mode === "edit" && currentAssignment.isPending) return;
+      const assignment = mode === "edit" ? currentAssignment.data : null;
       reset({
         title: assignment?.title ?? `${course.title} campaign`,
         startDate: assignment?.startDate.slice(0, 10) ?? localDate(),
@@ -275,7 +361,13 @@ function AssignCourseDialog({
       });
       dialog.showModal();
     } else if (!course && dialog?.open) dialog.close();
-  }, [course, currentAssignment.data, currentAssignment.isPending, reset]);
+  }, [
+    course,
+    currentAssignment.data,
+    currentAssignment.isPending,
+    mode,
+    reset,
+  ]);
 
   const close = () => {
     if (!mutation.isPending) {
@@ -300,16 +392,24 @@ function AssignCourseDialog({
   const submit = async (input: AssignCourseInput) => {
     if (!course) return;
     setMessage(undefined);
-    if (currentAssignment.data && !input.changeReason?.trim()) {
+    if (
+      mode === "edit" &&
+      currentAssignment.data &&
+      !input.changeReason?.trim()
+    ) {
       setMessage("Enter a reason for changing this assignment.");
       return;
     }
     try {
-      const result = await mutation.mutateAsync({ courseId: course.id, input });
+      const result = await mutation.mutateAsync({
+        courseId: course.id,
+        input,
+        createNewCampaign: mode === "create",
+      });
       onClose();
       toast.success(
-        currentAssignment.data ? "Assignment updated" : "Course assigned",
-        currentAssignment.data
+        mode === "edit" ? "Campaign updated" : "Campaign created",
+        mode === "edit"
           ? `${result.removedCount} removed; ${result.retainedStartedCount} started and ${result.retainedCompletedCount} completed enrollments retained. Use Withdraw in Track completion to stop assessment access.`
           : `${result.enrollmentCount} employee${result.enrollmentCount === 1 ? "" : "s"} enrolled.`,
       );
@@ -326,7 +426,7 @@ function AssignCourseDialog({
     <Dialog
       title={
         course
-          ? `${currentAssignment.data ? "Manage" : "Assign"} ${course.title}`
+          ? `${mode === "edit" ? "Edit latest campaign for" : "Create assignment campaign for"} ${course.title}`
           : "Assign training course"
       }
       dialogRef={dialogRef}
@@ -338,10 +438,23 @@ function AssignCourseDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
     >
       <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
-        {currentAssignment.isError ? (
+        <p className="text-muted text-sm leading-6">
+          {mode === "create"
+            ? "Create a separate training cycle. Employees assigned here start with fresh progress; results from earlier campaigns remain in history."
+            : "Update the latest campaign only. Existing progress, completed results, and certificates are preserved."}
+        </p>
+        {mode === "edit" && currentAssignment.isError ? (
           <Alert>
             Unable to load the existing assignment. Close this form and try
             again before saving.
+          </Alert>
+        ) : null}
+        {mode === "edit" &&
+        !currentAssignment.isPending &&
+        !currentAssignment.data ? (
+          <Alert>
+            No assignment campaign exists for this course yet. Create a campaign
+            first.
           </Alert>
         ) : null}
         {message ? (
@@ -390,7 +503,7 @@ function AssignCourseDialog({
             />
           </FormField>
         </div>
-        {currentAssignment.data ? (
+        {mode === "edit" && currentAssignment.data ? (
           <FormField
             id="assignment-change-reason"
             label="Reason for change"
@@ -476,14 +589,15 @@ function AssignCourseDialog({
               mutation.isPending ||
               options.isPending ||
               options.isError ||
-              currentAssignment.isError
+              (mode === "edit" && !currentAssignment.data) ||
+              (mode === "edit" && currentAssignment.isError)
             }
           >
             {mutation.isPending
               ? "Saving…"
-              : currentAssignment.data
-                ? "Save assignment"
-                : "Assign course"}
+              : mode === "edit"
+                ? "Save campaign"
+                : "Create campaign"}
           </Button>
         </div>
       </form>
