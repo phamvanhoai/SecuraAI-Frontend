@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assignIncidentFormSchema,
+  updateIncidentProgressFormSchema,
   classifyIncidentFormSchema,
   reportIncidentFormSchema,
 } from "./report-incident-schema";
@@ -54,6 +55,22 @@ describe("assignIncidentFormSchema", () => {
     expect(
       assignIncidentFormSchema.safeParse({ assigneeUserId: "", note: "short" })
         .success,
+    ).toBe(false);
+  });
+});
+describe("updateIncidentProgressFormSchema", () => {
+  it("requires a supported next status and meaningful progress note", () => {
+    expect(
+      updateIncidentProgressFormSchema.safeParse({
+        status: "resolved",
+        note: "Containment is complete and validation found no remaining exposure.",
+      }).success,
+    ).toBe(true);
+    expect(
+      updateIncidentProgressFormSchema.safeParse({
+        status: "assigned",
+        note: "short",
+      }).success,
     ).toBe(false);
   });
 });

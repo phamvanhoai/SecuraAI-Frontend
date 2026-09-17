@@ -75,8 +75,19 @@ export const assignIncidentFormSchema = z.object({
     .min(10, "Explain the assignment in at least 10 characters")
     .max(2000),
 });
+export const updateIncidentProgressFormSchema = z.object({
+  status: z.enum(["in_progress", "escalated", "resolved", "closed"]),
+  note: z
+    .string()
+    .trim()
+    .min(10, "Describe the progress in at least 10 characters")
+    .max(5000),
+});
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
 export type IncidentSeverity = z.infer<typeof severitySchema>;
 export type AssignIncidentForm = z.infer<typeof assignIncidentFormSchema>;
+export type UpdateIncidentProgressForm = z.infer<
+  typeof updateIncidentProgressFormSchema
+>;
