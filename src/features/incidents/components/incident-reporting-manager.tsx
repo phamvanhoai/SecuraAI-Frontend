@@ -1,8 +1,16 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, Plus, RotateCcw, Search, ShieldAlert } from "lucide-react";
+import {
+  Ellipsis,
+  Eye,
+  Plus,
+  RotateCcw,
+  Search,
+  ShieldAlert,
+  UserPlus,
+} from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
   type DataTableColumn,
@@ -19,12 +27,15 @@ import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/auth";
 import {
   useClassifyIncidentSeverity,
+  useAssignIncidentHandler,
+  useIncidentAssignmentOptions,
   useIncidentClassificationQueue,
   useMyIncident,
   useMyIncidents,
@@ -32,8 +43,10 @@ import {
 } from "../hooks/use-incidents";
 import {
   classifyIncidentFormSchema,
+  assignIncidentFormSchema,
   reportIncidentFormSchema,
   type ClassifyIncidentForm,
+  type AssignIncidentForm,
   type Incident,
   type IncidentSeverity,
   type ReportIncidentForm,
@@ -49,6 +62,7 @@ const classificationDefaults: ClassifyIncidentForm = {
   severity: "medium",
   rationale: "",
 };
+const assignmentDefaults: AssignIncidentForm = { assigneeUserId: "", note: "" };
 const categoryLabels: Record<ReportIncidentForm["category"], string> = {
   phishing: "Phishing",
   malware: "Malware",
@@ -75,6 +89,8 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.report") ?? false;
   const canClassify =
     session.data?.permissions.includes("incidents.classify") ?? false;
+  const canAssign =
+    session.data?.permissions.includes("incidents.assign") ?? false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -86,10 +102,13 @@ export function IncidentReportingManager() {
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();
   const [classificationTarget, setClassificationTarget] = useState<Incident>();
+  const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
+  const [handlerSearch, setHandlerSearch] = useState("");
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const detailDialogRef = useRef<HTMLDialogElement>(null);
   const classificationDialogRef = useRef<HTMLDialogElement>(null);
+  const assignmentDialogRef = useRef<HTMLDialogElement>(null);
   const list = useMyIncidents(page, allowed && !canClassify);
   const classificationQueue = useIncidentClassificationQueue(
     page,
@@ -100,6 +119,8 @@ export function IncidentReportingManager() {
   const detail = useMyIncident(selectedId);
   const mutation = useReportIncident();
   const classificationMutation = useClassifyIncidentSeverity();
+  const assignmentOptions = useIncidentAssignmentOptions(canAssign);
+  const assignmentMutation = useAssignIncidentHandler();
   const toast = useToast();
   const {
     register,
@@ -114,6 +135,23 @@ export function IncidentReportingManager() {
     resolver: zodResolver(classifyIncidentFormSchema),
     defaultValues: classificationDefaults,
   });
+  const assignmentForm = useForm<AssignIncidentForm>({
+    resolver: zodResolver(assignIncidentFormSchema),
+    defaultValues: assignmentDefaults,
+  });
+  const selectedHandlerId = useWatch({
+    control: assignmentForm.control,
+    name: "assigneeUserId",
+  });
+  const filteredHandlers =
+    assignmentOptions.data?.users.filter((user) => {
+      const search = handlerSearch.trim().toLocaleLowerCase("vi");
+      return (
+        !search ||
+        user.name.toLocaleLowerCase("vi").includes(search) ||
+        user.email.toLocaleLowerCase("vi").includes(search)
+      );
+    }) ?? [];
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -132,6 +170,12 @@ export function IncidentReportingManager() {
     if (classificationTarget && !dialog.open) dialog.showModal();
     if (!classificationTarget && dialog.open) dialog.close();
   }, [classificationTarget]);
+  useEffect(() => {
+    const dialog = assignmentDialogRef.current;
+    if (!dialog) return;
+    if (assignmentTarget && !dialog.open) dialog.showModal();
+    if (!assignmentTarget && dialog.open) dialog.close();
+  }, [assignmentTarget]);
   const close = () => {
     setOpen(false);
     setMessage(undefined);
@@ -178,6 +222,37 @@ export function IncidentReportingManager() {
       toast.success(
         "Severity classified",
         `${updated.incidentCode} is now ${updated.severity}.`,
+      );
+    } catch {
+      // The persistent API error is rendered inside the dialog.
+    }
+  };
+  const openAssignment = (incident: Incident) => {
+    setHandlerSearch("");
+    assignmentForm.reset({
+      assigneeUserId: incident.currentAssignment?.assignee.id ?? "",
+      note: "",
+    });
+    assignmentMutation.reset();
+    setAssignmentTarget(incident);
+  };
+  const closeAssignment = () => {
+    setAssignmentTarget(undefined);
+    assignmentForm.reset(assignmentDefaults);
+    assignmentMutation.reset();
+    setHandlerSearch("");
+  };
+  const submitAssignment = async (values: AssignIncidentForm) => {
+    if (!assignmentTarget) return;
+    try {
+      const updated = await assignmentMutation.mutateAsync({
+        id: assignmentTarget.id,
+        values,
+      });
+      closeAssignment();
+      toast.success(
+        "Handler assigned",
+        `${updated.incidentCode} is assigned to ${updated.currentAssignment?.assignee.name ?? "the selected handler"}.`,
       );
     } catch {
       // The persistent API error is rendered inside the dialog.
@@ -238,6 +313,16 @@ export function IncidentReportingManager() {
       header: "Status",
       cell: (item) => <StatusBadge tone="info">{item.status}</StatusBadge>,
     },
+    ...(canAssign
+      ? ([
+          {
+            key: "handler",
+            header: "Handler",
+            cell: (item: Incident) =>
+              item.currentAssignment?.assignee.name ?? "Unassigned",
+          },
+        ] satisfies readonly DataTableColumn<Incident>[])
+      : []),
     {
       key: "reported",
       header: "Reported",
@@ -250,22 +335,50 @@ export function IncidentReportingManager() {
       header: "Action",
       cell: (item) =>
         canClassify ? (
-          <Button
-            variant="secondary"
-            disabled={item.status === "closed"}
-            onClick={() => openClassification(item)}
+          <DropdownMenu
+            className="w-fit"
+            label={
+              <span className="grid size-6 place-items-center">
+                <span className="sr-only">Actions for {item.incidentCode}</span>
+                <Ellipsis
+                  aria-hidden="true"
+                  className="size-5"
+                  strokeWidth={1.8}
+                />
+              </span>
+            }
           >
-            <ShieldAlert
-              aria-hidden="true"
-              className="size-4"
-              strokeWidth={1.8}
-            />
-            {item.status === "closed"
-              ? "Closed"
-              : item.classified
-                ? "Reclassify"
-                : "Classify"}
-          </Button>
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={item.status === "closed"}
+              onClick={() => openClassification(item)}
+              type="button"
+            >
+              <ShieldAlert
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              {item.classified ? "Reclassify severity" : "Classify severity"}
+            </button>
+            {canAssign ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  item.status === "closed" || item.status === "resolved"
+                }
+                onClick={() => openAssignment(item)}
+                type="button"
+              >
+                <UserPlus
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {item.currentAssignment ? "Reassign handler" : "Assign handler"}
+              </button>
+            ) : null}
+          </DropdownMenu>
         ) : (
           <Button variant="secondary" onClick={() => setSelectedId(item.id)}>
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
@@ -558,6 +671,166 @@ export function IncidentReportingManager() {
             </Button>
           </div>
         </form>
+      </Dialog>
+      <Dialog
+        dialogRef={assignmentDialogRef}
+        title="Assign incident handler"
+        className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
+        onClose={closeAssignment}
+      >
+        {assignmentTarget ? (
+          <form
+            className="space-y-5"
+            noValidate
+            onSubmit={assignmentForm.handleSubmit(submitAssignment)}
+          >
+            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+              <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                {assignmentTarget.incidentCode}
+              </p>
+              <p className="mt-1 font-semibold break-words">
+                {assignmentTarget.title}
+              </p>
+              {assignmentTarget.currentAssignment ? (
+                <p className="text-muted mt-2 text-sm">
+                  Currently assigned to{" "}
+                  {assignmentTarget.currentAssignment.assignee.name} ·{" "}
+                  {formatDate(assignmentTarget.currentAssignment.assignedAt)}
+                </p>
+              ) : (
+                <p className="text-muted mt-2 text-sm">
+                  No active handler assigned.
+                </p>
+              )}
+            </div>
+            {assignmentMutation.isError ? (
+              <Alert className="border-danger/25 bg-danger-soft text-danger">
+                {assignmentMutation.error instanceof Error
+                  ? assignmentMutation.error.message
+                  : "Unable to assign this incident. Review the values and try again."}
+              </Alert>
+            ) : null}
+            {assignmentOptions.isError ? (
+              <Alert>
+                Unable to load eligible handlers. Try reopening this dialog.
+              </Alert>
+            ) : null}
+            <FormField
+              id="incident-handler"
+              label="Handler"
+              error={assignmentForm.formState.errors.assigneeUserId?.message}
+            >
+              <input
+                type="hidden"
+                {...assignmentForm.register("assigneeUserId")}
+              />
+              <div className="border-border overflow-hidden rounded-lg border">
+                <div className="border-border relative border-b">
+                  <Search
+                    aria-hidden="true"
+                    className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    strokeWidth={1.8}
+                  />
+                  <Input
+                    id="incident-handler"
+                    autoFocus
+                    className="rounded-none border-0 pl-10 focus:ring-0"
+                    disabled={
+                      assignmentOptions.isPending || assignmentOptions.isError
+                    }
+                    onChange={(event) => setHandlerSearch(event.target.value)}
+                    placeholder="Search by name or email"
+                    value={handlerSearch}
+                  />
+                </div>
+                <div
+                  aria-label="Eligible incident handlers"
+                  className="max-h-56 overflow-y-auto p-1.5"
+                  role="listbox"
+                >
+                  {assignmentOptions.isPending ? (
+                    <p className="text-muted px-3 py-4 text-sm">
+                      Loading handlers…
+                    </p>
+                  ) : filteredHandlers.length ? (
+                    filteredHandlers.map((user) => {
+                      const selected = selectedHandlerId === user.id;
+                      return (
+                        <button
+                          aria-selected={selected}
+                          className={`focus-visible:outline-brand flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 text-left text-sm focus-visible:outline-2 ${selected ? "bg-brand-soft text-brand" : "hover:bg-neutral-soft"}`}
+                          key={user.id}
+                          onClick={() =>
+                            assignmentForm.setValue("assigneeUserId", user.id, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                          role="option"
+                          type="button"
+                        >
+                          <span className="min-w-0">
+                            <span className="block font-medium break-words">
+                              {user.name}
+                            </span>
+                            <span className="text-muted block text-xs break-all">
+                              {user.email}
+                            </span>
+                          </span>
+                          {selected ? (
+                            <span className="shrink-0 text-xs font-semibold">
+                              Selected
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="text-muted px-3 py-4 text-sm">
+                      No active security officers match this search.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </FormField>
+            <FormField
+              id="assignment-note"
+              label="Assignment note"
+              error={assignmentForm.formState.errors.note?.message}
+            >
+              <Textarea
+                id="assignment-note"
+                className="min-h-28"
+                maxLength={2000}
+                placeholder="Explain why this handler is appropriate and any immediate response expectations."
+                {...assignmentForm.register("note")}
+              />
+              <p className="text-muted text-xs">
+                The assignment, responsible officer and note are retained in
+                incident history and the audit log.
+              </p>
+            </FormField>
+            <Alert>
+              Assigning a reported incident changes its workflow status to
+              Assigned. Reassignment closes the previous active assignment.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={closeAssignment}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  assignmentMutation.isPending ||
+                  assignmentOptions.isPending ||
+                  assignmentOptions.isError
+                }
+              >
+                {assignmentMutation.isPending ? "Assigning…" : "Assign handler"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </Dialog>
       <Dialog
         dialogRef={classificationDialogRef}
