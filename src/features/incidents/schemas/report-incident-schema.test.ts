@@ -3,6 +3,7 @@ import {
   assignIncidentFormSchema,
   updateIncidentProgressFormSchema,
   incidentEvidenceListSchema,
+  removeIncidentEvidenceFormSchema,
   classifyIncidentFormSchema,
   reportIncidentFormSchema,
 } from "./report-incident-schema";
@@ -88,5 +89,17 @@ describe("incidentEvidenceListSchema", () => {
         pagination: { page: 1, limit: 10, total: 0, totalPages: 1 },
       }).pagination.total,
     ).toBe(0);
+  });
+});
+describe("removeIncidentEvidenceFormSchema", () => {
+  it("requires a meaningful audit reason", () => {
+    expect(
+      removeIncidentEvidenceFormSchema.parse({
+        reason: "  Uploaded to the wrong incident.  ",
+      }),
+    ).toEqual({ reason: "Uploaded to the wrong incident." });
+    expect(
+      removeIncidentEvidenceFormSchema.safeParse({ reason: "mistake" }).success,
+    ).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Search,
   ShieldAlert,
+  Trash2,
   UserPlus,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -42,6 +43,7 @@ import {
   useIncidentClassificationQueue,
   useIncidentEvidence,
   useUploadIncidentEvidence,
+  useRemoveIncidentEvidence,
   useUpdateIncidentHandlingProgress,
   useMyIncident,
   useMyIncidents,
@@ -52,11 +54,14 @@ import {
   assignIncidentFormSchema,
   updateIncidentProgressFormSchema,
   reportIncidentFormSchema,
+  removeIncidentEvidenceFormSchema,
   type ClassifyIncidentForm,
   type AssignIncidentForm,
   type UpdateIncidentProgressForm,
   type Incident,
   type IncidentSeverity,
+  type IncidentEvidence,
+  type RemoveIncidentEvidenceForm,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
 
@@ -75,6 +80,7 @@ const progressDefaults: UpdateIncidentProgressForm = {
   status: "in_progress",
   note: "",
 };
+const removalDefaults: RemoveIncidentEvidenceForm = { reason: "" };
 const progressOptions: Record<
   string,
   readonly UpdateIncidentProgressForm["status"][]
@@ -152,6 +158,7 @@ export function IncidentReportingManager() {
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
   const [progressTarget, setProgressTarget] = useState<Incident>();
   const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
+  const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
   const [evidenceDescription, setEvidenceDescription] = useState("");
@@ -164,6 +171,7 @@ export function IncidentReportingManager() {
   const assignmentDialogRef = useRef<HTMLDialogElement>(null);
   const progressDialogRef = useRef<HTMLDialogElement>(null);
   const evidenceDialogRef = useRef<HTMLDialogElement>(null);
+  const removalDialogRef = useRef<HTMLDialogElement>(null);
   const list = useMyIncidents(page, allowed && !canClassify);
   const classificationQueue = useIncidentClassificationQueue(
     page,
@@ -179,6 +187,7 @@ export function IncidentReportingManager() {
   const progressMutation = useUpdateIncidentHandlingProgress();
   const evidence = useIncidentEvidence(evidenceTarget?.id, evidencePage);
   const evidenceMutation = useUploadIncidentEvidence();
+  const removalMutation = useRemoveIncidentEvidence();
   const toast = useToast();
   const {
     register,
@@ -200,6 +209,10 @@ export function IncidentReportingManager() {
   const progressForm = useForm<UpdateIncidentProgressForm>({
     resolver: zodResolver(updateIncidentProgressFormSchema),
     defaultValues: progressDefaults,
+  });
+  const removalForm = useForm<RemoveIncidentEvidenceForm>({
+    resolver: zodResolver(removeIncidentEvidenceFormSchema),
+    defaultValues: removalDefaults,
   });
   const selectedHandlerId = useWatch({
     control: assignmentForm.control,
@@ -250,6 +263,12 @@ export function IncidentReportingManager() {
     if (evidenceTarget && !dialog.open) dialog.showModal();
     if (!evidenceTarget && dialog.open) dialog.close();
   }, [evidenceTarget]);
+  useEffect(() => {
+    const dialog = removalDialogRef.current;
+    if (!dialog) return;
+    if (removalTarget && !dialog.open) dialog.showModal();
+    if (!removalTarget && dialog.open) dialog.close();
+  }, [removalTarget]);
   const close = () => {
     setOpen(false);
     setMessage(undefined);
@@ -369,11 +388,14 @@ export function IncidentReportingManager() {
     evidenceMutation.reset();
   };
   const closeEvidence = () => {
+    setRemovalTarget(undefined);
     setEvidenceTarget(undefined);
     setEvidenceFile(undefined);
     setEvidenceDescription("");
     setEvidenceError(undefined);
     evidenceMutation.reset();
+    removalMutation.reset();
+    removalForm.reset(removalDefaults);
   };
   const submitEvidence = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -403,6 +425,36 @@ export function IncidentReportingManager() {
       setEvidenceError(
         error instanceof Error ? error.message : "Unable to upload evidence.",
       );
+    }
+  };
+  const openRemoval = (item: IncidentEvidence) => {
+    removalForm.reset(removalDefaults);
+    removalMutation.reset();
+    setRemovalTarget(item);
+  };
+  const closeRemoval = () => {
+    setRemovalTarget(undefined);
+    removalForm.reset(removalDefaults);
+    removalMutation.reset();
+  };
+  const submitRemoval = async (values: RemoveIncidentEvidenceForm) => {
+    if (!removalTarget || !evidenceTarget) return;
+    try {
+      const removedName = removalTarget.file.name;
+      await removalMutation.mutateAsync({
+        id: removalTarget.id,
+        incidentId: evidenceTarget.id,
+        values,
+      });
+      if ((evidence.data?.items.length ?? 0) === 1 && evidencePage > 1)
+        setEvidencePage((current) => current - 1);
+      closeRemoval();
+      toast.success(
+        "Evidence removed",
+        `${removedName} was removed and the reason was retained in the audit log.`,
+      );
+    } catch {
+      // The persistent API error is rendered inside the confirmation dialog.
     }
   };
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
@@ -1074,17 +1126,36 @@ export function IncidentReportingManager() {
                           SHA-256: {item.file.checksum ?? "Unavailable"}
                         </span>
                       </span>
-                      <a
-                        className="border-border hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium focus-visible:outline-2"
-                        href={`/api/incidents/evidence/${item.id}/download`}
-                      >
-                        <Download
-                          aria-hidden="true"
-                          className="size-4"
-                          strokeWidth={1.8}
-                        />
-                        Download
-                      </a>
+                      <span className="flex shrink-0 flex-wrap gap-2">
+                        <a
+                          className="border-border hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
+                          href={`/api/incidents/evidence/${item.id}/download`}
+                        >
+                          <Download
+                            aria-hidden="true"
+                            className="size-4"
+                            strokeWidth={1.8}
+                          />
+                          Download
+                        </a>
+                        {evidenceTarget.status !== "closed" &&
+                        (canAssign ||
+                          evidenceTarget.currentAssignment?.assignee.id ===
+                            session.data?.id) ? (
+                          <Button
+                            className="px-3"
+                            variant="danger"
+                            onClick={() => openRemoval(item)}
+                          >
+                            <Trash2
+                              aria-hidden="true"
+                              className="size-4"
+                              strokeWidth={1.8}
+                            />
+                            Remove
+                          </Button>
+                        ) : null}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -1191,6 +1262,78 @@ export function IncidentReportingManager() {
               </div>
             )}
           </div>
+        ) : null}
+      </Dialog>
+      <Dialog
+        dialogRef={removalDialogRef}
+        title="Remove incorrect evidence"
+        className="max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] overflow-y-auto"
+        onClose={closeRemoval}
+      >
+        {removalTarget && evidenceTarget ? (
+          <form
+            className="space-y-5"
+            noValidate
+            onSubmit={removalForm.handleSubmit(submitRemoval)}
+          >
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              This permanently removes the evidence record and stored file. The
+              file metadata and your reason remain in the audit log.
+            </Alert>
+            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+              <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                {evidenceTarget.incidentCode}
+              </p>
+              <p className="mt-1 font-semibold break-all">
+                {removalTarget.file.name}
+              </p>
+              <p className="text-muted mt-1 text-sm">
+                {formatBytes(removalTarget.file.sizeBytes)} · uploaded by{" "}
+                {removalTarget.uploadedBy?.name ?? "Unknown user"}
+              </p>
+            </div>
+            {removalMutation.isError ? (
+              <Alert className="border-danger/25 bg-danger-soft text-danger">
+                {removalMutation.error instanceof Error
+                  ? removalMutation.error.message
+                  : "Unable to remove the evidence."}
+              </Alert>
+            ) : null}
+            <FormField
+              id="incident-evidence-removal-reason"
+              label="Reason for removal"
+              error={removalForm.formState.errors.reason?.message}
+            >
+              <Textarea
+                id="incident-evidence-removal-reason"
+                autoFocus
+                className="min-h-28"
+                maxLength={2000}
+                placeholder="Explain why this file is incorrect or was attached to the wrong incident."
+                {...removalForm.register("reason")}
+              />
+              <p className="text-muted text-xs">
+                Required for audit purposes; minimum 10 characters.
+              </p>
+            </FormField>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="secondary" onClick={closeRemoval}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="danger"
+                disabled={removalMutation.isPending}
+              >
+                <Trash2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {removalMutation.isPending ? "Removing…" : "Remove evidence"}
+              </Button>
+            </div>
+          </form>
         ) : null}
       </Dialog>
       <Dialog

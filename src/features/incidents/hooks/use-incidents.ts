@@ -6,6 +6,7 @@ import {
   updateIncidentHandlingProgress,
   listIncidentEvidence,
   uploadIncidentEvidence,
+  removeIncidentEvidence,
   getMyIncident,
   listIncidentsForClassification,
   listIncidentAssignmentOptions,
@@ -98,6 +99,17 @@ export function useUploadIncidentEvidence() {
     onSuccess: (_data, input) =>
       client.invalidateQueries({
         queryKey: ["incidents", "evidence", input.id],
+      }),
+  });
+}
+export function useRemoveIncidentEvidence() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: removeIncidentEvidence,
+    retry: false,
+    onSuccess: (_data, input) =>
+      client.invalidateQueries({
+        queryKey: ["incidents", "evidence", input.incidentId],
       }),
   });
 }
