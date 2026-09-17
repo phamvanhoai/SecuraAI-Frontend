@@ -12,7 +12,13 @@ import {
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TrainingCompletionManager } from "./training-completion-manager";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
@@ -47,6 +53,7 @@ import {
   createCourseSchema,
   type AssignCourseInput,
   type Course,
+  type CourseStatusFilter,
   type CreateCourseInput,
 } from "../schemas/course-schema";
 
@@ -75,8 +82,10 @@ const defaults: CreateCourseInput = {
 
 export function TrainingCoursesManager({
   onAssessments,
+  headerActions,
 }: {
   onAssessments?: () => void;
+  headerActions?: ReactNode;
 }) {
   const session = useSessionUser();
   const canRead =
@@ -91,12 +100,14 @@ export function TrainingCoursesManager({
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [draftStatus, setDraftStatus] = useState<CourseStatusFilter>("all");
+  const [status, setStatus] = useState<CourseStatusFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [assignmentDialog, setAssignmentDialog] = useState<{
     course: Course;
     mode: "create" | "edit";
   }>();
-  const courses = useCourses(page, query, canRead);
+  const courses = useCourses(page, query, status, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
       key: "title",
@@ -206,6 +217,7 @@ export function TrainingCoursesManager({
         <TrainingCompletionManager
           key={courseToTrack.id}
           course={courseToTrack}
+          headerActions={headerActions}
           onViewCourses={() => setCourseToTrack(undefined)}
         />
       ) : null}
@@ -234,6 +246,7 @@ export function TrainingCoursesManager({
               }
             : {})}
         />
+        {headerActions}
         <ProductPanel
           title="Courses"
           description={
@@ -247,6 +260,7 @@ export function TrainingCoursesManager({
             onSubmit={(event) => {
               event.preventDefault();
               setQuery(draftQuery.trim());
+              setStatus(draftStatus);
               setPage(1);
             }}
           >
@@ -265,6 +279,19 @@ export function TrainingCoursesManager({
                 onChange={(event) => setDraftQuery(event.target.value)}
               />
             </label>
+            <Select
+              aria-label="Filter course status"
+              className="w-full sm:w-44"
+              value={draftStatus}
+              onChange={(event) =>
+                setDraftStatus(event.target.value as CourseStatusFilter)
+              }
+            >
+              <option value="all">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </Select>
             <Button type="submit">Search</Button>
           </form>
           <div className="p-4">
@@ -290,7 +317,7 @@ export function TrainingCoursesManager({
                 No courses found.{" "}
                 {canCreate
                   ? "Create a draft to get started."
-                  : "Try a different search."}
+                  : "Try a different search or status filter."}
               </p>
             ) : courses.data ? (
               <DataTable

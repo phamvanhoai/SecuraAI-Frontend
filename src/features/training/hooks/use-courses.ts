@@ -8,12 +8,20 @@ import {
   getLatestCourseAssignment,
   listCourses,
 } from "../api/courses";
-import type { AssignCourseInput } from "../schemas/course-schema";
+import type {
+  AssignCourseInput,
+  CourseStatusFilter,
+} from "../schemas/course-schema";
 
-export function useCourses(page: number, q: string, enabled: boolean) {
+export function useCourses(
+  page: number,
+  q: string,
+  status: CourseStatusFilter,
+  enabled: boolean,
+) {
   return useQuery({
-    queryKey: ["training", "courses", page, q],
-    queryFn: ({ signal }) => listCourses(page, q, signal),
+    queryKey: ["training", "courses", page, q, status],
+    queryFn: ({ signal }) => listCourses(page, q, status, signal),
     enabled,
   });
 }

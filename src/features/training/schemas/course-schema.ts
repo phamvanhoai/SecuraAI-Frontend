@@ -146,6 +146,7 @@ export const courseAssignmentDetailSchema = z
   .nullable();
 
 export type Course = z.infer<typeof courseSchema>;
+export type CourseStatusFilter = "all" | "draft" | "published" | "archived";
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type AssignmentOptions = z.infer<typeof assignmentOptionsSchema>;
 export type AssignCourseInput = z.infer<typeof assignCourseSchema>;
