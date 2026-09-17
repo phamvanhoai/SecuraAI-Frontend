@@ -1,11 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ClipboardList, Ellipsis, Eye, Send, Search } from "lucide-react";
+import {
+  ClipboardList,
+  Ellipsis,
+  Eye,
+  Plus,
+  Send,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TrainingCompletionManager } from "./training-completion-manager";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
   type DataTableColumn,
@@ -23,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/auth";
@@ -41,7 +50,28 @@ import {
   type CreateCourseInput,
 } from "../schemas/course-schema";
 
-const defaults: CreateCourseInput = { title: "", description: "", content: "" };
+const defaultQuestion = () => ({
+  text: "",
+  options: [
+    { text: "", isCorrect: true },
+    { text: "", isCorrect: false },
+    { text: "", isCorrect: false },
+    { text: "", isCorrect: false },
+  ],
+});
+
+const defaults: CreateCourseInput = {
+  title: "",
+  description: "",
+  content: "",
+  status: "draft",
+  assessment: {
+    title: "Post-training assessment",
+    passingScore: 80,
+    maxAttempts: 3,
+    questions: [defaultQuestion()],
+  },
+};
 
 export function TrainingCoursesManager({
   onAssessments,
@@ -710,13 +740,21 @@ function CreateCourseDialog({
   const toast = useToast();
   const [message, setMessage] = useState<string>();
   const {
+    control,
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CreateCourseInput>({
     resolver: zodResolver(createCourseSchema),
     defaultValues: defaults,
+  });
+  const assessment = useWatch({ control, name: "assessment" });
+  const courseStatus = useWatch({ control, name: "status" });
+  const questions = useFieldArray({
+    control,
+    name: "assessment.questions",
   });
 
   useEffect(() => {
@@ -738,7 +776,9 @@ function CreateCourseDialog({
       close();
       toast.success(
         "Course created",
-        "The draft is ready for further preparation.",
+        values.status === "published"
+          ? "The course is published and ready to assign."
+          : "The draft is ready for further preparation.",
       );
     } catch (error: unknown) {
       setMessage(
@@ -800,12 +840,201 @@ function CreateCourseDialog({
             {...register("content")}
           />
         </FormField>
+        <FormField
+          id="course-status"
+          label="Status"
+          error={errors.status?.message}
+        >
+          <Select id="course-status" {...register("status")}>
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+          </Select>
+        </FormField>
+        <section className="border-border space-y-4 rounded-xl border p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">Post-training assessment</h3>
+              <p className="text-muted mt-1 text-sm leading-6">
+                Add a scored assessment so employees can complete the course.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setValue(
+                  "assessment",
+                  assessment
+                    ? undefined
+                    : {
+                        title: "Post-training assessment",
+                        passingScore: 80,
+                        maxAttempts: 3,
+                        questions: [defaultQuestion()],
+                      },
+                  { shouldValidate: true },
+                )
+              }
+            >
+              {assessment ? "Remove assessment" : "Add assessment"}
+            </Button>
+          </div>
+          {!assessment && errors.assessment ? (
+            <p className="text-danger text-sm" role="alert">
+              A published course requires a post-training assessment.
+            </p>
+          ) : null}
+          {assessment ? (
+            <>
+              <FormField
+                id="assessment-title"
+                label="Assessment title"
+                error={errors.assessment?.title?.message}
+              >
+                <Input
+                  id="assessment-title"
+                  maxLength={255}
+                  aria-invalid={Boolean(errors.assessment?.title)}
+                  {...register("assessment.title")}
+                />
+              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  id="assessment-passing-score"
+                  label="Passing score (%)"
+                  error={errors.assessment?.passingScore?.message}
+                >
+                  <Input
+                    id="assessment-passing-score"
+                    type="number"
+                    min={0}
+                    max={100}
+                    {...register("assessment.passingScore", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                </FormField>
+                <FormField
+                  id="assessment-max-attempts"
+                  label="Maximum attempts"
+                  error={errors.assessment?.maxAttempts?.message}
+                >
+                  <Input
+                    id="assessment-max-attempts"
+                    type="number"
+                    min={1}
+                    max={10}
+                    {...register("assessment.maxAttempts", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                </FormField>
+              </div>
+              <div className="space-y-4">
+                {questions.fields.map((question, questionIndex) => (
+                  <fieldset
+                    className="border-border space-y-3 rounded-lg border p-4"
+                    key={question.id}
+                  >
+                    <legend className="px-1 text-sm font-semibold">
+                      Question {questionIndex + 1}
+                    </legend>
+                    <FormField
+                      id={`assessment-question-${questionIndex}`}
+                      label="Question"
+                      error={
+                        errors.assessment?.questions?.[questionIndex]?.text
+                          ?.message
+                      }
+                    >
+                      <Input
+                        id={`assessment-question-${questionIndex}`}
+                        maxLength={2000}
+                        {...register(
+                          `assessment.questions.${questionIndex}.text`,
+                        )}
+                      />
+                    </FormField>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Answers</p>
+                      {assessment.questions[questionIndex]?.options.map(
+                        (option, optionIndex) => (
+                          <label
+                            className="flex items-center gap-2"
+                            key={`${question.id}-${optionIndex}`}
+                          >
+                            <input
+                              type="radio"
+                              name={`correct-answer-${questionIndex}`}
+                              checked={option.isCorrect}
+                              onChange={() => {
+                                assessment.questions[
+                                  questionIndex
+                                ]?.options.forEach((_, index) =>
+                                  setValue(
+                                    `assessment.questions.${questionIndex}.options.${index}.isCorrect`,
+                                    index === optionIndex,
+                                    { shouldValidate: true },
+                                  ),
+                                );
+                              }}
+                              aria-label={`Mark answer ${optionIndex + 1} as correct`}
+                            />
+                            <Input
+                              aria-label={`Answer ${optionIndex + 1}`}
+                              maxLength={1000}
+                              {...register(
+                                `assessment.questions.${questionIndex}.options.${optionIndex}.text`,
+                              )}
+                            />
+                          </label>
+                        ),
+                      )}
+                      {errors.assessment?.questions?.[questionIndex]?.options
+                        ?.message ? (
+                        <p className="text-danger text-sm" role="alert">
+                          {
+                            errors.assessment.questions[questionIndex].options
+                              .message
+                          }
+                        </p>
+                      ) : null}
+                    </div>
+                    {questions.fields.length > 1 ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => questions.remove(questionIndex)}
+                      >
+                        <Trash2 aria-hidden="true" className="size-4" />
+                        Remove question
+                      </Button>
+                    ) : null}
+                  </fieldset>
+                ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={questions.fields.length >= 50}
+                  onClick={() => questions.append(defaultQuestion())}
+                >
+                  <Plus aria-hidden="true" className="size-4" />
+                  Add question
+                </Button>
+              </div>
+            </>
+          ) : null}
+        </section>
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={close}>
             Cancel
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Creating…" : "Create draft"}
+            {mutation.isPending
+              ? "Creating…"
+              : courseStatus === "published"
+                ? "Publish course"
+                : "Create draft"}
           </Button>
         </div>
       </form>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Bell, ClipboardCheck, Eye, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -111,14 +111,33 @@ export function MyAssessmentsManager({ onBack }: { onBack?: () => void }) {
       key: "actions",
       header: "Actions",
       cell: (item) => {
+        const isAvailable = item.assessment.availability === "available";
+        const isRetake = isAvailable && item.assessment.attemptsUsed > 0;
         return (
           <Button
             className="min-h-10 px-3"
+            variant={isAvailable ? "primary" : "secondary"}
             onClick={() => setSelectedEnrollmentId(item.enrollmentId)}
           >
-            <ClipboardCheck aria-hidden="true" className="size-4" />
-            {item.assessment.availability === "available"
-              ? item.assessment.attemptsUsed > 0
+            {isAvailable ? (
+              isRetake ? (
+                <RotateCcw
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <ClipboardCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              )
+            ) : (
+              <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            )}
+            {isAvailable
+              ? isRetake
                 ? "Retake"
                 : "Take assessment"
               : "View details"}
@@ -133,7 +152,18 @@ export function MyAssessmentsManager({ onBack }: { onBack?: () => void }) {
       <ProductPageHeader
         title="My training assessments"
         {...(onBack
-          ? { primaryAction: "Back to training", onPrimaryAction: onBack }
+          ? {
+              additionalActions: (
+                <Button variant="secondary" onClick={onBack}>
+                  <ArrowLeft
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={1.8}
+                  />
+                  Back to training
+                </Button>
+              ),
+            }
           : {})}
         secondaryAction="Deadline reminders"
         secondaryActionIcon={<Bell aria-hidden="true" className="size-4" />}

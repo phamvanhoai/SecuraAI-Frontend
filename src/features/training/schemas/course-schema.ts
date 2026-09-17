@@ -1,14 +1,60 @@
 import { z } from "zod";
 
-export const createCourseSchema = z.object({
-  title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
-  description: z.string().trim().max(2000),
-  content: z
-    .string()
-    .trim()
-    .min(10, "Enter at least 10 characters.")
-    .max(50000),
-});
+const assessmentQuestionSchema = z
+  .object({
+    text: z.string().trim().min(3, "Enter the question.").max(2000),
+    options: z
+      .array(
+        z.object({
+          text: z.string().trim().min(1, "Enter the answer.").max(1000),
+          isCorrect: z.boolean(),
+        }),
+      )
+      .min(2)
+      .max(6),
+  })
+  .superRefine((value, context) => {
+    if (value.options.filter((option) => option.isCorrect).length !== 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["options"],
+        message: "Select exactly one correct answer.",
+      });
+    }
+  });
+
+export const createCourseSchema = z
+  .object({
+    title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+    description: z.string().trim().max(2000),
+    content: z
+      .string()
+      .trim()
+      .min(10, "Enter at least 10 characters.")
+      .max(50000),
+    status: z.enum(["draft", "published"]),
+    assessment: z
+      .object({
+        title: z
+          .string()
+          .trim()
+          .min(3, "Enter at least 3 characters.")
+          .max(255),
+        passingScore: z.number().min(0).max(100),
+        maxAttempts: z.number().int().min(1).max(10),
+        questions: z.array(assessmentQuestionSchema).min(1).max(50),
+      })
+      .optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === "published" && !value.assessment) {
+      context.addIssue({
+        code: "custom",
+        path: ["assessment"],
+        message: "A published course requires an assessment.",
+      });
+    }
+  });
 
 export const courseSchema = z.object({
   id: z.uuid(),
