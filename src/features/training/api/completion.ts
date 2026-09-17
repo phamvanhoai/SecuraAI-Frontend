@@ -9,11 +9,17 @@ export async function listCompletionCampaigns(
   page: number,
   q: string,
   signal?: AbortSignal,
+  courseId?: string,
 ) {
   return completionCampaignListSchema.parse(
     await apiRequest<unknown>("/api/training/completion", {
       target: "same-origin",
-      query: { page, limit: 10, ...(q ? { q } : {}) },
+      query: {
+        page,
+        limit: 10,
+        ...(q ? { q } : {}),
+        ...(courseId ? { courseId } : {}),
+      },
       ...(signal ? { signal } : {}),
     }),
   );

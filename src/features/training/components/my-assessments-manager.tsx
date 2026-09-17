@@ -34,7 +34,7 @@ const formatDate = (value: string) =>
     new Date(value),
   );
 
-export function MyAssessmentsManager() {
+export function MyAssessmentsManager({ onBack }: { onBack?: () => void }) {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [selectedEnrollmentId, setSelectedEnrollmentId] = useState<string>();
@@ -132,6 +132,9 @@ export function MyAssessmentsManager() {
     <>
       <ProductPageHeader
         title="My training assessments"
+        {...(onBack
+          ? { primaryAction: "Back to training", onPrimaryAction: onBack }
+          : {})}
         secondaryAction="Deadline reminders"
         secondaryActionIcon={<Bell aria-hidden="true" className="size-4" />}
         onSecondaryAction={() => router.push("/notifications")}

@@ -50,10 +50,12 @@ export function useAssignCourse() {
     mutationFn: ({
       courseId,
       input,
+      createNewCampaign,
     }: {
       courseId: string;
       input: AssignCourseInput;
-    }) => assignCourse(courseId, input),
+      createNewCampaign: boolean;
+    }) => assignCourse(courseId, input, createNewCampaign),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["training"] });
     },
