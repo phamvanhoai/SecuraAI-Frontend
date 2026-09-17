@@ -1,6 +1,9 @@
 import { apiRequest } from "@/lib/api/api-client";
+import { ApiError, normalizeApiError } from "@/lib/api/api-error";
 import {
   incidentSchema,
+  incidentEvidenceListSchema,
+  incidentEvidenceSchema,
   assignmentOptionsSchema,
   myIncidentsSchema,
   type ClassifyIncidentForm,
@@ -125,5 +128,55 @@ export async function updateIncidentHandlingProgress(input: {
         body: { status: input.values.status, note: input.values.note.trim() },
       },
     ),
+  );
+}
+export async function listIncidentEvidence(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return incidentEvidenceListSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/evidence?page=${page}&limit=10`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+export async function uploadIncidentEvidence(input: {
+  id: string;
+  file: File;
+  description: string;
+}) {
+  const form = new FormData();
+  form.set("file", input.file);
+  if (input.description.trim())
+    form.set("description", input.description.trim());
+  let response: Response;
+  try {
+    response = await fetch(
+      `/api/incidents/${encodeURIComponent(input.id)}/evidence`,
+      {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      },
+    );
+  } catch (cause: unknown) {
+    throw new ApiError(
+      "Unable to connect to the server.",
+      0,
+      "NETWORK_ERROR",
+      cause,
+    );
+  }
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) throw normalizeApiError(response.status, payload);
+  return incidentEvidenceSchema.parse(
+    typeof payload === "object" && payload !== null && "data" in payload
+      ? payload.data
+      : undefined,
   );
 }

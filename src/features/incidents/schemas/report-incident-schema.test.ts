@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assignIncidentFormSchema,
   updateIncidentProgressFormSchema,
+  incidentEvidenceListSchema,
   classifyIncidentFormSchema,
   reportIncidentFormSchema,
 } from "./report-incident-schema";
@@ -72,5 +73,20 @@ describe("updateIncidentProgressFormSchema", () => {
         note: "short",
       }).success,
     ).toBe(false);
+  });
+});
+describe("incidentEvidenceListSchema", () => {
+  it("rejects malformed evidence metadata", () => {
+    expect(() =>
+      incidentEvidenceListSchema.parse({ items: [{ id: "invalid" }] }),
+    ).toThrow();
+  });
+  it("accepts paginated evidence metadata", () => {
+    expect(
+      incidentEvidenceListSchema.parse({
+        items: [],
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 1 },
+      }).pagination.total,
+    ).toBe(0);
   });
 });
