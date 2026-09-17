@@ -52,6 +52,9 @@ export function ApiKeyModal({
       ? apiKey.expiresAt.slice(0, 16)
       : "",
   );
+  const [minExpiryDateTime] = useState(() =>
+    new Date(Date.now() + 60000).toISOString().slice(0, 16),
+  );
   const [isActive, setIsActive] = useState(
     mode === "edit" && apiKey ? apiKey.isActive : false,
   );
@@ -266,7 +269,7 @@ export function ApiKeyModal({
               <Input
                 className="text-xs"
                 id="expires-at-input"
-                min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                min={minExpiryDateTime}
                 onChange={(e) => setExpiresAt(e.target.value)}
                 type="datetime-local"
                 value={expiresAt}

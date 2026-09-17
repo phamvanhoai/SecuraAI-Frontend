@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { useTestConnection, useTriggerSync } from "../hooks/use-integrations";
 import type { Integration } from "../schemas/integration-schema";
 import {
-  IntegrationStatusBadge,
+  IntegrationAdminBadge,
+  IntegrationConnectionBadge,
   IntegrationTypeBadge,
 } from "./integration-status-badge";
 import { TestConnectionDialog } from "./test-connection-dialog";
@@ -101,7 +102,13 @@ export function IntegrationCard({
                 </h3>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <IntegrationTypeBadge type={integration.integrationType} />
-                  <IntegrationStatusBadge status={integration.status} />
+                  <IntegrationAdminBadge
+                    isEnabled={
+                      integration.status !== "disabled" &&
+                      integration.status !== "inactive"
+                    }
+                  />
+                  <IntegrationConnectionBadge status={integration.status} />
                 </div>
               </div>
             </div>

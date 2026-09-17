@@ -28,12 +28,10 @@ import {
   useIntegration,
   useUpdateIntegration,
 } from "../hooks/use-integrations";
-import type {
-  Integration,
-  IntegrationStatus,
-} from "../schemas/integration-schema";
+import type { Integration } from "../schemas/integration-schema";
 import {
-  IntegrationStatusBadge,
+  IntegrationAdminBadge,
+  IntegrationConnectionBadge,
   IntegrationTypeBadge,
 } from "./integration-status-badge";
 import { ApiKeysTab } from "./api-keys-tab";
@@ -60,9 +58,14 @@ function IntegrationOverviewTab({
   const toast = useToast();
   const updateMutation = useUpdateIntegration();
 
+  const isInitiallyEnabled =
+    integration.status !== "disabled" && integration.status !== "inactive";
+
   const [name, setName] = useState(integration.name);
   const [baseUrl, setBaseUrl] = useState(integration.baseUrl ?? "");
-  const [status, setStatus] = useState<IntegrationStatus>(integration.status);
+  const [adminState, setAdminState] = useState<"active" | "disabled">(
+    isInitiallyEnabled ? "active" : "disabled",
+  );
   const [configJson, setConfigJson] = useState(
     integration.configuration
       ? JSON.stringify(integration.configuration, null, 2)
@@ -90,7 +93,7 @@ function IntegrationOverviewTab({
         input: {
           name: name.trim(),
           baseUrl: baseUrl.trim() || null,
-          status,
+          status: adminState,
           configuration: parsedConfig,
         },
       });
@@ -127,20 +130,20 @@ function IntegrationOverviewTab({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs" htmlFor="edit-status">
-              Operational Status
+              Integration State (Admin Managed)
             </Label>
             <Select
               id="edit-status"
               onChange={(e) =>
-                setStatus(e.target.value as IntegrationStatus)
+                setAdminState(e.target.value as "active" | "disabled")
               }
-              value={status === "inactive" ? "inactive" : "active"}
+              value={adminState}
             >
-              <option value="active">Active (Enabled)</option>
-              <option value="inactive">Inactive (Disabled)</option>
+              <option value="active">Enabled</option>
+              <option value="disabled">Disabled</option>
             </Select>
             <p className="text-muted text-[11px]">
-              Connection Error & Pending states are managed automatically by live telemetry.
+              Connection health (Connected / Connection Error) is probed and updated automatically by SecuraAI.
             </p>
           </div>
         </div>
@@ -196,8 +199,16 @@ function IntegrationOverviewTab({
     <div className="grid gap-6 sm:grid-cols-2">
       <div className="border-border space-y-3 rounded-lg border p-4 text-xs">
         <h3 className="font-semibold text-foreground text-sm">
-          Identity Information
+          Identity & Status
         </h3>
+        <div className="flex justify-between items-center py-1 border-b border-border/50">
+          <span className="text-muted">Integration State:</span>
+          <IntegrationAdminBadge isEnabled={isInitiallyEnabled} />
+        </div>
+        <div className="flex justify-between items-center py-1 border-b border-border/50">
+          <span className="text-muted">Connection Health:</span>
+          <IntegrationConnectionBadge status={integration.status} />
+        </div>
         <div className="flex justify-between py-1 border-b border-border/50">
           <span className="text-muted">Integration ID (UUID):</span>
           <span className="font-mono">{integration.id}</span>
@@ -312,7 +323,13 @@ export function IntegrationDetailDrawer({
                 {integration ? (
                   <>
                     <IntegrationTypeBadge type={integration.integrationType} />
-                    <IntegrationStatusBadge status={integration.status} />
+                    <IntegrationAdminBadge
+                      isEnabled={
+                        integration.status !== "disabled" &&
+                        integration.status !== "inactive"
+                      }
+                    />
+                    <IntegrationConnectionBadge status={integration.status} />
                   </>
                 ) : null}
               </div>
