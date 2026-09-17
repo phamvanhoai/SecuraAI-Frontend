@@ -37,20 +37,19 @@ export function ControlAssessmentManager() {
   const toast = useToast();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [status, setStatus] = useState<keyof typeof labels>("compliant");
-  const [score, setScore] = useState("100");
+  const [score, setScore] = useState("");
   const [notes, setNotes] = useState("");
   const [nextReview, setNextReview] = useState("");
   const [error, setError] = useState<string>();
   const open = (item: ControlAssessmentItem) => {
     setSelected(item); setStatus(item.latestAssessment?.complianceStatus ?? "compliant");
-    setScore(item.latestAssessment?.score?.toString() ?? "100"); setNotes(""); setNextReview(""); setError(undefined);
+    setScore(item.latestAssessment?.score?.toString() ?? ""); setNotes(""); setNextReview(""); setError(undefined);
     dialogRef.current?.showModal();
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!selected) return; setError(undefined);
     const numericScore = score === "" ? null : Number(score);
-    const scoreMismatch = status === "not_assessed" ? numericScore !== null : status === "compliant" ? numericScore === null || numericScore < 80 || numericScore > 100 : status === "partially_compliant" ? numericScore === null || numericScore < 40 || numericScore >= 80 : numericScore === null || numericScore < 0 || numericScore >= 40;
-    if (scoreMismatch) { setError("Choose a score that matches the selected compliance status."); return; }
+    if (numericScore !== null && (numericScore < 0 || numericScore > 100)) { setError("Score must be between 0 and 100."); return; }
     try {
       await mutation.mutateAsync({ controlId: selected.id, body: { complianceStatus: status, score: numericScore, notes: notes.trim() || null, nextReviewAt: nextReview ? new Date(nextReview).toISOString() : null } });
       dialogRef.current?.close();
@@ -71,9 +70,9 @@ export function ControlAssessmentManager() {
   return <>
     <ProductPageHeader title="Assess control compliance" description="Record and review the compliance level of controls in your security frameworks." showSampleNotice={false} />
     <MetricStrip metrics={[
-      { label: "Compliant", value: String(query.data?.summary.compliant ?? 0), detail: "Score 80–100", tone: "brand" },
-      { label: "Partially compliant", value: String(query.data?.summary.partiallyCompliant ?? 0), detail: "Score 40–79.99", tone: "warning" },
-      { label: "Non-compliant", value: String(query.data?.summary.nonCompliant ?? 0), detail: "Score below 40", tone: "warning" },
+      { label: "Compliant", value: String(query.data?.summary.compliant ?? 0), detail: "Latest assessment status", tone: "brand" },
+      { label: "Partially compliant", value: String(query.data?.summary.partiallyCompliant ?? 0), detail: "Latest assessment status", tone: "warning" },
+      { label: "Non-compliant", value: String(query.data?.summary.nonCompliant ?? 0), detail: "Latest assessment status", tone: "warning" },
       { label: "Not assessed / overdue", value: `${query.data?.summary.notAssessed ?? 0} / ${query.data?.summary.overdue ?? 0}`, detail: "Requires attention", tone: "neutral" },
     ]} />
     <ProductPanel title="Framework controls" description={`${query.data?.pagination.total ?? 0} controls available for assessment.`}>
@@ -93,7 +92,7 @@ export function ControlAssessmentManager() {
     <Dialog className="w-[min(44rem,calc(100%-2rem))]" dialogRef={dialogRef} title={selected ? `Assess ${selected.controlCode}` : "Assess control"}>
       <form className="space-y-4" onSubmit={submit}>
         <p className="text-muted text-sm">{selected?.title}</p>{error ? <Alert>{error}</Alert> : null}
-        <div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="assessment-status">Compliance status</Label><Select id="assessment-status" className="mt-1.5" value={status} onChange={(event) => { const value = event.target.value as keyof typeof labels; setStatus(value); setScore(value === "compliant" ? "100" : value === "partially_compliant" ? "60" : value === "non_compliant" ? "0" : ""); }}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></div><div><Label htmlFor="assessment-score">Score (0–100)</Label><Input id="assessment-score" className="mt-1.5" type="number" min="0" max="100" step="0.01" disabled={status === "not_assessed"} required={status !== "not_assessed"} value={score} onChange={(event) => setScore(event.target.value)} /><p className="text-muted mt-1 text-xs">Compliant: 80–100 · Partial: 40–79.99 · Non-compliant: 0–39.99</p></div></div>
+        <div className="grid gap-4 sm:grid-cols-2"><div><Label htmlFor="assessment-status">Compliance status</Label><Select id="assessment-status" className="mt-1.5" value={status} onChange={(event) => setStatus(event.target.value as keyof typeof labels)}>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></div><div><Label htmlFor="assessment-score">Score (0–100, optional)</Label><Input id="assessment-score" className="mt-1.5" type="number" min="0" max="100" step="0.01" value={score} onChange={(event) => setScore(event.target.value)} /><p className="text-muted mt-1 text-xs">Optional professional assessment score. It does not determine the compliance status.</p></div></div>
         <div><Label htmlFor="next-review">Next review</Label><Input id="next-review" className="mt-1.5" type="datetime-local" value={nextReview} onChange={(event) => setNextReview(event.target.value)} /></div>
         <div><Label htmlFor="assessment-notes">Assessment notes</Label><Textarea id="assessment-notes" className="mt-1.5 min-h-24" maxLength={5000} value={notes} onChange={(event) => setNotes(event.target.value)} /></div>
         <section aria-labelledby="history-title" className="border-border border-t pt-4">
