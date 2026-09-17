@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { reportIncidentFormSchema } from "./report-incident-schema";
+import {
+  classifyIncidentFormSchema,
+  reportIncidentFormSchema,
+} from "./report-incident-schema";
 describe("reportIncidentFormSchema", () => {
   it("accepts a complete report", () =>
     expect(
@@ -18,6 +21,24 @@ describe("reportIncidentFormSchema", () => {
         description: "Too short",
         category: "phishing",
         occurredAt: "",
+      }).success,
+    ).toBe(false));
+});
+describe("classifyIncidentFormSchema", () => {
+  it("accepts an approved severity with rationale", () =>
+    expect(
+      classifyIncidentFormSchema.safeParse({
+        severity: "high",
+        rationale:
+          "The incident affects a production service and remains active.",
+      }).success,
+    ).toBe(true));
+  it("rejects unsupported severity", () =>
+    expect(
+      classifyIncidentFormSchema.safeParse({
+        severity: "urgent",
+        rationale:
+          "The incident affects a production service and remains active.",
       }).success,
     ).toBe(false));
 });

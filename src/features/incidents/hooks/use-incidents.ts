@@ -1,7 +1,9 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  classifyIncidentSeverity,
   getMyIncident,
+  listIncidentsForClassification,
   listMyIncidents,
   reportIncident,
 } from "../api/incidents";
@@ -26,5 +28,30 @@ export function useReportIncident() {
     mutationFn: reportIncident,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: key }),
+  });
+}
+export const useIncidentClassificationQueue = (
+  page: number,
+  filters: {
+    search: string;
+    severity: string;
+    status: string;
+    classification: string;
+  },
+  enabled: boolean,
+) =>
+  useQuery({
+    queryKey: ["incidents", "classification", page, filters],
+    queryFn: ({ signal }) =>
+      listIncidentsForClassification(page, filters, signal),
+    enabled,
+    retry: false,
+  });
+export function useClassifyIncidentSeverity() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: classifyIncidentSeverity,
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
   });
 }

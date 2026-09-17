@@ -1,7 +1,7 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, Plus } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Eye, Plus, RotateCcw, Search, ShieldAlert } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import {
   DataTable,
@@ -24,13 +24,18 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/auth";
 import {
+  useClassifyIncidentSeverity,
+  useIncidentClassificationQueue,
   useMyIncident,
   useMyIncidents,
   useReportIncident,
 } from "../hooks/use-incidents";
 import {
+  classifyIncidentFormSchema,
   reportIncidentFormSchema,
+  type ClassifyIncidentForm,
   type Incident,
+  type IncidentSeverity,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
 
@@ -39,6 +44,10 @@ const defaults: ReportIncidentForm = {
   description: "",
   category: "other",
   occurredAt: "",
+};
+const classificationDefaults: ClassifyIncidentForm = {
+  severity: "medium",
+  rationale: "",
 };
 const categoryLabels: Record<ReportIncidentForm["category"], string> = {
   phishing: "Phishing",
@@ -54,19 +63,43 @@ const formatDate = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+const severityTone = (severity: string) => {
+  if (severity === "critical") return "danger" as const;
+  if (severity === "high") return "warning" as const;
+  if (severity === "low") return "success" as const;
+  return "info" as const;
+};
 export function IncidentReportingManager() {
   const session = useSessionUser();
   const allowed =
     session.data?.permissions.includes("incidents.report") ?? false;
+  const canClassify =
+    session.data?.permissions.includes("incidents.classify") ?? false;
   const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [classificationFilters, setClassificationFilters] = useState({
+    search: "",
+    severity: "",
+    status: "",
+    classification: "",
+  });
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();
+  const [classificationTarget, setClassificationTarget] = useState<Incident>();
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const detailDialogRef = useRef<HTMLDialogElement>(null);
-  const list = useMyIncidents(page, allowed);
+  const classificationDialogRef = useRef<HTMLDialogElement>(null);
+  const list = useMyIncidents(page, allowed && !canClassify);
+  const classificationQueue = useIncidentClassificationQueue(
+    page,
+    classificationFilters,
+    canClassify,
+  );
+  const displayedList = canClassify ? classificationQueue : list;
   const detail = useMyIncident(selectedId);
   const mutation = useReportIncident();
+  const classificationMutation = useClassifyIncidentSeverity();
   const toast = useToast();
   const {
     register,
@@ -76,6 +109,10 @@ export function IncidentReportingManager() {
   } = useForm<ReportIncidentForm>({
     resolver: zodResolver(reportIncidentFormSchema),
     defaultValues: defaults,
+  });
+  const classificationForm = useForm<ClassifyIncidentForm>({
+    resolver: zodResolver(classifyIncidentFormSchema),
+    defaultValues: classificationDefaults,
   });
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -89,6 +126,12 @@ export function IncidentReportingManager() {
     if (selectedId && !dialog.open) dialog.showModal();
     if (!selectedId && dialog.open) dialog.close();
   }, [selectedId]);
+  useEffect(() => {
+    const dialog = classificationDialogRef.current;
+    if (!dialog) return;
+    if (classificationTarget && !dialog.open) dialog.showModal();
+    if (!classificationTarget && dialog.open) dialog.close();
+  }, [classificationTarget]);
   const close = () => {
     setOpen(false);
     setMessage(undefined);
@@ -111,6 +154,53 @@ export function IncidentReportingManager() {
       );
     }
   };
+  const openClassification = (incident: Incident) => {
+    classificationForm.reset({
+      severity: incident.severity as IncidentSeverity,
+      rationale: "",
+    });
+    classificationMutation.reset();
+    setClassificationTarget(incident);
+  };
+  const closeClassification = () => {
+    setClassificationTarget(undefined);
+    classificationForm.reset(classificationDefaults);
+    classificationMutation.reset();
+  };
+  const submitClassification = async (values: ClassifyIncidentForm) => {
+    if (!classificationTarget) return;
+    try {
+      const updated = await classificationMutation.mutateAsync({
+        id: classificationTarget.id,
+        values,
+      });
+      closeClassification();
+      toast.success(
+        "Severity classified",
+        `${updated.incidentCode} is now ${updated.severity}.`,
+      );
+    } catch {
+      // The persistent API error is rendered inside the dialog.
+    }
+  };
+  const submitFilters = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPage(1);
+    setClassificationFilters((current) => ({
+      ...current,
+      search: searchInput.trim(),
+    }));
+  };
+  const resetFilters = () => {
+    setSearchInput("");
+    setPage(1);
+    setClassificationFilters({
+      search: "",
+      severity: "",
+      status: "",
+      classification: "",
+    });
+  };
   const columns: readonly DataTableColumn<Incident>[] = [
     {
       key: "incident",
@@ -132,6 +222,18 @@ export function IncidentReportingManager() {
           : "—",
     },
     {
+      key: "severity",
+      header: "Severity",
+      cell: (item) =>
+        canClassify && !item.classified ? (
+          <StatusBadge tone="neutral">Unclassified</StatusBadge>
+        ) : (
+          <StatusBadge tone={severityTone(item.severity)}>
+            <span className="capitalize">{item.severity}</span>
+          </StatusBadge>
+        ),
+    },
+    {
       key: "status",
       header: "Status",
       cell: (item) => <StatusBadge tone="info">{item.status}</StatusBadge>,
@@ -146,12 +248,30 @@ export function IncidentReportingManager() {
     {
       key: "action",
       header: "Action",
-      cell: (item) => (
-        <Button variant="secondary" onClick={() => setSelectedId(item.id)}>
-          <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
-          View details
-        </Button>
-      ),
+      cell: (item) =>
+        canClassify ? (
+          <Button
+            variant="secondary"
+            disabled={item.status === "closed"}
+            onClick={() => openClassification(item)}
+          >
+            <ShieldAlert
+              aria-hidden="true"
+              className="size-4"
+              strokeWidth={1.8}
+            />
+            {item.status === "closed"
+              ? "Closed"
+              : item.classified
+                ? "Reclassify"
+                : "Classify"}
+          </Button>
+        ) : (
+          <Button variant="secondary" onClick={() => setSelectedId(item.id)}>
+            <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            View details
+          </Button>
+        ),
     },
   ];
   if (session.isPending)
@@ -161,55 +281,191 @@ export function IncidentReportingManager() {
         className="bg-neutral-soft h-56 animate-pulse rounded-xl"
       />
     );
-  if (!allowed)
-    return <Alert>You do not have permission to report incidents.</Alert>;
+  if (!allowed && !canClassify)
+    return (
+      <Alert>You do not have permission to access incident management.</Alert>
+    );
   return (
     <>
       <ProductPageHeader
-        title="Report security incidents"
-        description="Report suspicious activity promptly so the security team can investigate and respond."
+        title={
+          canClassify
+            ? "Classify incident severity"
+            : "Report security incidents"
+        }
+        description={
+          canClassify
+            ? "Review reported incidents and assign a documented severity for response prioritization."
+            : "Report suspicious activity promptly so the security team can investigate and respond."
+        }
         showSampleNotice={false}
         additionalActions={
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={() => setOpen(true)} disabled={!allowed}>
             <Plus aria-hidden="true" className="size-4" />
             Report new incident
           </Button>
         }
       />
       <ProductPanel
-        title="My incident reports"
+        title={
+          canClassify ? "Incident classification queue" : "My incident reports"
+        }
         description={
-          list.data
-            ? `${list.data.pagination.total} reports submitted`
-            : "Incidents you have reported"
+          displayedList.data
+            ? `${displayedList.data.pagination.total} incidents found`
+            : canClassify
+              ? "Reported incidents awaiting review or reclassification"
+              : "Incidents you have reported"
         }
       >
+        {canClassify ? (
+          <form
+            className="border-border flex flex-col gap-3 border-b p-4 md:flex-row md:flex-wrap md:items-end xl:flex-nowrap"
+            onSubmit={submitFilters}
+          >
+            <label className="min-w-0 flex-1 md:basis-full xl:basis-0">
+              <span className="mb-1.5 block text-sm font-medium">
+                Search incidents
+              </span>
+              <span className="relative block">
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  strokeWidth={1.8}
+                />
+                <Input
+                  className="pl-9"
+                  value={searchInput}
+                  maxLength={100}
+                  placeholder="Search by incident code or title"
+                  onChange={(event) => setSearchInput(event.target.value)}
+                />
+              </span>
+            </label>
+            <label className="min-w-40 flex-1 md:max-w-52">
+              <span className="mb-1.5 block text-sm font-medium">Severity</span>
+              <Select
+                value={classificationFilters.severity}
+                onChange={(event) => {
+                  setPage(1);
+                  setClassificationFilters((current) => ({
+                    ...current,
+                    severity: event.target.value,
+                  }));
+                }}
+              >
+                <option value="">All severities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </Select>
+            </label>
+            <label className="min-w-40 flex-1 md:max-w-52">
+              <span className="mb-1.5 block text-sm font-medium">
+                Classification
+              </span>
+              <Select
+                value={classificationFilters.classification}
+                onChange={(event) => {
+                  setPage(1);
+                  setClassificationFilters((current) => ({
+                    ...current,
+                    classification: event.target.value,
+                  }));
+                }}
+              >
+                <option value="">All classifications</option>
+                <option value="unclassified">Unclassified</option>
+                <option value="classified">Classified</option>
+              </Select>
+            </label>
+            <label className="min-w-40 flex-1 md:max-w-52">
+              <span className="mb-1.5 block text-sm font-medium">Status</span>
+              <Select
+                value={classificationFilters.status}
+                onChange={(event) => {
+                  setPage(1);
+                  setClassificationFilters((current) => ({
+                    ...current,
+                    status: event.target.value,
+                  }));
+                }}
+              >
+                <option value="">All statuses</option>
+                <option value="reported">Reported</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In progress</option>
+                <option value="escalated">Escalated</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </Select>
+            </label>
+            <div className="flex gap-2">
+              <Button type="submit">
+                <Search
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Search
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={resetFilters}
+                disabled={
+                  !searchInput &&
+                  !classificationFilters.search &&
+                  !classificationFilters.severity &&
+                  !classificationFilters.status &&
+                  !classificationFilters.classification
+                }
+              >
+                <RotateCcw
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Reset
+              </Button>
+            </div>
+          </form>
+        ) : null}
         <div className="p-4">
-          {list.isPending ? (
+          {displayedList.isPending ? (
             <div
               aria-label="Loading incident reports"
               className="bg-neutral-soft h-56 animate-pulse rounded-xl"
             />
-          ) : list.isError ? (
-            <Alert>Unable to load your incident reports.</Alert>
-          ) : list.data?.items.length ? (
+          ) : displayedList.isError ? (
+            <Alert>Unable to load incident reports.</Alert>
+          ) : displayedList.data?.items.length ? (
             <DataTable
               columns={columns}
-              rows={list.data.items}
+              rows={displayedList.data.items}
               getRowKey={(item) => item.id}
             />
           ) : (
             <EmptyState
-              title="No incidents reported"
-              description="Use Report new incident when you notice suspicious activity or a possible security event."
+              title={
+                canClassify
+                  ? "No incidents to classify"
+                  : "No incidents reported"
+              }
+              description={
+                canClassify
+                  ? "New incident reports will appear here for severity classification."
+                  : "Use Report new incident when you notice suspicious activity or a possible security event."
+              }
             />
           )}
         </div>
-        {list.data ? (
+        {displayedList.data ? (
           <div className="border-border border-t p-4">
             <Pagination
               page={page}
-              pageCount={list.data.pagination.totalPages}
+              pageCount={displayedList.data.pagination.totalPages}
               onPageChange={setPage}
             />
           </div>
@@ -302,6 +558,132 @@ export function IncidentReportingManager() {
             </Button>
           </div>
         </form>
+      </Dialog>
+      <Dialog
+        dialogRef={classificationDialogRef}
+        title="Classify incident severity"
+        className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
+        onClose={closeClassification}
+      >
+        {classificationTarget ? (
+          <form
+            className="space-y-5"
+            noValidate
+            onSubmit={classificationForm.handleSubmit(submitClassification)}
+          >
+            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+              <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                {classificationTarget.incidentCode}
+              </p>
+              <p className="mt-1 font-semibold break-words">
+                {classificationTarget.title}
+              </p>
+              <p className="text-muted mt-2 line-clamp-4 text-sm leading-6 break-words whitespace-pre-wrap">
+                {classificationTarget.description}
+              </p>
+            </div>
+            {classificationTarget.lastClassification ? (
+              <div className="border-border rounded-lg border p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold">
+                    Latest classification
+                  </h3>
+                  <span className="text-muted text-xs">
+                    {classificationTarget.classificationCount} classification
+                    {classificationTarget.classificationCount === 1
+                      ? ""
+                      : "s"}{" "}
+                    recorded
+                  </span>
+                </div>
+                <p className="text-muted mt-2 text-sm">
+                  {classificationTarget.lastClassification.classifiedBy?.name ??
+                    "Unknown user"}{" "}
+                  ·{" "}
+                  {formatDate(
+                    classificationTarget.lastClassification.classifiedAt,
+                  )}
+                </p>
+                {classificationTarget.lastClassification.rationale ? (
+                  <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap">
+                    {classificationTarget.lastClassification.rationale}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <Alert>
+                This incident has not been formally classified. Its stored
+                medium severity is the database default, not an officer
+                decision.
+              </Alert>
+            )}
+            {classificationMutation.isError ? (
+              <Alert className="border-danger/25 bg-danger-soft text-danger">
+                {classificationMutation.error instanceof Error
+                  ? classificationMutation.error.message
+                  : "Unable to classify this incident. Review the values and try again."}
+              </Alert>
+            ) : null}
+            <FormField
+              id="incident-severity"
+              label="Severity"
+              error={classificationForm.formState.errors.severity?.message}
+            >
+              <Select
+                id="incident-severity"
+                autoFocus
+                {...classificationForm.register("severity")}
+              >
+                <option value="low">
+                  Low — limited impact, routine response
+                </option>
+                <option value="medium">
+                  Medium — contained but requires investigation
+                </option>
+                <option value="high">
+                  High — significant impact or active threat
+                </option>
+                <option value="critical">
+                  Critical — severe, widespread or urgent impact
+                </option>
+              </Select>
+            </FormField>
+            <FormField
+              id="classification-rationale"
+              label="Classification rationale"
+              error={classificationForm.formState.errors.rationale?.message}
+            >
+              <Textarea
+                id="classification-rationale"
+                className="min-h-28"
+                maxLength={2000}
+                placeholder="Describe the observed impact, scope, affected services and urgency supporting this severity."
+                aria-invalid={Boolean(
+                  classificationForm.formState.errors.rationale,
+                )}
+                {...classificationForm.register("rationale")}
+              />
+              <p className="text-muted text-xs">
+                This rationale is retained in the incident update history and
+                audit log.
+              </p>
+            </FormField>
+            <Alert>
+              Classification prioritizes response; it does not assign the
+              incident or change its workflow status.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={closeClassification}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={classificationMutation.isPending}>
+                {classificationMutation.isPending
+                  ? "Saving…"
+                  : "Save classification"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </Dialog>
       <Dialog
         dialogRef={detailDialogRef}
