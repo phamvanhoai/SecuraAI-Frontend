@@ -36,6 +36,8 @@ export async function proxyAuthenticatedRequest(
     const headers = new Headers();
     const contentType = response.headers.get("content-type");
     if (contentType) headers.set("Content-Type", contentType);
+    const contentDisposition = response.headers.get("content-disposition");
+    if (contentDisposition) headers.set("Content-Disposition", contentDisposition);
     return new Response(response.body, {
       status: response.status,
       headers,

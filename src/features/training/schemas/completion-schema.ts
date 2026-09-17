@@ -50,6 +50,7 @@ export const completionCampaignDetailSchema = z.object({
       startedAt: z.iso.datetime({ offset: true }).nullable(),
       completedAt: z.iso.datetime({ offset: true }).nullable(),
       lastAccessedAt: z.iso.datetime({ offset: true }).nullable(),
+      certificateNumber: z.string().nullable(),
     }),
   ),
   pagination: paginationSchema,

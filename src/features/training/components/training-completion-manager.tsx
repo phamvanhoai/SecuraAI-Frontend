@@ -1,6 +1,15 @@
 "use client";
 
-import { Eye, Search } from "lucide-react";
+import {
+  Award,
+  ArrowLeft,
+  ClipboardList,
+  Eye,
+  Search,
+  UserMinus,
+} from "lucide-react";
+import { TrainingCertificatePanel } from "./training-certificate-panel";
+import { useCertificateIssuancePending } from "../hooks/use-certificate";
 import { useEffect, useRef, useState } from "react";
 import {
   DataTable,
@@ -39,14 +48,18 @@ const date = (value: string) =>
 
 export function TrainingCompletionManager({
   onViewCourses,
+  course,
+  onAssessments,
 }: {
   onViewCourses?: () => void;
+  course?: { id: string; title: string };
+  onAssessments?: () => void;
 }) {
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
   const [campaignId, setCampaignId] = useState<string>();
-  const campaigns = useCompletionCampaigns(page, query, true);
+  const campaigns = useCompletionCampaigns(page, query, true, course?.id);
   const pageItems = campaigns.data?.items ?? [];
   const columns: readonly DataTableColumn<CompletionCampaign>[] = [
     {
@@ -55,7 +68,9 @@ export function TrainingCompletionManager({
       cell: (item) => (
         <span>
           <strong className="block">{item.title}</strong>
-          <span className="text-muted text-xs">{item.courseTitle}</span>
+          {!course ? (
+            <span className="text-muted text-xs">{item.courseTitle}</span>
+          ) : null}
         </span>
       ),
     },
@@ -104,8 +119,8 @@ export function TrainingCompletionManager({
           variant="secondary"
           onClick={() => setCampaignId(item.id)}
         >
-          <Eye className="size-4" aria-hidden="true" />
-          View details
+          <Eye className="size-4" aria-hidden="true" strokeWidth={1.8} />
+          View employees
         </Button>
       ),
     },
@@ -119,12 +134,36 @@ export function TrainingCompletionManager({
   return (
     <>
       <ProductPageHeader
-        title="Training completion"
-        description="Monitor security awareness campaign completion and follow up with employees who are incomplete or overdue."
+        title="Training progress"
+        description={
+          course
+            ? `Course: ${course.title}. Select an assignment campaign to review employee completion and issue certificates.`
+            : "Select an assignment campaign to review employee completion and completion certificates."
+        }
         showSampleNotice={false}
+        {...(onAssessments
+          ? {
+              secondaryAction: "My assessments",
+              secondaryActionIcon: (
+                <ClipboardList
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              ),
+              onSecondaryAction: onAssessments,
+            }
+          : {})}
         {...(onViewCourses
           ? {
-              secondaryAction: "Manage courses",
+              secondaryAction: "Back to courses",
+              secondaryActionIcon: (
+                <ArrowLeft
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              ),
               onSecondaryAction: onViewCourses,
             }
           : {})}
@@ -156,7 +195,7 @@ export function TrainingCompletionManager({
         ]}
       />
       <ProductPanel
-        title="Training campaigns"
+        title="Assignment campaigns"
         description={
           campaigns.data
             ? `${campaigns.data.pagination.total} campaigns found`
@@ -206,7 +245,9 @@ export function TrainingCompletionManager({
             <Alert>Unable to load training completion data.</Alert>
           ) : pageItems.length === 0 ? (
             <p className="text-muted py-10 text-center text-sm">
-              No training campaigns match your search.
+              {course
+                ? "No assignment campaigns for this course match your search. Assign the course to employees before tracking completion."
+                : "No training campaigns match your search."}
             </p>
           ) : (
             <DataTable
@@ -242,6 +283,9 @@ function CompletionDetailDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [certificateId, setCertificateId] = useState<string>();
+  const certificateTrigger = useRef<HTMLButtonElement>(null);
+  const issuingCertificate = useCertificateIssuancePending();
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
   const [draftQuery, setDraftQuery] = useState("");
@@ -250,6 +294,8 @@ function CompletionDetailDialog({
   const session = useSessionUser();
   const canWithdraw =
     session.data?.permissions.includes("training-courses.assign") ?? false;
+  const canIssue =
+    session.data?.permissions.includes("training-certificates.issue") ?? false;
   const withdraw = useWithdrawEnrollment();
   const toast = useToast();
   const [withdrawTarget, setWithdrawTarget] = useState<{
@@ -262,9 +308,13 @@ function CompletionDetailDialog({
     const dialog = dialogRef.current;
     if (campaignId && dialog && !dialog.open) dialog.showModal();
   }, [campaignId]);
+  useEffect(() => {
+    if (!certificateId) certificateTrigger.current?.focus();
+  }, [certificateId]);
   const close = () => {
-    if (withdraw.isPending) return;
+    if (withdraw.isPending || issuingCertificate) return;
     setWithdrawTarget(undefined);
+    setCertificateId(undefined);
     setReason("");
     setWithdrawError("");
     dialogRef.current?.close();
@@ -289,211 +339,271 @@ function CompletionDetailDialog({
       }}
       title={detail.data?.campaign.title ?? "Campaign completion details"}
     >
-      {withdrawTarget ? (
-        <form
-          className="border-border mb-4 space-y-3 rounded-lg border p-4"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (reason.trim().length < 3) {
-              setWithdrawError("Enter at least 3 characters for the reason.");
-              return;
-            }
-            try {
-              await withdraw.mutateAsync({
-                id: withdrawTarget.id,
-                reason: reason.trim(),
-              });
-              setWithdrawTarget(undefined);
-              setReason("");
-              setWithdrawError("");
-              toast.success(
-                "Assignment withdrawn",
-                "Assessment access is blocked. History and results are preserved.",
-              );
-            } catch {
-              setWithdrawError(
-                "Unable to withdraw this assignment. Refresh and try again.",
-              );
-            }
+      {certificateId ? (
+        <TrainingCertificatePanel
+          key={certificateId}
+          enrollmentId={certificateId}
+          onClose={() => {
+            setCertificateId(undefined);
           }}
-        >
-          <h3 className="font-semibold">
-            Withdraw assignment: {withdrawTarget.name}
-          </h3>
-          <p className="text-muted text-sm">
-            This employee will no longer be able to take the assessment.
-            Existing history and results will remain.
-          </p>
-          <label className="block text-sm" htmlFor="withdraw-reason">
-            Reason for withdrawal
-          </label>
-          <Textarea
-            id="withdraw-reason"
-            value={reason}
-            maxLength={500}
-            onChange={(event) => setReason(event.target.value)}
-          />
-          {withdrawError ? <Alert>{withdrawError}</Alert> : null}
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={withdraw.isPending}
-              onClick={() => {
+        />
+      ) : null}
+      <div hidden={Boolean(certificateId)}>
+        {withdrawTarget ? (
+          <form
+            className="border-border mb-4 space-y-3 rounded-lg border p-4"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (reason.trim().length < 3) {
+                setWithdrawError("Enter at least 3 characters for the reason.");
+                return;
+              }
+              try {
+                await withdraw.mutateAsync({
+                  id: withdrawTarget.id,
+                  reason: reason.trim(),
+                });
                 setWithdrawTarget(undefined);
                 setReason("");
                 setWithdrawError("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="danger"
-              disabled={withdraw.isPending}
-            >
-              {withdraw.isPending ? "Withdrawing…" : "Confirm withdrawal"}
-            </Button>
-          </div>
-        </form>
-      ) : null}
-      <form
-        className="mb-4 flex flex-col gap-2 sm:flex-row"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setQuery(draftQuery.trim());
-          setPage(1);
-        }}
-      >
-        <Input
-          aria-label="Search employees"
-          placeholder="Search employee name, email, or code"
-          value={draftQuery}
-          onChange={(event) => setDraftQuery(event.target.value)}
-        />
-        <Select
-          aria-label="Filter completion status"
-          value={status}
-          onChange={(event) => {
-            setStatus(event.target.value as CompletionStatus);
+                toast.success(
+                  "Assignment withdrawn",
+                  "Assessment access is blocked. History and results are preserved.",
+                );
+              } catch {
+                setWithdrawError(
+                  "Unable to withdraw this assignment. Refresh and try again.",
+                );
+              }
+            }}
+          >
+            <h3 className="font-semibold">
+              Withdraw assignment: {withdrawTarget.name}
+            </h3>
+            <p className="text-muted text-sm">
+              This employee will no longer be able to take the assessment.
+              Existing history and results will remain.
+            </p>
+            <label className="block text-sm" htmlFor="withdraw-reason">
+              Reason for withdrawal
+            </label>
+            <Textarea
+              id="withdraw-reason"
+              value={reason}
+              maxLength={500}
+              onChange={(event) => setReason(event.target.value)}
+            />
+            {withdrawError ? <Alert>{withdrawError}</Alert> : null}
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={withdraw.isPending}
+                onClick={() => {
+                  setWithdrawTarget(undefined);
+                  setReason("");
+                  setWithdrawError("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="danger"
+                disabled={withdraw.isPending}
+              >
+                {withdraw.isPending ? "Withdrawing…" : "Confirm withdrawal"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+        <form
+          className="mb-4 flex flex-col gap-2 sm:flex-row"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setQuery(draftQuery.trim());
             setPage(1);
           }}
         >
-          <option value="all">All statuses</option>
-          <option value="assigned">Not started</option>
-          <option value="in_progress">In progress</option>
-          <option value="completed">Completed</option>
-          <option value="overdue">Overdue</option>
-          <option value="withdrawn">Withdrawn</option>
-        </Select>
-        <Button type="submit">Search</Button>
-      </form>
-      {detail.isPending ? (
-        <TableSkeleton
-          headers={[
-            "Employee",
-            "Status",
-            "Progress",
-            "Last activity",
-            ...(canWithdraw ? ["Actions"] : []),
-          ]}
-          rows={5}
-          label="Loading employee completion"
-        />
-      ) : detail.isError ? (
-        <Alert>Unable to load campaign details.</Alert>
-      ) : rows.length === 0 ? (
-        <p className="text-muted py-10 text-center text-sm">
-          No employees match these filters.
-        </p>
-      ) : (
-        <DataTable
-          rows={rows}
-          getRowKey={(item) => item.id}
-          columns={[
-            {
-              key: "employee",
-              header: "Employee",
-              cell: (item) => (
-                <span>
-                  <strong className="block">{item.user.name}</strong>
-                  <span className="text-muted text-xs">
-                    {item.user.email}
-                    {item.user.employeeCode
-                      ? ` · ${item.user.employeeCode}`
-                      : ""}
-                  </span>
-                </span>
-              ),
-            },
-            {
-              key: "status",
-              header: "Status",
-              cell: (item) => (
-                <StatusBadge
-                  tone={
-                    item.status === "completed"
-                      ? "success"
-                      : item.status === "overdue"
-                        ? "danger"
-                        : "neutral"
-                  }
-                >
-                  {item.status.replace("_", " ")}
-                </StatusBadge>
-              ),
-            },
-            {
-              key: "progress",
-              header: "Progress",
-              cell: (item) => `${item.progressPercent}%`,
-            },
-            {
-              key: "activity",
-              header: "Last activity",
-              cell: (item) =>
-                item.lastAccessedAt ? date(item.lastAccessedAt) : "Never",
-            },
-            ...(canWithdraw
-              ? [
-                  {
-                    key: "actions",
-                    header: "Actions",
-                    cell: (item: (typeof rows)[number]) =>
-                      item.status !== "completed" &&
-                      item.status !== "withdrawn" ? (
-                        <Button
-                          variant="secondary"
-                          disabled={withdraw.isPending}
-                          onClick={() => {
-                            setWithdrawTarget({
-                              id: item.id,
-                              name: item.user.name,
-                            });
-                            setReason("");
-                            setWithdrawError("");
-                          }}
-                        >
-                          Withdraw
-                        </Button>
-                      ) : null,
-                  },
-                ]
-              : []),
-          ]}
-        />
-      )}
-      {detail.data ? (
-        <div className="border-border mt-4 border-t pt-4">
-          <Pagination
-            page={detail.data.pagination.page}
-            pageCount={detail.data.pagination.totalPages}
-            onPageChange={setPage}
+          <Input
+            aria-label="Search employees"
+            placeholder="Search employee name, email, or code"
+            value={draftQuery}
+            onChange={(event) => setDraftQuery(event.target.value)}
           />
-        </div>
-      ) : null}
+          <Select
+            aria-label="Filter completion status"
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value as CompletionStatus);
+              setPage(1);
+            }}
+          >
+            <option value="all">All statuses</option>
+            <option value="assigned">Not started</option>
+            <option value="in_progress">In progress</option>
+            <option value="completed">Completed</option>
+            <option value="overdue">Overdue</option>
+            <option value="withdrawn">Withdrawn</option>
+          </Select>
+          <Button type="submit">Search</Button>
+        </form>
+        {detail.isPending ? (
+          <TableSkeleton
+            headers={[
+              "Employee",
+              "Status",
+              "Progress",
+              "Last activity",
+              "Certificate",
+              ...(canWithdraw ? ["Actions"] : []),
+            ]}
+            rows={5}
+            label="Loading employee completion"
+          />
+        ) : detail.isError ? (
+          <Alert>Unable to load campaign details.</Alert>
+        ) : rows.length === 0 ? (
+          <p className="text-muted py-10 text-center text-sm">
+            No employees match these filters.
+          </p>
+        ) : (
+          <DataTable
+            rows={rows}
+            getRowKey={(item) => item.id}
+            columns={[
+              {
+                key: "employee",
+                header: "Employee",
+                cell: (item) => (
+                  <span>
+                    <strong className="block">{item.user.name}</strong>
+                    <span className="text-muted text-xs">
+                      {item.user.email}
+                      {item.user.employeeCode
+                        ? ` · ${item.user.employeeCode}`
+                        : ""}
+                    </span>
+                  </span>
+                ),
+              },
+              {
+                key: "status",
+                header: "Status",
+                cell: (item) => (
+                  <StatusBadge
+                    tone={
+                      item.status === "completed"
+                        ? "success"
+                        : item.status === "overdue"
+                          ? "danger"
+                          : "neutral"
+                    }
+                  >
+                    {item.status.replace("_", " ")}
+                  </StatusBadge>
+                ),
+              },
+              {
+                key: "progress",
+                header: "Progress",
+                cell: (item) => `${item.progressPercent}%`,
+              },
+              {
+                key: "activity",
+                header: "Last activity",
+                cell: (item) =>
+                  item.lastAccessedAt ? date(item.lastAccessedAt) : "Never",
+              },
+              {
+                key: "certificate",
+                header: "Certificate",
+                cell: (item) =>
+                  item.certificateNumber ||
+                  (item.status === "completed" && canIssue) ? (
+                    <Button
+                      variant={item.certificateNumber ? "secondary" : "primary"}
+                      onClick={(event) => {
+                        certificateTrigger.current = event.currentTarget;
+                        setCertificateId(item.id);
+                      }}
+                      disabled={issuingCertificate}
+                    >
+                      {item.certificateNumber ? (
+                        <Eye
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                      ) : (
+                        <Award
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                      )}
+                      {item.certificateNumber
+                        ? "View certificate"
+                        : "Issue certificate"}
+                    </Button>
+                  ) : (
+                    <span className="text-muted">
+                      {item.status === "completed"
+                        ? "Not issued"
+                        : "Not eligible"}
+                    </span>
+                  ),
+              },
+              ...(canWithdraw
+                ? [
+                    {
+                      key: "actions",
+                      header: "Actions",
+                      cell: (item: (typeof rows)[number]) =>
+                        item.status !== "completed" &&
+                        item.status !== "withdrawn" ? (
+                          <Button
+                            variant="danger"
+                            disabled={withdraw.isPending}
+                            onClick={() => {
+                              setWithdrawTarget({
+                                id: item.id,
+                                name: item.user.name,
+                              });
+                              setReason("");
+                              setWithdrawError("");
+                            }}
+                          >
+                            <UserMinus
+                              aria-hidden="true"
+                              className="size-4"
+                              strokeWidth={1.8}
+                            />
+                            Withdraw
+                          </Button>
+                        ) : null,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        )}
+        {detail.data ? (
+          <div className="border-border mt-4 border-t pt-4">
+            <Pagination
+              page={detail.data.pagination.page}
+              pageCount={detail.data.pagination.totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : null}
+      </div>
       <div className="mt-5 flex justify-end">
-        <Button variant="secondary" onClick={close}>
+        <Button
+          variant="secondary"
+          disabled={issuingCertificate || withdraw.isPending}
+          onClick={close}
+        >
           Close
         </Button>
       </div>

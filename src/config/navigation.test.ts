@@ -71,14 +71,14 @@ describe("panel navigation", () => {
       true,
     );
   });
-  it("shows policy navigation to employees who can acknowledge policies", () => {
+  it("shows policy navigation to every authenticated role for version history", () => {
     const policies = getPanelNavigation("dashboard").find(
       (item) => item.href === "/policies",
     );
     expect(policies).toBeDefined();
     if (!policies) return;
 
-    expect(canAccessNavigationItem([], policies)).toBe(false);
+    expect(canAccessNavigationItem([], policies)).toBe(true);
     expect(canAccessNavigationItem(["policies.acknowledge"], policies)).toBe(
       true,
     );

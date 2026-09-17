@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  createApiKeyFormSchema,
   createIntegrationFormSchema,
   createSyncScheduleFormSchema,
+  deriveApiKeyStatus,
   integrationListSchema,
   integrationSchema,
   testConnectionResultSchema,
@@ -121,5 +123,45 @@ describe("integration-schema", () => {
     });
     expect(valid.name).toBe("Updated SIEM");
     expect(valid.status).toBe("inactive");
+  });
+
+  it("validates and rejects past dates in createApiKeyFormSchema", () => {
+    const futureDate = new Date(Date.now() + 86400000).toISOString();
+    const valid = createApiKeyFormSchema.parse({
+      keyName: "New Production Key",
+      expiresAt: futureDate,
+      isActive: true,
+    });
+    expect(valid.keyName).toBe("New Production Key");
+    expect(valid.isActive).toBe(true);
+
+    const defaultInactive = createApiKeyFormSchema.parse({
+      keyName: "Default Inactive Key",
+    });
+    expect(defaultInactive.isActive).toBe(false);
+
+    const pastDate = new Date(Date.now() - 3600000).toISOString();
+    expect(() =>
+      createApiKeyFormSchema.parse({
+        keyName: "Past Key",
+        expiresAt: pastDate,
+      }),
+    ).toThrow();
+  });
+
+  it("correctly derives ApiKeyStatus with deriveApiKeyStatus helper", () => {
+    // 1. Expired key
+    const pastDate = new Date(Date.now() - 60000).toISOString();
+    expect(deriveApiKeyStatus(true, pastDate)).toBe("EXPIRED");
+    expect(deriveApiKeyStatus(false, pastDate)).toBe("EXPIRED");
+
+    // 2. Active key
+    const futureDate = new Date(Date.now() + 86400000).toISOString();
+    expect(deriveApiKeyStatus(true, futureDate)).toBe("ACTIVE");
+    expect(deriveApiKeyStatus(true, null)).toBe("ACTIVE");
+
+    // 3. Inactive key
+    expect(deriveApiKeyStatus(false, futureDate)).toBe("INACTIVE");
+    expect(deriveApiKeyStatus(false, null)).toBe("INACTIVE");
   });
 });

@@ -35,6 +35,8 @@ export async function createCourse(input: CreateCourseInput) {
         title: parsed.title,
         description: parsed.description || null,
         content: parsed.content,
+        status: parsed.status,
+        ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
       },
     }),
   );
@@ -54,7 +56,11 @@ export async function getAssignmentOptions(
   );
 }
 
-export async function assignCourse(courseId: string, input: AssignCourseInput) {
+export async function assignCourse(
+  courseId: string,
+  input: AssignCourseInput,
+  createNewCampaign: boolean,
+) {
   return courseAssignmentSchema.parse(
     await apiRequest<unknown>(
       `/api/training/courses/${encodeURIComponent(courseId)}/assignments`,
@@ -63,6 +69,7 @@ export async function assignCourse(courseId: string, input: AssignCourseInput) {
         target: "same-origin",
         body: {
           ...assignCourseSchema.parse(input),
+          createNewCampaign,
           changeReason: input.changeReason?.trim() || undefined,
         },
       },

@@ -8,6 +8,7 @@ describe("createCourseSchema", () => {
         title: "Phishing basics",
         description: "",
         content: "Learn to identify phishing emails.",
+        status: "draft",
       }).title,
     ).toBe("Phishing basics");
   });
@@ -17,8 +18,34 @@ describe("createCourseSchema", () => {
         title: "Phishing",
         description: "",
         content: " ",
+        status: "draft",
       }).success,
     ).toBe(false);
+  });
+  it("validates the post-training assessment and its correct answer", () => {
+    const course = {
+      title: "Phishing basics",
+      description: "",
+      content: "Learn to identify phishing emails.",
+      status: "published" as const,
+      assessment: {
+        title: "Phishing assessment",
+        passingScore: 80,
+        maxAttempts: 3,
+        questions: [
+          {
+            text: "Which message is suspicious?",
+            options: [
+              { text: "Unexpected reset link", isCorrect: true },
+              { text: "Expected notice", isCorrect: false },
+            ],
+          },
+        ],
+      },
+    };
+    expect(createCourseSchema.safeParse(course).success).toBe(true);
+    course.assessment.questions[0]!.options[1]!.isCorrect = true;
+    expect(createCourseSchema.safeParse(course).success).toBe(false);
   });
 });
 

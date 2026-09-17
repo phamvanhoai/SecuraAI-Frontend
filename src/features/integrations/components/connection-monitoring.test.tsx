@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { ConnectionMonitoringHeader } from "./connection-monitoring-header";
 import { ConnectionStatusTable } from "./connection-status-table";
@@ -28,6 +28,11 @@ function createTestWrapper() {
 describe("Connection Monitoring UI Components", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
   });
 
   describe("ConnectionMonitoringHeader", () => {
@@ -134,12 +139,11 @@ describe("Connection Monitoring UI Components", () => {
     };
 
     it("renders connection telemetry and allows submitting manual probe", async () => {
-      global.fetch = vi.fn().mockImplementation((url: string) => {
+      global.fetch = vi.fn().mockImplementation((urlInput: RequestInfo | URL) => {
+        const url = typeof urlInput === "string" ? urlInput : urlInput.toString();
         if (url.includes("connection-status")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            text: async () =>
+          return Promise.resolve(
+            new Response(
               JSON.stringify({
                 success: true,
                 data: {
@@ -158,14 +162,14 @@ describe("Connection Monitoring UI Components", () => {
                   recentLogs: [],
                 },
               }),
-          } as Response);
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            ),
+          );
         }
 
         if (url.includes("test-connection")) {
-          return Promise.resolve({
-            ok: true,
-            status: 200,
-            text: async () =>
+          return Promise.resolve(
+            new Response(
               JSON.stringify({
                 success: true,
                 data: {
@@ -175,7 +179,9 @@ describe("Connection Monitoring UI Components", () => {
                   message: "Connection established successfully",
                 },
               }),
-          } as Response);
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            ),
+          );
         }
 
         return Promise.reject(new Error("Unknown route"));
@@ -187,14 +193,14 @@ describe("Connection Monitoring UI Components", () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText("Thực hiện kiểm tra kết nối trực tiếp (Manual Probe)")).toBeDefined();
+        expect(screen.getByText("Active Manual Connection Probe")).toBeDefined();
       });
 
-      const submitBtn = screen.getByText("Kiểm tra ngay");
+      const submitBtn = screen.getByText("Test Connection Now");
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
-        expect(screen.getByText("Kết nối thành công (Healthy)")).toBeDefined();
+        expect(screen.getByText("Connection Healthy (Success)")).toBeDefined();
       });
     });
   });

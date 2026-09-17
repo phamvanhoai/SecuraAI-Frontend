@@ -52,8 +52,11 @@ export function ApiKeyModal({
       ? apiKey.expiresAt.slice(0, 16)
       : "",
   );
+  const [minExpiryDateTime] = useState(() =>
+    new Date(Date.now() + 60000).toISOString().slice(0, 16),
+  );
   const [isActive, setIsActive] = useState(
-    mode === "edit" && apiKey ? apiKey.isActive : true,
+    mode === "edit" && apiKey ? apiKey.isActive : false,
   );
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -82,14 +85,14 @@ export function ApiKeyModal({
     const formattedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : null;
 
     if (formattedExpiresAt && new Date(formattedExpiresAt).getTime() <= Date.now()) {
-      setFormError("Ngày hết hạn phải ở tương lai.");
+      setFormError("Expiration date must be in the future.");
       return;
     }
 
     try {
       if (mode === "create") {
         if (!keyName.trim()) {
-          setFormError("Tên khóa không được để trống.");
+          setFormError("Key identifier name is required.");
           return;
         }
 
@@ -103,12 +106,12 @@ export function ApiKeyModal({
           },
         });
 
-        toast.success("Tạo API Key thành công");
+        toast.success("API key created successfully");
         onOpenChange(false);
         onSecretGenerated(result.keyName, result.secret);
       } else if (mode === "edit" && apiKey) {
         if (!keyName.trim()) {
-          setFormError("Tên khóa không được để trống.");
+          setFormError("Key identifier name is required.");
           return;
         }
 
@@ -122,7 +125,7 @@ export function ApiKeyModal({
           },
         });
 
-        toast.success("Cập nhật API Key thành công");
+        toast.success("API key updated successfully");
         onOpenChange(false);
       } else if (mode === "rotate" && apiKey) {
         const result = await rotateMutation.mutateAsync({
@@ -133,7 +136,7 @@ export function ApiKeyModal({
           },
         });
 
-        toast.success("Luân chuyển Secret thành công");
+        toast.success("Secret token rotated successfully");
         onOpenChange(false);
         onSecretGenerated(result.keyName, result.secret);
       }
@@ -141,7 +144,7 @@ export function ApiKeyModal({
       if (err instanceof ApiError) {
         setFormError(err.message);
       } else {
-        setFormError("Đã xảy ra lỗi khi lưu API Key. Vui lòng thử lại.");
+        setFormError("An error occurred while saving the API key. Please try again.");
       }
     }
   }
@@ -174,20 +177,20 @@ export function ApiKeyModal({
             <div>
               <h3 id="api-key-modal-title" className="text-sm font-semibold tracking-tight">
                 {mode === "create"
-                  ? "Tạo mới API Key"
+                  ? "Create New API Key"
                   : mode === "rotate"
-                    ? "Luân chuyển (Rotate) API Key"
-                    : "Chỉnh sửa API Key"}
+                    ? "Rotate API Key Secret"
+                    : "Edit API Key"}
               </h3>
               <p className="text-muted text-xs">
                 {mode === "rotate"
-                  ? `Cập nhật secret token mới cho "${apiKey?.keyName}"`
-                  : "Cấu hình khóa xác thực cho kết nối tích hợp"}
+                  ? `Generate a new secret token for "${apiKey?.keyName}"`
+                  : "Configure authentication credentials for this integration endpoint"}
               </p>
             </div>
           </div>
           <button
-            aria-label="Đóng"
+            aria-label="Close"
             className="text-muted hover:text-foreground rounded p-1"
             onClick={() => onOpenChange(false)}
             type="button"
@@ -206,21 +209,21 @@ export function ApiKeyModal({
 
         {mode === "rotate" ? (
           <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-200">
-            Luân chuyển secret token sẽ thay thế khóa hiện tại bằng khóa mới. Secret mới sẽ chỉ hiển thị một lần sau khi luân chuyển thành công.
+            Rotating the secret token will invalidate the current key immediately. The new secret will be displayed once upon completion.
           </Alert>
         ) : null}
 
         {mode !== "rotate" ? (
           <div className="space-y-1.5">
             <Label className="text-xs" htmlFor="key-name-input">
-              Tên định danh khóa <span className="text-danger">*</span>
+              Key Identifier Name <span className="text-danger">*</span>
             </Label>
             <Input
               className="text-xs"
               id="key-name-input"
               maxLength={100}
               onChange={(e) => setKeyName(e.target.value)}
-              placeholder="Ví dụ: Wazuh Manager HEC Token"
+              placeholder="e.g., Wazuh Manager HEC Token"
               required
               value={keyName}
             />
@@ -231,7 +234,7 @@ export function ApiKeyModal({
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label className="text-xs" htmlFor="secret-input">
-                {mode === "rotate" ? "Secret Token mới" : "Secret Token (Tùy chọn)"}
+                {mode === "rotate" ? "New Secret Token" : "Secret Token (Optional)"}
               </Label>
               <button
                 className="text-brand hover:text-brand-hover inline-flex items-center gap-1 text-[11px] font-medium"
@@ -239,7 +242,7 @@ export function ApiKeyModal({
                 type="button"
               >
                 <Sparkles className="size-3" />
-                Sinh ngẫu nhiên
+                Auto-generate
               </button>
             </div>
             <Input
@@ -247,12 +250,12 @@ export function ApiKeyModal({
               id="secret-input"
               maxLength={1000}
               onChange={(e) => setSecret(e.target.value)}
-              placeholder="Để trống để hệ thống tự động sinh khóa bảo mật"
+              placeholder="Leave blank to auto-generate a secure token"
               type="text"
               value={secret}
             />
             <p className="text-muted text-[11px]">
-              Nếu để trống, máy chủ sẽ tự động tạo một chuỗi khóa bảo mật ngẫu nhiên 192-bit.
+              If left empty, a cryptographically secure 192-bit token will be generated automatically.
             </p>
           </div>
         ) : null}
@@ -261,17 +264,18 @@ export function ApiKeyModal({
           <>
             <div className="space-y-1.5">
               <Label className="text-xs" htmlFor="expires-at-input">
-                Thời điểm hết hạn (Tùy chọn)
+                Expiration Date (Optional)
               </Label>
               <Input
                 className="text-xs"
                 id="expires-at-input"
+                min={minExpiryDateTime}
                 onChange={(e) => setExpiresAt(e.target.value)}
                 type="datetime-local"
                 value={expiresAt}
               />
               <p className="text-muted text-[11px]">
-                Để trống nếu muốn khóa không bao giờ hết hạn.
+                Expiration must be in the future. Leave empty for a non-expiring key.
               </p>
             </div>
 
@@ -284,7 +288,7 @@ export function ApiKeyModal({
                 type="checkbox"
               />
               <Label className="text-xs cursor-pointer font-normal" htmlFor="is-active-input">
-                Kích hoạt API Key ngay sau khi lưu
+                Activate API Key immediately upon creation
               </Label>
             </div>
           </>
@@ -296,7 +300,7 @@ export function ApiKeyModal({
             onClick={() => onOpenChange(false)}
             type="button"
           >
-            Hủy
+            Cancel
           </Button>
           <Button
             className="min-h-8 px-4 text-xs"
@@ -304,12 +308,12 @@ export function ApiKeyModal({
             type="submit"
           >
             {isPending
-              ? "Đang lưu..."
+              ? "Saving..."
               : mode === "create"
-                ? "Tạo API Key"
+                ? "Create API Key"
                 : mode === "rotate"
-                  ? "Xác nhận Luân chuyển"
-                  : "Lưu thay đổi"}
+                  ? "Confirm Rotation"
+                  : "Save Changes"}
           </Button>
         </div>
       </form>

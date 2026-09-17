@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Search } from "lucide-react";
+import { Eye, History, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -30,7 +30,11 @@ import type {
   EmployeePolicyQuery,
 } from "../schemas/policy-acknowledgement-schema";
 const initial: EmployeePolicyQuery = { page: 1, limit: 20, status: "all" };
-export function EmployeePolicyAcknowledgementManager() {
+export function EmployeePolicyAcknowledgementManager({
+  onViewHistory,
+}: {
+  onViewHistory?: () => void;
+}) {
   const session = useSessionUser();
   const allowed =
     session.data?.permissions.includes("policies.acknowledge") ?? false;
@@ -134,6 +138,14 @@ export function EmployeePolicyAcknowledgementManager() {
         title="Policies requiring acknowledgement"
         description="Read policies applicable to your department and confirm your understanding."
         showSampleNotice={false}
+        additionalActions={
+          onViewHistory ? (
+            <Button variant="secondary" onClick={onViewHistory}>
+              <History aria-hidden="true" className="size-4" />
+              View version history
+            </Button>
+          ) : undefined
+        }
       />
       <ProductPanel
         title="Applicable policies"
@@ -147,20 +159,21 @@ export function EmployeePolicyAcknowledgementManager() {
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submit}
         >
-          <label className="relative flex-1">
+          <label className="relative min-w-0 flex-1">
             <span className="sr-only">Search policies</span>
             <Search
               aria-hidden="true"
               className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
             />
             <Input
-              className="pl-9"
+              className="w-full pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search policies"
             />
           </label>
           <Select
+            className="w-full sm:w-52"
             aria-label="Reading status"
             value={query.status}
             onChange={(e) =>

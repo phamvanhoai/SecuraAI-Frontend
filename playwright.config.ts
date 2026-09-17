@@ -5,7 +5,13 @@ const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
-  use: { baseURL, trace: "on-first-retry" },
+  use: {
+    baseURL,
+    trace: "on-first-retry",
+    ...(process.env.PLAYWRIGHT_CHANNEL
+      ? { channel: process.env.PLAYWRIGHT_CHANNEL }
+      : {}),
+  },
   webServer: {
     command: `corepack pnpm dev --port ${port}`,
     url: `${baseURL}/login`,

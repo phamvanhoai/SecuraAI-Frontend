@@ -12,10 +12,11 @@ export function useCompletionCampaigns(
   page: number,
   q: string,
   enabled: boolean,
+  courseId?: string,
 ) {
   return useQuery({
-    queryKey: ["training", "completion", page, q],
-    queryFn: ({ signal }) => listCompletionCampaigns(page, q, signal),
+    queryKey: ["training", "completion", page, q, courseId],
+    queryFn: ({ signal }) => listCompletionCampaigns(page, q, signal, courseId),
     enabled,
   });
 }
@@ -31,7 +32,6 @@ export function useCompletionCampaign(
     queryFn: ({ signal }) =>
       getCompletionCampaign(campaignId ?? "", page, q, status, signal),
     enabled: Boolean(campaignId),
-    placeholderData: (previous) => previous,
   });
 }
 export function useWithdrawEnrollment() {

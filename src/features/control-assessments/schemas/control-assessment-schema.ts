@@ -21,10 +21,6 @@ export const createAssessmentSchema = z.object({
   score: z.number().min(0).max(100).nullable().optional(),
   notes: z.string().trim().max(5000).nullable().optional(),
   nextReviewAt: z.string().datetime({ offset: true }).nullable().optional(),
-}).superRefine((value, context) => {
-  const score = value.score;
-  const invalid = value.complianceStatus === "not_assessed" ? score != null : value.complianceStatus === "compliant" ? score == null || score < 80 : value.complianceStatus === "partially_compliant" ? score == null || score < 40 || score >= 80 : score == null || score >= 40;
-  if (invalid) context.addIssue({ code: "custom", path: ["score"], message: "Score must match the selected compliance status" });
 });
 export type ControlAssessmentList = z.infer<typeof controlAssessmentListSchema>;
 export type ControlAssessmentItem = ControlAssessmentList["items"][number];

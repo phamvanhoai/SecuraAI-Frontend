@@ -42,10 +42,10 @@ describe("OneTimeSecretDialog", () => {
     expect(screen.getByText("API Key Secret Token")).toBeInTheDocument();
     expect(screen.getByDisplayValue("sec_test_secret_12345")).toBeInTheDocument();
     expect(
-      screen.getByText(/không thể xem lại/i),
+      screen.getByText(/not be able to view/i),
     ).toBeInTheDocument();
 
-    const copyBtn = screen.getByRole("button", { name: /sao chép/i });
+    const copyBtn = screen.getByRole("button", { name: /copy/i });
     fireEvent.click(copyBtn);
 
     expect(writeTextMock).toHaveBeenCalledWith("sec_test_secret_12345");
@@ -140,9 +140,9 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("sec_c3d4...8y1")).toBeInTheDocument();
       expect(screen.getByText("sec_e5f6...7x2")).toBeInTheDocument();
 
-      expect(screen.getAllByText("Hoạt động").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Vô hiệu hóa").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText("Đã hết hạn")).toBeInTheDocument();
+      expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Inactive").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Expired").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -172,7 +172,7 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Tìm kiếm theo tên khóa...");
+    const searchInput = screen.getByPlaceholderText("Search by key name or fingerprint...");
     fireEvent.change(searchInput, { target: { value: "Staging" } });
 
     await waitFor(() => {
@@ -182,7 +182,66 @@ describe("ApiKeysTab", () => {
     });
   });
 
-  it("opens Create API Key modal when click Thêm API Key mới", async () => {
+  it("filters keys by status buttons (Active, Inactive, Expired, All)", async () => {
+    fetchMock.mockImplementation(() => {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: mockApiKeys }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
+      expect(screen.getByText("Staging Test Key")).toBeInTheDocument();
+      expect(screen.getByText("Old Firewall Key")).toBeInTheDocument();
+    });
+
+    // Filter "Active"
+    const activeFilterBtn = screen.getByRole("button", { name: /^active$/i });
+    fireEvent.click(activeFilterBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
+      expect(screen.queryByText("Staging Test Key")).not.toBeInTheDocument();
+      expect(screen.queryByText("Old Firewall Key")).not.toBeInTheDocument();
+    });
+
+    // Filter "Inactive"
+    const inactiveFilterBtn = screen.getByRole("button", { name: /^inactive$/i });
+    fireEvent.click(inactiveFilterBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Production Ingestion Key")).not.toBeInTheDocument();
+      expect(screen.getByText("Staging Test Key")).toBeInTheDocument();
+      expect(screen.queryByText("Old Firewall Key")).not.toBeInTheDocument();
+    });
+
+    // Filter "Expired"
+    const expiredFilterBtn = screen.getByRole("button", { name: /^expired$/i });
+    fireEvent.click(expiredFilterBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Production Ingestion Key")).not.toBeInTheDocument();
+      expect(screen.queryByText("Staging Test Key")).not.toBeInTheDocument();
+      expect(screen.getByText("Old Firewall Key")).toBeInTheDocument();
+    });
+
+    // Filter "All"
+    const allFilterBtn = screen.getByRole("button", { name: /^all$/i });
+    fireEvent.click(allFilterBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
+      expect(screen.getByText("Staging Test Key")).toBeInTheDocument();
+      expect(screen.getByText("Old Firewall Key")).toBeInTheDocument();
+    });
+  });
+
+  it("opens Create API Key modal when click Generate API Key", async () => {
     fetchMock.mockImplementation(() => {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [] }), {
@@ -195,14 +254,14 @@ describe("ApiKeysTab", () => {
     renderComponent();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /thêm api key mới/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /generate api key/i })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /thêm api key mới/i }));
+    fireEvent.click(screen.getByRole("button", { name: /generate api key/i }));
 
-    expect(screen.getByText("Tạo mới API Key")).toBeInTheDocument();
-    expect(screen.getByLabelText(/tên định danh khóa/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^tạo api key$/i })).toBeInTheDocument();
+    expect(screen.getByText("Create New API Key")).toBeInTheDocument();
+    expect(screen.getByLabelText(/key identifier name/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^create api key$/i })).toBeInTheDocument();
   });
 
   it("revokes an active API key after confirmation", async () => {
@@ -241,17 +300,17 @@ describe("ApiKeysTab", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: `Thu hồi API key ${mockApiKeys[0]!.keyName}` }),
+        screen.getByRole("button", { name: `Revoke API key ${mockApiKeys[0]!.keyName}` }),
       ).toBeInTheDocument();
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: `Thu hồi API key ${mockApiKeys[0]!.keyName}` }),
+      screen.getByRole("button", { name: `Revoke API key ${mockApiKeys[0]!.keyName}` }),
     );
 
-    expect(screen.getByText("Xác nhận thu hồi API Key")).toBeInTheDocument();
+    expect(screen.getByText("Confirm API Key Revocation")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /xác nhận thu hồi/i }));
+    fireEvent.click(screen.getByRole("button", { name: /confirm revocation/i }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -296,12 +355,12 @@ describe("ApiKeysTab", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: `Kích hoạt lại API key ${mockApiKeys[1]!.keyName}` }),
+        screen.getByRole("button", { name: `Reactivate API key ${mockApiKeys[1]!.keyName}` }),
       ).toBeInTheDocument();
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: `Kích hoạt lại API key ${mockApiKeys[1]!.keyName}` }),
+      screen.getByRole("button", { name: `Reactivate API key ${mockApiKeys[1]!.keyName}` }),
     );
 
     await waitFor(() => {
