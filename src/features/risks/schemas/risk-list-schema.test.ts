@@ -10,6 +10,7 @@ import {
 } from "./create-risk-assessment-schema";
 import { updateRiskAssessmentRequestSchema } from "./update-risk-assessment-schema";
 import { cancelRiskAssessmentRequestSchema } from "./cancel-risk-assessment-schema";
+import { submitTreatmentPlanRequestSchema } from "./submit-treatment-plan-schema";
 
 describe("risk list schemas", () => {
   it("uses ten rows and newest updates by default", () => {
@@ -93,6 +94,19 @@ describe("cancel risk assessment schema", () => {
         expectedUpdatedAt: "2026-09-15T10:00:00.000Z",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("submit treatment plan schema", () => {
+  it("requires concurrency data and normalizes the optional submission note", () => {
+    const parsed = submitTreatmentPlanRequestSchema.safeParse({
+      expectedUpdatedAt: "2026-09-16T10:00:00.000Z",
+      submissionNote: "  Ready\n for executive review. ",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success)
+      expect(parsed.data.submissionNote).toBe("Ready for executive review.");
+    expect(submitTreatmentPlanRequestSchema.safeParse({}).success).toBe(false);
   });
 });
 

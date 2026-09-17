@@ -166,21 +166,19 @@ export function EditRiskAssessmentDialog({
       expectedUpdatedAt: values.expectedUpdatedAt,
       threats: values.threatIds.map((threatId) => ({
         threatId,
-        notes:
-          threatNotes[threatId]?.trim() ||
-          detail.data.threats
-            .find(({ id: linkedId }) => linkedId === threatId)
-            ?.notes?.trim() ||
-          null,
+        notes: Object.hasOwn(threatNotes, threatId)
+          ? threatNotes[threatId]?.trim() || null
+          : detail.data.threats
+              .find(({ id: linkedId }) => linkedId === threatId)
+              ?.notes?.trim() || null,
       })),
       vulnerabilities: values.vulnerabilityIds.map((vulnerabilityId) => ({
         vulnerabilityId,
-        notes:
-          vulnerabilityNotes[vulnerabilityId]?.trim() ||
-          detail.data.vulnerabilities
-            .find(({ id: linkedId }) => linkedId === vulnerabilityId)
-            ?.notes?.trim() ||
-          null,
+        notes: Object.hasOwn(vulnerabilityNotes, vulnerabilityId)
+          ? vulnerabilityNotes[vulnerabilityId]?.trim() || null
+          : detail.data.vulnerabilities
+              .find(({ id: linkedId }) => linkedId === vulnerabilityId)
+              ?.notes?.trim() || null,
       })),
       ...(values.targetType === "asset" && values.assetId
         ? { assetId: values.assetId }

@@ -1,9 +1,13 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useSessionUser } from "@/features/auth";
 import { useRiskAssessmentDetail } from "../hooks/use-risk-assessment-detail";
+import type { RiskDetail } from "../schemas/risk-detail-schema";
+import { SubmitTreatmentPlanDialog } from "./submit-treatment-plan-dialog";
+import { ApproveTreatmentPlanDialog } from "./approve-treatment-plan-dialog";
 
 const formatDate = (value: string | null): string =>
   value
@@ -27,6 +31,47 @@ const Detail = ({
   </div>
 );
 
+function submissionIssues(
+  plan: RiskDetail["treatmentPlans"][number],
+  riskStatus: RiskDetail["assessment"]["status"],
+): string[] {
+  const issues: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDate = plan.targetDate ? new Date(plan.targetDate) : null;
+  if (!["approved", "in_treatment"].includes(riskStatus))
+    issues.push("The risk assessment is not approved.");
+  if (plan.description.trim().length < 10)
+    issues.push("Add a meaningful plan description.");
+  if (!plan.owner || plan.owner.inactive)
+    issues.push("Assign an active plan owner.");
+  if (!targetDate) issues.push("Set a target date.");
+  else if (targetDate < today) issues.push("The target date is in the past.");
+  const actions = plan.actions.filter(({ status }) => status !== "cancelled");
+  if (plan.strategy !== "accept" && actions.length === 0)
+    issues.push("This strategy requires an active treatment action.");
+  if (actions.some(({ assignee }) => !assignee || assignee.inactive))
+    issues.push("Every action needs an active assignee.");
+  if (actions.some(({ dueDate }) => !dueDate))
+    issues.push("Every action needs a due date.");
+  if (
+    targetDate &&
+    actions.some(
+      ({ dueDate }) =>
+        dueDate !== null &&
+        (new Date(dueDate) < today || new Date(dueDate) > targetDate),
+    )
+  )
+    issues.push("Action due dates must be current and before the target date.");
+  if (
+    actions.some(
+      ({ status, progressPercent }) => status !== "pending" || progressPercent !== 0,
+    )
+  )
+    issues.push("Actions must be pending with zero progress.");
+  return issues;
+}
+
 export function RiskAssessmentDetailDialog({
   id,
   onClose,
@@ -36,6 +81,13 @@ export function RiskAssessmentDetailDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const detail = useRiskAssessmentDetail(id);
+  const session = useSessionUser();
+  const [submittingPlan, setSubmittingPlan] = useState<
+    RiskDetail["treatmentPlans"][number] | null
+  >(null);
+  const [approvingPlan, setApprovingPlan] = useState<
+    RiskDetail["treatmentPlans"][number] | null
+  >(null);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -43,8 +95,15 @@ export function RiskAssessmentDetailDialog({
     if (!id && dialog.open) dialog.close();
   }, [id]);
   const data = detail.data;
+  const canSubmit =
+    session.data?.permissions.includes("risk-treatment-plans.submit") ?? false;
+  const canApprove =
+    session.data?.permissions.includes("risk-treatment-plans.approve") ?? false;
+  const isAdmin =
+    session.data?.roles.some(({ code }) => code === "ADMIN") ?? false;
   return (
-    <Dialog
+    <>
+      <Dialog
       title="Risk Assessment Details"
       dialogRef={ref}
       onClose={onClose}
@@ -184,7 +243,13 @@ export function RiskAssessmentDetailDialog({
               <p className="text-muted mt-2 text-sm">No treatment plan</p>
             ) : (
               <div className="mt-3 space-y-3">
-                {data.treatmentPlans.map((plan) => (
+                {data.treatmentPlans.map((plan) => {
+                  const issues = submissionIssues(plan, data.assessment.status);
+                  const canManage =
+                    isAdmin ||
+                    plan.owner?.id === session.data?.id ||
+                    plan.createdBy?.id === session.data?.id;
+                  return (
                   <article
                     className="border-border rounded-xl border p-4"
                     key={plan.id}
@@ -200,9 +265,66 @@ export function RiskAssessmentDetailDialog({
                     <p className="text-muted mt-2 text-sm">
                       {plan.description}
                     </p>
-                    <p className="text-muted mt-2 text-sm">
-                      Owner: {plan.owner?.fullName ?? "Unassigned"}
-                    </p>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-muted text-sm">
+                        Owner: {plan.owner?.fullName ?? "Unassigned"}
+                      </p>
+                      {canSubmit &&
+                      ["draft", "rejected"].includes(plan.status) &&
+                      canManage ? (
+                        <Button
+                          type="button"
+                          disabled={issues.length > 0}
+                          title={issues[0]}
+                          onClick={() => setSubmittingPlan(plan)}
+                        >
+                          Submit for approval
+                        </Button>
+                      ) : null}
+                      {canApprove &&
+                      plan.status === "pending_approval" &&
+                      plan.approval?.status === "pending" &&
+                      plan.approval.submittedBy?.id !== session.data?.id ? (
+                        <Button type="button" onClick={() => setApprovingPlan(plan)}>
+                          Review and approve
+                        </Button>
+                      ) : null}
+                    </div>
+                    {issues.length > 0 &&
+                    ["draft", "rejected"].includes(plan.status) &&
+                    canManage ? (
+                      <div className="border-warning/25 bg-warning-soft text-warning mt-3 rounded-lg border p-3 text-xs">
+                        <p className="font-medium">Not ready for submission</p>
+                        <ul className="mt-1 list-disc space-y-1 pl-4">
+                          {issues.map((issue) => (
+                            <li key={issue}>{issue}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {plan.approval ? (
+                      <div className="bg-info-soft text-info mt-3 rounded-lg p-3 text-xs">
+                        <p className="font-medium">
+                          Approval: {plan.approval.status.replaceAll("_", " ")}
+                        </p>
+                        <p className="mt-1">
+                          Step {plan.approval.currentStep}
+                          {plan.approval.currentStepName
+                            ? ` — ${plan.approval.currentStepName}`
+                            : ""}
+                          {plan.approval.approverRole
+                            ? ` · ${plan.approval.approverRole.name}`
+                            : ""}
+                        </p>
+                        <p className="mt-1">
+                          Submitted by {plan.approval.submittedBy?.fullName ?? "Unknown"} ·{" "}
+                          {formatDate(plan.approval.submittedAt)}
+                        </p>
+                        {plan.approval.submissionNote ? (
+                          <p className="mt-1">Note: {plan.approval.submissionNote}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {plan.actions.length ? (
                       <div className="mt-4 space-y-2">
                         {plan.actions.map((action) => {
@@ -244,7 +366,8 @@ export function RiskAssessmentDetailDialog({
                       </p>
                     )}
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -283,7 +406,18 @@ export function RiskAssessmentDetailDialog({
           Close
         </Button>
       </div>
-    </Dialog>
+      </Dialog>
+      <SubmitTreatmentPlanDialog
+        plan={submittingPlan}
+        riskCode={data?.assessment.riskCode ?? "Risk assessment"}
+        onClose={() => setSubmittingPlan(null)}
+      />
+      <ApproveTreatmentPlanDialog
+        plan={approvingPlan}
+        riskCode={data?.assessment.riskCode ?? "Risk assessment"}
+        onClose={() => setApprovingPlan(null)}
+      />
+    </>
   );
 }
 
