@@ -28,6 +28,15 @@ export const incidentSchema = z.object({
   occurredAt: z.string().datetime().nullable(),
   detectedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
+  classified: z.boolean(),
+  classificationCount: z.number().int().min(0),
+  lastClassification: z
+    .object({
+      classifiedAt: z.string().datetime(),
+      classifiedBy: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+      rationale: z.string().nullable(),
+    })
+    .nullable(),
 });
 export const myIncidentsSchema = z.object({
   items: z.array(incidentSchema),
@@ -38,5 +47,16 @@ export const myIncidentsSchema = z.object({
     totalPages: z.number(),
   }),
 });
+export const severitySchema = z.enum(["low", "medium", "high", "critical"]);
+export const classifyIncidentFormSchema = z.object({
+  severity: severitySchema,
+  rationale: z
+    .string()
+    .trim()
+    .min(10, "Explain the classification in at least 10 characters")
+    .max(2000),
+});
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
+export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
+export type IncidentSeverity = z.infer<typeof severitySchema>;
