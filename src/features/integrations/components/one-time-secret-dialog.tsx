@@ -45,14 +45,14 @@ export function OneTimeSecretDialog({
       await navigator.clipboard.writeText(secret);
       setCopied(true);
       toast.success(
-        "Đã sao chép Secret Token",
-        "Khóa bí mật đã được lưu vào clipboard của bạn.",
+        "Secret Token Copied",
+        "The secret token has been copied to your clipboard.",
       );
       setTimeout(() => setCopied(false), 3000);
     } catch {
       toast.error(
-        "Không thể sao chép",
-        "Vui lòng bôi đen và sao chép thủ công.",
+        "Failed to Copy",
+        "Please select and copy the text manually.",
       );
     }
   }
@@ -78,12 +78,12 @@ export function OneTimeSecretDialog({
                 API Key Secret Token
               </h3>
               <p className="text-muted text-xs">
-                Khóa: <span className="font-medium text-foreground">{keyName}</span>
+                Key: <span className="font-medium text-foreground">{keyName}</span>
               </p>
             </div>
           </div>
           <button
-            aria-label="Đóng"
+            aria-label="Close"
             className="text-muted hover:text-foreground rounded p-1"
             onClick={handleClose}
             type="button"
@@ -98,7 +98,7 @@ export function OneTimeSecretDialog({
           <div className="flex items-start gap-2">
             <ShieldAlert className="size-4 shrink-0 text-amber-400 mt-0.5" />
             <p className="text-xs leading-relaxed text-amber-200/90">
-              Sao chép Secret ngay bây giờ. Bạn sẽ <strong>không thể xem lại</strong> khóa bí mật này sau khi đóng hộp thoại.
+              Copy and store this secret securely now. You will <strong>not be able to view</strong> this secret again after closing this dialog.
             </p>
           </div>
         </Alert>
@@ -124,12 +124,12 @@ export function OneTimeSecretDialog({
               {copied ? (
                 <>
                   <Check className="mr-1 size-3 text-emerald-400" />
-                  Đã chép
+                  Copied
                 </>
               ) : (
                 <>
                   <Copy className="mr-1 size-3" />
-                  Sao chép
+                  Copy
                 </>
               )}
             </Button>
@@ -142,7 +142,7 @@ export function OneTimeSecretDialog({
             onClick={handleClose}
             type="button"
           >
-            Tôi đã lưu Secret & Đóng
+            I Have Saved the Secret & Close
           </Button>
         </div>
       </div>

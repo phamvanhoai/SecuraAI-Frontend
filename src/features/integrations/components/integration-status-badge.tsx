@@ -4,6 +4,37 @@ import type {
   IntegrationType,
 } from "../schemas/integration-schema";
 
+export function IntegrationAdminBadge({
+  isEnabled,
+}: {
+  isEnabled: boolean;
+}) {
+  return isEnabled ? (
+    <StatusBadge tone="success">Enabled</StatusBadge>
+  ) : (
+    <StatusBadge tone="neutral">Disabled</StatusBadge>
+  );
+}
+
+export function IntegrationConnectionBadge({
+  status,
+}: {
+  status: IntegrationStatus | string;
+}) {
+  switch (status) {
+    case "active":
+      return <StatusBadge tone="success">Connected</StatusBadge>;
+    case "error":
+      return <StatusBadge tone="danger">Connection Error</StatusBadge>;
+    case "pending":
+      return <StatusBadge tone="warning">Pending Probe</StatusBadge>;
+    case "inactive":
+    case "disabled":
+    default:
+      return <StatusBadge tone="neutral">Offline</StatusBadge>;
+  }
+}
+
 export function IntegrationStatusBadge({
   status,
 }: {
@@ -17,8 +48,9 @@ export function IntegrationStatusBadge({
     case "pending":
       return <StatusBadge tone="warning">Pending</StatusBadge>;
     case "inactive":
+    case "disabled":
     default:
-      return <StatusBadge tone="neutral">Inactive</StatusBadge>;
+      return <StatusBadge tone="neutral">Disabled</StatusBadge>;
   }
 }
 
@@ -47,3 +79,4 @@ export function IntegrationTypeBadge({
     </StatusBadge>
   );
 }
+

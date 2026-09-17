@@ -33,7 +33,7 @@ function LatencyPill({ latencyMs, status }: { latencyMs?: number | null | undefi
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-neutral-500/10 px-2 py-0.5 font-mono text-[11px] font-medium text-muted">
         <span className="size-1.5 rounded-full bg-muted" />
-        Chưa đo
+        Unmeasured
       </span>
     );
   }
@@ -42,7 +42,7 @@ function LatencyPill({ latencyMs, status }: { latencyMs?: number | null | undefi
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
         <span className="size-1.5 rounded-full bg-emerald-500" />
-        {latencyMs}ms (Nhanh)
+        {latencyMs}ms (Fast)
       </span>
     );
   }
@@ -51,7 +51,7 @@ function LatencyPill({ latencyMs, status }: { latencyMs?: number | null | undefi
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] font-medium text-amber-600 dark:text-amber-400">
         <span className="size-1.5 rounded-full bg-amber-500" />
-        {latencyMs}ms (Bình thường)
+        {latencyMs}ms (Normal)
       </span>
     );
   }
@@ -59,7 +59,7 @@ function LatencyPill({ latencyMs, status }: { latencyMs?: number | null | undefi
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 font-mono text-[11px] font-medium text-orange-600 dark:text-orange-400">
       <span className="size-1.5 rounded-full bg-orange-500" />
-      {latencyMs}ms (Chậm)
+      {latencyMs}ms (Slow)
     </span>
   );
 }
@@ -78,8 +78,8 @@ export function ConnectionStatusTable({
   async function handleSingleTest(integration: Integration) {
     if (!integration.baseUrl) {
       toast.warning(
-        "Chưa có URL",
-        `Hệ thống "${integration.name}" chưa được cấu hình URL kết nối.`,
+        "No URL Configured",
+        `Integration "${integration.name}" does not have a connection URL configured.`,
       );
       onOpenDetails(integration.id);
       return;
@@ -94,16 +94,16 @@ export function ConnectionStatusTable({
 
       if (result.connected) {
         toast.success(
-          "Kết nối thành công",
-          `${integration.name}: Phản hồi trong ${result.latencyMs}ms.`,
+          "Connection Succeeded",
+          `${integration.name}: Responded in ${result.latencyMs}ms.`,
         );
       } else {
-        toast.error("Kết nối thất bại", result.message);
+        toast.error("Connection Failed", result.message);
       }
     } catch {
       toast.error(
-        "Lỗi kiểm tra",
-        "Không thể hoàn tất kiểm tra kết nối đến endpoint.",
+        "Connection Error",
+        "Could not complete connection probe to endpoint.",
       );
     } finally {
       setTestingId(null);
@@ -116,12 +116,12 @@ export function ConnectionStatusTable({
         <table className="w-full text-left text-xs">
           <thead className="border-border bg-neutral-soft/50 text-muted border-b uppercase text-[10px] tracking-wider">
             <tr>
-              <th className="px-4 py-3 font-semibold">Hệ thống tích hợp</th>
+              <th className="px-4 py-3 font-semibold">Integration System</th>
               <th className="px-4 py-3 font-semibold">Endpoint URL</th>
-              <th className="px-4 py-3 font-semibold">Trạng thái</th>
-              <th className="px-4 py-3 font-semibold">Độ trễ phản hồi</th>
-              <th className="px-4 py-3 font-semibold">Lần kết nối gần nhất</th>
-              <th className="px-4 py-3 text-right font-semibold">Thao tác</th>
+              <th className="px-4 py-3 font-semibold">Status</th>
+              <th className="px-4 py-3 font-semibold">Response Latency</th>
+              <th className="px-4 py-3 font-semibold">Last Connected</th>
+              <th className="px-4 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-border divide-y">
@@ -158,7 +158,7 @@ export function ConnectionStatusTable({
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5 max-w-xs truncate font-mono text-muted text-[11px]">
                       <Globe className="size-3.5 shrink-0 text-muted" />
-                      <span className="truncate">{item.baseUrl || "Chưa cấu hình URL"}</span>
+                      <span className="truncate">{item.baseUrl || "No URL configured"}</span>
                     </div>
                   </td>
 
@@ -178,14 +178,14 @@ export function ConnectionStatusTable({
                       <Clock className="size-3.5 shrink-0" />
                       <span>
                         {item.lastConnectedAt
-                          ? new Date(item.lastConnectedAt).toLocaleString("vi-VN", {
+                          ? new Date(item.lastConnectedAt).toLocaleString("en-US", {
                               hour: "2-digit",
                               minute: "2-digit",
-                              day: "2-digit",
-                              month: "2-digit",
+                              month: "short",
+                              day: "numeric",
                               year: "numeric",
                             })
-                          : "Chưa từng kết nối"}
+                          : "Never connected"}
                       </span>
                     </div>
                   </td>
@@ -205,11 +205,11 @@ export function ConnectionStatusTable({
                         <Wifi
                           className={`mr-1 size-3 ${isTesting ? "animate-pulse text-brand" : ""}`}
                         />
-                        {isTesting ? "Đang ping..." : "Kiểm tra"}
+                        {isTesting ? "Pinging..." : "Test"}
                       </Button>
 
                       <Button
-                        aria-label={`Xem chi tiết ${item.name}`}
+                        aria-label={`View details for ${item.name}`}
                         className="min-h-7 px-2 text-[11px] bg-surface text-muted ring-border hover:text-foreground hover:bg-neutral-soft ring-1"
                         onClick={() => onOpenDetails(item.id)}
                         type="button"

@@ -18,10 +18,10 @@ export const integrationStatusEnum = z.enum([
 export type IntegrationStatus = z.infer<typeof integrationStatusEnum>;
 
 export const paginationSchema = z.object({
-  total: z.number(),
-  page: z.number(),
-  limit: z.number(),
-  totalPages: z.number(),
+  total: z.coerce.number(),
+  page: z.coerce.number(),
+  limit: z.coerce.number(),
+  totalPages: z.coerce.number(),
 });
 
 export const integrationSchema = z.object({
@@ -48,13 +48,13 @@ export const createIntegrationFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Tên kết nối không được để trống")
-    .max(150, "Tên kết nối không được vượt quá 150 ký tự"),
+    .min(1, "Integration name is required")
+    .max(150, "Integration name must not exceed 150 characters"),
   integrationType: integrationTypeEnum,
   baseUrl: z
     .string()
     .trim()
-    .url("Định dạng URL không hợp lệ (ví dụ: https://siem.enterprise.local)")
+    .url("Invalid URL format (e.g. https://siem.enterprise.local)")
     .or(z.literal(""))
     .optional()
     .transform((val) => (val && val.length > 0 ? val : null)),
@@ -66,13 +66,13 @@ export const updateIntegrationFormSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(1, "Tên kết nối không được để trống")
-    .max(150, "Tên kết nối không được vượt quá 150 ký tự")
+    .min(1, "Integration name is required")
+    .max(150, "Integration name must not exceed 150 characters")
     .optional(),
   baseUrl: z
     .string()
     .trim()
-    .url("Định dạng URL không hợp lệ")
+    .url("Invalid URL format")
     .or(z.literal(""))
     .optional()
     .nullable()
@@ -118,8 +118,8 @@ export const createSyncScheduleFormSchema = z.object({
   scheduleExpression: z
     .string()
     .trim()
-    .min(1, "Cron expression không được để trống")
-    .max(100, "Cron expression quá dài"),
+    .min(1, "Cron expression is required")
+    .max(100, "Cron expression is too long"),
   isActive: z.boolean().default(true),
 });
 export type CreateSyncScheduleInput = z.infer<typeof createSyncScheduleFormSchema>;
@@ -128,8 +128,8 @@ export const updateSyncScheduleFormSchema = z.object({
   scheduleExpression: z
     .string()
     .trim()
-    .min(1, "Cron expression không được để trống")
-    .max(100, "Cron expression quá dài")
+    .min(1, "Cron expression is required")
+    .max(100, "Cron expression is too long")
     .optional(),
   isActive: z.boolean().optional(),
 });
@@ -193,8 +193,24 @@ export const integrationLogListSchema = z.object({
 });
 export type IntegrationLogList = z.infer<typeof integrationLogListSchema>;
 
-export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED"]);
+export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED"]);
 export type ApiKeyStatus = z.infer<typeof apiKeyStatusEnum>;
+
+export function deriveApiKeyStatus(
+  isActive: boolean,
+  expiresAt: string | Date | null | undefined,
+): ApiKeyStatus {
+  if (expiresAt) {
+    const expTime = typeof expiresAt === "string" ? new Date(expiresAt).getTime() : expiresAt.getTime();
+    if (!isNaN(expTime) && expTime <= Date.now()) {
+      return "EXPIRED";
+    }
+  }
+  if (!isActive) {
+    return "INACTIVE";
+  }
+  return "ACTIVE";
+}
 
 export const integrationApiKeySchema = z.object({
   id: z.string().uuid(),
@@ -220,12 +236,12 @@ export const createApiKeyFormSchema = z.object({
   keyName: z
     .string()
     .trim()
-    .min(1, "Tên khóa không được để trống")
-    .max(100, "Tên khóa không được vượt quá 100 ký tự"),
+    .min(1, "Key name is required")
+    .max(100, "Key name must not exceed 100 characters"),
   secret: z
     .string()
     .trim()
-    .max(1000, "Secret không được vượt quá 1000 ký tự")
+    .max(1000, "Secret must not exceed 1000 characters")
     .optional()
     .or(z.literal("")),
   expiresAt: z
@@ -234,9 +250,9 @@ export const createApiKeyFormSchema = z.object({
     .optional()
     .refine(
       (val) => !val || new Date(val).getTime() > Date.now(),
-      { message: "Ngày hết hạn phải ở tương lai" },
+      { message: "Expiration date must be in the future" },
     ),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean().default(false),
 });
 export type CreateApiKeyInput = z.infer<typeof createApiKeyFormSchema>;
 
@@ -244,8 +260,8 @@ export const updateApiKeyFormSchema = z.object({
   keyName: z
     .string()
     .trim()
-    .min(1, "Tên khóa không được để trống")
-    .max(100, "Tên khóa không được vượt quá 100 ký tự")
+    .min(1, "Key name is required")
+    .max(100, "Key name must not exceed 100 characters")
     .optional(),
   expiresAt: z
     .string()
@@ -253,7 +269,7 @@ export const updateApiKeyFormSchema = z.object({
     .optional()
     .refine(
       (val) => !val || new Date(val).getTime() > Date.now(),
-      { message: "Ngày hết hạn phải ở tương lai" },
+      { message: "Expiration date must be in the future" },
     ),
   isActive: z.boolean().optional(),
 });

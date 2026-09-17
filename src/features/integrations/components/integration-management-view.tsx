@@ -147,7 +147,7 @@ export function IntegrationManagementView() {
           {/* View Mode Toggle */}
           <div className="border-border bg-neutral-soft/50 flex items-center rounded-lg border p-0.5">
             <button
-              aria-label="Xem dạng bảng"
+              aria-label="Table view"
               className={`flex size-7.5 items-center justify-center rounded-md text-xs transition-colors ${
                 viewMode === "table"
                   ? "bg-surface text-foreground shadow-xs"
@@ -159,7 +159,7 @@ export function IntegrationManagementView() {
               <TableIcon className="size-3.5" />
             </button>
             <button
-              aria-label="Xem dạng thẻ"
+              aria-label="Grid view"
               className={`flex size-7.5 items-center justify-center rounded-md text-xs transition-colors ${
                 viewMode === "grid"
                   ? "bg-surface text-foreground shadow-xs"
@@ -173,7 +173,7 @@ export function IntegrationManagementView() {
           </div>
 
           <Button
-            aria-label="Tải lại danh sách"
+            aria-label="Reload list"
             className="min-h-8 px-2.5 bg-surface text-muted ring-border hover:text-foreground hover:bg-neutral-soft ring-1"
             onClick={handleRefreshAll}
             type="button"
@@ -192,10 +192,30 @@ export function IntegrationManagementView() {
             <Skeleton className="h-16 w-full rounded-xl" key={idx} />
           ))}
         </div>
+      ) : integrationsQuery.isError ? (
+        <div className="border-border bg-surface flex flex-col items-center justify-center gap-3 rounded-xl border p-8 text-center shadow-xs">
+          <p className="text-sm font-medium text-destructive">
+            Failed to load integrations list.
+          </p>
+          <p className="text-muted text-xs">
+            {integrationsQuery.error instanceof Error
+              ? integrationsQuery.error.message
+              : "Please check backend connectivity or try reloading the data."}
+          </p>
+          <Button
+            className="mt-2 min-h-9 px-3 py-1.5 text-xs"
+            onClick={() => integrationsQuery.refetch()}
+            type="button"
+            variant="secondary"
+          >
+            <RefreshCw className="mr-1.5 size-3.5" />
+            Reload
+          </Button>
+        </div>
       ) : items.length === 0 ? (
         <EmptyState
-          description="Không tìm thấy hệ thống tích hợp nào phù hợp với điều kiện tìm kiếm hoặc chưa có hệ thống nào được thiết lập."
-          title="Không tìm thấy kết nối nào"
+          description="No configured integrations match your search criteria, or no external connections have been set up yet."
+          title="No Integrations Found"
         />
       ) : (
         <div className="space-y-6">
