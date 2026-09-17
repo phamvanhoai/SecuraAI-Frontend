@@ -37,6 +37,12 @@ export const incidentSchema = z.object({
       rationale: z.string().nullable(),
     })
     .nullable(),
+  currentAssignment: z
+    .object({
+      assignedAt: z.string().datetime(),
+      assignee: z.object({ id: z.uuid(), name: z.string(), email: z.email() }),
+    })
+    .nullable(),
 });
 export const myIncidentsSchema = z.object({
   items: z.array(incidentSchema),
@@ -56,7 +62,21 @@ export const classifyIncidentFormSchema = z.object({
     .min(10, "Explain the classification in at least 10 characters")
     .max(2000),
 });
+export const assignmentOptionsSchema = z.object({
+  users: z.array(
+    z.object({ id: z.uuid(), name: z.string(), email: z.email() }),
+  ),
+});
+export const assignIncidentFormSchema = z.object({
+  assigneeUserId: z.uuid("Select a handler"),
+  note: z
+    .string()
+    .trim()
+    .min(10, "Explain the assignment in at least 10 characters")
+    .max(2000),
+});
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
 export type IncidentSeverity = z.infer<typeof severitySchema>;
+export type AssignIncidentForm = z.infer<typeof assignIncidentFormSchema>;

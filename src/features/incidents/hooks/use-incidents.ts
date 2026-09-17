@@ -2,8 +2,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   classifyIncidentSeverity,
+  assignIncidentHandler,
   getMyIncident,
   listIncidentsForClassification,
+  listIncidentAssignmentOptions,
   listMyIncidents,
   reportIncident,
 } from "../api/incidents";
@@ -51,6 +53,21 @@ export function useClassifyIncidentSeverity() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: classifyIncidentSeverity,
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export const useIncidentAssignmentOptions = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["incidents", "assignment-options"],
+    queryFn: ({ signal }) => listIncidentAssignmentOptions(signal),
+    enabled,
+    retry: false,
+  });
+export function useAssignIncidentHandler() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: assignIncidentHandler,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
   });

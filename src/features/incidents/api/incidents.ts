@@ -1,8 +1,10 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
   incidentSchema,
+  assignmentOptionsSchema,
   myIncidentsSchema,
   type ClassifyIncidentForm,
+  type AssignIncidentForm,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
 export async function reportIncident(input: ReportIncidentForm) {
@@ -78,6 +80,32 @@ export async function classifyIncidentSeverity(input: {
         body: {
           severity: input.values.severity,
           rationale: input.values.rationale.trim(),
+        },
+      },
+    ),
+  );
+}
+export async function listIncidentAssignmentOptions(signal?: AbortSignal) {
+  return assignmentOptionsSchema.parse(
+    await apiRequest<unknown>("/api/incidents/assignment-options", {
+      target: "same-origin",
+      ...(signal ? { signal } : {}),
+    }),
+  );
+}
+export async function assignIncidentHandler(input: {
+  id: string;
+  values: AssignIncidentForm;
+}) {
+  return incidentSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/assignee`,
+      {
+        target: "same-origin",
+        method: "PATCH",
+        body: {
+          assigneeUserId: input.values.assigneeUserId,
+          note: input.values.note.trim(),
         },
       },
     ),
