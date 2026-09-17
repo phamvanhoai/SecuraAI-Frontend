@@ -29,7 +29,11 @@ import type {
   TrainingReminder,
 } from "../schemas/reminder-schema";
 
-export function TrainingRemindersManager() {
+export function TrainingRemindersManager({
+  showHeader = true,
+}: {
+  showHeader?: boolean;
+}) {
   const session = useSessionUser();
   const enabled =
     session.data?.permissions.includes("training-assessments.take") ?? false;
@@ -68,6 +72,11 @@ export function TrainingRemindersManager() {
           <p className="text-muted mt-1 text-sm break-words">{item.message}</p>
         </div>
       ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      cell: () => "Training deadline",
     },
     {
       key: "received",
@@ -116,11 +125,13 @@ export function TrainingRemindersManager() {
   ];
   return (
     <>
-      <ProductPageHeader
-        title="Notifications"
-        description="Deadline reminders for your assigned training courses. Other notification types are not available here yet."
-        showSampleNotice={false}
-      />
+      {showHeader ? (
+        <ProductPageHeader
+          title="Notifications"
+          description="Deadline reminders for your assigned training courses. Other notification types are not available here yet."
+          showSampleNotice={false}
+        />
+      ) : null}
       {session.isError ? (
         <Alert>
           Unable to check your session. Refresh the page and try again.
@@ -135,16 +146,16 @@ export function TrainingRemindersManager() {
           title="Training deadline reminders"
           description="Automatically sent before the deadline while your assigned training is incomplete."
         >
-          <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b p-4">
+          <div className="border-border flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-end">
             <form
-              className="flex w-full gap-2 sm:w-auto sm:flex-1"
+              className="flex min-w-0 flex-1 gap-2"
               onSubmit={(event) => {
                 event.preventDefault();
                 setPage(1);
                 setSearch(searchDraft.trim());
               }}
             >
-              <label className="relative block w-full max-w-md">
+              <label className="relative min-w-0 flex-1">
                 <span className="sr-only">Search training reminders</span>
                 <Search
                   aria-hidden="true"
@@ -152,7 +163,7 @@ export function TrainingRemindersManager() {
                   strokeWidth={1.8}
                 />
                 <Input
-                  className="bg-background min-h-10 pl-9"
+                  className="w-full pl-9"
                   type="search"
                   maxLength={100}
                   placeholder="Search courses or reminders"
@@ -160,18 +171,14 @@ export function TrainingRemindersManager() {
                   onChange={(event) => setSearchDraft(event.target.value)}
                 />
               </label>
-              <Button
-                type="submit"
-                className="min-h-10"
-                disabled={session.isPending}
-              >
+              <Button type="submit" disabled={session.isPending}>
                 Search
               </Button>
             </form>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Show
               <Select
-                className="min-w-44 font-normal"
+                className="w-full font-normal lg:w-48"
                 value={status}
                 onChange={(event) => {
                   setStatus(event.target.value === "unread" ? "unread" : "all");
@@ -194,7 +201,7 @@ export function TrainingRemindersManager() {
           <div className="p-4">
             {session.isPending || reminders.isPending ? (
               <TableSkeleton
-                headers={["Reminder", "Received", "Status", "Actions"]}
+                headers={["Reminder", "Type", "Received", "Status", "Actions"]}
                 rows={5}
                 label="Loading training deadline reminders"
               />

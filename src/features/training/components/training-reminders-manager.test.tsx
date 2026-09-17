@@ -111,7 +111,7 @@ describe("TrainingRemindersManager", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole("columnheader").map((element) => element.textContent),
-    ).toEqual(["Reminder", "Received", "Status", "Actions"]);
+    ).toEqual(["Reminder", "Type", "Received", "Status", "Actions"]);
   });
   it("submits trimmed search to the backend hook instead of filtering the current page", () => {
     render(<TrainingRemindersManager />);
