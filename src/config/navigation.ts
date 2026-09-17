@@ -101,14 +101,6 @@ const modules = {
     slug: "policies",
     icon: ScrollText,
     section: "Quản lý",
-    requiredAnyPermission: [
-      "policies.create",
-      "policies.update",
-      "policies.publish",
-      "policies.assign-department",
-      "compliance.map-controls",
-      "policies.acknowledge",
-    ],
   },
   training: {
     title: "Đào tạo",
