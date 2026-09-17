@@ -56,7 +56,7 @@ Permission code cụ thể chưa được backend công bố; cột permission v
 | Backend module                                                                                    | API route hiện có/prefix                               | Frontend feature  | Navigation                         | Permission                                            |
 | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------- | ---------------------------------- | ----------------------------------------------------- |
 | auth                                                                                              | `/auth/login`, `/auth/refresh`, `/auth/logout`         | `auth`            | `/login`                           | public; refresh/logout theo session                   |
-| users                                                                                             | `/users/me`                                            | `users`           | `/users`                           | chờ contract CRUD                                     |
+| users                                                                                             | `/users/me`, `/admin/users`, `/admin/users/{userId}/lock`, `/admin/users/{userId}/unlock` | `users` | `/admin/users`, `/users` | `users.read`; ADMIN và `users.lock` / `users.unlock` cho UC7 |
 | access-control                                                                                    | `/access-control/roles`, `/access-control/permissions` | `access-control`  | `/admin/roles`, `/roles`           | `roles.read/create/update/delete` do backend kiểm tra |
 | asset-management                                                                                  | `/assets` (skeleton)                                   | `assets`          | `/assets`                          | chờ contract                                          |
 | risk-management                                                                                   | `/risks` (skeleton)                                    | `risks`           | `/risks`                           | chờ contract                                          |
@@ -76,8 +76,14 @@ Health endpoints `/health/live` và `/health/ready` không phải feature naviga
 
 Backend nhận refresh token và trả token pair trong JSON. Next.js BFF trao đổi contract này ở server, giữ access/refresh token trong cookie `HttpOnly`, bật `Secure` ở production và xoay refresh token qua `/api/auth/session` hoặc `/api/auth/refresh`. Frontend không lưu token trong `localStorage`, `sessionStorage` hay cookie đọc được bằng JavaScript. Quản lý vai trò gọi backend qua các Route Handler `/api/access-control/roles` và lấy danh mục quyền đầy đủ qua `/api/access-control/permissions`. OpenAPI hiện là khai báo nội tuyến và chưa đủ để sinh toàn bộ domain types; khi spec đầy đủ nên dùng `openapi-typescript` trong CI thay vì sao chép Prisma schema.
 
+## Khóa và mở khóa tài khoản (UC7)
+
+Danh sách người dùng có nút Lock/Unlock trên từng tài khoản đủ điều kiện. Cả hai thao tác yêu cầu ADMIN, quyền tương ứng và lý do 10–1000 ký tự. Backend kiểm tra trạng thái, chặn tự khóa/mở khóa và bảo vệ quản trị viên cuối cùng; mở khóa yêu cầu đăng nhập lại. Chi tiết contract và kiểm thử tại [features/users/README.md](./src/features/users/README.md).
+
+Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có thể đặt `PLAYWRIGHT_PORT=3001` để tránh cổng backend; nếu chưa tải Chromium của Playwright, đặt `PLAYWRIGHT_CHANNEL=chrome` để dùng Chrome đã cài. Screenshot fixture xem trước được ghi vào `test-results/`.
+
 ## Phạm vi chưa triển khai
 
-Ngoại trừ luồng đăng nhập/BFF và quản lý vai trò đã tích hợp thật, các trang nghiệp vụ còn lại hiện là prototype giao diện với dữ liệu mẫu được gắn nhãn rõ ràng. Các module đó chưa có domain CRUD, KPI lấy từ backend, upload, thông báo realtime hoặc tích hợp AI; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
+Các trang nghiệp vụ chưa tích hợp API thật vẫn là prototype giao diện với dữ liệu mẫu; không được xem là chức năng production. Những trang đó chưa có domain CRUD hoặc KPI lấy từ backend; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. UC7 trong danh sách người dùng gọi API backend thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
 
 Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
