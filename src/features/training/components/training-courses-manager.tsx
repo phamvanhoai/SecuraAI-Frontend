@@ -12,7 +12,13 @@ import {
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TrainingCompletionManager } from "./training-completion-manager";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
@@ -47,13 +53,15 @@ import {
   createCourseSchema,
   type AssignCourseInput,
   type Course,
+  type CourseStatusFilter,
   type CreateCourseInput,
 } from "../schemas/course-schema";
 
 const defaultQuestion = () => ({
+  type: "single_choice" as const,
   text: "",
   options: [
-    { text: "", isCorrect: true },
+    { text: "", isCorrect: false },
     { text: "", isCorrect: false },
     { text: "", isCorrect: false },
     { text: "", isCorrect: false },
@@ -75,8 +83,10 @@ const defaults: CreateCourseInput = {
 
 export function TrainingCoursesManager({
   onAssessments,
+  headerActions,
 }: {
   onAssessments?: () => void;
+  headerActions?: ReactNode;
 }) {
   const session = useSessionUser();
   const canRead =
@@ -91,12 +101,14 @@ export function TrainingCoursesManager({
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [draftStatus, setDraftStatus] = useState<CourseStatusFilter>("all");
+  const [status, setStatus] = useState<CourseStatusFilter>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [assignmentDialog, setAssignmentDialog] = useState<{
     course: Course;
     mode: "create" | "edit";
   }>();
-  const courses = useCourses(page, query, canRead);
+  const courses = useCourses(page, query, status, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
       key: "title",
@@ -206,6 +218,7 @@ export function TrainingCoursesManager({
         <TrainingCompletionManager
           key={courseToTrack.id}
           course={courseToTrack}
+          headerActions={headerActions}
           onViewCourses={() => setCourseToTrack(undefined)}
         />
       ) : null}
@@ -234,6 +247,7 @@ export function TrainingCoursesManager({
               }
             : {})}
         />
+        {headerActions}
         <ProductPanel
           title="Courses"
           description={
@@ -247,6 +261,7 @@ export function TrainingCoursesManager({
             onSubmit={(event) => {
               event.preventDefault();
               setQuery(draftQuery.trim());
+              setStatus(draftStatus);
               setPage(1);
             }}
           >
@@ -265,6 +280,19 @@ export function TrainingCoursesManager({
                 onChange={(event) => setDraftQuery(event.target.value)}
               />
             </label>
+            <Select
+              aria-label="Filter course status"
+              className="w-full sm:w-44"
+              value={draftStatus}
+              onChange={(event) =>
+                setDraftStatus(event.target.value as CourseStatusFilter)
+              }
+            >
+              <option value="all">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </Select>
             <Button type="submit">Search</Button>
           </form>
           <div className="p-4">
@@ -290,7 +318,7 @@ export function TrainingCoursesManager({
                 No courses found.{" "}
                 {canCreate
                   ? "Create a draft to get started."
-                  : "Try a different search."}
+                  : "Try a different search or status filter."}
               </p>
             ) : courses.data ? (
               <DataTable
@@ -795,8 +823,10 @@ function CreateCourseDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
     >
       <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-        <p className="text-muted text-sm">
-          The course will be saved as a draft.
+        <p className="text-muted text-sm" aria-live="polite">
+          {courseStatus === "published"
+            ? "Publishing makes this course ready to assign and requires a valid post-training assessment."
+            : "Save a draft while you prepare the training material and assessment."}
         </p>
         {message ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -829,7 +859,7 @@ function CreateCourseDialog({
         </FormField>
         <FormField
           id="course-content"
-          label="Course content"
+          label="Learning objectives and training material"
           error={errors.content?.message}
         >
           <Textarea
@@ -837,8 +867,17 @@ function CreateCourseDialog({
             maxLength={50000}
             rows={8}
             aria-invalid={Boolean(errors.content)}
+            aria-describedby="course-content-guidance"
+            placeholder="Describe the learning objectives and training material."
             {...register("content")}
           />
+          <p
+            className="text-muted text-xs leading-5"
+            id="course-content-guidance"
+          >
+            Start with measurable learning objectives, then provide the guidance
+            and resource URLs employees need.
+          </p>
         </FormField>
         <FormField
           id="course-status"
@@ -955,31 +994,104 @@ function CreateCourseDialog({
                         )}
                       />
                     </FormField>
+                    <FormField
+                      id={`assessment-question-type-${questionIndex}`}
+                      label="Answer type"
+                      error={
+                        errors.assessment?.questions?.[questionIndex]?.type
+                          ?.message
+                      }
+                    >
+                      <Select
+                        id={`assessment-question-type-${questionIndex}`}
+                        {...register(
+                          `assessment.questions.${questionIndex}.type`,
+                          {
+                            onChange: (event) => {
+                              if (event.target.value !== "single_choice")
+                                return;
+                              const selectedIndex = assessment.questions[
+                                questionIndex
+                              ]?.options.findIndex(
+                                (option) => option.isCorrect,
+                              );
+                              assessment.questions[
+                                questionIndex
+                              ]?.options.forEach((_, index) =>
+                                setValue(
+                                  `assessment.questions.${questionIndex}.options.${index}.isCorrect`,
+                                  index === selectedIndex,
+                                  { shouldValidate: true },
+                                ),
+                              );
+                            },
+                          },
+                        )}
+                      >
+                        <option value="single_choice">Single answer</option>
+                        <option value="multiple_choice">
+                          Multiple answers
+                        </option>
+                      </Select>
+                    </FormField>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Answers</p>
+                      <div>
+                        <p className="text-sm font-medium">Answers</p>
+                        <p className="text-muted mt-1 text-xs">
+                          {assessment.questions[questionIndex]?.type ===
+                          "multiple_choice"
+                            ? "Select every correct answer (at least two)."
+                            : "Select one correct answer for this question."}
+                        </p>
+                      </div>
+                      <div
+                        aria-hidden="true"
+                        className="text-muted grid grid-cols-[4.5rem_minmax(0,1fr)] gap-2 px-1 text-xs font-medium"
+                      >
+                        <span className="text-center">Correct</span>
+                        <span>Answer</span>
+                      </div>
                       {assessment.questions[questionIndex]?.options.map(
                         (option, optionIndex) => (
-                          <label
-                            className="flex items-center gap-2"
+                          <div
+                            className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2"
                             key={`${question.id}-${optionIndex}`}
                           >
-                            <input
-                              type="radio"
-                              name={`correct-answer-${questionIndex}`}
-                              checked={option.isCorrect}
-                              onChange={() => {
-                                assessment.questions[
-                                  questionIndex
-                                ]?.options.forEach((_, index) =>
-                                  setValue(
-                                    `assessment.questions.${questionIndex}.options.${index}.isCorrect`,
-                                    index === optionIndex,
-                                    { shouldValidate: true },
-                                  ),
-                                );
-                              }}
-                              aria-label={`Mark answer ${optionIndex + 1} as correct`}
-                            />
+                            <label className="flex min-h-10 cursor-pointer items-center justify-center">
+                              <input
+                                type={
+                                  assessment.questions[questionIndex]?.type ===
+                                  "multiple_choice"
+                                    ? "checkbox"
+                                    : "radio"
+                                }
+                                name={`correct-answer-${questionIndex}`}
+                                checked={option.isCorrect}
+                                onChange={(event) => {
+                                  if (
+                                    assessment.questions[questionIndex]
+                                      ?.type === "multiple_choice"
+                                  ) {
+                                    setValue(
+                                      `assessment.questions.${questionIndex}.options.${optionIndex}.isCorrect`,
+                                      event.target.checked,
+                                      { shouldValidate: true },
+                                    );
+                                    return;
+                                  }
+                                  assessment.questions[
+                                    questionIndex
+                                  ]?.options.forEach((_, index) =>
+                                    setValue(
+                                      `assessment.questions.${questionIndex}.options.${index}.isCorrect`,
+                                      index === optionIndex,
+                                      { shouldValidate: true },
+                                    ),
+                                  );
+                                }}
+                                aria-label={`Answer ${optionIndex + 1} is correct`}
+                              />
+                            </label>
                             <Input
                               aria-label={`Answer ${optionIndex + 1}`}
                               maxLength={1000}
@@ -987,7 +1099,7 @@ function CreateCourseDialog({
                                 `assessment.questions.${questionIndex}.options.${optionIndex}.text`,
                               )}
                             />
-                          </label>
+                          </div>
                         ),
                       )}
                       {errors.assessment?.questions?.[questionIndex]?.options

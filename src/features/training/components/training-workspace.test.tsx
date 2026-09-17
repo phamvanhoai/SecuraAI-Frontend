@@ -6,11 +6,14 @@ vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
 vi.mock("./training-courses-manager", () => ({
   TrainingCoursesManager: ({
     onAssessments,
+    headerActions,
   }: {
     onAssessments?: () => void;
+    headerActions?: import("react").ReactNode;
   }) => (
     <>
       <h1>Courses content</h1>
+      {headerActions}
       {onAssessments ? (
         <button onClick={onAssessments}>My assessments</button>
       ) : null}
@@ -18,7 +21,16 @@ vi.mock("./training-courses-manager", () => ({
   ),
 }));
 vi.mock("./training-completion-manager", () => ({
-  TrainingCompletionManager: () => <h1>Progress content</h1>,
+  TrainingCompletionManager: ({
+    headerActions,
+  }: {
+    headerActions?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Progress content</h1>
+      {headerActions}
+    </>
+  ),
 }));
 vi.mock("./my-assessments-manager", () => ({
   MyAssessmentsManager: ({ onBack }: { onBack?: () => void }) => (
@@ -28,7 +40,35 @@ vi.mock("./my-assessments-manager", () => ({
     </>
   ),
 }));
+vi.mock("./department-report-manager", () => ({
+  DepartmentReportManager: ({
+    sectionNavigation,
+  }: {
+    sectionNavigation?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Department report content</h1>
+      {sectionNavigation}
+    </>
+  ),
+}));
 describe("TrainingWorkspace entry flow", () => {
+  it("switches Executive readers to the department report without route navigation", () => {
+    mocks.session.mockReturnValue({
+      data: {
+        permissions: [
+          "training-completion.read",
+          "training-department-reports.read",
+        ],
+      },
+    });
+    render(<TrainingWorkspace />);
+    fireEvent.click(screen.getByRole("button", { name: "Department report" }));
+    expect(screen.getByText("Department report content")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Department report" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
   beforeEach(() =>
     mocks.session.mockReturnValue({
       data: {

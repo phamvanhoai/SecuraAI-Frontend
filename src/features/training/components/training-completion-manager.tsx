@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { TrainingCertificatePanel } from "./training-certificate-panel";
 import { useCertificateIssuancePending } from "../hooks/use-certificate";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -50,10 +50,12 @@ export function TrainingCompletionManager({
   onViewCourses,
   course,
   onAssessments,
+  headerActions,
 }: {
   onViewCourses?: () => void;
   course?: { id: string; title: string };
   onAssessments?: () => void;
+  headerActions?: ReactNode;
 }) {
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
@@ -168,6 +170,7 @@ export function TrainingCompletionManager({
             }
           : {})}
       />
+      {headerActions}
       <MetricStrip
         ariaLabel="Training completion summary"
         metrics={[

@@ -8,18 +8,25 @@ import {
   courseSchema,
   createCourseSchema,
   type AssignCourseInput,
+  type CourseStatusFilter,
   type CreateCourseInput,
 } from "../schemas/course-schema";
 
 export async function listCourses(
   page: number,
   q: string,
+  status: CourseStatusFilter,
   signal?: AbortSignal,
 ) {
   return courseListSchema.parse(
     await apiRequest<unknown>("/api/training/courses", {
       target: "same-origin",
-      query: { page, limit: 20, ...(q ? { q } : {}) },
+      query: {
+        page,
+        limit: 20,
+        ...(q ? { q } : {}),
+        ...(status !== "all" ? { status } : {}),
+      },
       ...(signal ? { signal } : {}),
     }),
   );

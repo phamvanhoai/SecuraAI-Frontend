@@ -34,6 +34,7 @@ describe("createCourseSchema", () => {
         maxAttempts: 3,
         questions: [
           {
+            type: "single_choice" as const,
             text: "Which message is suspicious?",
             options: [
               { text: "Unexpected reset link", isCorrect: true },
@@ -46,6 +47,31 @@ describe("createCourseSchema", () => {
     expect(createCourseSchema.safeParse(course).success).toBe(true);
     course.assessment.questions[0]!.options[1]!.isCorrect = true;
     expect(createCourseSchema.safeParse(course).success).toBe(false);
+  });
+  it("accepts multiple-answer questions with at least two correct options", () => {
+    const result = createCourseSchema.safeParse({
+      title: "Password security",
+      description: "",
+      content: "Learn how to protect corporate accounts.",
+      status: "published",
+      assessment: {
+        title: "Password security assessment",
+        passingScore: 80,
+        maxAttempts: 3,
+        questions: [
+          {
+            type: "multiple_choice",
+            text: "Which practices protect an account?",
+            options: [
+              { text: "Use MFA", isCorrect: true },
+              { text: "Use a password manager", isCorrect: true },
+              { text: "Reuse passwords", isCorrect: false },
+            ],
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
   });
 });
 

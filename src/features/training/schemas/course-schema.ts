@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const assessmentQuestionSchema = z
   .object({
+    type: z.enum(["single_choice", "multiple_choice"]),
     text: z.string().trim().min(3, "Enter the question.").max(2000),
     options: z
       .array(
@@ -14,11 +15,21 @@ const assessmentQuestionSchema = z
       .max(6),
   })
   .superRefine((value, context) => {
-    if (value.options.filter((option) => option.isCorrect).length !== 1) {
+    const correctAnswers = value.options.filter(
+      (option) => option.isCorrect,
+    ).length;
+    const valid =
+      value.type === "single_choice"
+        ? correctAnswers === 1
+        : correctAnswers >= 2;
+    if (!valid) {
       context.addIssue({
         code: "custom",
         path: ["options"],
-        message: "Select exactly one correct answer.",
+        message:
+          value.type === "single_choice"
+            ? "Select exactly one correct answer."
+            : "Select at least two correct answers.",
       });
     }
   });
@@ -146,6 +157,7 @@ export const courseAssignmentDetailSchema = z
   .nullable();
 
 export type Course = z.infer<typeof courseSchema>;
+export type CourseStatusFilter = "all" | "draft" | "published" | "archived";
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type AssignmentOptions = z.infer<typeof assignmentOptionsSchema>;
 export type AssignCourseInput = z.infer<typeof assignCourseSchema>;

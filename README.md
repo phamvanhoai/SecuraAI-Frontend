@@ -87,3 +87,6 @@ Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có th
 Các trang nghiệp vụ chưa tích hợp API thật vẫn là prototype giao diện với dữ liệu mẫu; không được xem là chức năng production. Những trang đó chưa có domain CRUD hoặc KPI lấy từ backend; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. UC7 trong danh sách người dùng gọi API backend thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
 
 Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
+# UC81 — Department training report
+
+Executive/Admin users with `training-department-reports.read` can open **Training → Department report** or `/training/department-report`. This is a read-only report backed by `/training/department-report` on the backend. It counts distinct assigned employees and individual campaign assignments separately, excludes withdrawn assignments, and groups users by their current department (including No department). Overdue dates use UTC. Organization totals are independent of search and pagination. Apply the backend permission migration or the scoped UC81 permission seed before testing; sign in again to refresh session permissions.
