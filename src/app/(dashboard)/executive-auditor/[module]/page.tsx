@@ -1,4 +1,4 @@
-import { PanelModulePage } from "../../_components/panel-module-page";
+import { redirect } from "next/navigation";
 
 export default async function ExecutiveAuditorModulePage({
   params,
@@ -6,5 +6,5 @@ export default async function ExecutiveAuditorModulePage({
   params: Promise<{ module: string }>;
 }) {
   const { module } = await params;
-  return <PanelModulePage panel="executive-auditor" module={module} />;
+  redirect(`/${module}`);
 }

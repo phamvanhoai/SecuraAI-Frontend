@@ -6,6 +6,8 @@ import {
   createSyncSchedule,
   deleteSyncSchedule,
   getIntegrationById,
+  getIntegrationLogStats,
+  listAllIntegrationLogs,
   listIntegrationLogs,
   listIntegrations,
   listSyncJobs,
@@ -55,6 +57,10 @@ export const integrationKeys = {
     [...integrationKeys.all, "monitoring", "connection-summary", timeWindow ?? "24h"] as const,
   connectionStatus: (id: string, timeWindow?: "24h" | "7d") =>
     [...integrationKeys.all, "monitoring", "connection-status", id, timeWindow ?? "24h"] as const,
+  allLogs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
+    [...integrationKeys.all, "all-logs", input] as const,
+  logStats: (params?: { integrationId?: string; startDate?: string; endDate?: string }) =>
+    [...integrationKeys.all, "log-stats", params] as const,
 };
 
 
@@ -238,7 +244,7 @@ export function useSyncJobs(input: Omit<ListSyncJobsInput, "signal">) {
 }
 
 export function useIntegrationLogs(
-  input: Omit<ListIntegrationLogsInput, "signal">,
+  input: Omit<ListIntegrationLogsInput, "signal"> & { integrationId: string },
 ) {
   return useQuery({
     queryKey: integrationKeys.logs(input),
@@ -403,3 +409,20 @@ export function useIntegrationConnectionStatus(
 }
 
 
+export function useAllIntegrationLogs(
+  input: Omit<ListIntegrationLogsInput, "signal">,
+) {
+  return useQuery({
+    queryKey: integrationKeys.allLogs(input),
+    queryFn: ({ signal }) => listAllIntegrationLogs({ ...input, signal }),
+  });
+}
+
+export function useIntegrationLogStats(
+  params?: { integrationId?: string; startDate?: string; endDate?: string },
+) {
+  return useQuery({
+    queryKey: integrationKeys.logStats(params),
+    queryFn: ({ signal }) => getIntegrationLogStats({ ...params, signal }),
+  });
+}

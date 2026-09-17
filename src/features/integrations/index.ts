@@ -14,3 +14,4 @@ export { ConnectionMonitoringHeader } from "./components/connection-monitoring-h
 export { ConnectionStatusTable } from "./components/connection-status-table";
 export { ConnectionDiagnosticsTab } from "./components/connection-diagnostics-tab";
 
+export { SyncErrorLogsView } from "./components/sync-error-logs-view";

@@ -1,4 +1,4 @@
-import { RolePanel } from "@/features/reports";
+import { redirect } from "next/navigation";
 export default function Page() {
-  return <RolePanel kind="executive-auditor" />;
+  redirect("/dashboard");
 }

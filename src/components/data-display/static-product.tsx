@@ -24,7 +24,7 @@ export function ProductPageHeader({
   showSampleNotice = true,
 }: {
   title: string;
-  description: string;
+  description?: string;
   additionalActions?: ReactNode;
   primaryAction?: string;
   secondaryAction?: string;
@@ -41,9 +41,11 @@ export function ProductPageHeader({
           <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
             {title}
           </h1>
-          <p className="text-muted mt-2 max-w-2xl text-sm leading-6">
-            {description}
-          </p>
+          {description ? (
+            <p className="text-muted mt-2 max-w-2xl text-sm leading-6">
+              {description}
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {additionalActions}

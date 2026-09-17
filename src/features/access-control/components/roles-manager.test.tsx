@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
@@ -26,6 +26,13 @@ const systemRole = {
   createdAt: "2026-09-10T00:00:00.000Z",
   updatedAt: "2026-09-10T00:00:00.000Z",
 };
+const securityOfficerRole = {
+  ...systemRole,
+  id: "33333333-3333-4333-8333-333333333333",
+  code: "SECURITY_OFFICER",
+  name: "Security Officer",
+  isSystem: false,
+};
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function showModal() {
@@ -39,20 +46,10 @@ beforeAll(() => {
 describe("RolesManager", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("loads backend roles and creates a custom role with selected permissions", async () => {
-    const createdRole = {
-      ...systemRole,
-      id: "33333333-3333-4333-8333-333333333333",
-      code: "RISK_REVIEWER",
-      name: "Risk Reviewer",
-      isSystem: false,
-    };
+  it("keeps Admin read-only and updates permissions for another fixed role", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
-      if (init?.method === "POST") {
-        return Response.json(
-          { success: true, data: createdRole },
-          { status: 201 },
-        );
+      if (init?.method === "PATCH") {
+        return Response.json({ success: true, data: securityOfficerRole });
       }
       if (String(input).includes("/api/access-control/permissions")) {
         return Response.json({
@@ -66,8 +63,8 @@ describe("RolesManager", () => {
       return Response.json({
         success: true,
         data: {
-          items: [systemRole],
-          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+          items: [systemRole, securityOfficerRole],
+          pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
         },
       });
     });
@@ -99,28 +96,34 @@ describe("RolesManager", () => {
       screen.getByRole("dialog", { name: "Role details" }),
     );
     expect(detailDialog.getByText("roles.read")).toBeVisible();
-    expect(detailDialog.getByText("System")).toBeVisible();
+    expect(detailDialog.getByText("System role")).toBeVisible();
     await user.click(detailDialog.getByRole("button", { name: "Close" }));
-
-    await user.click(screen.getByRole("button", { name: "Create role" }));
-    const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByLabelText("Role code"), "risk_reviewer");
-    await user.type(dialog.getByLabelText("Role name"), "Risk Reviewer");
-    await user.click(dialog.getByRole("checkbox", { name: /roles\.read/ }));
-    await user.click(dialog.getByRole("button", { name: "Create role" }));
-
-    await waitFor(() =>
-      expect(
-        fetchMock.mock.calls.some(([, init]) => init?.method === "POST"),
-      ).toBe(true),
+    expect(
+      screen.queryByRole("button", { name: "Create role" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit permissions" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Security Officer" }),
     );
-    const postCall = fetchMock.mock.calls.find(
-      ([, init]) => init?.method === "POST",
+    await user.click(screen.getByRole("button", { name: "Edit permissions" }));
+    const permissionDialog = within(
+      screen.getByRole("dialog", { name: "Edit permissions" }),
     );
-    expect(JSON.parse(String(postCall?.[1]?.body))).toMatchObject({
-      code: "RISK_REVIEWER",
-      permissionIds: [permissionId],
-    });
-    expect(await screen.findByText("Role created")).toBeVisible();
+    expect(permissionDialog.getByText("SECURITY_OFFICER")).toBeVisible();
+    await user.click(
+      permissionDialog.getByRole("checkbox", { name: /roles\.read/ }),
+    );
+    await user.click(
+      permissionDialog.getByRole("button", { name: "Save permissions" }),
+    );
+    expect(await screen.findByText("Permissions updated")).toBeVisible();
+    expect(
+      fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH"),
+    ).toBe(true);
   });
 });

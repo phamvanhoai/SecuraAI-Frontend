@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { isFixedRoleCode } from "../lib/fixed-roles";
 import type { Permission, Role } from "../schemas/role-schema";
 
 export function RoleDetailDialog({
@@ -39,8 +40,8 @@ export function RoleDetailDialog({
                 {role.code}
               </p>
             </div>
-            <StatusBadge tone={role.isSystem ? "success" : "info"}>
-              {role.isSystem ? "System" : "Custom"}
+            <StatusBadge tone={isFixedRoleCode(role.code) ? "success" : "info"}>
+              {isFixedRoleCode(role.code) ? "System role" : "Legacy role"}
             </StatusBadge>
           </div>
 

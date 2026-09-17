@@ -1,90 +1,101 @@
-import { Mail, MapPin, Phone, UserRound } from "lucide-react";
+"use client";
+
+import { Mail, ShieldCheck, UserRound } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ProductPageHeader,
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-const inputClass =
-  "min-h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-brand focus:ring-3 focus:ring-brand/15";
+import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeletons";
+import { useSessionUser } from "@/features/auth";
+
 export default function ProfilePage() {
+  const session = useSessionUser();
+  if (session.isPending) return <DashboardLoadingSkeleton variant="form" />;
+  const user = session.data;
+  if (!user)
+    return (
+      <ProductPanel title="Không thể tải hồ sơ">
+        <p className="text-muted p-5 text-sm">
+          Phiên đăng nhập không còn hiệu lực. Vui lòng đăng nhập lại.
+        </p>
+      </ProductPanel>
+    );
+
   return (
     <>
       <ProductPageHeader
         title="Hồ sơ cá nhân"
-        description="Quản lý thông tin tài khoản và tùy chọn cá nhân."
+        description="Xem thông tin của tài khoản đang đăng nhập."
+        showSampleNotice={false}
+        additionalActions={
+          <Link
+            href="/authenticator-mfa"
+            className="bg-brand text-brand-contrast hover:bg-brand-strong focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
+          >
+            <ShieldCheck className="size-4" aria-hidden="true" />
+            Authenticator MFA
+          </Link>
+        }
       />
       <div className="grid gap-5 xl:grid-cols-[19rem_minmax(0,1fr)]">
         <ProductPanel title="Thông tin tài khoản">
           <div className="p-6 text-center">
             <span className="bg-brand-soft text-brand mx-auto grid size-24 place-items-center rounded-full">
-              <UserRound className="size-11" />
+              <UserRound className="size-11" aria-hidden="true" />
             </span>
-            <h2 className="mt-4 text-xl font-semibold">Nguyễn Văn An</h2>
-            <div className="mt-2">
-              <StatusBadge tone="info">Quản trị viên</StatusBadge>
-            </div>
-            <div className="border-border mt-6 space-y-4 border-t pt-5 text-left text-sm">
-              <p className="flex gap-3">
-                <Mail className="text-muted size-4" />
-                an.nguyen@securai.com
-              </p>
-              <p className="flex gap-3">
-                <Phone className="text-muted size-4" />
-                +84 912 345 678
-              </p>
-              <p className="flex gap-3">
-                <MapPin className="text-muted size-4" />
-                Công nghệ thông tin
-              </p>
+            <h2 className="mt-4 text-xl font-semibold">{user.fullName}</h2>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {user.roles.map((role) => (
+                <StatusBadge key={role.code} tone="info">
+                  {role.name}
+                </StatusBadge>
+              ))}
             </div>
           </div>
         </ProductPanel>
         <ProductPanel
-          title="Thông tin cá nhân"
-          description="Dữ liệu mẫu, chưa lưu vào hệ thống."
+          title="Chi tiết hồ sơ"
+          description="Thông tin được cung cấp bởi tài khoản đang đăng nhập."
         >
-          <form className="grid gap-5 p-5 md:grid-cols-2">
-            <label className="space-y-2 text-sm font-medium">
-              Họ và tên
-              <input className={inputClass} defaultValue="Nguyễn Văn An" />
-            </label>
-            <label className="space-y-2 text-sm font-medium">
-              Email
-              <input
-                className={inputClass}
-                defaultValue="an.nguyen@securai.com"
-                readOnly
-              />
-            </label>
-            <label className="space-y-2 text-sm font-medium">
-              Số điện thoại
-              <input className={inputClass} defaultValue="+84 912 345 678" />
-            </label>
-            <label className="space-y-2 text-sm font-medium">
-              Phòng ban
-              <input
-                className={inputClass}
-                defaultValue="Công nghệ thông tin"
-              />
-            </label>
-            <label className="space-y-2 text-sm font-medium md:col-span-2">
-              Giới thiệu
-              <textarea
-                className="border-border bg-background focus:border-brand focus:ring-brand/15 min-h-28 w-full rounded-lg border p-3 text-sm outline-none focus:ring-3"
-                defaultValue="Quản trị hệ thống và bảo mật thông tin."
-              />
-            </label>
-            <div className="flex justify-end md:col-span-2">
-              <button
-                type="button"
-                className="bg-brand hover:bg-brand-strong min-h-10 rounded-lg px-4 text-sm font-semibold text-white"
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </form>
+          <dl className="divide-border divide-y px-5">
+            <ProfileDetail label="Họ và tên" value={user.fullName} />
+            <ProfileDetail label="Email" value={user.email} icon={<Mail />} />
+            <ProfileDetail
+              label="Vai trò"
+              value={
+                user.roles.map((role) => role.name).join(", ") ||
+                "Chưa có vai trò"
+              }
+            />
+            <ProfileDetail label="Trạng thái" value={user.status} />
+          </dl>
         </ProductPanel>
       </div>
     </>
+  );
+}
+
+function ProfileDetail({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="grid gap-1 py-4 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
+      <dt className="text-muted text-sm font-medium">{label}</dt>
+      <dd className="flex min-w-0 items-center gap-2 text-sm font-medium break-words">
+        {icon ? (
+          <span className="text-muted [&>svg]:size-4">{icon}</span>
+        ) : null}
+        {value}
+      </dd>
+    </div>
   );
 }
