@@ -3,6 +3,7 @@ import {
   assignCourseSchema,
   assignmentOptionsSchema,
   courseAssignmentSchema,
+  courseAssignmentDetailSchema,
   courseListSchema,
   courseSchema,
   createCourseSchema,
@@ -60,7 +61,25 @@ export async function assignCourse(courseId: string, input: AssignCourseInput) {
       {
         method: "POST",
         target: "same-origin",
-        body: assignCourseSchema.parse(input),
+        body: {
+          ...assignCourseSchema.parse(input),
+          changeReason: input.changeReason?.trim() || undefined,
+        },
+      },
+    ),
+  );
+}
+
+export async function getLatestCourseAssignment(
+  courseId: string,
+  signal?: AbortSignal,
+) {
+  return courseAssignmentDetailSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}/assignments`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
       },
     ),
   );

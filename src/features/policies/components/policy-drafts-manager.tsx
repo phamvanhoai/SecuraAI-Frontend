@@ -7,6 +7,7 @@ import {
   FilePenLine,
   Pencil,
   Search,
+  Link2,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -62,9 +63,11 @@ function formatDate(value: string): string {
 export function PolicyDraftsManager({
   onAssignDepartments,
   onCreateNewVersion,
+  onMapControls,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
+  onMapControls?: () => void;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -216,21 +219,39 @@ export function PolicyDraftsManager({
   return (
     <>
       <ProductPageHeader
-        {...(onAssignDepartments
+        {...(onAssignDepartments || onMapControls
           ? {
               additionalActions: (
-                <Button
-                  className="min-h-10 px-3.5 font-medium"
-                  onClick={onAssignDepartments}
-                  variant="secondary"
-                >
-                  <Building2
-                    aria-hidden="true"
-                    className="size-4"
-                    strokeWidth={1.8}
-                  />
-                  Assign departments
-                </Button>
+                <>
+                  {onMapControls ? (
+                    <Button
+                      className="min-h-10 px-3.5 font-medium"
+                      onClick={onMapControls}
+                      variant="secondary"
+                    >
+                      <Link2
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
+                      Map controls
+                    </Button>
+                  ) : null}
+                  {onAssignDepartments ? (
+                    <Button
+                      className="min-h-10 px-3.5 font-medium"
+                      onClick={onAssignDepartments}
+                      variant="secondary"
+                    >
+                      <Building2
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
+                      Assign departments
+                    </Button>
+                  ) : null}
+                </>
               ),
             }
           : {})}

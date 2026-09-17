@@ -1,6 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch, type UseFormRegister } from "react-hook-form";
 import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
@@ -41,6 +41,8 @@ export function EditRiskAssessmentDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
+  const [targetSearch, setTargetSearch] = useState("");
+  const [debouncedTargetSearch, setDebouncedTargetSearch] = useState("");
   const [threatSearch, setThreatSearch] = useState("");
   const [vulnerabilitySearch, setVulnerabilitySearch] = useState("");
   const [threatPage, setThreatPage] = useState(1);
@@ -50,8 +52,6 @@ export function EditRiskAssessmentDialog({
     Record<string, string>
   >({});
   const detail = useRiskAssessmentDetail(id);
-  const assetOptions = useRiskCreateOptions("assets", id !== null);
-  const processOptions = useRiskCreateOptions("businessProcesses", id !== null);
   const threatOptions = useRiskCreateOptions(
     "threats",
     id !== null,
@@ -76,10 +76,36 @@ export function EditRiskAssessmentDialog({
     resolver: zodResolver(updateRiskAssessmentFormSchema),
     defaultValues: defaults,
   });
-  const [targetType, likelihoodValue, impactValue] = useWatch({
+  const [
+    targetType,
+    assetId,
+    businessProcessId,
+    likelihoodValue,
+    impactValue,
+    threatIds,
+    vulnerabilityIds,
+  ] = useWatch({
     control,
-    name: ["targetType", "likelihood", "impact"],
+    name: [
+      "targetType",
+      "assetId",
+      "businessProcessId",
+      "likelihood",
+      "impact",
+      "threatIds",
+      "vulnerabilityIds",
+    ],
   });
+  const assetOptions = useRiskCreateOptions(
+    "assets",
+    id !== null && targetType === "asset",
+    debouncedTargetSearch,
+  );
+  const processOptions = useRiskCreateOptions(
+    "businessProcesses",
+    id !== null && targetType === "business_process",
+    debouncedTargetSearch,
+  );
   const score = Number(likelihoodValue) * Number(impactValue);
   const level =
     score <= 4
@@ -89,6 +115,13 @@ export function EditRiskAssessmentDialog({
         : score <= 16
           ? "High"
           : "Critical";
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedTargetSearch(targetSearch),
+      300,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [targetSearch]);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -116,6 +149,8 @@ export function EditRiskAssessmentDialog({
   }, [detail.data, reset]);
   const close = (): void => {
     setMessage(undefined);
+    setTargetSearch("");
+    setDebouncedTargetSearch("");
     setThreatNotes({});
     setVulnerabilityNotes({});
     onClose();
@@ -202,45 +237,69 @@ export function EditRiskAssessmentDialog({
           ) : null}
           <section className="space-y-3">
             <h3 className="font-semibold">Assessment target</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-4">
               <FormField id="editTargetType" label="Target type">
-                <Select id="editTargetType" {...register("targetType")}>
+                <Select
+                  id="editTargetType"
+                  disabled={detail.data.assessment.status === "rejected"}
+                  {...register("targetType")}
+                >
                   <option value="asset">Asset</option>
                   <option value="business_process">Business process</option>
                 </Select>
               </FormField>
-              {targetType === "asset" ? (
-                <FormField
-                  id="editAssetId"
-                  label="Asset"
-                  error={errors.assetId?.message}
-                >
-                  <Select id="editAssetId" {...register("assetId")}>
-                    <option value="">Select an active asset</option>
-                    {assetOptions.data?.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} — {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              ) : (
-                <FormField
-                  id="editProcessId"
-                  label="Business process"
-                  error={errors.businessProcessId?.message}
-                >
-                  <Select id="editProcessId" {...register("businessProcessId")}>
-                    <option value="">Select an active business process</option>
-                    {processOptions.data?.items.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.code} — {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              )}
+              {detail.data.assessment.status === "draft" ? (
+                <Input
+                  aria-label="Search assessment targets"
+                  placeholder="Search targets by code or name"
+                  value={targetSearch}
+                  onChange={(event) => setTargetSearch(event.target.value)}
+                />
+              ) : null}
+              <TargetChoices
+                name={targetType === "asset" ? "assetId" : "businessProcessId"}
+                options={
+                  targetType === "asset"
+                    ? (assetOptions.data?.items ?? [])
+                    : (processOptions.data?.items ?? [])
+                }
+                current={
+                  (targetType === "asset" && detail.data.target.type === "asset") ||
+                  (targetType === "business_process" &&
+                    detail.data.target.type === "businessProcess")
+                    ? detail.data.target
+                    : null
+                }
+                selectedId={
+                  targetType === "asset"
+                    ? typeof assetId === "string"
+                      ? assetId
+                      : ""
+                    : typeof businessProcessId === "string"
+                      ? businessProcessId
+                      : ""
+                }
+                register={register}
+                disabled={detail.data.assessment.status === "rejected"}
+                loading={
+                  targetType === "asset"
+                    ? assetOptions.isPending
+                    : processOptions.isPending
+                }
+                {...(targetType === "asset" &&
+                typeof errors.assetId?.message === "string"
+                  ? { error: errors.assetId.message }
+                  : targetType === "business_process" &&
+                      typeof errors.businessProcessId?.message === "string"
+                    ? { error: errors.businessProcessId.message }
+                    : {})}
+              />
             </div>
+            {detail.data.assessment.status === "rejected" ? (
+              <p className="text-muted text-xs">
+                The assessment target is locked after rejection to preserve its review history.
+              </p>
+            ) : null}
           </section>
           <FormField id="editTitle" label="Title" error={errors.title?.message}>
             <Input id="editTitle" maxLength={255} {...register("title")} />
@@ -291,6 +350,8 @@ export function EditRiskAssessmentDialog({
               title="Threats"
               name="threatIds"
               options={threatOptions.data?.items ?? []}
+              selectedOptions={detail.data.threats}
+              selectedIds={threatIds ?? []}
               register={register}
               search={threatSearch}
               onSearch={(value) => {
@@ -302,7 +363,10 @@ export function EditRiskAssessmentDialog({
               onPage={setThreatPage}
               notes={{
                 ...Object.fromEntries(
-                  detail.data.threats.map((item) => [item.id, item.notes ?? ""]),
+                  detail.data.threats.map((item) => [
+                    item.id,
+                    item.notes ?? "",
+                  ]),
                 ),
                 ...threatNotes,
               }}
@@ -317,6 +381,8 @@ export function EditRiskAssessmentDialog({
               title="Vulnerabilities"
               name="vulnerabilityIds"
               options={vulnerabilityOptions.data?.items ?? []}
+              selectedOptions={detail.data.vulnerabilities}
+              selectedIds={vulnerabilityIds ?? []}
               register={register}
               search={vulnerabilitySearch}
               onSearch={(value) => {
@@ -367,6 +433,8 @@ function Checks({
   title,
   name,
   options,
+  selectedOptions,
+  selectedIds,
   register,
   search,
   onSearch,
@@ -380,6 +448,8 @@ function Checks({
   title: string;
   name: "threatIds" | "vulnerabilityIds";
   options: { id: string; code: string; name: string }[];
+  selectedOptions: { id: string; code: string; name: string }[];
+  selectedIds: string[];
   register: UseFormRegister<UpdateRiskAssessmentInput>;
   search: string;
   onSearch: (value: string) => void;
@@ -390,6 +460,17 @@ function Checks({
   onNote: (id: string, value: string) => void;
   error?: string;
 }) {
+  const visibleOptions = useMemo(() => {
+    const byId = new Map(options.map((item) => [item.id, item]));
+    for (const item of selectedOptions)
+      if (selectedIds.includes(item.id)) byId.set(item.id, item);
+    return [...byId.values()].sort((left, right) => {
+      const selectedDifference =
+        Number(selectedIds.includes(right.id)) -
+        Number(selectedIds.includes(left.id));
+      return selectedDifference || left.code.localeCompare(right.code);
+    });
+  }, [options, selectedIds, selectedOptions]);
   return (
     <fieldset>
       <legend className="font-semibold">{title}</legend>
@@ -401,7 +482,7 @@ function Checks({
         onChange={(event) => onSearch(event.target.value)}
       />
       <div className="border-border mt-3 max-h-44 space-y-1 overflow-y-auto rounded-lg border p-2">
-        {options.map((item) => (
+        {visibleOptions.map((item) => (
           <label
             className="hover:bg-neutral-soft flex cursor-pointer gap-2 rounded-md p-2 text-sm"
             key={item.id}
@@ -414,6 +495,9 @@ function Checks({
             />
             <span>
               <strong>{item.code}</strong> — {item.name}
+              {selectedIds.includes(item.id) ? (
+                <span className="text-muted ml-1 text-xs">(Selected)</span>
+              ) : null}
             </span>
             <Textarea
               className="mt-2"
@@ -452,6 +536,69 @@ function Checks({
           Next
         </Button>
       </div>
+    </fieldset>
+  );
+}
+
+function TargetChoices({
+  name,
+  options,
+  current,
+  selectedId,
+  register,
+  disabled,
+  loading,
+  error,
+}: {
+  name: "assetId" | "businessProcessId";
+  options: { id: string; code: string; name: string }[];
+  current: { id: string; code: string; name: string } | null;
+  selectedId: string;
+  register: UseFormRegister<UpdateRiskAssessmentInput>;
+  disabled: boolean;
+  loading: boolean;
+  error?: string;
+}) {
+  const visible =
+    current && !options.some((item) => item.id === current.id)
+      ? [current, ...options]
+      : options;
+  return (
+    <fieldset>
+      <legend className="font-medium">
+        {name === "assetId" ? "Asset" : "Business process"}
+      </legend>
+      <div className="border-border mt-2 max-h-48 space-y-1 overflow-y-auto rounded-lg border p-2">
+        {loading ? <p className="text-muted p-2 text-sm">Loading targets…</p> : null}
+        {!loading && visible.length === 0 ? (
+          <p className="text-muted p-2 text-sm">No matching targets.</p>
+        ) : null}
+        {visible.map((item) => (
+          <label
+            key={item.id}
+            className={`flex cursor-pointer gap-3 rounded-md p-2 text-sm ${
+              selectedId === item.id
+                ? "bg-neutral-soft"
+                : "hover:bg-neutral-soft"
+            }`}
+          >
+            <input
+              type="radio"
+              value={item.id}
+              disabled={disabled}
+              {...register(name)}
+            />
+            <span>
+              <strong>{item.code}</strong> — {item.name}
+            </span>
+          </label>
+        ))}
+      </div>
+      {error ? (
+        <p className="text-danger mt-1 text-xs" role="alert">
+          {error}
+        </p>
+      ) : null}
     </fieldset>
   );
 }

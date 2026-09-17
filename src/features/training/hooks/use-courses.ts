@@ -5,6 +5,7 @@ import {
   assignCourse,
   createCourse,
   getAssignmentOptions,
+  getLatestCourseAssignment,
   listCourses,
 } from "../api/courses";
 import type { AssignCourseInput } from "../schemas/course-schema";
@@ -44,6 +45,7 @@ export function useAssignmentOptions(
 }
 
 export function useAssignCourse() {
+  const client = useQueryClient();
   return useMutation({
     mutationFn: ({
       courseId,
@@ -52,6 +54,17 @@ export function useAssignCourse() {
       courseId: string;
       input: AssignCourseInput;
     }) => assignCourse(courseId, input),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["training"] });
+    },
     retry: false,
+  });
+}
+
+export function useLatestCourseAssignment(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ["training", "course-assignment", courseId],
+    queryFn: ({ signal }) => getLatestCourseAssignment(courseId ?? "", signal),
+    enabled: Boolean(courseId),
   });
 }

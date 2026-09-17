@@ -12,9 +12,11 @@ vi.mock("@/features/policies", () => ({
   PolicyDraftsManager: ({
     onAssignDepartments,
     onCreateNewVersion,
+    onMapControls,
   }: {
     onAssignDepartments?: () => void;
     onCreateNewVersion?: () => void;
+    onMapControls?: () => void;
   }) => (
     <div>
       <button type="button" onClick={onCreateNewVersion}>
@@ -23,6 +25,11 @@ vi.mock("@/features/policies", () => ({
       {onAssignDepartments ? (
         <button type="button" onClick={onAssignDepartments}>
           Open assignment workflow
+        </button>
+      ) : null}
+      {onMapControls ? (
+        <button type="button" onClick={onMapControls}>
+          Open control-mapping workflow
         </button>
       ) : null}
     </div>
@@ -38,6 +45,12 @@ vi.mock("@/features/policies", () => ({
     </div>
   ),
   PolicyPublicationManager: () => <p>Publication workflow</p>,
+  PolicyControlMappingManager: ({ onBack }: { onBack?: () => void }) => (
+    <div>
+      <p>Control-mapping workflow</p>
+      {onBack ? <button onClick={onBack}>Back to policies</button> : null}
+    </div>
+  ),
   UpdatePolicyVersionManager: ({ onBack }: { onBack?: () => void }) => (
     <div>
       <p>New-version workflow</p>
@@ -128,6 +141,23 @@ describe("PoliciesPage", () => {
     expect(
       screen.queryByRole("button", { name: "Back to drafts" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("lets a policy author open control mapping and return", async () => {
+    const user = userEvent.setup();
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.create", "compliance.map-controls"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+    await user.click(
+      screen.getByRole("button", { name: "Open control-mapping workflow" }),
+    );
+    expect(screen.getByText("Control-mapping workflow")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Back to policies" }));
+    expect(
+      screen.getByRole("button", { name: "Open control-mapping workflow" }),
+    ).toBeInTheDocument();
   });
 
   it("shows policy acknowledgement for an employee", () => {
