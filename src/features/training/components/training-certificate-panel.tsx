@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { Award, ArrowLeft } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -113,6 +114,11 @@ export function TrainingCertificatePanel({
               disabled={issue.isPending}
               onClick={onClose}
             >
+              <ArrowLeft
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
               Back to employees
             </Button>
             {canIssue && !certificate ? (
@@ -130,6 +136,11 @@ export function TrainingCertificatePanel({
                   }
                 }}
               >
+                <Award
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
                 {issue.isPending ? "Issuing…" : "Issue certificate"}
               </Button>
             ) : null}

@@ -35,6 +35,8 @@ export async function createCourse(input: CreateCourseInput) {
         title: parsed.title,
         description: parsed.description || null,
         content: parsed.content,
+        status: parsed.status,
+        ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
       },
     }),
   );

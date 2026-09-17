@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowLeft, ClipboardList, Eye, Search } from "lucide-react";
+import {
+  Award,
+  ArrowLeft,
+  ClipboardList,
+  Eye,
+  Search,
+  UserMinus,
+} from "lucide-react";
 import { TrainingCertificatePanel } from "./training-certificate-panel";
 import { useCertificateIssuancePending } from "../hooks/use-certificate";
 import { useEffect, useRef, useState } from "react";
@@ -112,7 +119,7 @@ export function TrainingCompletionManager({
           variant="secondary"
           onClick={() => setCampaignId(item.id)}
         >
-          <Eye className="size-4" aria-hidden="true" />
+          <Eye className="size-4" aria-hidden="true" strokeWidth={1.8} />
           View employees
         </Button>
       ),
@@ -515,13 +522,26 @@ function CompletionDetailDialog({
                   item.certificateNumber ||
                   (item.status === "completed" && canIssue) ? (
                     <Button
-                      variant="secondary"
+                      variant={item.certificateNumber ? "secondary" : "primary"}
                       onClick={(event) => {
                         certificateTrigger.current = event.currentTarget;
                         setCertificateId(item.id);
                       }}
                       disabled={issuingCertificate}
                     >
+                      {item.certificateNumber ? (
+                        <Eye
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                      ) : (
+                        <Award
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                      )}
                       {item.certificateNumber
                         ? "View certificate"
                         : "Issue certificate"}
@@ -543,7 +563,7 @@ function CompletionDetailDialog({
                         item.status !== "completed" &&
                         item.status !== "withdrawn" ? (
                           <Button
-                            variant="secondary"
+                            variant="danger"
                             disabled={withdraw.isPending}
                             onClick={() => {
                               setWithdrawTarget({
@@ -554,6 +574,11 @@ function CompletionDetailDialog({
                               setWithdrawError("");
                             }}
                           >
+                            <UserMinus
+                              aria-hidden="true"
+                              className="size-4"
+                              strokeWidth={1.8}
+                            />
                             Withdraw
                           </Button>
                         ) : null,
