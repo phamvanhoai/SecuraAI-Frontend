@@ -6,11 +6,13 @@ import {
   Copy,
   Edit2,
   Key,
+  PauseCircle,
   Plus,
   RefreshCw,
   Search,
   ShieldAlert,
   ShieldCheck,
+  ShieldX,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/feedback/toast";
@@ -33,7 +35,7 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
         <ShieldCheck className="size-3" />
-        Hoạt động
+        Active
       </span>
     );
   }
@@ -41,14 +43,22 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400 border border-amber-500/20">
         <ShieldAlert className="size-3" />
-        Đã hết hạn
+        Expired
+      </span>
+    );
+  }
+  if (status === "REVOKED") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-400 border border-rose-500/20">
+        <ShieldX className="size-3" />
+        Revoked
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-neutral-soft px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
-      <Ban className="size-3" />
-      Đã thu hồi / Vô hiệu hóa
+      <PauseCircle className="size-3" />
+      Inactive
     </span>
   );
 }
@@ -58,14 +68,8 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const queryParams: { isActive?: boolean; search?: string } = {};
-  if (statusFilter === "active") queryParams.isActive = true;
-  if (statusFilter === "inactive") queryParams.isActive = false;
-  if (searchTerm.trim()) queryParams.search = searchTerm.trim();
-
   const apiKeysQuery = useApiKeys({
     integrationId,
-    ...queryParams,
   });
 
   const revokeMutation = useRevokeApiKey();
@@ -113,11 +117,11 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
     try {
       await navigator.clipboard.writeText(fingerprint);
       toast.info(
-        "Đã sao chép Key Fingerprint",
-        "Lưu ý: Đây là mã định danh đại diện, không phải là secret token.",
+        "Copied Key Fingerprint",
+        "Note: This is a public key fingerprint, not the secret token.",
       );
     } catch {
-      toast.error("Không thể sao chép");
+      toast.error("Failed to copy fingerprint");
     }
   }
 
@@ -128,10 +132,10 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
         integrationId,
         keyId: keyToRevoke.id,
       });
-      toast.success(`Đã thu hồi API Key "${keyToRevoke.keyName}"`);
+      toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
       setKeyToRevoke(null);
     } catch {
-      toast.error("Không thể thu hồi API Key");
+      toast.error("Failed to revoke API key");
     }
   }
 
@@ -144,13 +148,26 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
           isActive: true,
         },
       });
-      toast.success(`Đã kích hoạt lại API Key "${key.keyName}"`);
+      toast.success(`API key "${key.keyName}" reactivated`);
     } catch {
-      toast.error("Không thể kích hoạt lại API Key");
+      toast.error("Failed to reactivate API key");
     }
   }
 
-  const keys = apiKeysQuery.data ?? [];
+  const rawKeys = apiKeysQuery.data ?? [];
+  const keys = rawKeys.filter((k) => {
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      const matchName = k.keyName.toLowerCase().includes(term);
+      const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
+      if (!matchName && !matchFp) return false;
+    }
+    if (statusFilter === "active") return k.status === "ACTIVE";
+    if (statusFilter === "inactive") return k.status === "INACTIVE";
+    if (statusFilter === "expired") return k.status === "EXPIRED";
+    if (statusFilter === "revoked") return k.status === "REVOKED";
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -162,7 +179,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             <Input
               className="h-8 pl-8 text-xs"
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm theo tên khóa..."
+              placeholder="Search by key name or fingerprint..."
               value={searchTerm}
             />
           </div>
@@ -177,7 +194,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
               onClick={() => setStatusFilter("all")}
               type="button"
             >
-              Tất cả
+              All
             </button>
             <button
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -188,7 +205,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
               onClick={() => setStatusFilter("active")}
               type="button"
             >
-              Hoạt động
+              Active
             </button>
             <button
               className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -199,7 +216,18 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
               onClick={() => setStatusFilter("inactive")}
               type="button"
             >
-              Vô hiệu hóa
+              Inactive
+            </button>
+            <button
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                statusFilter === "expired"
+                  ? "bg-surface text-foreground shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+              onClick={() => setStatusFilter("expired")}
+              type="button"
+            >
+              Expired
             </button>
           </div>
         </div>
@@ -210,7 +238,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
           type="button"
         >
           <Plus className="mr-1.5 size-3.5" />
-          Thêm API Key mới
+          Generate API Key
         </Button>
       </div>
 
@@ -223,13 +251,13 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
         </div>
       ) : apiKeysQuery.isError ? (
         <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-danger text-xs flex items-center justify-between">
-          <span>Đã xảy ra lỗi khi kết nối với máy chủ. Vui lòng thử lại sau.</span>
+          <span>Failed to connect to the server. Please try again later.</span>
           <Button
             className="min-h-7 px-2.5 text-xs"
             onClick={() => apiKeysQuery.refetch()}
             variant="secondary"
           >
-            Thử lại
+            Retry
           </Button>
         </div>
       ) : keys.length === 0 ? (
@@ -238,10 +266,10 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             <Key className="size-5" />
           </div>
           <h4 className="mt-3 text-xs font-semibold text-foreground">
-            Chưa có API Key nào
+            No API Keys Generated
           </h4>
           <p className="text-muted mt-1 max-w-sm text-[11px]">
-            Tạo API Key để cung cấp thông tin xác thực an toàn cho các tác vụ đồng bộ dữ liệu và thu thập sự kiện bảo mật.
+            Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders.
           </p>
           <Button
             className="mt-4 min-h-8 px-3 text-xs"
@@ -249,7 +277,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             type="button"
           >
             <Plus className="mr-1.5 size-3.5" />
-            Tạo API Key đầu tiên
+            Generate First API Key
           </Button>
         </div>
       ) : (
@@ -258,12 +286,12 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             <table className="w-full text-left text-xs">
               <thead className="border-border bg-neutral-soft/50 text-muted border-b font-medium">
                 <tr>
-                  <th className="px-4 py-2.5">Tên định danh khóa</th>
+                  <th className="px-4 py-2.5">Key Identifier</th>
                   <th className="px-4 py-2.5">Key Fingerprint</th>
-                  <th className="px-4 py-2.5">Trạng thái</th>
-                  <th className="px-4 py-2.5">Hết hạn</th>
-                  <th className="px-4 py-2.5">Ngày tạo</th>
-                  <th className="px-4 py-2.5 text-right">Thao tác</th>
+                  <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Expires At</th>
+                  <th className="px-4 py-2.5">Created At</th>
+                  <th className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-border divide-y">
@@ -288,10 +316,10 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                         </span>
                         {key.keyFingerprint ? (
                           <button
-                            aria-label="Sao chép Key Fingerprint"
+                            aria-label="Copy Key Fingerprint"
                             className="text-muted hover:text-foreground p-1"
                             onClick={() => handleCopyFingerprint(key.keyFingerprint)}
-                            title="Sao chép Key Fingerprint (nhận diện)"
+                            title="Copy Key Fingerprint"
                             type="button"
                           >
                             <Copy className="size-3" />
@@ -306,12 +334,22 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
 
                     <td className="text-muted px-4 py-3 text-[11px]">
                       {key.expiresAt
-                        ? new Date(key.expiresAt).toLocaleString("vi-VN")
-                        : "Không giới hạn"}
+                        ? new Date(key.expiresAt).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Never"}
                     </td>
 
                     <td className="text-muted px-4 py-3 text-[11px]">
-                      {new Date(key.createdAt).toLocaleDateString("vi-VN")}
+                      {new Date(key.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </td>
 
                     <td className="px-4 py-3 text-right">
@@ -320,7 +358,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                           aria-label={`Rotate API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenRotate(key)}
-                          title="Luân chuyển (Rotate) secret token mới"
+                          title="Rotate secret token"
                           type="button"
                         >
                           <RefreshCw className="mr-1 size-3" />
@@ -328,10 +366,10 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                         </Button>
 
                         <Button
-                          aria-label={`Chỉnh sửa API key ${key.keyName}`}
+                          aria-label={`Edit API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenEdit(key)}
-                          title="Chỉnh sửa tên và thời hạn"
+                          title="Edit key name and expiration"
                           type="button"
                         >
                           <Edit2 className="size-3" />
@@ -339,21 +377,21 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
 
                         {key.isActive ? (
                           <Button
-                            aria-label={`Thu hồi API key ${key.keyName}`}
+                            aria-label={`Revoke API key ${key.keyName}`}
                             className="h-7 px-2 text-[11px] text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
                             onClick={() => setKeyToRevoke(key)}
-                            title="Thu hồi / Vô hiệu hóa API key này"
+                            title="Revoke this API key"
                             type="button"
                           >
                             <Ban className="size-3" />
                           </Button>
                         ) : (
                           <Button
-                            aria-label={`Kích hoạt lại API key ${key.keyName}`}
+                            aria-label={`Reactivate API key ${key.keyName}`}
                             className="h-7 px-2 text-[11px] text-emerald-400 ring-emerald-500/30 hover:bg-emerald-500/10 ring-1 bg-surface"
                             disabled={updateMutation.isPending}
                             onClick={() => handleReactivate(key)}
-                            title="Kích hoạt lại API key này"
+                            title="Reactivate this API key"
                             type="button"
                           >
                             <CheckCircle2 className="size-3" />
@@ -401,16 +439,16 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                 <ShieldAlert className="size-4" />
               </div>
               <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
-                Xác nhận thu hồi API Key
+                Confirm API Key Revocation
               </h3>
             </div>
           </div>
 
           <div className="space-y-4 p-5 text-xs">
             <p className="text-muted leading-relaxed">
-              Bạn có chắc chắn muốn thu hồi khóa{" "}
+              Are you sure you want to revoke the key{" "}
               <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
-              Khóa này sẽ bị chuyển sang trạng thái <strong>Vô hiệu hóa</strong> và các kết nối sử dụng khóa này sẽ không thể tiếp tục xác thực.
+              This key will be marked as <strong>Revoked</strong> and any incoming requests using this secret token will be rejected (401 Unauthorized).
             </p>
 
             <div className="border-border flex justify-end gap-2 border-t pt-4">
@@ -420,7 +458,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                 onClick={() => setKeyToRevoke(null)}
                 type="button"
               >
-                Hủy
+                Cancel
               </Button>
               <Button
                 className="min-h-8 px-4 text-xs bg-danger hover:bg-danger/90 text-white"
@@ -428,7 +466,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                 onClick={handleConfirmRevoke}
                 type="button"
               >
-                {revokeMutation.isPending ? "Đang thu hồi..." : "Xác nhận Thu hồi"}
+                {revokeMutation.isPending ? "Revoking..." : "Confirm Revocation"}
               </Button>
             </div>
           </div>
