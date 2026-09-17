@@ -1,2 +1,1 @@
-/** Incident-management public API. Implementation awaits backend contracts. */
-export {};
+export { IncidentReportingManager } from "./components/incident-reporting-manager";
