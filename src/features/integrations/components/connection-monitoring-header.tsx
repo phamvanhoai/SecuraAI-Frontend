@@ -37,19 +37,19 @@ export function ConnectionMonitoringHeader({
       const result = await checkAllMutation.mutateAsync({ timeoutMs: 5000 });
       if (result.failed === 0) {
         toast.success(
-          "Kiểm tra kết nối hoàn tất",
-          `Tất cả ${result.totalTested} hệ thống tích hợp đều phản hồi tốt.`,
+          "Connection Checks Complete",
+          `All ${result.totalTested} integrated endpoints responded successfully.`,
         );
       } else {
         toast.warning(
-          "Phát hiện kết nối lỗi",
-          `Đã kiểm tra ${result.totalTested} hệ thống: ${result.successful} hoạt động, ${result.failed} lỗi kết nối.`,
+          "Connection Issues Detected",
+          `Tested ${result.totalTested} endpoints: ${result.successful} responsive, ${result.failed} with errors.`,
         );
       }
     } catch {
       toast.error(
-        "Lỗi kiểm tra hàng loạt",
-        "Không thể hoàn thành kiểm tra kết nối các hệ thống.",
+        "Batch Check Error",
+        "Could not complete batch connection probe across all systems.",
       );
     }
   }

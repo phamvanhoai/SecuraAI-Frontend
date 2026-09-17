@@ -18,10 +18,10 @@ export const integrationStatusEnum = z.enum([
 export type IntegrationStatus = z.infer<typeof integrationStatusEnum>;
 
 export const paginationSchema = z.object({
-  total: z.number(),
-  page: z.number(),
-  limit: z.number(),
-  totalPages: z.number(),
+  total: z.coerce.number(),
+  page: z.coerce.number(),
+  limit: z.coerce.number(),
+  totalPages: z.coerce.number(),
 });
 
 export const integrationSchema = z.object({

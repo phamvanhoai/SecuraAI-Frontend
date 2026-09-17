@@ -55,8 +55,8 @@ export function ConnectionDiagnosticsTab({
     e.preventDefault();
     if (!integration.baseUrl) {
       toast.warning(
-        "Chưa có URL",
-        "Hệ thống này chưa được cấu hình URL kết nối.",
+        "No URL Configured",
+        "This integration does not have a connection URL configured.",
       );
       return;
     }
@@ -77,16 +77,16 @@ export function ConnectionDiagnosticsTab({
 
       if (result.connected) {
         toast.success(
-          "Kiểm tra thành công",
-          `Kết nối phản hồi trong ${result.latencyMs}ms (HTTP ${result.statusCode ?? 200})`,
+          "Probe Successful",
+          `Connection responded in ${result.latencyMs}ms (HTTP ${result.statusCode ?? 200})`,
         );
       } else {
-        toast.error("Kiểm tra thất bại", result.message);
+        toast.error("Probe Failed", result.message);
       }
       refetchTelemetry();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lỗi kiểm tra kết nối";
-      toast.error("Lỗi kiểm tra", msg);
+      const msg = err instanceof Error ? err.message : "Connection check error";
+      toast.error("Probe Error", msg);
     }
   }
 
@@ -114,7 +114,7 @@ export function ConnectionDiagnosticsTab({
                 <IntegrationStatusBadge status={integration.status} />
               </div>
               <p className="font-mono text-muted text-xs mt-0.5">
-                {integration.baseUrl || "Chưa cấu hình URL"}
+                {integration.baseUrl || "No Base URL configured"}
               </p>
             </div>
           </div>
@@ -128,14 +128,14 @@ export function ConnectionDiagnosticsTab({
             <RefreshCw
               className={`size-3.5 mr-1 ${isTelemetryFetching ? "animate-spin text-brand" : ""}`}
             />
-            Làm mới
+            Refresh
           </Button>
         </div>
 
         {/* 24h Telemetry Strip */}
         <div className="border-border/60 mt-4 grid grid-cols-2 gap-3 border-t pt-3.5 sm:grid-cols-4">
           <div>
-            <span className="text-muted text-[11px]">Tính sẵn sàng (24h)</span>
+            <span className="text-muted text-[11px]">Availability (24h)</span>
             <div className="text-foreground mt-0.5 text-base font-bold">
               {availability !== null && availability !== undefined
                 ? `${availability}%`
@@ -143,7 +143,7 @@ export function ConnectionDiagnosticsTab({
             </div>
           </div>
           <div>
-            <span className="text-muted text-[11px]">Độ trễ TB (24h)</span>
+            <span className="text-muted text-[11px]">Avg Latency (24h)</span>
             <div className="text-foreground mt-0.5 text-base font-bold">
               {avgLatency !== null && avgLatency !== undefined
                 ? `${avgLatency}ms`
@@ -151,17 +151,23 @@ export function ConnectionDiagnosticsTab({
             </div>
           </div>
           <div>
-            <span className="text-muted text-[11px]">Lượt kiểm tra (24h)</span>
+            <span className="text-muted text-[11px]">Probe Checks (24h)</span>
             <div className="text-foreground mt-0.5 text-base font-bold">
-              {checks24h} <span className="text-muted text-xs font-normal">({successfulChecks} thành công / {failedChecks} lỗi)</span>
+              {checks24h} <span className="text-muted text-xs font-normal">({successfulChecks} ok / {failedChecks} err)</span>
             </div>
           </div>
           <div>
-            <span className="text-muted text-[11px]">Lần kết nối gần nhất</span>
+            <span className="text-muted text-[11px]">Last Connected</span>
             <div className="text-foreground mt-0.5 text-xs font-medium truncate">
               {integration.lastConnectedAt
-                ? new Date(integration.lastConnectedAt).toLocaleString("vi-VN")
-                : "Chưa từng kết nối"}
+                ? new Date(integration.lastConnectedAt).toLocaleString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Never connected"}
             </div>
           </div>
         </div>
@@ -170,17 +176,17 @@ export function ConnectionDiagnosticsTab({
       {/* Manual Probe & Diagnostics Card */}
       <div className="border-border bg-surface rounded-xl border p-4 shadow-xs">
         <h3 className="text-foreground text-xs font-semibold uppercase tracking-wider text-muted">
-          Thực hiện kiểm tra kết nối trực tiếp (Manual Probe)
+          Active Manual Connection Probe
         </h3>
         <p className="text-muted text-xs mt-1">
-          Gửi yêu cầu HTTP GET an toàn kèm xác thực chống SSRF đến endpoint và đo lường độ trễ phản hồi tức thì.
+          Send an authenticated HTTP request with SSRF guard to test live endpoint availability and measure real-time latency.
         </p>
 
         <form className="mt-4 space-y-3" onSubmit={handleManualProbe}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex-1 space-y-1">
               <Label className="text-xs" htmlFor="probe-url">
-                Endpoint URL đích
+                Target Endpoint URL
               </Label>
               <div className="relative">
                 <Globe className="text-muted absolute top-1/2 left-3 size-3.5 -translate-y-1/2" />
@@ -188,14 +194,14 @@ export function ConnectionDiagnosticsTab({
                   className="pl-8 font-mono text-xs bg-neutral-soft/30"
                   disabled
                   id="probe-url"
-                  value={integration.baseUrl || "Chưa có URL"}
+                  value={integration.baseUrl || "No URL configured"}
                 />
               </div>
             </div>
 
             <div className="w-full sm:w-36 space-y-1">
               <Label className="text-xs" htmlFor="probe-timeout">
-                Thời gian chờ (Timeout)
+                Timeout (Seconds)
               </Label>
               <Input
                 className="text-xs"
@@ -216,7 +222,7 @@ export function ConnectionDiagnosticsTab({
               <Wifi
                 className={`mr-1.5 size-3.5 ${testMutation.isPending ? "animate-pulse" : ""}`}
               />
-              {testMutation.isPending ? "Đang gửi probe..." : "Kiểm tra ngay"}
+              {testMutation.isPending ? "Probing..." : "Test Connection Now"}
             </Button>
           </div>
         </form>
@@ -241,25 +247,25 @@ export function ConnectionDiagnosticsTab({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-semibold">
                       {lastProbeResult.connected
-                        ? "Kết nối thành công (Healthy)"
-                        : "Kết nối thất bại (Error)"}
+                        ? "Connection Healthy (Success)"
+                        : "Connection Error (Failed)"}
                     </span>
                     <span className="font-mono text-[11px] opacity-80">
-                      {lastProbeResult.testedAt.toLocaleTimeString("vi-VN")}
+                      {lastProbeResult.testedAt.toLocaleTimeString("en-US")}
                     </span>
                   </div>
                   <p className="mt-1">{lastProbeResult.message}</p>
                   <div className="mt-2 flex flex-wrap gap-3 font-mono text-[11px]">
                     <span>
-                      Mã trạng thái HTTP:{" "}
+                      HTTP Status:{" "}
                       <strong>
                         {lastProbeResult.statusCode !== null
                           ? lastProbeResult.statusCode
-                          : "Không có phản hồi"}
+                          : "No Response"}
                       </strong>
                     </span>
                     <span>
-                      Độ trễ: <strong>{lastProbeResult.latencyMs}ms</strong>
+                      Latency: <strong>{lastProbeResult.latencyMs}ms</strong>
                     </span>
                   </div>
                 </div>
@@ -274,16 +280,16 @@ export function ConnectionDiagnosticsTab({
         <div className="border-rose-500/20 bg-rose-500/5 rounded-xl border p-4 text-xs">
           <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-semibold">
             <ShieldAlert className="size-4" />
-            <span>Chẩn đoán nguyên nhân lỗi kết nối</span>
+            <span>Connection Error Diagnostics</span>
           </div>
           <p className="text-muted mt-1.5 leading-relaxed">
-            Hệ thống đang không thể thiết lập kết nối đến endpoint. Các nguyên nhân phổ biến có thể gồm:
+            The system could not establish a connection to this endpoint. Common root causes include:
           </p>
           <ul className="mt-2 list-disc list-inside space-y-1 text-muted">
-            <li>Máy chủ đích đang ngoại tuyến, bảo trì hoặc gặp lỗi nội bộ (HTTP 502/503).</li>
-            <li>Tường lửa hoặc chính sách mạng nội bộ chặn kết nối IP/Port ra bên ngoài.</li>
-            <li>Chứng chỉ bảo mật SSL/TLS của endpoint bị hết hạn hoặc không hợp lệ.</li>
-            <li>Địa chỉ URL endpoint bị thay đổi hoặc không thể phân giải tên miền (DNS Failure).</li>
+            <li>Target host is offline, under maintenance, or returning internal server errors (HTTP 502/503).</li>
+            <li>Network firewall or internal security group is blocking outbound traffic to this IP/Port.</li>
+            <li>SSL/TLS certificate of the endpoint has expired, is untrusted, or has a domain mismatch.</li>
+            <li>Target URL changed, host is unreachable, or DNS resolution failure.</li>
           </ul>
         </div>
       )}
@@ -291,7 +297,7 @@ export function ConnectionDiagnosticsTab({
       {/* Connection Check Logs Timeline */}
       <div className="border-border bg-surface rounded-xl border p-4 shadow-xs">
         <h3 className="text-foreground text-xs font-semibold uppercase tracking-wider text-muted">
-          Lịch sử kiểm tra kết nối gần đây
+          Recent Connection Probe History
         </h3>
 
         {isTelemetryLoading ? (
@@ -302,7 +308,7 @@ export function ConnectionDiagnosticsTab({
           </div>
         ) : recentLogs.length === 0 ? (
           <p className="text-muted text-xs mt-3 italic">
-            Chưa có nhật ký kiểm tra kết nối nào được ghi nhận.
+            No connection probe history recorded yet.
           </p>
         ) : (
           <div className="mt-3 divide-border divide-y text-xs">
@@ -324,11 +330,11 @@ export function ConnectionDiagnosticsTab({
                       <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
                         <Clock className="size-3" />
                         <span>
-                          {new Date(log.createdAt).toLocaleString("vi-VN", {
+                          {new Date(log.createdAt).toLocaleString("en-US", {
                             hour: "2-digit",
                             minute: "2-digit",
-                            day: "2-digit",
-                            month: "2-digit",
+                            month: "short",
+                            day: "numeric",
                             year: "numeric",
                           })}
                         </span>
@@ -349,7 +355,7 @@ export function ConnectionDiagnosticsTab({
                         : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                     }`}
                   >
-                    {isSuccess ? "Thành công" : "Thất bại"}
+                    {isSuccess ? "Success" : "Failed"}
                   </span>
                 </div>
               );

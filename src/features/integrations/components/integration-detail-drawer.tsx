@@ -134,13 +134,14 @@ function IntegrationOverviewTab({
               onChange={(e) =>
                 setStatus(e.target.value as IntegrationStatus)
               }
-              value={status}
+              value={status === "inactive" ? "inactive" : "active"}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-              <option value="error">Connection Error</option>
+              <option value="active">Active (Enabled)</option>
+              <option value="inactive">Inactive (Disabled)</option>
             </Select>
+            <p className="text-muted text-[11px]">
+              Connection Error & Pending states are managed automatically by live telemetry.
+            </p>
           </div>
         </div>
 
@@ -377,7 +378,7 @@ export function IntegrationDetailDrawer({
               type="button"
             >
               <Radio className="size-3.5" />
-              Kết nối & Chẩn đoán
+              Connection & Diagnostics
             </button>
             <button
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
