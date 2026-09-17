@@ -5,6 +5,7 @@ import {
   myIncidentsSchema,
   type ClassifyIncidentForm,
   type AssignIncidentForm,
+  type UpdateIncidentProgressForm,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
 export async function reportIncident(input: ReportIncidentForm) {
@@ -107,6 +108,21 @@ export async function assignIncidentHandler(input: {
           assigneeUserId: input.values.assigneeUserId,
           note: input.values.note.trim(),
         },
+      },
+    ),
+  );
+}
+export async function updateIncidentHandlingProgress(input: {
+  id: string;
+  values: UpdateIncidentProgressForm;
+}) {
+  return incidentSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/progress`,
+      {
+        target: "same-origin",
+        method: "PATCH",
+        body: { status: input.values.status, note: input.values.note.trim() },
       },
     ),
   );

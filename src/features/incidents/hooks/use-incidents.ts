@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   classifyIncidentSeverity,
   assignIncidentHandler,
+  updateIncidentHandlingProgress,
   getMyIncident,
   listIncidentsForClassification,
   listIncidentAssignmentOptions,
@@ -68,6 +69,14 @@ export function useAssignIncidentHandler() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: assignIncidentHandler,
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export function useUpdateIncidentHandlingProgress() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: updateIncidentHandlingProgress,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
   });

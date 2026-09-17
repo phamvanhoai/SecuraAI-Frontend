@@ -2,6 +2,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Ellipsis,
+  Activity,
   Eye,
   Plus,
   RotateCcw,
@@ -37,6 +38,7 @@ import {
   useAssignIncidentHandler,
   useIncidentAssignmentOptions,
   useIncidentClassificationQueue,
+  useUpdateIncidentHandlingProgress,
   useMyIncident,
   useMyIncidents,
   useReportIncident,
@@ -44,9 +46,11 @@ import {
 import {
   classifyIncidentFormSchema,
   assignIncidentFormSchema,
+  updateIncidentProgressFormSchema,
   reportIncidentFormSchema,
   type ClassifyIncidentForm,
   type AssignIncidentForm,
+  type UpdateIncidentProgressForm,
   type Incident,
   type IncidentSeverity,
   type ReportIncidentForm,
@@ -63,6 +67,19 @@ const classificationDefaults: ClassifyIncidentForm = {
   rationale: "",
 };
 const assignmentDefaults: AssignIncidentForm = { assigneeUserId: "", note: "" };
+const progressDefaults: UpdateIncidentProgressForm = {
+  status: "in_progress",
+  note: "",
+};
+const progressOptions: Record<
+  string,
+  readonly UpdateIncidentProgressForm["status"][]
+> = {
+  assigned: ["in_progress", "escalated"],
+  in_progress: ["escalated", "resolved"],
+  escalated: ["in_progress", "resolved"],
+  resolved: ["closed"],
+};
 const categoryLabels: Record<ReportIncidentForm["category"], string> = {
   phishing: "Phishing",
   malware: "Malware",
@@ -83,6 +100,22 @@ const severityTone = (severity: string) => {
   if (severity === "low") return "success" as const;
   return "info" as const;
 };
+const statusPresentation: Record<
+  string,
+  { label: string; tone: "neutral" | "info" | "warning" | "danger" | "success" }
+> = {
+  reported: { label: "Reported", tone: "neutral" },
+  assigned: { label: "Assigned", tone: "info" },
+  in_progress: { label: "In progress", tone: "warning" },
+  escalated: { label: "Escalated", tone: "danger" },
+  resolved: { label: "Resolved", tone: "success" },
+  closed: { label: "Closed", tone: "neutral" },
+};
+const incidentStatus = (status: string) =>
+  statusPresentation[status] ?? {
+    label: status.replaceAll("_", " "),
+    tone: "neutral" as const,
+  };
 export function IncidentReportingManager() {
   const session = useSessionUser();
   const allowed =
@@ -91,6 +124,8 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.classify") ?? false;
   const canAssign =
     session.data?.permissions.includes("incidents.assign") ?? false;
+  const canUpdateProgress =
+    session.data?.permissions.includes("incidents.update-progress") ?? false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -103,12 +138,14 @@ export function IncidentReportingManager() {
   const [selectedId, setSelectedId] = useState<string>();
   const [classificationTarget, setClassificationTarget] = useState<Incident>();
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
+  const [progressTarget, setProgressTarget] = useState<Incident>();
   const [handlerSearch, setHandlerSearch] = useState("");
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const detailDialogRef = useRef<HTMLDialogElement>(null);
   const classificationDialogRef = useRef<HTMLDialogElement>(null);
   const assignmentDialogRef = useRef<HTMLDialogElement>(null);
+  const progressDialogRef = useRef<HTMLDialogElement>(null);
   const list = useMyIncidents(page, allowed && !canClassify);
   const classificationQueue = useIncidentClassificationQueue(
     page,
@@ -121,6 +158,7 @@ export function IncidentReportingManager() {
   const classificationMutation = useClassifyIncidentSeverity();
   const assignmentOptions = useIncidentAssignmentOptions(canAssign);
   const assignmentMutation = useAssignIncidentHandler();
+  const progressMutation = useUpdateIncidentHandlingProgress();
   const toast = useToast();
   const {
     register,
@@ -138,6 +176,10 @@ export function IncidentReportingManager() {
   const assignmentForm = useForm<AssignIncidentForm>({
     resolver: zodResolver(assignIncidentFormSchema),
     defaultValues: assignmentDefaults,
+  });
+  const progressForm = useForm<UpdateIncidentProgressForm>({
+    resolver: zodResolver(updateIncidentProgressFormSchema),
+    defaultValues: progressDefaults,
   });
   const selectedHandlerId = useWatch({
     control: assignmentForm.control,
@@ -176,6 +218,12 @@ export function IncidentReportingManager() {
     if (assignmentTarget && !dialog.open) dialog.showModal();
     if (!assignmentTarget && dialog.open) dialog.close();
   }, [assignmentTarget]);
+  useEffect(() => {
+    const dialog = progressDialogRef.current;
+    if (!dialog) return;
+    if (progressTarget && !dialog.open) dialog.showModal();
+    if (!progressTarget && dialog.open) dialog.close();
+  }, [progressTarget]);
   const close = () => {
     setOpen(false);
     setMessage(undefined);
@@ -258,6 +306,34 @@ export function IncidentReportingManager() {
       // The persistent API error is rendered inside the dialog.
     }
   };
+  const openProgress = (incident: Incident) => {
+    const nextStatus = progressOptions[incident.status]?.[0];
+    if (!nextStatus) return;
+    progressForm.reset({ status: nextStatus, note: "" });
+    progressMutation.reset();
+    setProgressTarget(incident);
+  };
+  const closeProgress = () => {
+    setProgressTarget(undefined);
+    progressForm.reset(progressDefaults);
+    progressMutation.reset();
+  };
+  const submitProgress = async (values: UpdateIncidentProgressForm) => {
+    if (!progressTarget) return;
+    try {
+      const updated = await progressMutation.mutateAsync({
+        id: progressTarget.id,
+        values,
+      });
+      closeProgress();
+      toast.success(
+        "Progress updated",
+        `${updated.incidentCode} is now ${incidentStatus(updated.status).label}.`,
+      );
+    } catch {
+      // Persistent error is rendered in the dialog.
+    }
+  };
   const submitFilters = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
@@ -311,7 +387,14 @@ export function IncidentReportingManager() {
     {
       key: "status",
       header: "Status",
-      cell: (item) => <StatusBadge tone="info">{item.status}</StatusBadge>,
+      cell: (item) => {
+        const presentation = incidentStatus(item.status);
+        return (
+          <StatusBadge tone={presentation.tone}>
+            {presentation.label}
+          </StatusBadge>
+        );
+      },
     },
     ...(canAssign
       ? ([
@@ -376,6 +459,20 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 {item.currentAssignment ? "Reassign handler" : "Assign handler"}
+              </button>
+            ) : null}
+            {canUpdateProgress && progressOptions[item.status]?.length ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => openProgress(item)}
+                type="button"
+              >
+                <Activity
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Update progress
               </button>
             ) : null}
           </DropdownMenu>
@@ -833,6 +930,85 @@ export function IncidentReportingManager() {
         ) : null}
       </Dialog>
       <Dialog
+        dialogRef={progressDialogRef}
+        title="Update incident handling progress"
+        className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
+        onClose={closeProgress}
+      >
+        {progressTarget ? (
+          <form
+            className="space-y-5"
+            noValidate
+            onSubmit={progressForm.handleSubmit(submitProgress)}
+          >
+            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+              <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                {progressTarget.incidentCode}
+              </p>
+              <p className="mt-1 font-semibold break-words">
+                {progressTarget.title}
+              </p>
+              <p className="text-muted mt-2 text-sm">
+                Current status: {incidentStatus(progressTarget.status).label}
+              </p>
+            </div>
+            {progressMutation.isError ? (
+              <Alert className="border-danger/25 bg-danger-soft text-danger">
+                {progressMutation.error instanceof Error
+                  ? progressMutation.error.message
+                  : "Unable to update incident progress."}
+              </Alert>
+            ) : null}
+            <FormField
+              id="incident-progress-status"
+              label="Next status"
+              error={progressForm.formState.errors.status?.message}
+            >
+              <Select
+                id="incident-progress-status"
+                autoFocus
+                {...progressForm.register("status")}
+              >
+                {progressOptions[progressTarget.status]?.map((status) => (
+                  <option key={status} value={status}>
+                    {incidentStatus(status).label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField
+              id="incident-progress-note"
+              label="Progress note"
+              error={progressForm.formState.errors.note?.message}
+            >
+              <Textarea
+                id="incident-progress-note"
+                className="min-h-32"
+                maxLength={5000}
+                placeholder="Describe actions completed, findings, impact changes, blockers and the next response step."
+                {...progressForm.register("note")}
+              />
+              <p className="text-muted text-xs">
+                This note and status transition are retained in incident history
+                and the audit log.
+              </p>
+            </FormField>
+            <Alert>
+              Workflow transitions are controlled. Closed incidents cannot be
+              reopened from this function.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={closeProgress}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={progressMutation.isPending}>
+                {progressMutation.isPending ? "Saving…" : "Save progress"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+      </Dialog>
+      <Dialog
         dialogRef={classificationDialogRef}
         title="Classify incident severity"
         className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
@@ -992,7 +1168,9 @@ export function IncidentReportingManager() {
                   {detail.data.title}
                 </p>
               </div>
-              <StatusBadge tone="info">{detail.data.status}</StatusBadge>
+              <StatusBadge tone={incidentStatus(detail.data.status).tone}>
+                {incidentStatus(detail.data.status).label}
+              </StatusBadge>
             </div>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
