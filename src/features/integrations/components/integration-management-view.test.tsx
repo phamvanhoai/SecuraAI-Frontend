@@ -72,12 +72,44 @@ describe("IntegrationManagementView", () => {
       },
     };
 
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(mockList), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/integrations/monitoring/connection-status")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                totalIntegrations: 2,
+                activeCount: 2,
+                errorCount: 0,
+                inactiveCount: 0,
+                pendingCount: 0,
+                timeWindow: "24h",
+                checks24h: 5,
+                successfulChecks24h: 5,
+                failedChecks24h: 0,
+                availability24h: 100,
+                averageLatency24h: 45,
+                failingIntegrations: [],
+                recentLogs: [],
+              },
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify(mockList), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
 
     renderView();
 
@@ -104,12 +136,44 @@ describe("IntegrationManagementView", () => {
       },
     };
 
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify(mockList), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/integrations/monitoring/connection-status")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                totalIntegrations: 0,
+                activeCount: 0,
+                errorCount: 0,
+                inactiveCount: 0,
+                pendingCount: 0,
+                timeWindow: "24h",
+                checks24h: 0,
+                successfulChecks24h: 0,
+                failedChecks24h: 0,
+                availability24h: null,
+                averageLatency24h: null,
+                failingIntegrations: [],
+                recentLogs: [],
+              },
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify(mockList), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
 
     renderView();
 

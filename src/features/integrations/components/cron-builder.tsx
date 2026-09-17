@@ -1,21 +1,17 @@
 "use client";
 
 import {
-  Calendar,
-  Check,
   Clock,
   Code2,
   HelpCircle,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { describeCron, validateCron } from "../utils/cron-utils";
+import { describeCron } from "../utils/cron-utils";
 
 export interface CronBuilderProps {
   value: string;

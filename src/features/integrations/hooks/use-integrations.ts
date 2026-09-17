@@ -22,10 +22,14 @@ import {
   updateApiKey,
   rotateApiKey,
   revokeApiKey,
+  getConnectionStatusSummary,
+  checkAllConnections,
+  getIntegrationConnectionStatus,
   type ListIntegrationLogsInput,
   type ListIntegrationsInput,
   type ListSyncJobsInput,
   type ListApiKeysInput,
+  type BatchConnectionCheckInput,
 } from "../api/integrations";
 import type {
   CreateIntegrationInput,
@@ -49,26 +53,41 @@ export const integrationKeys = {
     [...integrationKeys.all, "jobs", input] as const,
   logs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
     [...integrationKeys.all, "logs", input] as const,
+  connectionSummary: (timeWindow?: "24h" | "7d") =>
+    [...integrationKeys.all, "monitoring", "connection-summary", timeWindow ?? "24h"] as const,
+  connectionStatus: (id: string, timeWindow?: "24h" | "7d") =>
+    [...integrationKeys.all, "monitoring", "connection-status", id, timeWindow ?? "24h"] as const,
   allLogs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
     [...integrationKeys.all, "all-logs", input] as const,
   logStats: (params?: { integrationId?: string; startDate?: string; endDate?: string }) =>
     [...integrationKeys.all, "log-stats", params] as const,
 };
 
+
 export function useIntegrations(
   input: Omit<ListIntegrationsInput, "signal"> = {},
+  options?: { refetchInterval?: number | false | undefined },
 ) {
   return useQuery({
     queryKey: integrationKeys.list(input),
     queryFn: ({ signal }) => listIntegrations({ ...input, signal }),
+    ...(options?.refetchInterval !== undefined
+      ? { refetchInterval: options.refetchInterval }
+      : {}),
   });
 }
 
-export function useIntegration(id: string) {
+export function useIntegration(
+  id: string,
+  options?: { refetchInterval?: number | false | undefined },
+) {
   return useQuery({
     queryKey: integrationKeys.detail(id),
     queryFn: ({ signal }) => getIntegrationById(id, signal),
     enabled: Boolean(id),
+    ...(options?.refetchInterval !== undefined
+      ? { refetchInterval: options.refetchInterval }
+      : {}),
   });
 }
 
@@ -342,6 +361,53 @@ export function useRevokeApiKey() {
     },
   });
 }
+
+// -------------------------------------------------------------
+// Connection Monitoring Hooks
+// -------------------------------------------------------------
+export function useConnectionStatusSummary(
+  options: {
+    timeWindow?: "24h" | "7d" | undefined;
+    refetchInterval?: number | false | undefined;
+    enabled?: boolean | undefined;
+  } = {},
+) {
+  const { timeWindow = "24h", refetchInterval, enabled = true } = options;
+  return useQuery({
+    queryKey: integrationKeys.connectionSummary(timeWindow),
+    queryFn: ({ signal }) => getConnectionStatusSummary({ timeWindow, signal }),
+    enabled,
+    ...(refetchInterval !== undefined ? { refetchInterval } : {}),
+  });
+}
+
+export function useCheckAllConnections() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BatchConnectionCheckInput = {}) => checkAllConnections(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: integrationKeys.all });
+    },
+  });
+}
+
+export function useIntegrationConnectionStatus(
+  id: string,
+  options: {
+    timeWindow?: "24h" | "7d" | undefined;
+    refetchInterval?: number | false | undefined;
+    enabled?: boolean | undefined;
+  } = {},
+) {
+  const { timeWindow = "24h", refetchInterval, enabled = true } = options;
+  return useQuery({
+    queryKey: integrationKeys.connectionStatus(id, timeWindow),
+    queryFn: ({ signal }) => getIntegrationConnectionStatus(id, { timeWindow, signal }),
+    enabled: Boolean(id) && enabled,
+    ...(refetchInterval !== undefined ? { refetchInterval } : {}),
+  });
+}
+
 
 export function useAllIntegrationLogs(
   input: Omit<ListIntegrationLogsInput, "signal">,
