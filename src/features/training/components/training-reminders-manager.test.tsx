@@ -51,6 +51,7 @@ describe("TrainingRemindersManager", () => {
       refetch: mocks.refresh,
       data: {
         items: [item],
+        summary: { total: 4, unread: 2 },
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
     });
@@ -70,11 +71,19 @@ describe("TrainingRemindersManager", () => {
     );
     await waitFor(() => expect(mocks.success).toHaveBeenCalled());
   });
-  it("has no user dispatch action and filters the inbox without sending", () => {
+  it("applies status only on submit and has no user dispatch action", () => {
     render(<TrainingRemindersManager />);
     fireEvent.change(screen.getByRole("combobox", { name: "Show" }), {
       target: { value: "unread" },
     });
+    expect(mocks.query).toHaveBeenLastCalledWith(
+      1,
+      "all",
+      true,
+      "employee-1",
+      "",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
     expect(mocks.query).toHaveBeenLastCalledWith(
       1,
       "unread",
@@ -82,8 +91,6 @@ describe("TrainingRemindersManager", () => {
       "employee-1",
       "",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(mocks.refresh).toHaveBeenCalled();
     expect(mocks.read).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("button", { name: /send/i }),
@@ -111,7 +118,16 @@ describe("TrainingRemindersManager", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole("columnheader").map((element) => element.textContent),
-    ).toEqual(["Reminder", "Type", "Received", "Status", "Actions"]);
+    ).toEqual(["Reminder", "Received", "Status", "Actions"]);
+  });
+  it("shows account-wide totals returned by the backend", () => {
+    render(<TrainingRemindersManager />);
+    expect(
+      screen.getByLabelText("Training reminder summary"),
+    ).toHaveTextContent("Reminders4");
+    expect(
+      screen.getByLabelText("Training reminder summary"),
+    ).toHaveTextContent("Unread2");
   });
   it("submits trimmed search to the backend hook instead of filtering the current page", () => {
     render(<TrainingRemindersManager />);

@@ -19,6 +19,7 @@ describe("training reminder boundary", () => {
     expect(
       trainingReminderListSchema.safeParse({
         items: [reminder],
+        summary: { total: 4, unread: 2 },
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       }).success,
     ).toBe(true);
@@ -41,6 +42,7 @@ describe("training reminder boundary", () => {
     expect(
       trainingReminderListSchema.safeParse({
         items: [],
+        summary: { total: -1, unread: 0 },
         pagination: { page: 1, limit: 1000, total: -1, totalPages: 0 },
       }).success,
     ).toBe(false);
