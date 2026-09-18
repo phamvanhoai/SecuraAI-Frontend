@@ -21,3 +21,22 @@ Search submits via Enter or Search, resets to page 1, and queries all of the
 account's reminders by title/message (including course names), not just the
 current page. Search combines with All/Unread. No-result state offers Clear search.
 See the backend training-awareness README for external/Vercel scheduler setup.
+# Structured course creation (UC75)
+
+Use Training > Courses > Create course, or `/training/create`. The long editor
+uses a dedicated route and existing product controls rather than an oversized
+dialog. Prepare ordered required/optional lessons, multiple text/URL/PDF/video
+materials, lesson assessments and an optional final assessment. Single-answer
+questions select one correct option; multiple-answer questions require at least
+two. New structured courses are drafts; publication is a separate use case.
+
+Files are submitted with the course, not uploaded on selection. Cancel does not
+leave uploaded file records. Uses the shared API client, BFF cookies and existing
+`training-courses.create` permission. View details loads the saved lesson outline
+and exposes authenticated attachment downloads using `training-courses.read`.
+PDF/MP4/WebM uploads are limited to 20 MiB per file, maximum 10 uploads. External
+resources must use HTTPS and are links, not copies imported into storage.
+
+Local storage requires a persistent backend server/VPS. Host and reverse-proxy
+upload limits also apply; this is not production video storage on Vercel.
+Structured draft editing and employee learning flows remain separate tasks.

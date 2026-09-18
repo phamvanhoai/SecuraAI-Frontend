@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignCourse,
   createCourse,
+  getCourseContent,
   getAssignmentOptions,
   getLatestCourseAssignment,
   listCourses,
@@ -11,7 +12,16 @@ import {
 import type {
   AssignCourseInput,
   CourseStatusFilter,
+  CreateCourseInput,
 } from "../schemas/course-schema";
+
+export function useCourseContent(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ["training", "course-content", courseId],
+    queryFn: ({ signal }) => getCourseContent(courseId ?? "", signal),
+    enabled: Boolean(courseId),
+  });
+}
 
 export function useCourses(
   page: number,
@@ -29,7 +39,9 @@ export function useCourses(
 export function useCreateCourse() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createCourse,
+    mutationFn: (
+      input: CreateCourseInput & { files?: Readonly<Record<string, File>> },
+    ) => createCourse(input, input.files),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["training", "courses"],

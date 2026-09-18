@@ -7,10 +7,23 @@ import {
   courseListSchema,
   courseSchema,
   createCourseSchema,
+  courseContentSchema,
   type AssignCourseInput,
   type CourseStatusFilter,
   type CreateCourseInput,
 } from "../schemas/course-schema";
+
+export async function getCourseContent(courseId: string, signal?: AbortSignal) {
+  return courseContentSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}/content`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 
 export async function listCourses(
   page: number,
@@ -32,19 +45,37 @@ export async function listCourses(
   );
 }
 
-export async function createCourse(input: CreateCourseInput) {
+export async function createCourse(
+  input: CreateCourseInput,
+  files: Readonly<Record<string, File>> = {},
+) {
   const parsed = createCourseSchema.parse(input);
+  const payload = {
+    title: parsed.title,
+    description: parsed.description || null,
+    content: parsed.content,
+    status: parsed.status,
+    ...(parsed.lessons ? { lessons: parsed.lessons } : {}),
+    ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
+  };
+  const keys =
+    parsed.lessons?.flatMap((lesson) =>
+      lesson.materials.flatMap((material) =>
+        material.uploadKey ? [material.uploadKey] : [],
+      ),
+    ) ?? [];
+  const form = new FormData();
+  form.append("payload", JSON.stringify(payload));
+  for (const key of keys) {
+    const file = files[key];
+    if (!file) throw new Error("Select the file for every uploaded material.");
+    form.append(key, file);
+  }
   return courseSchema.parse(
     await apiRequest<unknown>("/api/training/courses", {
       method: "POST",
       target: "same-origin",
-      body: {
-        title: parsed.title,
-        description: parsed.description || null,
-        content: parsed.content,
-        status: parsed.status,
-        ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
-      },
+      body: keys.length ? form : payload,
     }),
   );
 }
