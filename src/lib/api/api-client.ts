@@ -54,6 +54,8 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const { body, headers, query, target = "backend", ...init } = options;
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(buildUrl(path, query, target), {
@@ -61,10 +63,14 @@ export async function apiRequest<T>(
       credentials: "include",
       headers: {
         Accept: "application/json",
-        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(body === undefined || isFormData
+          ? {}
+          : { "Content-Type": "application/json" }),
         ...headers,
       },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined
+        ? {}
+        : { body: isFormData ? body : JSON.stringify(body) }),
     });
   } catch (cause: unknown) {
     throw new ApiError("Không thể kết nối máy chủ.", 0, "NETWORK_ERROR", cause);
