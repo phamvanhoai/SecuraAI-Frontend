@@ -4,3 +4,4 @@ export { TrainingCompletionManager } from "./components/training-completion-mana
 export { TrainingRemindersManager } from "./components/training-reminders-manager";
 export { TrainingWorkspace } from "./components/training-workspace";
 export { DepartmentReportManager } from "./components/department-report-manager";
+export { CreateCourseBuilder } from "./components/create-course-builder";
