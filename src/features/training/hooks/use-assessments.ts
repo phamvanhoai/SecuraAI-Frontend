@@ -16,10 +16,14 @@ export function useMyAssessments(page: number, enabled: boolean) {
   });
 }
 
-export function useAssessmentDetail(enrollmentId: string | undefined) {
+export function useAssessmentDetail(
+  enrollmentId: string | undefined,
+  lessonId?: string,
+) {
   return useQuery({
-    queryKey: ["training", "assessment", enrollmentId],
-    queryFn: ({ signal }) => getMyAssessment(enrollmentId ?? "", signal),
+    queryKey: ["training", "assessment", enrollmentId, lessonId],
+    queryFn: ({ signal }) =>
+      getMyAssessment(enrollmentId ?? "", signal, lessonId),
     enabled: Boolean(enrollmentId),
   });
 }
@@ -30,10 +34,12 @@ export function useSubmitAssessment() {
     mutationFn: ({
       enrollmentId,
       answers,
+      lessonId,
     }: {
       enrollmentId: string;
       answers: readonly AssessmentAnswer[];
-    }) => submitMyAssessment(enrollmentId, answers),
+      lessonId?: string;
+    }) => submitMyAssessment(enrollmentId, answers, lessonId),
     onSuccess: async (_, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -41,6 +47,10 @@ export function useSubmitAssessment() {
         }),
         queryClient.invalidateQueries({
           queryKey: ["training", "assessment", variables.enrollmentId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["training", "learning"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["training", "learning-detail", variables.enrollmentId],
         }),
       ]);
     },

@@ -21,6 +21,7 @@ Search submits via Enter or Search, resets to page 1, and queries all of the
 account's reminders by title/message (including course names), not just the
 current page. Search combines with All/Unread. No-result state offers Clear search.
 See the backend training-awareness README for external/Vercel scheduler setup.
+
 # Assignment eligibility (UC76)
 
 Only published courses expose assignment actions. Draft and archived courses
@@ -47,3 +48,11 @@ resources must use HTTPS and are links, not copies imported into storage.
 Local storage requires a persistent backend server/VPS. Host and reverse-proxy
 upload limits also apply; this is not production video storage on Vercel.
 Structured draft editing and employee learning flows remain separate tasks.
+
+# Complete assigned training course (UC77)
+
+Employees with `training-assessments.take` see My assigned training. The view
+opens an enrollment-scoped learning workspace with ordered lessons, text and
+HTTPS resources, authenticated file downloads, progress, lesson assessments and
+final-assessment guidance. Completion feedback is explicit and responsive; an
+assessment-gated lesson cannot be manually bypassed.
