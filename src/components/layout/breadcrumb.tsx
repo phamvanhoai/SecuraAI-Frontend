@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getPanelKind, panelLabels } from "@/config/navigation";
 
-export function Breadcrumb({ title }: { title: string }) {
+export function Breadcrumb({
+  title,
+  panelLabel,
+}: {
+  title: string;
+  panelLabel?: string | undefined;
+}) {
   const panel = getPanelKind(usePathname());
   return (
     <nav aria-label="Breadcrumb" className="text-muted mb-5 text-sm">
@@ -14,7 +20,7 @@ export function Breadcrumb({ title }: { title: string }) {
             className="hover:text-foreground transition-colors"
             href={`/${panel}`}
           >
-            {panelLabels[panel]}
+            {panelLabel ?? panelLabels[panel]}
           </Link>
         </li>
         <li aria-hidden="true" className="text-border">
