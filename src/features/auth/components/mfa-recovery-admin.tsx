@@ -71,6 +71,13 @@ export function MfaRecoveryAdmin() {
       />
     );
 
+  const visibleRequests = requests.data.items.filter(
+    (item) =>
+      item.user?.id !== session.data?.id &&
+      item.user?.email.trim().toLowerCase() !==
+        session.data?.email.trim().toLowerCase(),
+  );
+
   const openDecision = (
     request: MfaRecoveryRequest,
     nextDecision: "approve" | "reject",
@@ -155,15 +162,15 @@ export function MfaRecoveryAdmin() {
           <option value="rejected">Rejected</option>
         </Select>
       </div>
-      {requests.data.items.length === 0 ? (
+      {visibleRequests.length === 0 ? (
         <EmptyState
           title={`No ${labels[status].toLowerCase()} requests`}
-          description="There are no MFA recovery requests with this status."
+          description="There are no requests from other users on this page. Your own recovery requests must be reviewed by another administrator."
         />
       ) : (
         <DataTable<MfaRecoveryRequest>
           columns={columns}
-          rows={requests.data.items}
+          rows={visibleRequests}
           getRowKey={(item) => item.id}
         />
       )}
