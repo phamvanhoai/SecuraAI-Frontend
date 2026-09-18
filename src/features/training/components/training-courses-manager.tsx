@@ -159,7 +159,14 @@ export function TrainingCoursesManager({
                   </span>
                 }
               >
-                {canAssign ? (
+                {canAssign && course.status !== "published" ? (
+                  <p className="text-muted px-3 py-2 text-xs">
+                    {course.status === "draft"
+                      ? "Publish this course before assigning it."
+                      : "Archived courses cannot be assigned."}
+                  </p>
+                ) : null}
+                {canAssign && course.status === "published" ? (
                   <>
                     <button
                       type="button"

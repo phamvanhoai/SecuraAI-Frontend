@@ -21,3 +21,9 @@ Search submits via Enter or Search, resets to page 1, and queries all of the
 account's reminders by title/message (including course names), not just the
 current page. Search combines with All/Unread. No-result state offers Clear search.
 See the backend training-awareness README for external/Vercel scheduler setup.
+# Assignment eligibility (UC76)
+
+Only published courses expose assignment actions. Draft and archived courses
+show an explanation in the actions menu; the backend independently rejects them.
+New campaigns create fresh enrollments. Editing the latest campaign retains
+existing learner progress and completed records; targets are loaded before editing.
