@@ -27,9 +27,8 @@ export function Sidebar() {
   const panel = getPanelKind(pathname);
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
-  const roles = session.data?.roles.map((role) => role.code) ?? [];
-  const navigation = getPanelNavigation(panel).filter((item) =>
-    canAccessNavigationItem(permissions, item, roles),
+  const navigation = getPanelNavigation(panel).filter(
+    (item) => canAccessNavigationItem(permissions, item),
   );
   const sections = sectionOrder
     .map((label) => ({
