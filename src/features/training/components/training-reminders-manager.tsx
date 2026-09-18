@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, RefreshCw, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
 import {
+  MetricStrip,
   ProductPageHeader,
   ProductPanel,
   StatusBadge,
@@ -39,6 +40,7 @@ export function TrainingRemindersManager({
     session.data?.permissions.includes("training-assessments.take") ?? false;
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ReminderFilter>("all");
+  const [statusDraft, setStatusDraft] = useState<ReminderFilter>("all");
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const reminders = useTrainingReminders(
@@ -72,11 +74,6 @@ export function TrainingRemindersManager({
           <p className="text-muted mt-1 text-sm break-words">{item.message}</p>
         </div>
       ),
-    },
-    {
-      key: "type",
-      header: "Type",
-      cell: () => "Training deadline",
     },
     {
       key: "received",
@@ -142,128 +139,157 @@ export function TrainingRemindersManager({
           to take assigned assessments.
         </Alert>
       ) : (
-        <ProductPanel
-          title="Training deadline reminders"
-          description="Automatically sent before the deadline while your assigned training is incomplete."
-        >
-          <div className="border-border flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-end">
+        <>
+          <MetricStrip
+            ariaLabel="Training reminder summary"
+            metrics={[
+              {
+                label: "Reminders",
+                value: String(reminders.data?.summary.total ?? 0),
+                detail: "Assigned to your account",
+                loading: session.isPending || reminders.isPending,
+              },
+              {
+                label: "Unread",
+                value: String(reminders.data?.summary.unread ?? 0),
+                detail: "Require your attention",
+                tone: reminders.data?.summary.unread ? "warning" : "neutral",
+                loading: session.isPending || reminders.isPending,
+              },
+              {
+                label: "Matching",
+                value: String(reminders.data?.pagination.total ?? 0),
+                detail:
+                  search || status !== "all"
+                    ? "Current search and filter"
+                    : "Current view",
+                loading: session.isPending || reminders.isPending,
+              },
+            ]}
+          />
+          <ProductPanel
+            title="Training deadline reminders"
+            description="Automatically sent before the deadline while your assigned training is incomplete."
+          >
             <form
-              className="flex min-w-0 flex-1 gap-2"
+              className="border-border flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-end"
               onSubmit={(event) => {
                 event.preventDefault();
                 setPage(1);
                 setSearch(searchDraft.trim());
+                setStatus(statusDraft);
               }}
             >
-              <label className="relative min-w-0 flex-1">
-                <span className="sr-only">Search training reminders</span>
-                <Search
-                  aria-hidden="true"
-                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                  strokeWidth={1.8}
-                />
-                <Input
-                  className="w-full pl-9"
-                  type="search"
-                  maxLength={100}
-                  placeholder="Search courses or reminders"
-                  value={searchDraft}
-                  onChange={(event) => setSearchDraft(event.target.value)}
-                />
+              <div className="flex min-w-0 flex-1 gap-2">
+                <label className="relative min-w-0 flex-1">
+                  <span className="sr-only">Search training reminders</span>
+                  <Search
+                    aria-hidden="true"
+                    className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    strokeWidth={1.8}
+                  />
+                  <Input
+                    className="w-full pl-9"
+                    type="search"
+                    maxLength={100}
+                    placeholder="Search courses or reminders"
+                    value={searchDraft}
+                    onChange={(event) => setSearchDraft(event.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Show
+                <Select
+                  className="w-full font-normal lg:w-48"
+                  value={statusDraft}
+                  onChange={(event) => {
+                    setStatusDraft(
+                      event.target.value === "unread" ? "unread" : "all",
+                    );
+                  }}
+                >
+                  <option value="all">All reminders</option>
+                  <option value="unread">Unread reminders</option>
+                </Select>
               </label>
               <Button type="submit" disabled={session.isPending}>
                 Search
               </Button>
             </form>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Show
-              <Select
-                className="w-full font-normal lg:w-48"
-                value={status}
-                onChange={(event) => {
-                  setStatus(event.target.value === "unread" ? "unread" : "all");
-                  setPage(1);
-                }}
-              >
-                <option value="all">All reminders</option>
-                <option value="unread">Unread reminders</option>
-              </Select>
-            </label>
-            <Button
-              variant="secondary"
-              disabled={session.isPending || reminders.isFetching}
-              onClick={() => void reminders.refetch()}
-            >
-              <RefreshCw aria-hidden="true" className="size-4" />
-              Refresh
-            </Button>
-          </div>
-          <div className="p-4">
-            {session.isPending || reminders.isPending ? (
-              <TableSkeleton
-                headers={["Reminder", "Type", "Received", "Status", "Actions"]}
-                rows={5}
-                label="Loading training deadline reminders"
-              />
-            ) : reminders.isError ? (
-              <Alert>
-                Unable to load your reminders. Check your connection and select
-                Refresh to try again.
-              </Alert>
-            ) : !reminders.data?.items.length ? (
-              <div className="py-12 text-center">
-                <Bell
-                  aria-hidden="true"
-                  className="text-muted mx-auto mb-3 size-6"
+            <div className="p-4">
+              {session.isPending || reminders.isPending ? (
+                <TableSkeleton
+                  headers={["Reminder", "Received", "Status", "Actions"]}
+                  rows={5}
+                  label="Loading training deadline reminders"
                 />
-                <p className="font-medium">
-                  {search
-                    ? "No reminders match your search"
-                    : status === "unread"
-                      ? "No unread reminders"
-                      : "No training deadline reminders"}
-                </p>
-                <p className="text-muted mt-1 text-sm">
-                  {search
-                    ? "Try another keyword or clear the search. You can also select All reminders."
-                    : "Reminders appear automatically near the deadline for incomplete assigned training."}
-                </p>
-                {search && (
+              ) : reminders.isError ? (
+                <Alert>
+                  Unable to load your reminders. Check your connection and try
+                  again.{" "}
                   <Button
-                    className="mt-3"
                     variant="secondary"
-                    onClick={() => {
-                      setSearchDraft("");
-                      setSearch("");
-                      setPage(1);
-                    }}
+                    onClick={() => void reminders.refetch()}
                   >
-                    Clear search
+                    Retry
                   </Button>
-                )}
-                <Link
-                  className="text-brand mt-3 inline-block rounded-lg p-2 text-sm font-medium hover:underline focus-visible:outline-2"
-                  href="/training"
-                >
-                  View my training
-                </Link>
-              </div>
-            ) : (
-              <DataTable
-                columns={columns}
-                rows={reminders.data.items}
-                getRowKey={(item) => item.notificationId}
+                </Alert>
+              ) : !reminders.data?.items.length ? (
+                <div className="py-12 text-center">
+                  <Bell
+                    aria-hidden="true"
+                    className="text-muted mx-auto mb-3 size-6"
+                  />
+                  <p className="font-medium">
+                    {search
+                      ? "No reminders match your search"
+                      : status === "unread"
+                        ? "No unread reminders"
+                        : "No training deadline reminders"}
+                  </p>
+                  <p className="text-muted mt-1 text-sm">
+                    {search
+                      ? "Try another keyword or clear the search. You can also select All reminders."
+                      : "Reminders appear automatically near the deadline for incomplete assigned training."}
+                  </p>
+                  {search && (
+                    <Button
+                      className="mt-3"
+                      variant="secondary"
+                      onClick={() => {
+                        setSearchDraft("");
+                        setSearch("");
+                        setPage(1);
+                      }}
+                    >
+                      Clear search
+                    </Button>
+                  )}
+                  <Link
+                    className="text-brand mt-3 inline-block rounded-lg p-2 text-sm font-medium hover:underline focus-visible:outline-2"
+                    href="/training"
+                  >
+                    View my training
+                  </Link>
+                </div>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  rows={reminders.data.items}
+                  getRowKey={(item) => item.notificationId}
+                />
+              )}
+            </div>
+            <div className="border-border border-t p-4">
+              <Pagination
+                page={page}
+                pageCount={reminders.data?.pagination.totalPages ?? 1}
+                onPageChange={setPage}
               />
-            )}
-          </div>
-          <div className="border-border border-t p-4">
-            <Pagination
-              page={page}
-              pageCount={reminders.data?.pagination.totalPages ?? 1}
-              onPageChange={setPage}
-            />
-          </div>
-        </ProductPanel>
+            </div>
+          </ProductPanel>
+        </>
       )}
     </>
   );
