@@ -59,15 +59,28 @@ export const courseMaterialSchema = z
       }, "Use an HTTPS URL without credentials.")
       .optional(),
     uploadKey: z.uuid().optional(),
+    existingFileId: z.uuid().optional(),
+    existingFile: z
+      .object({
+        name: z.string(),
+        mimeType: z.string(),
+        sizeBytes: z.number().int().nonnegative().nullable(),
+      })
+      .nullable()
+      .optional(),
   })
   .superRefine((value, ctx) => {
+    const sourceCount = [
+      value.externalUrl,
+      value.uploadKey,
+      value.existingFileId,
+    ].filter(Boolean).length;
     const valid =
       value.type === "text"
-        ? Boolean(value.content) && !value.externalUrl && !value.uploadKey
+        ? Boolean(value.content) && sourceCount === 0
         : value.type === "link"
-          ? Boolean(value.externalUrl) && !value.content && !value.uploadKey
-          : !value.content &&
-            Boolean(value.externalUrl) !== Boolean(value.uploadKey);
+          ? Boolean(value.externalUrl) && !value.content && sourceCount === 1
+          : !value.content && sourceCount === 1;
     if (!valid)
       ctx.addIssue({
         code: "custom",
@@ -175,6 +188,61 @@ export const courseSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
 });
+
+export const courseDraftSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  content: z.string(),
+  status: z.literal("draft"),
+  updatedAt: z.iso.datetime({ offset: true }),
+  lessons: z.array(courseLessonSchema),
+  assessment: courseAssessmentSchema.nullable(),
+});
+
+export const updateCourseDraftSchema = z
+  .object({
+    title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+    description: z.string().trim().max(2000),
+    content: z
+      .string()
+      .trim()
+      .min(10, "Enter at least 10 characters.")
+      .max(50000),
+    lessons: z.array(courseLessonSchema).min(1).max(50),
+    assessment: courseAssessmentSchema.optional(),
+    expectedUpdatedAt: z.iso.datetime({ offset: true }),
+  })
+  .superRefine((value, context) => {
+    const keys = value.lessons.flatMap((lesson) =>
+      lesson.materials.flatMap((material) =>
+        material.uploadKey ? [material.uploadKey] : [],
+      ),
+    );
+    const materialCount = value.lessons.reduce(
+      (count, lesson) => count + lesson.materials.length,
+      0,
+    );
+    const questionCount =
+      (value.assessment?.questions.length ?? 0) +
+      value.lessons.reduce(
+        (count, lesson) => count + (lesson.assessment?.questions.length ?? 0),
+        0,
+      );
+    if (materialCount > 100 || questionCount > 100)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message:
+          "Use at most 100 materials and 100 assessment questions per course.",
+      });
+    if (new Set(keys).size !== keys.length || keys.length > 10)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message: "Use unique upload keys and at most 10 uploaded files.",
+      });
+  });
 
 export const courseContentSchema = z.object({
   lessons: z.array(
@@ -293,5 +361,7 @@ export const courseAssignmentDetailSchema = z
 export type Course = z.infer<typeof courseSchema>;
 export type CourseStatusFilter = "all" | "draft" | "published" | "archived";
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
+export type CourseDraft = z.infer<typeof courseDraftSchema>;
+export type UpdateCourseDraftInput = z.infer<typeof updateCourseDraftSchema>;
 export type AssignmentOptions = z.infer<typeof assignmentOptionsSchema>;
 export type AssignCourseInput = z.infer<typeof assignCourseSchema>;

@@ -1,5 +1,9 @@
 # SecuraAI Frontend
 
+## UC160 — Edit security awareness course draft
+
+Security Officers with `training-courses.update` can open **Training → Course actions → Edit draft** for an unassigned draft. The editor loads the current course, lessons, materials, lesson assessments, and final assessment; existing uploaded files remain attached unless removed or replaced. Saving checks the draft's last-updated timestamp to prevent overwriting another edit. Courses with an assignment campaign cannot be edited. Deploy the backend permission-data migration and sign in again before testing.
+
 ## View Login History
 
 Admin opens `/admin/login-history`; Security Officer opens `/login-history`. Menu visibility and direct navigation require the matching system role plus `login-history.read`. Other accounts redirect to `/forbidden`, and unauthorized accounts never fetch history. The table uses Backend records with search, result/date/IP/user filters and pagination. See [feature documentation](src/features/login-history/README.md). Deploy the Backend implementation and provision its permission, then sign in again before testing.
