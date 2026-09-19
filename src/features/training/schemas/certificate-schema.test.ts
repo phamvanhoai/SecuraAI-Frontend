@@ -7,6 +7,12 @@ const value = {
   campaignTitle: "Campaign",
   completedAt: null,
   eligible: false,
+  requirements: {
+    courseCompleted: false,
+    progressComplete: false,
+    finalAssessmentRequired: false,
+    finalAssessmentPassed: null,
+  },
   certificate: null,
 };
 describe("training certificate boundary", () => {

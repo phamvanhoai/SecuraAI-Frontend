@@ -9,7 +9,7 @@ Admin opens `/admin/login-history`; Security Officer opens `/login-history`. Men
 Open **Training → Course actions → View training progress → Assignment campaign → View employees → Issue/View certificate**.
 There is one course list, not duplicate courses/completion tabs. Campaigns are filtered by the selected course UUID in the backend. Back to courses preserves the course search/page state. Completion-only readers enter the campaign list directly; employees enter their assigned assessments.
 Security Officers with `training-certificates.issue` can issue; users with `training-completion.read` can view.
-The backend verifies completed status, 100% progress and a submitted passing assessment. Issuance is idempotent and audited.
+The backend verifies completed status, 100% progress and, when configured, a passing final assessment scoped to the same enrollment. Lesson quizzes and results from earlier campaigns do not qualify. The UI explains each eligibility check and asks for confirmation before issuance. Issuance is idempotent and audited.
 The certificate is a persisted metadata record, not a generated PDF. Deploy the backend permission migration and sign in again before testing issuance.
 
 Frontend repository độc lập cho nền tảng quản lý rủi ro an toàn thông tin SecuraAI. Đây là foundation dùng Next.js App Router, React, TypeScript strict và Tailwind CSS v4; các domain chưa có API thật chỉ hiển thị “Chưa triển khai”.
