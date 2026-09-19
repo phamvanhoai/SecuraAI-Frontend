@@ -2,9 +2,11 @@ import { z } from "zod";
 
 const counts = z.object({
   employees: z.number().int().nonnegative(),
+  assignedEmployees: z.number().int().nonnegative(),
   assigned: z.number().int().nonnegative(),
   completed: z.number().int().nonnegative(),
   overdue: z.number().int().nonnegative(),
+  coverageRate: z.number().min(0).max(100),
   completionRate: z.number().min(0).max(100),
 });
 export const departmentReportSchema = z.object({
