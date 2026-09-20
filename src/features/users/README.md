@@ -1,4 +1,15 @@
-# Lock and unlock user accounts (UC7)
+# User management
+
+## View user accounts
+
+The user table is backed by the paginated administration API. Users with
+`users.read` can select **View** on any row to load current account details from
+`/api/users/{userId}`. The dialog presents profile, department, assigned roles,
+MFA status and account activity with explicit loading, retry, empty-value and
+not-found/error states. The same-origin BFF keeps tokens in HttpOnly cookies and
+forwards the request to `/admin/users/{userId}`.
+
+## Lock and unlock user accounts (UC7)
 
 The user list exposes a Lock/Unlock button on each eligible account. Both the
 ADMIN role and the corresponding backend permission (`users.lock` or

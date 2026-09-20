@@ -9,19 +9,20 @@ import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";
 
 export async function GET(request: Request): Promise<Response> {
-  return forwardUsersRequest(request, { method: "GET" });
+  return forwardUsersRequest(request, "admin/users", { method: "GET" });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return forwardUsersRequest(request, {
+  return forwardUsersRequest(request, "admin/users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: await request.text(),
   });
 }
 
-async function forwardUsersRequest(
+export async function forwardUsersRequest(
   request: Request,
+  backendPath: string,
   init: RequestInit,
 ): Promise<Response> {
   const cookieStore = await cookies();
@@ -29,7 +30,7 @@ async function forwardUsersRequest(
   let refreshedTokens;
 
   const url = new URL(
-    `admin/users${new URL(request.url).search}`,
+    `${backendPath}${new URL(request.url).search}`,
     `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}/`,
   );
   const send = (token: string) =>
