@@ -1,5 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { assignCourseSchema, createCourseSchema } from "./course-schema";
+import {
+  assignCourseSchema,
+  courseDraftSchema,
+  createCourseSchema,
+} from "./course-schema";
+
+describe("courseDraftSchema", () => {
+  it("accepts a draft with an existing private video for editing", () => {
+    const result = courseDraftSchema.safeParse({
+      id: "e2ef8324-9ac0-4e7f-b16d-50050274a72e",
+      title: "Security basics",
+      description: null,
+      content: "Learn safe daily practices.",
+      status: "draft",
+      updatedAt: "2026-09-19T08:00:00.000Z",
+      lessons: [
+        {
+          title: "Passwords",
+          isRequired: true,
+          materials: [
+            {
+              title: "Video guide",
+              type: "video",
+              existingFileId: "8aa86891-5d1d-4053-9859-2934f886476e",
+              existingFile: {
+                name: "guide.mp4",
+                mimeType: "video/mp4",
+                sizeBytes: 100,
+              },
+            },
+          ],
+        },
+      ],
+      assessment: null,
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 describe("createCourseSchema", () => {
   it("accepts a course draft", () => {

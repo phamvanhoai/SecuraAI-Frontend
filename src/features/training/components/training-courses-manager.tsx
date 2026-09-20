@@ -3,7 +3,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { CourseContentDialog } from "./course-content-dialog";
-import { ClipboardList, Ellipsis, Eye, Send, Search } from "lucide-react";
+import {
+  ClipboardList,
+  Ellipsis,
+  Eye,
+  Pencil,
+  Send,
+  Search,
+} from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TrainingCompletionManager } from "./training-completion-manager";
 import {
@@ -63,6 +70,8 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.create") ?? false;
   const canAssign =
     session.data?.permissions.includes("training-courses.assign") ?? false;
+  const canUpdate =
+    session.data?.permissions.includes("training-courses.update") ?? false;
   const canTrack =
     session.data?.permissions.includes("training-completion.read") ?? false;
   const [courseToTrack, setCourseToTrack] = useState<Course>();
@@ -109,7 +118,7 @@ export function TrainingCoursesManager({
           new Date(course.createdAt),
         ),
     },
-    ...(canRead || canAssign || canTrack
+    ...(canRead || canUpdate || canAssign || canTrack
       ? [
           {
             key: "actions",
@@ -146,6 +155,24 @@ export function TrainingCoursesManager({
                   />
                   View details
                 </button>
+                {canUpdate && course.status === "draft" ? (
+                  <button
+                    type="button"
+                    className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                    onClick={() =>
+                      router.push(
+                        `/training/${encodeURIComponent(course.id)}/edit`,
+                      )
+                    }
+                  >
+                    <Pencil
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    Edit draft
+                  </button>
+                ) : null}
                 {canAssign && course.status === "published" ? (
                   <>
                     <button

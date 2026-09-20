@@ -16,7 +16,12 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormField } from "@/components/forms/form-field";
-import { useCreateCourse } from "../hooks/use-courses";
+import { ApiError } from "@/lib/api/api-error";
+import {
+  useCourseDraft,
+  useCreateCourse,
+  useUpdateCourseDraft,
+} from "../hooks/use-courses";
 import {
   createCourseSchema,
   type CourseLesson,
@@ -42,22 +47,42 @@ const initial = (): CreateCourseInput => ({
   lessons: [newLesson()],
 });
 
-export function CreateCourseBuilder() {
+export function CreateCourseBuilder({ courseId }: { courseId?: string } = {}) {
   const session = useSessionUser();
   const router = useRouter();
   const toast = useToast();
-  const mutation = useCreateCourse();
+  const createMutation = useCreateCourse();
+  const updateMutation = useUpdateCourseDraft();
+  const draft = useCourseDraft(courseId);
+  const isEditing = Boolean(courseId);
+  const isPending = createMutation.isPending || updateMutation.isPending;
   const [value, setValue] = useState(initial);
   const [files, setFiles] = useState<Record<string, File>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string>();
   const [dirty, setDirty] = useState(false);
+  const loadedDraftId = useRef<string | undefined>(undefined);
   const summary = useRef<HTMLDivElement>(null);
   const lessons = value.lessons ?? [];
   const change = (next: CreateCourseInput) => {
     setValue(next);
     setDirty(true);
   };
+  useEffect(() => {
+    if (!courseId || !draft.data || loadedDraftId.current === courseId) return;
+    loadedDraftId.current = courseId;
+    setValue({
+      title: draft.data.title,
+      description: draft.data.description ?? "",
+      content: draft.data.content,
+      status: "draft",
+      lessons: draft.data.lessons,
+      ...(draft.data.assessment ? { assessment: draft.data.assessment } : {}),
+    });
+    setFiles({});
+    setErrors({});
+    setDirty(false);
+  }, [courseId, draft.data]);
   const patchLesson = (index: number, patch: Partial<CourseLesson>) =>
     change({
       ...value,
@@ -88,14 +113,15 @@ export function CreateCourseBuilder() {
   }, [dirty]);
   const cancel = () => {
     if (
-      !mutation.isPending &&
+      !isPending &&
       (!dirty || window.confirm("Discard this unsaved course?"))
     )
       router.push("/training");
   };
 
   const submit = async () => {
-    if (mutation.isPending) return;
+    if (isPending) return;
+    if (courseId && !draft.data) return;
     setMessage(undefined);
     const parsed = createCourseSchema.safeParse(value);
     if (!parsed.success) {
@@ -125,16 +151,35 @@ export function CreateCourseBuilder() {
       return;
     }
     try {
-      await mutation.mutateAsync({ ...parsed.data, files });
+      if (courseId && draft.data)
+        await updateMutation.mutateAsync({
+          courseId,
+          input: {
+            title: parsed.data.title,
+            description: parsed.data.description,
+            content: parsed.data.content,
+            lessons: parsed.data.lessons ?? [],
+            ...(parsed.data.assessment
+              ? { assessment: parsed.data.assessment }
+              : {}),
+            expectedUpdatedAt: draft.data.updatedAt,
+          },
+          files,
+        });
+      else await createMutation.mutateAsync({ ...parsed.data, files });
       setDirty(false);
       toast.success(
-        "Course draft created",
-        "Your lessons and assessments were saved. Publication is a separate step.",
+        isEditing ? "Course draft updated" : "Course draft created",
+        isEditing
+          ? "Your lesson, material and assessment changes were saved."
+          : "Your lessons and assessments were saved. Publication is a separate step.",
       );
       router.push("/training");
-    } catch {
+    } catch (error: unknown) {
       setMessage(
-        "Unable to create the course. Check the connection, file types and file sizes, then try again. Your form has been kept.",
+        error instanceof ApiError && error.status === 409
+          ? "This draft changed or is no longer editable. Your form has been kept. Return to courses and reopen the draft before saving."
+          : `Unable to ${isEditing ? "update" : "create"} the course. Check the connection, file types and file sizes, then try again. Your form has been kept.`,
       );
     }
   };
@@ -152,22 +197,51 @@ export function CreateCourseBuilder() {
         Unable to load your permissions. Reload the page and try again.
       </Alert>
     );
-  if (!session.data?.permissions.includes("training-courses.create"))
+  if (
+    !session.data?.permissions.includes(
+      isEditing ? "training-courses.update" : "training-courses.create",
+    )
+  )
     return (
-      <Alert>You do not have permission to create training courses.</Alert>
+      <Alert>
+        You do not have permission to {isEditing ? "edit" : "create"} training
+        courses.
+      </Alert>
+    );
+  if (isEditing && draft.isPending)
+    return (
+      <Skeleton className="h-96 w-full" aria-label="Loading course draft" />
+    );
+  if (isEditing && (draft.isError || !draft.data))
+    return (
+      <Alert>
+        Unable to load this draft. It may have been published, assigned, or
+        removed.{" "}
+        <Button variant="secondary" onClick={() => router.push("/training")}>
+          Back to courses
+        </Button>
+      </Alert>
     );
 
   return (
     <div className="space-y-6">
       <ProductPageHeader
-        title="Create security awareness course"
-        description="Prepare a draft with ordered lessons and optional assessments. Files are uploaded only when you create the draft."
+        title={
+          isEditing
+            ? "Edit security awareness course draft"
+            : "Create security awareness course"
+        }
+        description={
+          isEditing
+            ? "Update the draft's ordered lessons, materials and assessments. Published or assigned courses remain immutable."
+            : "Prepare a draft with ordered lessons and optional assessments. Files are uploaded only when you create the draft."
+        }
       />
       <form
         noValidate
         onBlur={(event) => {
           const id = event.target.id;
-          if (!id || mutation.isPending) return;
+          if (!id || isPending) return;
           const checked = createCourseSchema.safeParse(value);
           const issue = checked.success
             ? undefined
@@ -209,7 +283,7 @@ export function CreateCourseBuilder() {
           </div>
         ) : null}
         {message ? <Alert role="alert">{message}</Alert> : null}
-        <fieldset disabled={mutation.isPending} className="space-y-6">
+        <fieldset disabled={isPending} className="space-y-6">
           <ProductPanel
             title="Course information"
             description="This course is saved as a draft, not assigned to employees."
@@ -444,7 +518,12 @@ export function CreateCourseBuilder() {
                                 <FormField id={`${path}.source`} label="Source">
                                   <Select
                                     id={`${path}.source`}
-                                    value={material.uploadKey ? "file" : "url"}
+                                    value={
+                                      material.uploadKey ||
+                                      material.existingFileId
+                                        ? "file"
+                                        : "url"
+                                    }
                                     onChange={(e) =>
                                       patchMaterial(
                                         lessonIndex,
@@ -464,7 +543,36 @@ export function CreateCourseBuilder() {
                                   </Select>
                                 </FormField>
                               ) : null}
-                              {material.uploadKey ? (
+                              {material.existingFileId &&
+                              !material.uploadKey ? (
+                                <div className="border-border bg-neutral-soft space-y-2 rounded-lg border p-3">
+                                  <p className="text-sm font-medium">
+                                    {material.existingFile?.name ??
+                                      "Existing uploaded file"}
+                                  </p>
+                                  <p className="text-muted text-xs">
+                                    Keep this file, choose HTTPS URL above, or
+                                    replace it with a new upload.
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() =>
+                                      patchMaterial(
+                                        lessonIndex,
+                                        materialIndex,
+                                        {
+                                          title: material.title,
+                                          type: material.type,
+                                          uploadKey: crypto.randomUUID(),
+                                        },
+                                      )
+                                    }
+                                  >
+                                    Replace file
+                                  </Button>
+                                </div>
+                              ) : material.uploadKey ? (
                                 <FormField
                                   id={`${path}.content`}
                                   label="Upload file *"
@@ -674,13 +782,19 @@ export function CreateCourseBuilder() {
           <Button
             type="button"
             variant="secondary"
-            disabled={mutation.isPending}
+            disabled={isPending}
             onClick={cancel}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Creating draft…" : "Create draft"}
+          <Button type="submit" disabled={isPending || (isEditing && !dirty)}>
+            {isPending
+              ? isEditing
+                ? "Saving draft…"
+                : "Creating draft…"
+              : isEditing
+                ? "Save changes"
+                : "Create draft"}
           </Button>
         </div>
       </form>
