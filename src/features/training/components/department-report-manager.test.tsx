@@ -23,9 +23,11 @@ describe("department training report", () => {
     });
     const counts = {
       employees: 2,
+      assignedEmployees: 1,
       assigned: 4,
       completed: 2,
       overdue: 1,
+      coverageRate: 50,
       completionRate: 50,
     };
     mocks.query.mockReturnValue({
