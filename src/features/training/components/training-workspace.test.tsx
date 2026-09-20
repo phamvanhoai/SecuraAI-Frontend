@@ -6,11 +6,14 @@ vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
 vi.mock("./training-courses-manager", () => ({
   TrainingCoursesManager: ({
     onAssessments,
+    headerActions,
   }: {
     onAssessments?: () => void;
+    headerActions?: import("react").ReactNode;
   }) => (
     <>
       <h1>Courses content</h1>
+      {headerActions}
       {onAssessments ? (
         <button onClick={onAssessments}>My assessments</button>
       ) : null}
@@ -18,7 +21,16 @@ vi.mock("./training-courses-manager", () => ({
   ),
 }));
 vi.mock("./training-completion-manager", () => ({
-  TrainingCompletionManager: () => <h1>Progress content</h1>,
+  TrainingCompletionManager: ({
+    headerActions,
+  }: {
+    headerActions?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Progress content</h1>
+      {headerActions}
+    </>
+  ),
 }));
 vi.mock("./my-assessments-manager", () => ({
   MyAssessmentsManager: ({ onBack }: { onBack?: () => void }) => (
@@ -28,7 +40,41 @@ vi.mock("./my-assessments-manager", () => ({
     </>
   ),
 }));
+vi.mock("./my-learning-manager", () => ({
+  MyLearningManager: () => <h1>Assigned training content</h1>,
+}));
+vi.mock("./my-certificates-manager", () => ({
+  MyCertificatesManager: () => <h1>My certificates content</h1>,
+}));
+vi.mock("./department-report-manager", () => ({
+  DepartmentReportManager: ({
+    sectionNavigation,
+  }: {
+    sectionNavigation?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Department report content</h1>
+      {sectionNavigation}
+    </>
+  ),
+}));
 describe("TrainingWorkspace entry flow", () => {
+  it("switches Executive readers to the department report without route navigation", () => {
+    mocks.session.mockReturnValue({
+      data: {
+        permissions: [
+          "training-completion.read",
+          "training-department-reports.read",
+        ],
+      },
+    });
+    render(<TrainingWorkspace />);
+    fireEvent.click(screen.getByRole("button", { name: "Department report" }));
+    expect(screen.getByText("Department report content")).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Department report" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
   beforeEach(() =>
     mocks.session.mockReturnValue({
       data: {
@@ -53,12 +99,19 @@ describe("TrainingWorkspace entry flow", () => {
     expect(screen.getByText("Progress content")).toBeVisible();
     expect(screen.queryByText("Courses content")).not.toBeInTheDocument();
   });
-  it("keeps employees on their assigned assessments", () => {
+  it("takes employees to their assigned training", () => {
     mocks.session.mockReturnValue({
       data: { permissions: ["training-assessments.take"] },
     });
     render(<TrainingWorkspace />);
-    expect(screen.getByText("Assessment content")).toBeVisible();
+    expect(screen.getByText("Assigned training content")).toBeVisible();
+  });
+  it("takes certificate-only users to their certificates", () => {
+    mocks.session.mockReturnValue({
+      data: { permissions: ["training-certificates.read-own"] },
+    });
+    render(<TrainingWorkspace />);
+    expect(screen.getByText("My certificates content")).toBeVisible();
   });
   it("preserves assessment access for users who also manage courses", () => {
     mocks.session.mockReturnValue({

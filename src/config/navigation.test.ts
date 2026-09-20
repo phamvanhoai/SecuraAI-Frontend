@@ -9,6 +9,30 @@ import {
 } from "./navigation";
 
 describe("panel navigation", () => {
+  it("shows login history only to permitted admins and security officers", () => {
+    const item = getPanelNavigation("admin").find(
+      (entry) => entry.href === "/admin/login-history",
+    );
+    if (!item) throw new Error("Missing login history navigation");
+    expect(
+      getPanelNavigation("dashboard").some(
+        (entry) => entry.href === "/login-history",
+      ),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["login-history.read"], item, ["ADMIN"]),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["login-history.read"], item, [
+        "SECURITY_OFFICER",
+      ]),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["login-history.read"], item, ["EMPLOYEE"]),
+    ).toBe(false);
+    expect(canAccessNavigationItem([], item, ["ADMIN"])).toBe(false);
+    expect(canAccessNavigationItem(["login-history.read"], item)).toBe(false);
+  });
   it("gives the admin every management module under the admin prefix", () => {
     const links = getPanelNavigation("admin").map((item) => item.href);
     expect(links).toContain("/admin/users");
@@ -99,6 +123,9 @@ describe("panel navigation", () => {
     ).toBe(true);
     expect(
       canAccessNavigationItem(["training-completion.read"], training),
+    ).toBe(true);
+    expect(
+      canAccessNavigationItem(["training-certificates.read-own"], training),
     ).toBe(true);
   });
 });

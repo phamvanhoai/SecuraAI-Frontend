@@ -2,8 +2,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   classifyIncidentSeverity,
+  assignIncidentHandler,
+  updateIncidentHandlingProgress,
+  listIncidentEvidence,
+  uploadIncidentEvidence,
+  removeIncidentEvidence,
   getMyIncident,
   listIncidentsForClassification,
+  listIncidentAssignmentOptions,
   listMyIncidents,
   reportIncident,
 } from "../api/incidents";
@@ -53,5 +59,57 @@ export function useClassifyIncidentSeverity() {
     mutationFn: classifyIncidentSeverity,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export const useIncidentAssignmentOptions = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["incidents", "assignment-options"],
+    queryFn: ({ signal }) => listIncidentAssignmentOptions(signal),
+    enabled,
+    retry: false,
+  });
+export function useAssignIncidentHandler() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: assignIncidentHandler,
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export function useUpdateIncidentHandlingProgress() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: updateIncidentHandlingProgress,
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+  });
+}
+export const useIncidentEvidence = (id: string | undefined, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "evidence", id, page],
+    queryFn: ({ signal }) => listIncidentEvidence(id ?? "", page, signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useUploadIncidentEvidence() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: uploadIncidentEvidence,
+    retry: false,
+    onSuccess: (_data, input) =>
+      client.invalidateQueries({
+        queryKey: ["incidents", "evidence", input.id],
+      }),
+  });
+}
+export function useRemoveIncidentEvidence() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: removeIncidentEvidence,
+    retry: false,
+    onSuccess: (_data, input) =>
+      client.invalidateQueries({
+        queryKey: ["incidents", "evidence", input.incidentId],
+      }),
   });
 }

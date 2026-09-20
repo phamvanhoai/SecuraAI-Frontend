@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { TrainingCertificatePanel } from "./training-certificate-panel";
 import { useCertificateIssuancePending } from "../hooks/use-certificate";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -50,10 +50,12 @@ export function TrainingCompletionManager({
   onViewCourses,
   course,
   onAssessments,
+  headerActions,
 }: {
   onViewCourses?: () => void;
   course?: { id: string; title: string };
   onAssessments?: () => void;
+  headerActions?: ReactNode;
 }) {
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
@@ -168,6 +170,7 @@ export function TrainingCompletionManager({
             }
           : {})}
       />
+      {headerActions}
       <MetricStrip
         ariaLabel="Training completion summary"
         metrics={[
@@ -290,6 +293,7 @@ function CompletionDetailDialog({
   const [query, setQuery] = useState("");
   const [draftQuery, setDraftQuery] = useState("");
   const [status, setStatus] = useState<CompletionStatus>("all");
+  const [draftStatus, setDraftStatus] = useState<CompletionStatus>("all");
   const detail = useCompletionCampaign(campaignId, page, query, status);
   const session = useSessionUser();
   const canWithdraw =
@@ -322,13 +326,14 @@ function CompletionDetailDialog({
     setQuery("");
     setDraftQuery("");
     setStatus("all");
+    setDraftStatus("all");
     onClose();
   };
   const rows = detail.data?.items ?? [];
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] w-[min(64rem,calc(100%-2rem))] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onCancel={(event) => {
         event.preventDefault();
@@ -349,6 +354,61 @@ function CompletionDetailDialog({
         />
       ) : null}
       <div hidden={Boolean(certificateId)}>
+        {detail.data ? (
+          <>
+            <p className="text-muted mb-4 text-sm">
+              {detail.data.campaign.courseTitle} ·{" "}
+              {date(detail.data.campaign.startDate)} –{" "}
+              {date(detail.data.campaign.dueDate)} ·{" "}
+              {detail.data.campaign.requiredLessonCount} required lessons
+              {detail.data.campaign.hasFinalAssessment
+                ? " · Final assessment required"
+                : " · No final assessment"}
+            </p>
+            <MetricStrip
+              ariaLabel="Campaign completion summary"
+              metrics={[
+                {
+                  label: "Assigned",
+                  value: String(detail.data.summary.assigned),
+                  detail: `${detail.data.summary.inProgress} in progress`,
+                },
+                {
+                  label: "Completed",
+                  value: String(detail.data.summary.completed),
+                  detail: `${detail.data.summary.completionRate}% completion rate`,
+                  tone: "brand",
+                },
+                {
+                  label: "Average progress",
+                  value: `${detail.data.summary.averageProgress}%`,
+                  detail: "Across active assignments",
+                },
+                {
+                  label: "Overdue",
+                  value: String(detail.data.summary.overdue),
+                  detail: `${detail.data.summary.withdrawn} withdrawn`,
+                  tone: detail.data.summary.overdue > 0 ? "danger" : "neutral",
+                },
+              ]}
+            />
+          </>
+        ) : detail.isPending ? (
+          <MetricStrip
+            ariaLabel="Loading campaign completion summary"
+            metrics={[
+              { label: "Assigned", value: "", detail: "", loading: true },
+              { label: "Completed", value: "", detail: "", loading: true },
+              {
+                label: "Average progress",
+                value: "",
+                detail: "",
+                loading: true,
+              },
+              { label: "Overdue", value: "", detail: "", loading: true },
+            ]}
+          />
+        ) : null}
         {withdrawTarget ? (
           <form
             className="border-border mb-4 space-y-3 rounded-lg border p-4"
@@ -422,6 +482,7 @@ function CompletionDetailDialog({
           onSubmit={(event) => {
             event.preventDefault();
             setQuery(draftQuery.trim());
+            setStatus(draftStatus);
             setPage(1);
           }}
         >
@@ -433,10 +494,9 @@ function CompletionDetailDialog({
           />
           <Select
             aria-label="Filter completion status"
-            value={status}
+            value={draftStatus}
             onChange={(event) => {
-              setStatus(event.target.value as CompletionStatus);
-              setPage(1);
+              setDraftStatus(event.target.value as CompletionStatus);
             }}
           >
             <option value="all">All statuses</option>
@@ -453,7 +513,9 @@ function CompletionDetailDialog({
             headers={[
               "Employee",
               "Status",
-              "Progress",
+              "Overall progress",
+              "Required lessons",
+              "Final assessment",
               "Last activity",
               "Certificate",
               ...(canWithdraw ? ["Actions"] : []),
@@ -506,8 +568,66 @@ function CompletionDetailDialog({
               },
               {
                 key: "progress",
-                header: "Progress",
-                cell: (item) => `${item.progressPercent}%`,
+                header: "Overall progress",
+                cell: (item) => (
+                  <div className="min-w-28">
+                    <div className="mb-1 flex justify-between text-xs tabular-nums">
+                      <span>{item.progressPercent}%</span>
+                    </div>
+                    <div
+                      aria-label={`${item.user.name} overall progress`}
+                      aria-valuemax={100}
+                      aria-valuemin={0}
+                      aria-valuenow={item.progressPercent}
+                      className="bg-neutral-soft h-2 overflow-hidden rounded-full"
+                      role="progressbar"
+                    >
+                      <div
+                        className="bg-brand h-full"
+                        style={{ width: `${item.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                ),
+              },
+              {
+                key: "lessons",
+                header: "Required lessons",
+                cell: (item) =>
+                  item.requiredLessons.total > 0 ? (
+                    <span className="tabular-nums">
+                      {item.requiredLessons.completed}/
+                      {item.requiredLessons.total}
+                    </span>
+                  ) : (
+                    <span className="text-muted">None</span>
+                  ),
+              },
+              {
+                key: "assessment",
+                header: "Final assessment",
+                cell: (item) => {
+                  if (!item.finalAssessment.required)
+                    return <span className="text-muted">Not required</span>;
+                  if (item.finalAssessment.latestScore === null)
+                    return (
+                      <StatusBadge tone="neutral">Not attempted</StatusBadge>
+                    );
+                  return (
+                    <span className="flex flex-col gap-1">
+                      <StatusBadge
+                        tone={
+                          item.finalAssessment.passed ? "success" : "warning"
+                        }
+                      >
+                        {item.finalAssessment.passed ? "Passed" : "Not passed"}
+                      </StatusBadge>
+                      <span className="text-muted text-xs tabular-nums">
+                        Latest: {item.finalAssessment.latestScore}%
+                      </span>
+                    </span>
+                  );
+                },
               },
               {
                 key: "activity",

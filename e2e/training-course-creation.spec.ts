@@ -68,35 +68,37 @@ test("creates a course draft with a post-training assessment", async ({
   await page.setViewportSize({ width: 375, height: 900 });
   await page.goto("/training");
   await page.getByRole("button", { name: "Create course" }).click();
-  await page.getByLabel("Title", { exact: true }).fill("Phishing essentials");
+  await expect(page).toHaveURL(/\/training\/create$/);
+  await page.getByLabel("Course title *", { exact: true }).fill("Phishing essentials");
   await page
-    .getByLabel("Description (optional)")
+    .getByLabel("Description (optional)", { exact: true })
     .fill("Recognize phishing attempts");
   await page
-    .getByLabel("Course content")
+    .getByLabel("Learning objectives *")
     .fill("Learn how to identify and report suspicious messages.");
+  await page.getByLabel("Lesson title *").fill("Recognize phishing");
+  await page.getByLabel("Material title *").fill("Phishing guide");
+  await page.getByLabel("Learning content *").fill("Check the sender before opening a link.");
+  await page.getByRole("button", { name: "Add final assessment" }).click();
   await page
     .getByLabel("Question", { exact: true })
     .fill("Which message is suspicious?");
+  await page.getByLabel("Answer type").selectOption("multiple_choice");
   await page
     .getByRole("textbox", { name: "Answer 1" })
     .fill("An unexpected password reset link");
   await page
     .getByRole("textbox", { name: "Answer 2" })
-    .fill("A requested internal report");
-  await page
-    .getByRole("textbox", { name: "Answer 3" })
-    .fill("A scheduled team meeting");
-  await page
-    .getByRole("textbox", { name: "Answer 4" })
-    .fill("An expected payroll notice");
+    .fill("An unexpected MFA approval request");
+  await page.getByRole("checkbox", { name: "Correct answer 1 for question 1" }).check();
+  await page.getByRole("checkbox", { name: "Correct answer 2 for question 1" }).check();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,
     ),
   ).toBe(false);
   await page.getByRole("button", { name: "Create draft" }).click();
-  await expect(page.getByText("Course created")).toBeVisible();
+  await expect(page.getByText("Course draft created")).toBeVisible();
   expect(submitted).toMatchObject({
     title: "Phishing essentials",
     assessment: {
@@ -104,10 +106,15 @@ test("creates a course draft with a post-training assessment", async ({
       maxAttempts: 3,
       questions: expect.arrayContaining([
         expect.objectContaining({
+          type: "multiple_choice",
           text: "Which message is suspicious?",
           options: expect.arrayContaining([
             expect.objectContaining({
               text: "An unexpected password reset link",
+              isCorrect: true,
+            }),
+            expect.objectContaining({
+              text: "An unexpected MFA approval request",
               isCorrect: true,
             }),
           ]),

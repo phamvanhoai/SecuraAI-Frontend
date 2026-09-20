@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const assessmentQuestionSchema = z
   .object({
+    type: z.enum(["single_choice", "multiple_choice"]),
     text: z.string().trim().min(3, "Enter the question.").max(2000),
     options: z
       .array(
@@ -14,14 +15,94 @@ const assessmentQuestionSchema = z
       .max(6),
   })
   .superRefine((value, context) => {
-    if (value.options.filter((option) => option.isCorrect).length !== 1) {
+    const correctAnswers = value.options.filter(
+      (option) => option.isCorrect,
+    ).length;
+    const valid =
+      value.type === "single_choice"
+        ? correctAnswers === 1
+        : correctAnswers >= 2;
+    if (!valid) {
       context.addIssue({
         code: "custom",
         path: ["options"],
-        message: "Select exactly one correct answer.",
+        message:
+          value.type === "single_choice"
+            ? "Select exactly one correct answer."
+            : "Select at least two correct answers.",
       });
     }
   });
+
+export const courseAssessmentSchema = z.object({
+  title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+  passingScore: z.number().min(0).max(100),
+  maxAttempts: z.number().int().min(1).max(10),
+  questions: z.array(assessmentQuestionSchema).min(1).max(50),
+});
+
+export const courseMaterialSchema = z
+  .object({
+    title: z.string().trim().min(1, "Enter a material title.").max(255),
+    type: z.enum(["text", "video", "document", "link"]),
+    content: z.string().trim().max(50000).optional(),
+    externalUrl: z
+      .url("Enter a valid URL.")
+      .max(2000)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === "https:" && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, "Use an HTTPS URL without credentials.")
+      .optional(),
+    uploadKey: z.uuid().optional(),
+    existingFileId: z.uuid().optional(),
+    existingFile: z
+      .object({
+        name: z.string(),
+        mimeType: z.string(),
+        sizeBytes: z.number().int().nonnegative().nullable(),
+      })
+      .nullable()
+      .optional(),
+  })
+  .superRefine((value, ctx) => {
+    const sourceCount = [
+      value.externalUrl,
+      value.uploadKey,
+      value.existingFileId,
+    ].filter(Boolean).length;
+    const valid =
+      value.type === "text"
+        ? Boolean(value.content) && sourceCount === 0
+        : value.type === "link"
+          ? Boolean(value.externalUrl) && !value.content && sourceCount === 1
+          : !value.content && sourceCount === 1;
+    if (!valid)
+      ctx.addIssue({
+        code: "custom",
+        path: ["content"],
+        message:
+          "Provide text, an HTTPS URL, or an uploaded file matching the material type.",
+      });
+  });
+
+export const courseLessonSchema = z.object({
+  title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+  description: z.string().trim().max(2000).optional(),
+  isRequired: z.boolean(),
+  materials: z
+    .array(courseMaterialSchema)
+    .min(1, "Add a learning material.")
+    .max(10),
+  assessment: courseAssessmentSchema.optional(),
+});
+export type CourseLesson = z.infer<typeof courseLessonSchema>;
+export type CourseMaterial = z.infer<typeof courseMaterialSchema>;
+export type CourseAssessment = z.infer<typeof courseAssessmentSchema>;
 
 export const createCourseSchema = z
   .object({
@@ -33,6 +114,11 @@ export const createCourseSchema = z
       .min(10, "Enter at least 10 characters.")
       .max(50000),
     status: z.enum(["draft", "published"]),
+    lessons: z
+      .array(courseLessonSchema)
+      .min(1, "Add at least one lesson.")
+      .max(50)
+      .optional(),
     assessment: z
       .object({
         title: z
@@ -47,6 +133,42 @@ export const createCourseSchema = z
       .optional(),
   })
   .superRefine((value, context) => {
+    if (value.lessons && value.status !== "draft")
+      context.addIssue({
+        code: "custom",
+        path: ["status"],
+        message: "Create the course as a draft first.",
+      });
+    const keys =
+      value.lessons?.flatMap((lesson) =>
+        lesson.materials.flatMap((material) =>
+          material.uploadKey ? [material.uploadKey] : [],
+        ),
+      ) ?? [];
+    const materialCount =
+      value.lessons?.reduce(
+        (count, lesson) => count + lesson.materials.length,
+        0,
+      ) ?? 0;
+    const questionCount =
+      (value.assessment?.questions.length ?? 0) +
+      (value.lessons?.reduce(
+        (count, lesson) => count + (lesson.assessment?.questions.length ?? 0),
+        0,
+      ) ?? 0);
+    if (materialCount > 100 || questionCount > 100)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message:
+          "Use at most 100 materials and 100 assessment questions per course.",
+      });
+    if (new Set(keys).size !== keys.length || keys.length > 10)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message: "Use unique upload keys and at most 10 uploaded files.",
+      });
     if (value.status === "published" && !value.assessment) {
       context.addIssue({
         code: "custom",
@@ -65,6 +187,97 @@ export const courseSchema = z.object({
   createdByUserId: z.uuid().nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
+});
+
+export const courseDraftSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string().nullable(),
+  content: z.string(),
+  status: z.literal("draft"),
+  updatedAt: z.iso.datetime({ offset: true }),
+  lessons: z.array(courseLessonSchema),
+  assessment: courseAssessmentSchema.nullable(),
+});
+
+export const updateCourseDraftSchema = z
+  .object({
+    title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+    description: z.string().trim().max(2000),
+    content: z
+      .string()
+      .trim()
+      .min(10, "Enter at least 10 characters.")
+      .max(50000),
+    lessons: z.array(courseLessonSchema).min(1).max(50),
+    assessment: courseAssessmentSchema.optional(),
+    expectedUpdatedAt: z.iso.datetime({ offset: true }),
+  })
+  .superRefine((value, context) => {
+    const keys = value.lessons.flatMap((lesson) =>
+      lesson.materials.flatMap((material) =>
+        material.uploadKey ? [material.uploadKey] : [],
+      ),
+    );
+    const materialCount = value.lessons.reduce(
+      (count, lesson) => count + lesson.materials.length,
+      0,
+    );
+    const questionCount =
+      (value.assessment?.questions.length ?? 0) +
+      value.lessons.reduce(
+        (count, lesson) => count + (lesson.assessment?.questions.length ?? 0),
+        0,
+      );
+    if (materialCount > 100 || questionCount > 100)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message:
+          "Use at most 100 materials and 100 assessment questions per course.",
+      });
+    if (new Set(keys).size !== keys.length || keys.length > 10)
+      context.addIssue({
+        code: "custom",
+        path: ["lessons"],
+        message: "Use unique upload keys and at most 10 uploaded files.",
+      });
+  });
+
+export const courseContentSchema = z.object({
+  lessons: z.array(
+    z.object({
+      id: z.uuid(),
+      title: z.string(),
+      description: z.string().nullable(),
+      order: z.number().int(),
+      isRequired: z.boolean(),
+      materials: z.array(
+        z.object({
+          id: z.uuid(),
+          title: z.string(),
+          type: z.enum(["text", "video", "document", "link"]),
+          content: z.string().nullable(),
+          externalUrl: z.string().nullable(),
+          file: z
+            .object({
+              name: z.string(),
+              mimeType: z.string().nullable(),
+              sizeBytes: z.number().nullable(),
+            })
+            .nullable(),
+        }),
+      ),
+      assessments: z.array(
+        z.object({
+          title: z.string(),
+          passingScore: z.number(),
+          maxAttempts: z.number().int(),
+          questionCount: z.number().int(),
+        }),
+      ),
+    }),
+  ),
 });
 
 export const courseListSchema = z.object({
@@ -146,6 +359,9 @@ export const courseAssignmentDetailSchema = z
   .nullable();
 
 export type Course = z.infer<typeof courseSchema>;
+export type CourseStatusFilter = "all" | "draft" | "published" | "archived";
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
+export type CourseDraft = z.infer<typeof courseDraftSchema>;
+export type UpdateCourseDraftInput = z.infer<typeof updateCourseDraftSchema>;
 export type AssignmentOptions = z.infer<typeof assignmentOptionsSchema>;
 export type AssignCourseInput = z.infer<typeof assignCourseSchema>;

@@ -9,9 +9,16 @@ import { useSessionUser } from "@/features/auth";
 import { TrainingCoursesManager } from "./training-courses-manager";
 import { TrainingCompletionManager } from "./training-completion-manager";
 import { MyAssessmentsManager } from "./my-assessments-manager";
+import { MyLearningManager } from "./my-learning-manager";
+import { MyCertificatesManager } from "./my-certificates-manager";
+import { DepartmentReportManager } from "./department-report-manager";
+import { TrainingSectionNavigation } from "./training-section-navigation";
 export function TrainingWorkspace() {
   const session = useSessionUser();
   const [showAssessments, setShowAssessments] = useState(false);
+  const [activeSection, setActiveSection] = useState<
+    "training" | "department-report"
+  >("training");
   if (session.isPending)
     return <Skeleton className="h-56 w-full" aria-label="Loading training" />;
   if (session.isError)
@@ -24,18 +31,79 @@ export function TrainingWorkspace() {
       </Alert>
     );
   const permissions = session.data?.permissions ?? [];
+  return (
+    <TrainingWorkspaceContent
+      permissions={permissions}
+      showAssessments={showAssessments}
+      setShowAssessments={setShowAssessments}
+      activeSection={activeSection}
+      setActiveSection={setActiveSection}
+    />
+  );
+}
+
+function TrainingWorkspaceContent({
+  permissions,
+  showAssessments,
+  setShowAssessments,
+  activeSection,
+  setActiveSection,
+}: {
+  permissions: readonly string[];
+  showAssessments: boolean;
+  setShowAssessments: (value: boolean) => void;
+  activeSection: "training" | "department-report";
+  setActiveSection: (value: "training" | "department-report") => void;
+}) {
   const canAssess = permissions.includes("training-assessments.take");
   const assessmentAction = canAssess
     ? { onAssessments: () => setShowAssessments(true) }
     : {};
   if (showAssessments && canAssess)
     return <MyAssessmentsManager onBack={() => setShowAssessments(false)} />;
+  const canReport = permissions.includes("training-department-reports.read");
+  const primaryLabel = permissions.includes("training-courses.read")
+    ? "Courses"
+    : "Training progress";
+  const canViewPrimary =
+    permissions.includes("training-courses.read") ||
+    permissions.includes("training-completion.read");
+  const headerActions =
+    canReport && canViewPrimary ? (
+      <TrainingSectionNavigation
+        active={activeSection}
+        onSelect={setActiveSection}
+        primaryLabel={primaryLabel}
+      />
+    ) : undefined;
+  if (activeSection === "department-report" && canReport)
+    return <DepartmentReportManager sectionNavigation={headerActions} />;
   if (permissions.includes("training-courses.read"))
-    return <TrainingCoursesManager {...assessmentAction} />;
+    return (
+      <TrainingCoursesManager
+        {...assessmentAction}
+        headerActions={headerActions}
+      />
+    );
   if (permissions.includes("training-completion.read"))
-    return <TrainingCompletionManager {...assessmentAction} />;
+    return (
+      <TrainingCompletionManager
+        {...assessmentAction}
+        headerActions={headerActions}
+      />
+    );
   if (permissions.includes("training-assessments.take"))
-    return <MyAssessmentsManager />;
+    return (
+      <MyLearningManager
+        canViewCertificates={permissions.includes(
+          "training-certificates.read-own",
+        )}
+      />
+    );
+  if (permissions.includes("training-certificates.read-own"))
+    return <MyCertificatesManager />;
+  if (permissions.includes("training-department-reports.read"))
+    return <DepartmentReportManager />;
   return (
     <div className="space-y-5">
       <ProductPageHeader

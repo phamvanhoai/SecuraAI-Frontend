@@ -22,6 +22,7 @@ export function ProductPageHeader({
   onSecondaryAction,
   secondaryActionIcon,
   showSampleNotice = true,
+  breadcrumbLabel,
 }: {
   title: string;
   description?: string;
@@ -32,10 +33,11 @@ export function ProductPageHeader({
   onSecondaryAction?: () => void;
   secondaryActionIcon?: ReactNode;
   showSampleNotice?: boolean;
+  breadcrumbLabel?: string;
 }) {
   return (
     <>
-      <Breadcrumb title={title} />
+      <Breadcrumb title={title} panelLabel={breadcrumbLabel} />
       <div className="mb-5 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="max-w-3xl">
           <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">

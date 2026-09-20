@@ -1,19 +1,26 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { CourseContentDialog } from "./course-content-dialog";
 import {
   ClipboardList,
   Ellipsis,
   Eye,
-  Plus,
+  Pencil,
   Send,
   Search,
-  Trash2,
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TrainingCompletionManager } from "./training-completion-manager";
-import { useDeferredValue, useEffect, useRef, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useForm, useWatch } from "react-hook-form";
 import {
   DataTable,
   type DataTableColumn,
@@ -39,45 +46,23 @@ import {
   useAssignCourse,
   useAssignmentOptions,
   useCourses,
-  useCreateCourse,
   useLatestCourseAssignment,
 } from "../hooks/use-courses";
 import {
   assignCourseSchema,
-  createCourseSchema,
   type AssignCourseInput,
   type Course,
-  type CreateCourseInput,
+  type CourseStatusFilter,
 } from "../schemas/course-schema";
-
-const defaultQuestion = () => ({
-  text: "",
-  options: [
-    { text: "", isCorrect: true },
-    { text: "", isCorrect: false },
-    { text: "", isCorrect: false },
-    { text: "", isCorrect: false },
-  ],
-});
-
-const defaults: CreateCourseInput = {
-  title: "",
-  description: "",
-  content: "",
-  status: "draft",
-  assessment: {
-    title: "Post-training assessment",
-    passingScore: 80,
-    maxAttempts: 3,
-    questions: [defaultQuestion()],
-  },
-};
 
 export function TrainingCoursesManager({
   onAssessments,
+  headerActions,
 }: {
   onAssessments?: () => void;
+  headerActions?: ReactNode;
 }) {
+  const router = useRouter();
   const session = useSessionUser();
   const canRead =
     session.data?.permissions.includes("training-courses.read") ?? false;
@@ -85,18 +70,22 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.create") ?? false;
   const canAssign =
     session.data?.permissions.includes("training-courses.assign") ?? false;
+  const canUpdate =
+    session.data?.permissions.includes("training-courses.update") ?? false;
   const canTrack =
     session.data?.permissions.includes("training-completion.read") ?? false;
   const [courseToTrack, setCourseToTrack] = useState<Course>();
+  const [courseToView, setCourseToView] = useState<Course>();
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<CourseStatusFilter>("all");
+  const [status, setStatus] = useState<CourseStatusFilter>("all");
   const [assignmentDialog, setAssignmentDialog] = useState<{
     course: Course;
     mode: "create" | "edit";
   }>();
-  const courses = useCourses(page, query, canRead);
+  const courses = useCourses(page, query, status, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
       key: "title",
@@ -129,7 +118,7 @@ export function TrainingCoursesManager({
           new Date(course.createdAt),
         ),
     },
-    ...(canAssign || canTrack
+    ...(canRead || canUpdate || canAssign || canTrack
       ? [
           {
             key: "actions",
@@ -147,7 +136,44 @@ export function TrainingCoursesManager({
                   </span>
                 }
               >
-                {canAssign ? (
+                {canAssign && course.status !== "published" ? (
+                  <p className="text-muted px-3 py-2 text-xs">
+                    {course.status === "draft"
+                      ? "Publish this course before assigning it."
+                      : "Archived courses cannot be assigned."}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm"
+                  onClick={() => setCourseToView(course)}
+                >
+                  <Eye
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={1.8}
+                  />
+                  View details
+                </button>
+                {canUpdate && course.status === "draft" ? (
+                  <button
+                    type="button"
+                    className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                    onClick={() =>
+                      router.push(
+                        `/training/${encodeURIComponent(course.id)}/edit`,
+                      )
+                    }
+                  >
+                    <Pencil
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    Edit draft
+                  </button>
+                ) : null}
+                {canAssign && course.status === "published" ? (
                   <>
                     <button
                       type="button"
@@ -206,6 +232,7 @@ export function TrainingCoursesManager({
         <TrainingCompletionManager
           key={courseToTrack.id}
           course={courseToTrack}
+          headerActions={headerActions}
           onViewCourses={() => setCourseToTrack(undefined)}
         />
       ) : null}
@@ -230,10 +257,11 @@ export function TrainingCoursesManager({
           {...(canCreate
             ? {
                 primaryAction: "Create course",
-                onPrimaryAction: () => setFormOpen(true),
+                onPrimaryAction: () => router.push("/training/create"),
               }
             : {})}
         />
+        {headerActions}
         <ProductPanel
           title="Courses"
           description={
@@ -247,6 +275,7 @@ export function TrainingCoursesManager({
             onSubmit={(event) => {
               event.preventDefault();
               setQuery(draftQuery.trim());
+              setStatus(draftStatus);
               setPage(1);
             }}
           >
@@ -265,6 +294,19 @@ export function TrainingCoursesManager({
                 onChange={(event) => setDraftQuery(event.target.value)}
               />
             </label>
+            <Select
+              aria-label="Filter course status"
+              className="w-full sm:w-44"
+              value={draftStatus}
+              onChange={(event) =>
+                setDraftStatus(event.target.value as CourseStatusFilter)
+              }
+            >
+              <option value="all">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </Select>
             <Button type="submit">Search</Button>
           </form>
           <div className="p-4">
@@ -290,7 +332,7 @@ export function TrainingCoursesManager({
                 No courses found.{" "}
                 {canCreate
                   ? "Create a draft to get started."
-                  : "Try a different search."}
+                  : "Try a different search or status filter."}
               </p>
             ) : courses.data ? (
               <DataTable
@@ -310,14 +352,14 @@ export function TrainingCoursesManager({
             </div>
           ) : null}
         </ProductPanel>
-        <CreateCourseDialog
-          open={formOpen}
-          onClose={() => setFormOpen(false)}
-        />
         <AssignCourseDialog
           course={assignmentDialog?.course}
           mode={assignmentDialog?.mode ?? "create"}
           onClose={() => setAssignmentDialog(undefined)}
+        />
+        <CourseContentDialog
+          course={courseToView}
+          onClose={() => setCourseToView(undefined)}
         />
       </div>
     </>
@@ -725,319 +767,5 @@ function TargetList({
         ) : null}
       </div>
     </fieldset>
-  );
-}
-
-function CreateCourseDialog({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const mutation = useCreateCourse();
-  const toast = useToast();
-  const [message, setMessage] = useState<string>();
-  const {
-    control,
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<CreateCourseInput>({
-    resolver: zodResolver(createCourseSchema),
-    defaultValues: defaults,
-  });
-  const assessment = useWatch({ control, name: "assessment" });
-  const courseStatus = useWatch({ control, name: "status" });
-  const questions = useFieldArray({
-    control,
-    name: "assessment.questions",
-  });
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  const close = () => {
-    reset(defaults);
-    setMessage(undefined);
-    onClose();
-  };
-  const submit = async (values: CreateCourseInput) => {
-    setMessage(undefined);
-    try {
-      await mutation.mutateAsync(values);
-      close();
-      toast.success(
-        "Course created",
-        values.status === "published"
-          ? "The course is published and ready to assign."
-          : "The draft is ready for further preparation.",
-      );
-    } catch (error: unknown) {
-      setMessage(
-        error instanceof Error ? error.message : "Unable to create course.",
-      );
-    }
-  };
-
-  return (
-    <Dialog
-      title="Create security awareness course"
-      dialogRef={dialogRef}
-      onClose={close}
-      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
-    >
-      <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-        <p className="text-muted text-sm">
-          The course will be saved as a draft.
-        </p>
-        {message ? (
-          <Alert className="border-danger/25 bg-danger-soft text-danger">
-            {message}
-          </Alert>
-        ) : null}
-        <FormField
-          id="course-title"
-          label="Title"
-          error={errors.title?.message}
-        >
-          <Input
-            id="course-title"
-            maxLength={255}
-            aria-invalid={Boolean(errors.title)}
-            {...register("title")}
-          />
-        </FormField>
-        <FormField
-          id="course-description"
-          label="Description (optional)"
-          error={errors.description?.message}
-        >
-          <Textarea
-            id="course-description"
-            maxLength={2000}
-            rows={3}
-            {...register("description")}
-          />
-        </FormField>
-        <FormField
-          id="course-content"
-          label="Course content"
-          error={errors.content?.message}
-        >
-          <Textarea
-            id="course-content"
-            maxLength={50000}
-            rows={8}
-            aria-invalid={Boolean(errors.content)}
-            {...register("content")}
-          />
-        </FormField>
-        <FormField
-          id="course-status"
-          label="Status"
-          error={errors.status?.message}
-        >
-          <Select id="course-status" {...register("status")}>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </Select>
-        </FormField>
-        <section className="border-border space-y-4 rounded-xl border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold">Post-training assessment</h3>
-              <p className="text-muted mt-1 text-sm leading-6">
-                Add a scored assessment so employees can complete the course.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setValue(
-                  "assessment",
-                  assessment
-                    ? undefined
-                    : {
-                        title: "Post-training assessment",
-                        passingScore: 80,
-                        maxAttempts: 3,
-                        questions: [defaultQuestion()],
-                      },
-                  { shouldValidate: true },
-                )
-              }
-            >
-              {assessment ? "Remove assessment" : "Add assessment"}
-            </Button>
-          </div>
-          {!assessment && errors.assessment ? (
-            <p className="text-danger text-sm" role="alert">
-              A published course requires a post-training assessment.
-            </p>
-          ) : null}
-          {assessment ? (
-            <>
-              <FormField
-                id="assessment-title"
-                label="Assessment title"
-                error={errors.assessment?.title?.message}
-              >
-                <Input
-                  id="assessment-title"
-                  maxLength={255}
-                  aria-invalid={Boolean(errors.assessment?.title)}
-                  {...register("assessment.title")}
-                />
-              </FormField>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  id="assessment-passing-score"
-                  label="Passing score (%)"
-                  error={errors.assessment?.passingScore?.message}
-                >
-                  <Input
-                    id="assessment-passing-score"
-                    type="number"
-                    min={0}
-                    max={100}
-                    {...register("assessment.passingScore", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </FormField>
-                <FormField
-                  id="assessment-max-attempts"
-                  label="Maximum attempts"
-                  error={errors.assessment?.maxAttempts?.message}
-                >
-                  <Input
-                    id="assessment-max-attempts"
-                    type="number"
-                    min={1}
-                    max={10}
-                    {...register("assessment.maxAttempts", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </FormField>
-              </div>
-              <div className="space-y-4">
-                {questions.fields.map((question, questionIndex) => (
-                  <fieldset
-                    className="border-border space-y-3 rounded-lg border p-4"
-                    key={question.id}
-                  >
-                    <legend className="px-1 text-sm font-semibold">
-                      Question {questionIndex + 1}
-                    </legend>
-                    <FormField
-                      id={`assessment-question-${questionIndex}`}
-                      label="Question"
-                      error={
-                        errors.assessment?.questions?.[questionIndex]?.text
-                          ?.message
-                      }
-                    >
-                      <Input
-                        id={`assessment-question-${questionIndex}`}
-                        maxLength={2000}
-                        {...register(
-                          `assessment.questions.${questionIndex}.text`,
-                        )}
-                      />
-                    </FormField>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">Answers</p>
-                      {assessment.questions[questionIndex]?.options.map(
-                        (option, optionIndex) => (
-                          <label
-                            className="flex items-center gap-2"
-                            key={`${question.id}-${optionIndex}`}
-                          >
-                            <input
-                              type="radio"
-                              name={`correct-answer-${questionIndex}`}
-                              checked={option.isCorrect}
-                              onChange={() => {
-                                assessment.questions[
-                                  questionIndex
-                                ]?.options.forEach((_, index) =>
-                                  setValue(
-                                    `assessment.questions.${questionIndex}.options.${index}.isCorrect`,
-                                    index === optionIndex,
-                                    { shouldValidate: true },
-                                  ),
-                                );
-                              }}
-                              aria-label={`Mark answer ${optionIndex + 1} as correct`}
-                            />
-                            <Input
-                              aria-label={`Answer ${optionIndex + 1}`}
-                              maxLength={1000}
-                              {...register(
-                                `assessment.questions.${questionIndex}.options.${optionIndex}.text`,
-                              )}
-                            />
-                          </label>
-                        ),
-                      )}
-                      {errors.assessment?.questions?.[questionIndex]?.options
-                        ?.message ? (
-                        <p className="text-danger text-sm" role="alert">
-                          {
-                            errors.assessment.questions[questionIndex].options
-                              .message
-                          }
-                        </p>
-                      ) : null}
-                    </div>
-                    {questions.fields.length > 1 ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => questions.remove(questionIndex)}
-                      >
-                        <Trash2 aria-hidden="true" className="size-4" />
-                        Remove question
-                      </Button>
-                    ) : null}
-                  </fieldset>
-                ))}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={questions.fields.length >= 50}
-                  onClick={() => questions.append(defaultQuestion())}
-                >
-                  <Plus aria-hidden="true" className="size-4" />
-                  Add question
-                </Button>
-              </div>
-            </>
-          ) : null}
-        </section>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={close}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending
-              ? "Creating…"
-              : courseStatus === "published"
-                ? "Publish course"
-                : "Create draft"}
-          </Button>
-        </div>
-      </form>
-    </Dialog>
   );
 }

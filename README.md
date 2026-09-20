@@ -1,11 +1,19 @@
 # SecuraAI Frontend
 
+## UC160 — Edit security awareness course draft
+
+Security Officers with `training-courses.update` can open **Training → Course actions → Edit draft** for an unassigned draft. The editor loads the current course, lessons, materials, lesson assessments, and final assessment; existing uploaded files remain attached unless removed or replaced. Saving checks the draft's last-updated timestamp to prevent overwriting another edit. Courses with an assignment campaign cannot be edited. Deploy the backend permission-data migration and sign in again before testing.
+
+## View Login History
+
+Admin opens `/admin/login-history`; Security Officer opens `/login-history`. Menu visibility and direct navigation require the matching system role plus `login-history.read`. Other accounts redirect to `/forbidden`, and unauthorized accounts never fetch history. The table uses Backend records with search, result/date/IP/user filters and pagination. See [feature documentation](src/features/login-history/README.md). Deploy the Backend implementation and provision its permission, then sign in again before testing.
+
 ## UC80 — Training completion certificates
 
 Open **Training → Course actions → View training progress → Assignment campaign → View employees → Issue/View certificate**.
 There is one course list, not duplicate courses/completion tabs. Campaigns are filtered by the selected course UUID in the backend. Back to courses preserves the course search/page state. Completion-only readers enter the campaign list directly; employees enter their assigned assessments.
 Security Officers with `training-certificates.issue` can issue; users with `training-completion.read` can view.
-The backend verifies completed status, 100% progress and a submitted passing assessment. Issuance is idempotent and audited.
+The backend verifies completed status, 100% progress and, when configured, a passing final assessment scoped to the same enrollment. Lesson quizzes and results from earlier campaigns do not qualify. The UI explains each eligibility check and asks for confirmation before issuance. Issuance is idempotent and audited.
 The certificate is a persisted metadata record, not a generated PDF. Deploy the backend permission migration and sign in again before testing issuance.
 
 Frontend repository độc lập cho nền tảng quản lý rủi ro an toàn thông tin SecuraAI. Đây là foundation dùng Next.js App Router, React, TypeScript strict và Tailwind CSS v4; các domain chưa có API thật chỉ hiển thị “Chưa triển khai”.
@@ -87,3 +95,6 @@ Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có th
 Các trang nghiệp vụ chưa tích hợp API thật vẫn là prototype giao diện với dữ liệu mẫu; không được xem là chức năng production. Những trang đó chưa có domain CRUD hoặc KPI lấy từ backend; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. UC7 trong danh sách người dùng gọi API backend thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
 
 Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
+# UC81 — Department training report
+
+Executive/Admin users with `training-department-reports.read` can open **Training → Department report** or `/training/department-report`. This is a read-only report backed by `/training/department-report` on the backend. It counts distinct assigned employees and individual campaign assignments separately, excludes withdrawn assignments, and groups users by their current department (including No department). Overdue dates use UTC. Organization totals are independent of search and pagination. Apply the backend permission migration or the scoped UC81 permission seed before testing; sign in again to refresh session permissions.

@@ -6,6 +6,8 @@ import {
   type CreatedUser,
   type UserListQuery,
   type UserListResponse,
+  type UserDetail,
+  userDetailSchema,
   userListResponseSchema,
 } from "../schemas/user-schema";
 
@@ -23,7 +25,9 @@ export async function listUsers(
   if (!parsed.success) {
     throw new ApiError(
       `The server returned an invalid user list: ${parsed.error.issues
-        .map((issue) => `${issue.path.join(".") || "response"}: ${issue.message}`)
+        .map(
+          (issue) => `${issue.path.join(".") || "response"}: ${issue.message}`,
+        )
         .join("; ")}`,
       502,
       "UNKNOWN_ERROR",
@@ -33,11 +37,37 @@ export async function listUsers(
   return parsed.data;
 }
 
-export async function createUser(input: CreateUserPayload): Promise<CreatedUser> {
+export async function createUser(
+  input: CreateUserPayload,
+): Promise<CreatedUser> {
   const data = await apiRequest<unknown>("/api/users", {
     method: "POST",
     target: "same-origin",
     body: input,
   });
   return createdUserSchema.parse(data);
+}
+
+export async function getUser(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserDetail> {
+  const data = await apiRequest<unknown>(
+    `/api/users/${encodeURIComponent(userId)}`,
+    {
+      method: "GET",
+      target: "same-origin",
+      ...(signal ? { signal } : {}),
+    },
+  );
+  const parsed = userDetailSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new ApiError(
+      "The server returned invalid user details.",
+      502,
+      "UNKNOWN_ERROR",
+      parsed.error.flatten(),
+    );
+  }
+  return parsed.data;
 }

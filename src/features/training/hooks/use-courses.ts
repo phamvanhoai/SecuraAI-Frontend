@@ -4,16 +4,37 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignCourse,
   createCourse,
+  getCourseContent,
+  getCourseDraft,
   getAssignmentOptions,
   getLatestCourseAssignment,
   listCourses,
+  updateCourseDraft,
 } from "../api/courses";
-import type { AssignCourseInput } from "../schemas/course-schema";
+import type {
+  AssignCourseInput,
+  CourseStatusFilter,
+  CreateCourseInput,
+  UpdateCourseDraftInput,
+} from "../schemas/course-schema";
 
-export function useCourses(page: number, q: string, enabled: boolean) {
+export function useCourseContent(courseId: string | undefined) {
   return useQuery({
-    queryKey: ["training", "courses", page, q],
-    queryFn: ({ signal }) => listCourses(page, q, signal),
+    queryKey: ["training", "course-content", courseId],
+    queryFn: ({ signal }) => getCourseContent(courseId ?? "", signal),
+    enabled: Boolean(courseId),
+  });
+}
+
+export function useCourses(
+  page: number,
+  q: string,
+  status: CourseStatusFilter,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ["training", "courses", page, q, status],
+    queryFn: ({ signal }) => listCourses(page, q, status, signal),
     enabled,
   });
 }
@@ -21,11 +42,45 @@ export function useCourses(page: number, q: string, enabled: boolean) {
 export function useCreateCourse() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createCourse,
+    mutationFn: (
+      input: CreateCourseInput & { files?: Readonly<Record<string, File>> },
+    ) => createCourse(input, input.files),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["training", "courses"],
       });
+    },
+    retry: false,
+  });
+}
+
+export function useCourseDraft(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ["training", "course-draft", courseId],
+    queryFn: ({ signal }) => getCourseDraft(courseId ?? "", signal),
+    enabled: Boolean(courseId),
+  });
+}
+
+export function useUpdateCourseDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      input,
+      files,
+    }: {
+      courseId: string;
+      input: UpdateCourseDraftInput;
+      files: Readonly<Record<string, File>>;
+    }) => updateCourseDraft(courseId, input, files),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["training", "courses"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["training", "course-draft", variables.courseId],
+        }),
+      ]);
     },
     retry: false,
   });

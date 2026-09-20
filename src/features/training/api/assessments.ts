@@ -19,10 +19,13 @@ export async function listMyAssessments(page: number, signal?: AbortSignal) {
 export async function getMyAssessment(
   enrollmentId: string,
   signal?: AbortSignal,
+  lessonId?: string,
 ) {
   return assessmentDetailSchema.parse(
     await apiRequest<unknown>(
-      `/api/training/assessments/${encodeURIComponent(enrollmentId)}`,
+      lessonId
+        ? `/api/training/learning/${encodeURIComponent(enrollmentId)}/lessons/${encodeURIComponent(lessonId)}/assessment`
+        : `/api/training/assessments/${encodeURIComponent(enrollmentId)}`,
       { target: "same-origin", ...(signal ? { signal } : {}) },
     ),
   );
@@ -31,10 +34,13 @@ export async function getMyAssessment(
 export async function submitMyAssessment(
   enrollmentId: string,
   answers: readonly AssessmentAnswer[],
+  lessonId?: string,
 ) {
   return assessmentSubmissionSchema.parse(
     await apiRequest<unknown>(
-      `/api/training/assessments/${encodeURIComponent(enrollmentId)}/attempts`,
+      lessonId
+        ? `/api/training/learning/${encodeURIComponent(enrollmentId)}/lessons/${encodeURIComponent(lessonId)}/assessment/attempts`
+        : `/api/training/assessments/${encodeURIComponent(enrollmentId)}/attempts`,
       { method: "POST", target: "same-origin", body: { answers } },
     ),
   );
