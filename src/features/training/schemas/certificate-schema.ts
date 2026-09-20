@@ -7,6 +7,12 @@ export const trainingCertificateSchema = z.object({
   campaignTitle: z.string(),
   completedAt: z.iso.datetime({ offset: true }).nullable(),
   eligible: z.boolean(),
+  requirements: z.object({
+    courseCompleted: z.boolean(),
+    progressComplete: z.boolean(),
+    finalAssessmentRequired: z.boolean(),
+    finalAssessmentPassed: z.boolean().nullable(),
+  }),
   certificate: z
     .object({
       id: z.uuid(),

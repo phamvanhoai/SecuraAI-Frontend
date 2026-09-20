@@ -29,6 +29,12 @@ const data = {
   campaignTitle: "Campaign",
   completedAt: "2026-09-17T00:00:00.000Z",
   eligible: true,
+  requirements: {
+    courseCompleted: true,
+    progressComplete: true,
+    finalAssessmentRequired: true,
+    finalAssessmentPassed: true,
+  },
   certificate: null,
 };
 describe("training certificate panel", () => {
@@ -53,6 +59,13 @@ describe("training certificate panel", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Issue certificate" }));
+    expect(
+      screen.getByRole("alertdialog", {
+        name: "Confirm certificate issuance",
+      }),
+    ).toBeInTheDocument();
+    expect(mocks.issue).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm issuance" }));
     await waitFor(() =>
       expect(mocks.issue).toHaveBeenCalledWith("enrollment-1"),
     );
@@ -73,7 +86,13 @@ describe("training certificate panel", () => {
     ).not.toBeInTheDocument();
   });
   it("disables issuance for ineligible enrollments", () => {
-    mocks.query.mockReturnValue({ data: { ...data, eligible: false } });
+    mocks.query.mockReturnValue({
+      data: {
+        ...data,
+        eligible: false,
+        requirements: { ...data.requirements, finalAssessmentPassed: false },
+      },
+    });
     render(
       <TrainingCertificatePanel
         enrollmentId="enrollment-1"
@@ -115,5 +134,26 @@ describe("training certificate panel", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Issuing…" })).toBeDisabled();
+  });
+  it("explains when no final assessment is required", () => {
+    mocks.query.mockReturnValue({
+      data: {
+        ...data,
+        requirements: {
+          ...data.requirements,
+          finalAssessmentRequired: false,
+          finalAssessmentPassed: null,
+        },
+      },
+    });
+    render(
+      <TrainingCertificatePanel
+        enrollmentId="enrollment-1"
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      screen.getByText("Final assessment not required"),
+    ).toBeInTheDocument();
   });
 });
