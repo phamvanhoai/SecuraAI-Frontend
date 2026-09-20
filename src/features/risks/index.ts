@@ -1,4 +1,15 @@
 export { RiskAssessmentsShell } from "./components/risk-assessments-shell";
+export { TreatmentPlansShell } from "./components/treatment-plans-shell";
+export { TreatmentPlanDetailShell } from "./components/treatment-plan-detail-shell";
+export { treatmentPlanDetailSchema } from "./schemas/treatment-plan-detail-schema";
+export type { TreatmentPlanDetail } from "./schemas/treatment-plan-detail-schema";
+export {
+  treatmentPlanListQuerySchema,
+  treatmentPlanListResponseSchema,
+  type TreatmentPlanListQuery,
+  type TreatmentPlanListItem,
+  type TreatmentPlanListResponse,
+} from "./schemas/treatment-plan-list-schema";
 export {
   riskListQuerySchema,
   riskListResponseSchema,
