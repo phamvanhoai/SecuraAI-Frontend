@@ -1,5 +1,12 @@
 # Training reminders (UC79)
 
+UC165 **View My Training Certificates**: Employee opens **Training → My certificates**
+or `/training/my-certificates`. The list is paginated and searchable by course,
+campaign or certificate number; details show issue and completion dates and
+issuer. Backend scopes records to the authenticated user and requires
+`training-certificates.read-own` (granted to Employee and Admin by a data-only
+migration). Existing certificates are metadata, not generated PDF files.
+
 Real backend in-app reminders appear under **Notifications**, reachable from the
 header bell. Employee access
 uses the existing `training-assessments.take` permission; the inbox is restricted

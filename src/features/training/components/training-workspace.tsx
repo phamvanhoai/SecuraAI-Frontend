@@ -10,6 +10,7 @@ import { TrainingCoursesManager } from "./training-courses-manager";
 import { TrainingCompletionManager } from "./training-completion-manager";
 import { MyAssessmentsManager } from "./my-assessments-manager";
 import { MyLearningManager } from "./my-learning-manager";
+import { MyCertificatesManager } from "./my-certificates-manager";
 import { DepartmentReportManager } from "./department-report-manager";
 import { TrainingSectionNavigation } from "./training-section-navigation";
 export function TrainingWorkspace() {
@@ -92,7 +93,15 @@ function TrainingWorkspaceContent({
       />
     );
   if (permissions.includes("training-assessments.take"))
-    return <MyLearningManager />;
+    return (
+      <MyLearningManager
+        canViewCertificates={permissions.includes(
+          "training-certificates.read-own",
+        )}
+      />
+    );
+  if (permissions.includes("training-certificates.read-own"))
+    return <MyCertificatesManager />;
   if (permissions.includes("training-department-reports.read"))
     return <DepartmentReportManager />;
   return (
