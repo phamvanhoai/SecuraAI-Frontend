@@ -124,5 +124,8 @@ describe("panel navigation", () => {
     expect(
       canAccessNavigationItem(["training-completion.read"], training),
     ).toBe(true);
+    expect(
+      canAccessNavigationItem(["training-certificates.read-own"], training),
+    ).toBe(true);
   });
 });

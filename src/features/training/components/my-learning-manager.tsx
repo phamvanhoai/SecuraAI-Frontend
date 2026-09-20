@@ -1,5 +1,6 @@
 "use client";
 import {
+  Award,
   BookOpen,
   CheckCircle2,
   Download,
@@ -7,6 +8,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 import {
   DataTable,
   type DataTableColumn,
@@ -29,7 +31,9 @@ import {
 } from "../hooks/use-learning";
 import { AssessmentDialog } from "./my-assessments-manager";
 
-export function MyLearningManager() {
+export function MyLearningManager({
+  canViewCertificates = false,
+}: { canViewCertificates?: boolean } = {}) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string>();
   const query = useMyLearning(page);
@@ -85,6 +89,17 @@ export function MyLearningManager() {
         title="My assigned training"
         description="Complete required lessons and assessments for each assignment campaign."
         showSampleNotice={false}
+        additionalActions={
+          canViewCertificates ? (
+            <Link
+              className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium focus-visible:outline-2"
+              href="/training/my-certificates"
+            >
+              <Award aria-hidden="true" className="size-4" />
+              My certificates
+            </Link>
+          ) : undefined
+        }
       />
       <ProductPanel
         title="Assigned courses"
