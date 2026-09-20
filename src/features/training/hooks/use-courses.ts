@@ -5,12 +5,15 @@ import {
   assignCourse,
   createCourse,
   getAssignmentOptions,
+  getCourseDraft,
   getLatestCourseAssignment,
   listCourses,
+  updateCourseDraft,
 } from "../api/courses";
 import type {
   AssignCourseInput,
   CourseStatusFilter,
+  UpdateCourseDraftInput,
 } from "../schemas/course-schema";
 
 export function useCourses(
@@ -34,6 +37,36 @@ export function useCreateCourse() {
       await queryClient.invalidateQueries({
         queryKey: ["training", "courses"],
       });
+    },
+    retry: false,
+  });
+}
+
+export function useCourseDraft(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ["training", "course-draft", courseId],
+    queryFn: ({ signal }) => getCourseDraft(courseId ?? "", signal),
+    enabled: Boolean(courseId),
+  });
+}
+
+export function useUpdateCourseDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      input,
+    }: {
+      courseId: string;
+      input: UpdateCourseDraftInput;
+    }) => updateCourseDraft(courseId, input),
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["training", "courses"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["training", "course-draft", variables.courseId],
+        }),
+      ]);
     },
     retry: false,
   });

@@ -38,4 +38,19 @@ describe("TrainingSectionNavigation", () => {
     expect(selections).toEqual(["department-report"]);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
+
+  it("keeps the primary training tab visible without department report access", () => {
+    render(
+      <TrainingSectionNavigation
+        active="training"
+        primaryLabel="Courses"
+        showDepartmentReport={false}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Courses" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Department report" }),
+    ).not.toBeInTheDocument();
+  });
 });

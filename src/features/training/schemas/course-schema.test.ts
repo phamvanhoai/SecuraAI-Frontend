@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { assignCourseSchema, createCourseSchema } from "./course-schema";
+import {
+  assignCourseSchema,
+  courseDraftDetailSchema,
+  createCourseSchema,
+  updateCourseDraftSchema,
+} from "./course-schema";
 
 describe("createCourseSchema", () => {
   it("accepts a course draft", () => {
@@ -71,6 +76,48 @@ describe("createCourseSchema", () => {
         ],
       },
     });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("updateCourseDraftSchema", () => {
+  it("accepts editable draft fields without a status transition", () => {
+    expect(
+      updateCourseDraftSchema.safeParse({
+        title: "Updated phishing basics",
+        description: "Updated course",
+        content: "Updated learning objectives and training material.",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("loads a legacy multiple-choice draft so its invalid answers can be corrected", () => {
+    const result = courseDraftDetailSchema.safeParse({
+      id: "17afbe84-38a1-409e-846c-b3f4f3b3cced",
+      title: "TEST",
+      description: null,
+      content: "Course content",
+      status: "draft",
+      createdByUserId: "141f5699-9b20-42aa-8c7f-6e887565e9d5",
+      createdAt: "2026-09-17T16:26:35.391Z",
+      updatedAt: "2026-09-17T16:26:35.391Z",
+      assessment: {
+        title: "Post-training assessment",
+        passingScore: 80,
+        maxAttempts: 3,
+        questions: [
+          {
+            type: "multiple_choice",
+            text: "1 + 1 =",
+            options: [
+              { text: "3", isCorrect: true },
+              { text: "2", isCorrect: false },
+            ],
+          },
+        ],
+      },
+    });
+
     expect(result.success).toBe(true);
   });
 });

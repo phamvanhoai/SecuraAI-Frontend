@@ -21,3 +21,10 @@ Search submits via Enter or Search, resets to page 1, and queries all of the
 account's reminders by title/message (including course names), not just the
 current page. Search combines with All/Unread. No-result state offers Clear search.
 See the backend training-awareness README for external/Vercel scheduler setup.
+# Security awareness training
+
+Course managers with `training-courses.update` can edit draft courses from the
+course row action menu. The edit dialog loads the latest backend draft detail,
+including assessment questions and correct-answer settings. Published and archived
+courses are intentionally immutable; later revisions belong to the separate course
+versioning use case.

@@ -66,12 +66,12 @@ function TrainingWorkspaceContent({
   const canViewPrimary =
     permissions.includes("training-courses.read") ||
     permissions.includes("training-completion.read");
-  const headerActions =
-    canReport && canViewPrimary ? (
+  const headerActions = canViewPrimary ? (
       <TrainingSectionNavigation
         active={activeSection}
         onSelect={setActiveSection}
         primaryLabel={primaryLabel}
+        showDepartmentReport={canReport}
       />
     ) : undefined;
   if (activeSection === "department-report" && canReport)

@@ -77,12 +77,19 @@ describe("TrainingWorkspace entry flow", () => {
     }),
   );
   afterEach(cleanup);
-  it("starts with one course list, without duplicate navigation or campaign lists", () => {
+  it("starts with one course list and keeps its primary section tab visible", () => {
     render(<TrainingWorkspace />);
     expect(screen.getByText("Courses content")).toBeVisible();
     expect(screen.queryByText("Progress content")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("navigation", { name: "Training sections" }),
+      screen.getByRole("navigation", { name: "Training sections" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Courses" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Department report" }),
     ).not.toBeInTheDocument();
   });
   it("gives completion-only readers direct progress access without course management", () => {

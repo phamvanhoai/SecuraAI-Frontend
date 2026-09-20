@@ -6,10 +6,13 @@ import {
   courseAssignmentDetailSchema,
   courseListSchema,
   courseSchema,
+  courseDraftDetailSchema,
   createCourseSchema,
+  updateCourseDraftSchema,
   type AssignCourseInput,
   type CourseStatusFilter,
   type CreateCourseInput,
+  type UpdateCourseDraftInput,
 } from "../schemas/course-schema";
 
 export async function listCourses(
@@ -46,6 +49,37 @@ export async function createCourse(input: CreateCourseInput) {
         ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
       },
     }),
+  );
+}
+
+export async function getCourseDraft(courseId: string, signal?: AbortSignal) {
+  return courseDraftDetailSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+
+export async function updateCourseDraft(
+  courseId: string,
+  input: UpdateCourseDraftInput,
+) {
+  const parsed = updateCourseDraftSchema.parse(input);
+  return courseDraftDetailSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}`,
+      {
+        method: "PATCH",
+        target: "same-origin",
+        body: {
+          title: parsed.title,
+          description: parsed.description || null,
+          content: parsed.content,
+          ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
+        },
+      },
+    ),
   );
 }
 

@@ -1,20 +1,21 @@
 import { z } from "zod";
 
-const assessmentQuestionSchema = z
-  .object({
-    type: z.enum(["single_choice", "multiple_choice"]),
-    text: z.string().trim().min(3, "Enter the question.").max(2000),
-    options: z
-      .array(
-        z.object({
-          text: z.string().trim().min(1, "Enter the answer.").max(1000),
-          isCorrect: z.boolean(),
-        }),
-      )
-      .min(2)
-      .max(6),
-  })
-  .superRefine((value, context) => {
+const assessmentQuestionFieldsSchema = z.object({
+  type: z.enum(["single_choice", "multiple_choice"]),
+  text: z.string().trim().min(3, "Enter the question.").max(2000),
+  options: z
+    .array(
+      z.object({
+        text: z.string().trim().min(1, "Enter the answer.").max(1000),
+        isCorrect: z.boolean(),
+      }),
+    )
+    .min(2)
+    .max(6),
+});
+
+const assessmentQuestionSchema = assessmentQuestionFieldsSchema.superRefine(
+  (value, context) => {
     const correctAnswers = value.options.filter(
       (option) => option.isCorrect,
     ).length;
@@ -32,30 +33,32 @@ const assessmentQuestionSchema = z
             : "Select at least two correct answers.",
       });
     }
-  });
+  },
+);
 
-export const createCourseSchema = z
-  .object({
-    title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
-    description: z.string().trim().max(2000),
-    content: z
-      .string()
-      .trim()
-      .min(10, "Enter at least 10 characters.")
-      .max(50000),
+const courseDraftFieldsSchema = z.object({
+  title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+  description: z.string().trim().max(2000),
+  content: z
+    .string()
+    .trim()
+    .min(10, "Enter at least 10 characters.")
+    .max(50000),
+  assessment: z
+    .object({
+      title: z.string().trim().min(3, "Enter at least 3 characters.").max(255),
+      passingScore: z.number().min(0).max(100),
+      maxAttempts: z.number().int().min(1).max(10),
+      questions: z.array(assessmentQuestionSchema).min(1).max(50),
+    })
+    .optional(),
+});
+
+export const updateCourseDraftSchema = courseDraftFieldsSchema;
+
+export const createCourseSchema = courseDraftFieldsSchema
+  .extend({
     status: z.enum(["draft", "published"]),
-    assessment: z
-      .object({
-        title: z
-          .string()
-          .trim()
-          .min(3, "Enter at least 3 characters.")
-          .max(255),
-        passingScore: z.number().min(0).max(100),
-        maxAttempts: z.number().int().min(1).max(10),
-        questions: z.array(assessmentQuestionSchema).min(1).max(50),
-      })
-      .optional(),
   })
   .superRefine((value, context) => {
     if (value.status === "published" && !value.assessment) {
@@ -76,6 +79,18 @@ export const courseSchema = z.object({
   createdByUserId: z.uuid().nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
+});
+
+export const courseDraftDetailSchema = courseSchema.extend({
+  status: z.literal("draft"),
+  assessment: z
+    .object({
+      title: z.string(),
+      passingScore: z.number(),
+      maxAttempts: z.number().int(),
+      questions: z.array(assessmentQuestionFieldsSchema),
+    })
+    .nullable(),
 });
 
 export const courseListSchema = z.object({
@@ -159,5 +174,6 @@ export const courseAssignmentDetailSchema = z
 export type Course = z.infer<typeof courseSchema>;
 export type CourseStatusFilter = "all" | "draft" | "published" | "archived";
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
+export type UpdateCourseDraftInput = z.infer<typeof updateCourseDraftSchema>;
 export type AssignmentOptions = z.infer<typeof assignmentOptionsSchema>;
 export type AssignCourseInput = z.infer<typeof assignCourseSchema>;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listCourses } from "./courses";
+import { listCourses, updateCourseDraft } from "./courses";
 
 const emptyCourses = {
   items: [],
@@ -32,6 +32,36 @@ describe("training courses API", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/training/courses?page=1&limit=20",
       expect.any(Object),
+    );
+  });
+
+  it("updates a draft through the authenticated same-origin route", async () => {
+    const courseId = "e2ef8324-9ac0-4e7f-b16d-50050274a72e";
+    const updated = {
+      id: courseId,
+      title: "Updated phishing basics",
+      description: null,
+      content: "Updated learning objectives and training material.",
+      status: "draft",
+      createdByUserId: null,
+      createdAt: "2026-09-18T00:00:00.000Z",
+      updatedAt: "2026-09-18T01:00:00.000Z",
+      assessment: null,
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.json({ success: true, data: updated }));
+
+    await expect(
+      updateCourseDraft(courseId, {
+        title: updated.title,
+        description: "",
+        content: updated.content,
+      }),
+    ).resolves.toEqual(updated);
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/training/courses/${courseId}`,
+      expect.objectContaining({ method: "PATCH", credentials: "include" }),
     );
   });
 });
