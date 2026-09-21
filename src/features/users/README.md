@@ -1,5 +1,12 @@
 # User management
 
+## Edit user accounts
+
+Administrators with `users.update` can edit a user's name, phone, employee code,
+department, and role assignments. The dialog loads the current View User data,
+keeps email read-only, and refreshes the list and detail cache after a successful
+PATCH request. Password, MFA, and lock status remain separate workflows.
+
 ## View user accounts
 
 The user table is backed by the paginated administration API. Users with

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, LockKeyhole, Search, UnlockKeyhole } from "lucide-react";
+import { Eye, LockKeyhole, Pencil, Search, UnlockKeyhole } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   MetricStrip,
@@ -26,6 +26,7 @@ import { Select } from "@/components/ui/select";
 import type { AuthSessionUser } from "@/features/auth";
 import type { UserListQuery, UserListResponse } from "../schemas/user-schema";
 import { UserDetailDialog } from "./user-detail-dialog";
+import { EditUserDialog } from "./edit-user-dialog";
 
 function UserCell({ name, email }: { name: string; email: string }) {
   const initials = name
@@ -86,6 +87,8 @@ function userRows(
   actor: AuthSessionUser,
   select: (selection: AccountLockSelection) => void,
   view: (userId: string) => void,
+  edit: (userId: string) => void,
+  canUpdate: boolean,
 ) {
   return data.items.map((user) => {
     const action = accountLockAction(actor, user);
@@ -103,21 +106,37 @@ function userRows(
         {statusLabel(user.status)}
       </StatusBadge>,
       <div
-        className="flex flex-wrap items-center gap-2"
+        className="grid min-w-[23rem] grid-cols-3 items-center gap-2"
         key={user.id + "-actions"}
       >
         <Button
           aria-label={`View ${user.fullName}`}
+          className="w-full px-2"
           onClick={() => view(user.id)}
           variant="secondary"
         >
           <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
           View
         </Button>
+        <Button
+          aria-label={`Edit ${user.fullName}`}
+          className="w-full px-2"
+          disabled={!canUpdate}
+          onClick={() => edit(user.id)}
+          title={canUpdate ? undefined : "Requires users.update permission"}
+          variant="secondary"
+        >
+          <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
+          Edit
+        </Button>
         {action ? (
           <Button
             variant="secondary"
-            className={action === "lock" ? "text-danger" : "text-brand"}
+            className={
+              action === "lock"
+                ? "text-danger w-full px-2"
+                : "text-brand w-full px-2"
+            }
             aria-label={
               (action === "lock" ? "Lock " : "Unlock ") + user.fullName
             }
@@ -127,7 +146,10 @@ function userRows(
             {action === "lock" ? "Lock" : "Unlock"}
           </Button>
         ) : (
-          <span key={user.id + "-action"} className="text-muted text-xs">
+          <span
+            key={user.id + "-action"}
+            className="text-muted flex min-h-11 items-center justify-center text-center text-xs"
+          >
             {user.id === actor.id ? "Your account" : "—"}
           </span>
         )}
@@ -146,10 +168,12 @@ export function UsersShell() {
   const [createOpen, setCreateOpen] = useState(false);
   const [selection, setSelection] = useState<AccountLockSelection | null>(null);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
   const canRead = session.data?.permissions.includes("users.read") ?? false;
+  const canUpdate = session.data?.permissions.includes("users.update") ?? false;
   const users = useUsers(
     {
       page,
@@ -393,7 +417,14 @@ export function UsersShell() {
               "Status",
               "Actions",
             ]}
-            rows={userRows(data, session.data, setSelection, setDetailUserId)}
+            rows={userRows(
+              data,
+              session.data,
+              setSelection,
+              setDetailUserId,
+              setEditUserId,
+              canUpdate,
+            )}
           />
         )}
         <div className="border-border flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -415,6 +446,7 @@ export function UsersShell() {
         userId={detailUserId}
         onClose={() => setDetailUserId(null)}
       />
+      <EditUserDialog userId={editUserId} onClose={() => setEditUserId(null)} />
       {isAdmin ? (
         <CreateUserDialog
           open={createOpen}

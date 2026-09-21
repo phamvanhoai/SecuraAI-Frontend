@@ -11,6 +11,7 @@ import {
   type UserCreateOptions,
   userCreateOptionsSchema,
   userListResponseSchema,
+  type UpdateUserPayload,
 } from "../schemas/user-schema";
 
 export async function listUsers(
@@ -45,6 +46,7 @@ export async function createUser(
   const body = {
     email: input.email,
     fullName: input.fullName,
+    ...(input.phone ? { phone: input.phone } : {}),
     employeeCode: input.employeeCode,
     departmentId: input.departmentId,
     roleCodes: input.roleCodes,
@@ -55,6 +57,24 @@ export async function createUser(
     body,
   });
   return createdUserSchema.parse(data);
+}
+
+export async function updateUser(
+  userId: string,
+  input: UpdateUserPayload,
+): Promise<UserDetail> {
+  const body = {
+    fullName: input.fullName,
+    phone: input.phone || null,
+    employeeCode: input.employeeCode || null,
+    departmentId: input.departmentId || null,
+    roleCodes: input.roleCodes,
+  };
+  const data = await apiRequest<unknown>(
+    `/api/users/${encodeURIComponent(userId)}`,
+    { method: "PATCH", target: "same-origin", body },
+  );
+  return userDetailSchema.parse(data);
 }
 
 export async function getUser(
