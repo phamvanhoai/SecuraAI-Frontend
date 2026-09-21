@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 export type PanelKind =
-  "admin" | "security-officer" | "employee" | "executive-auditor";
+  "admin" | "dashboard" | "security-officer" | "employee" | "executive-auditor";
 export type NavigationItem = {
   title: string;
   href: string;
@@ -53,7 +53,13 @@ const modules = {
     section: "Quản lý",
     requiredAnyPermission: ["roles.read"],
   },
-  assets: { title: "Tài sản", slug: "assets", icon: Boxes, section: "Quản lý", requiredAnyPermission: ["assets.read"] },
+  assets: {
+    title: "Tài sản",
+    slug: "assets",
+    icon: Boxes,
+    section: "Quản lý",
+    requiredAnyPermission: ["assets.read"],
+  },
   risks: {
     title: "Rủi ro",
     slug: "risks",
@@ -171,6 +177,7 @@ const modules = {
 } as const satisfies Record<string, ModuleDefinition>;
 
 export const panelModules = {
+  dashboard: [] as const,
   admin: [
     modules.alerts,
     modules.users,
@@ -233,6 +240,7 @@ export const panelModules = {
 } as const satisfies Record<PanelKind, readonly ModuleDefinition[]>;
 
 export const panelLabels: Record<PanelKind, string> = {
+  dashboard: "Dashboard",
   admin: "Quản trị hệ thống",
   "security-officer": "Chuyên viên ATTT",
   employee: "Nhân viên",
@@ -240,6 +248,7 @@ export const panelLabels: Record<PanelKind, string> = {
 };
 
 export const panelRoleCodes: Record<PanelKind, string> = {
+  dashboard: "ADMIN",
   admin: "ADMIN",
   "security-officer": "SECURITY_OFFICER",
   employee: "EMPLOYEE",
@@ -253,7 +262,9 @@ const panelPriority: readonly PanelKind[] = [
   "employee",
 ];
 
-export function allowedPanels(roleCodes: readonly string[]): readonly PanelKind[] {
+export function allowedPanels(
+  roleCodes: readonly string[],
+): readonly PanelKind[] {
   const assigned = new Set(roleCodes);
   return panelPriority.filter((panel) => assigned.has(panelRoleCodes[panel]));
 }
@@ -268,29 +279,41 @@ export function panelFromPath(pathname: string): PanelKind | null {
   return panelPriority.find((panel) => panel === segment) ?? null;
 }
 
-export function canAccessPanel(roleCodes: readonly string[], panel: PanelKind): boolean {
+export function canAccessPanel(
+  roleCodes: readonly string[],
+  panel: PanelKind,
+): boolean {
   return roleCodes.includes(panelRoleCodes[panel]);
 }
 
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
+  _roleCodes: readonly string[] = [],
 ): boolean {
-  return !item.requiredAnyPermission?.length ||
-    item.requiredAnyPermission.some((permission) => permissions.includes(permission));
+  return (
+    !item.requiredAnyPermission?.length ||
+    item.requiredAnyPermission.some((permission) =>
+      permissions.includes(permission),
+    )
+  );
 }
 
 export function getPanelKind(pathname: string | null): PanelKind {
   const segment = pathname?.split("/")[1];
-  return segment === "security-officer" ||
-    segment === "employee" ||
-    segment === "executive-auditor"
-    ? segment
-    : "admin";
+  return segment === "dashboard"
+    ? "dashboard"
+    : segment === "security-officer" ||
+        segment === "employee" ||
+        segment === "executive-auditor"
+      ? segment
+      : "admin";
 }
 
 export function getPanelNavigation(
   panel: PanelKind,
+  _roleCodes: readonly string[] = [],
+  _permissions: readonly string[] = [],
 ): readonly NavigationItem[] {
   const base: NavigationItem[] = [
     {
