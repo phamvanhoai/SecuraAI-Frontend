@@ -36,3 +36,4 @@ export {
 } from "./schemas/create-treatment-plan-schema";
 export { updateTreatmentPlanRequestSchema } from "./schemas/update-treatment-plan-schema";
 export { cancelTreatmentPlanRequestSchema } from "./schemas/cancel-treatment-plan-schema";
+export { updateTreatmentActionProgressRequestSchema } from "./schemas/update-treatment-action-progress-schema";
