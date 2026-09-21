@@ -11,6 +11,10 @@ export const trainingReminderSchema = z.object({
 });
 export const trainingReminderListSchema = z.object({
   items: z.array(trainingReminderSchema),
+  summary: z.object({
+    total: z.number().int().nonnegative(),
+    unread: z.number().int().nonnegative(),
+  }),
   pagination: z.object({
     page: z.number().int().positive(),
     limit: z.number().int().min(1).max(50),

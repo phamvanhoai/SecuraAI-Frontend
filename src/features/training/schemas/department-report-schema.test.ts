@@ -3,9 +3,11 @@ import { departmentReportSchema } from "./department-report-schema";
 describe("department report boundary", () => {
   const counts = {
     employees: 1,
+    assignedEmployees: 1,
     assigned: 2,
     completed: 1,
     overdue: 1,
+    coverageRate: 100,
     completionRate: 50,
   };
   const data = {

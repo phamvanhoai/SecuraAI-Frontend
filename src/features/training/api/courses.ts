@@ -6,14 +6,27 @@ import {
   courseAssignmentDetailSchema,
   courseListSchema,
   courseSchema,
-  courseDraftDetailSchema,
+  courseDraftSchema,
   createCourseSchema,
   updateCourseDraftSchema,
+  courseContentSchema,
   type AssignCourseInput,
   type CourseStatusFilter,
   type CreateCourseInput,
   type UpdateCourseDraftInput,
 } from "../schemas/course-schema";
+
+export async function getCourseContent(courseId: string, signal?: AbortSignal) {
+  return courseContentSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}/content`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 
 export async function listCourses(
   page: number,
@@ -35,25 +48,43 @@ export async function listCourses(
   );
 }
 
-export async function createCourse(input: CreateCourseInput) {
+export async function createCourse(
+  input: CreateCourseInput,
+  files: Readonly<Record<string, File>> = {},
+) {
   const parsed = createCourseSchema.parse(input);
+  const payload = {
+    title: parsed.title,
+    description: parsed.description || null,
+    content: parsed.content,
+    status: parsed.status,
+    ...(parsed.lessons ? { lessons: parsed.lessons } : {}),
+    ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
+  };
+  const keys =
+    parsed.lessons?.flatMap((lesson) =>
+      lesson.materials.flatMap((material) =>
+        material.uploadKey ? [material.uploadKey] : [],
+      ),
+    ) ?? [];
+  const form = new FormData();
+  form.append("payload", JSON.stringify(payload));
+  for (const key of keys) {
+    const file = files[key];
+    if (!file) throw new Error("Select the file for every uploaded material.");
+    form.append(key, file);
+  }
   return courseSchema.parse(
     await apiRequest<unknown>("/api/training/courses", {
       method: "POST",
       target: "same-origin",
-      body: {
-        title: parsed.title,
-        description: parsed.description || null,
-        content: parsed.content,
-        status: parsed.status,
-        ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
-      },
+      body: keys.length ? form : payload,
     }),
   );
 }
 
 export async function getCourseDraft(courseId: string, signal?: AbortSignal) {
-  return courseDraftDetailSchema.parse(
+  return courseDraftSchema.parse(
     await apiRequest<unknown>(
       `/api/training/courses/${encodeURIComponent(courseId)}`,
       { target: "same-origin", ...(signal ? { signal } : {}) },
@@ -64,20 +95,50 @@ export async function getCourseDraft(courseId: string, signal?: AbortSignal) {
 export async function updateCourseDraft(
   courseId: string,
   input: UpdateCourseDraftInput,
+  files: Readonly<Record<string, File>> = {},
 ) {
   const parsed = updateCourseDraftSchema.parse(input);
-  return courseDraftDetailSchema.parse(
+  const lessons = parsed.lessons?.map((lesson) => ({
+    ...lesson,
+    materials: lesson.materials.map((material) => ({
+      title: material.title,
+      type: material.type,
+      ...(material.content ? { content: material.content } : {}),
+      ...(material.externalUrl ? { externalUrl: material.externalUrl } : {}),
+      ...(material.uploadKey ? { uploadKey: material.uploadKey } : {}),
+      ...(material.existingFileId
+        ? { existingFileId: material.existingFileId }
+        : {}),
+    })),
+  }));
+  const payload = {
+    title: parsed.title,
+    description: parsed.description || null,
+    content: parsed.content,
+    lessons: lessons ?? [],
+    ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
+    expectedUpdatedAt: parsed.expectedUpdatedAt,
+  };
+  const keys =
+    lessons?.flatMap((lesson) =>
+      lesson.materials.flatMap((material) =>
+        material.uploadKey ? [material.uploadKey] : [],
+      ),
+    ) ?? [];
+  const form = new FormData();
+  form.append("payload", JSON.stringify(payload));
+  for (const key of keys) {
+    const file = files[key];
+    if (!file) throw new Error("Select the file for every uploaded material.");
+    form.append(key, file);
+  }
+  return courseDraftSchema.parse(
     await apiRequest<unknown>(
       `/api/training/courses/${encodeURIComponent(courseId)}`,
       {
         method: "PATCH",
         target: "same-origin",
-        body: {
-          title: parsed.title,
-          description: parsed.description || null,
-          content: parsed.content,
-          ...(parsed.assessment ? { assessment: parsed.assessment } : {}),
-        },
+        body: keys.length ? form : payload,
       },
     ),
   );

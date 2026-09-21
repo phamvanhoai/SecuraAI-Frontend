@@ -40,6 +40,12 @@ vi.mock("./my-assessments-manager", () => ({
     </>
   ),
 }));
+vi.mock("./my-learning-manager", () => ({
+  MyLearningManager: () => <h1>Assigned training content</h1>,
+}));
+vi.mock("./my-certificates-manager", () => ({
+  MyCertificatesManager: () => <h1>My certificates content</h1>,
+}));
 vi.mock("./department-report-manager", () => ({
   DepartmentReportManager: ({
     sectionNavigation,
@@ -100,12 +106,19 @@ describe("TrainingWorkspace entry flow", () => {
     expect(screen.getByText("Progress content")).toBeVisible();
     expect(screen.queryByText("Courses content")).not.toBeInTheDocument();
   });
-  it("keeps employees on their assigned assessments", () => {
+  it("takes employees to their assigned training", () => {
     mocks.session.mockReturnValue({
       data: { permissions: ["training-assessments.take"] },
     });
     render(<TrainingWorkspace />);
-    expect(screen.getByText("Assessment content")).toBeVisible();
+    expect(screen.getByText("Assigned training content")).toBeVisible();
+  });
+  it("takes certificate-only users to their certificates", () => {
+    mocks.session.mockReturnValue({
+      data: { permissions: ["training-certificates.read-own"] },
+    });
+    render(<TrainingWorkspace />);
+    expect(screen.getByText("My certificates content")).toBeVisible();
   });
   it("preserves assessment access for users who also manage courses", () => {
     mocks.session.mockReturnValue({

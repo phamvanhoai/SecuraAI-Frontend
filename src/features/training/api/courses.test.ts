@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listCourses, updateCourseDraft } from "./courses";
+import { getCourseDraft, listCourses, updateCourseDraft } from "./courses";
 
 const emptyCourses = {
   items: [],
@@ -35,31 +35,46 @@ describe("training courses API", () => {
     );
   });
 
-  it("updates a draft through the authenticated same-origin route", async () => {
+  it("loads and updates a complete draft through the authenticated route", async () => {
     const courseId = "e2ef8324-9ac0-4e7f-b16d-50050274a72e";
-    const updated = {
+    const draft = {
       id: courseId,
-      title: "Updated phishing basics",
+      title: "Security basics",
       description: null,
-      content: "Updated learning objectives and training material.",
+      content: "Learn secure daily practices.",
       status: "draft",
-      createdByUserId: null,
-      createdAt: "2026-09-18T00:00:00.000Z",
-      updatedAt: "2026-09-18T01:00:00.000Z",
+      updatedAt: "2026-09-19T08:00:00.000Z",
+      lessons: [
+        {
+          title: "Passwords",
+          description: "",
+          isRequired: true,
+          materials: [
+            {
+              title: "Guide",
+              type: "text" as const,
+              content: "Use unique passwords.",
+            },
+          ],
+        },
+      ],
       assessment: null,
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(Response.json({ success: true, data: updated }));
+      .mockImplementation(() =>
+        Promise.resolve(Response.json({ success: true, data: draft })),
+      );
 
-    await expect(
-      updateCourseDraft(courseId, {
-        title: updated.title,
-        description: "",
-        content: updated.content,
-      }),
-    ).resolves.toEqual(updated);
-    expect(fetchMock).toHaveBeenCalledWith(
+    await expect(getCourseDraft(courseId)).resolves.toEqual(draft);
+    await updateCourseDraft(courseId, {
+      title: draft.title,
+      description: "",
+      content: draft.content,
+      lessons: draft.lessons,
+      expectedUpdatedAt: draft.updatedAt,
+    });
+    expect(fetchMock).toHaveBeenLastCalledWith(
       `/api/training/courses/${courseId}`,
       expect.objectContaining({ method: "PATCH", credentials: "include" }),
     );

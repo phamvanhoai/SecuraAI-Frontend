@@ -14,6 +14,7 @@ import {
   LifeBuoy,
   LayoutDashboard,
   Library,
+  ListRestart,
   ScrollText,
   Settings,
   ShieldAlert,
@@ -28,10 +29,19 @@ export type NavigationItem = {
   icon: LucideIcon;
   section: "Tổng quan" | "Quản lý" | "AI & Giám sát" | "Báo cáo" | "Cài đặt";
   requiredAnyPermission?: readonly string[];
+  requiredAnyRole?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
 const modules = {
+  loginHistory: {
+    title: "Login History",
+    slug: "login-history",
+    icon: ListRestart,
+    section: "Quản lý",
+    requiredAnyPermission: ["login-history.read"],
+    requiredAnyRole: ["ADMIN", "SECURITY_OFFICER"],
+  },
   alerts: {
     title: "Cảnh báo",
     slug: "alerts",
@@ -112,6 +122,7 @@ const modules = {
       "training-assessments.take",
       "training-completion.read",
       "training-department-reports.read",
+      "training-certificates.read-own",
     ],
   },
   anomalyMonitoring: {
@@ -180,6 +191,7 @@ export const panelModules = {
     modules.users,
     modules.roles,
     modules.mfaRecovery,
+    modules.loginHistory,
     modules.assets,
     modules.risks,
     modules.incidents,
@@ -199,6 +211,7 @@ export const panelModules = {
   ],
   dashboard: [
     modules.alerts,
+    modules.loginHistory,
     modules.assets,
     modules.risks,
     modules.incidents,
@@ -262,12 +275,15 @@ export function canAccessPanel(
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
+  roles: readonly string[] = [],
 ): boolean {
   return (
-    !item.requiredAnyPermission?.length ||
-    item.requiredAnyPermission.some((permission) =>
-      permissions.includes(permission),
-    )
+    (!item.requiredAnyRole?.length ||
+      item.requiredAnyRole.some((role) => roles.includes(role))) &&
+    (!item.requiredAnyPermission?.length ||
+      item.requiredAnyPermission.some((permission) =>
+        permissions.includes(permission),
+      ))
   );
 }
 
