@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CalendarClock, Eye, Search, X } from "lucide-react";
+import { ArrowLeft, CalendarClock, Eye, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useSessionUser } from "@/features/auth";
 import { useTreatmentPlans } from "../hooks/use-treatment-plans";
+import { CreateTreatmentPlanEntry } from "./create-treatment-plan-entry";
 import {
   treatmentPlanListQuerySchema,
   type TreatmentPlanListItem,
@@ -167,6 +168,8 @@ export function TreatmentPlansShell() {
   const session = useSessionUser();
   const canRead =
     session.data?.permissions.includes("risk-treatment-plans.read") ?? false;
+  const canCreate =
+    session.data?.permissions.includes("risk-treatment-plans.create") ?? false;
   const plans = useTreatmentPlans(query, canRead);
   const [search, setSearch] = useState(query.q ?? "");
   const [status, setStatus] = useState(query.status ?? "");
@@ -177,6 +180,7 @@ export function TreatmentPlansShell() {
   const [targetTo, setTargetTo] = useState(query.targetTo ?? "");
   const [sort, setSort] = useState(`${query.sortBy}:${query.sortOrder}`);
   const [dateError, setDateError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const navigate = (next: Partial<TreatmentPlanListQuery>): void => {
     const nextParameters = new URLSearchParams();
@@ -246,19 +250,22 @@ export function TreatmentPlansShell() {
         description="Review treatment ownership, deadlines, approval state, and action progress."
         showSampleNotice={false}
         additionalActions={
-          <Link
-            className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-            href="/risks"
-          >
-            <ArrowLeft
-              className="size-4"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />{" "}
-            Risk assessments
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {canCreate ? (
+              <Button type="button" onClick={() => setCreating(true)}>
+                <Plus className="size-4" aria-hidden="true" /> Create treatment plan
+              </Button>
+            ) : null}
+            <Link
+              className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              href="/risks"
+            >
+              <ArrowLeft className="size-4" strokeWidth={1.8} aria-hidden="true" /> Risk assessments
+            </Link>
+          </div>
         }
       />
+      <CreateTreatmentPlanEntry open={creating} onClose={() => setCreating(false)} />
       <ProductPanel
         title="Treatment Plan Register"
         description={

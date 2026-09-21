@@ -19,6 +19,13 @@ export const treatmentPlanDetailSchema = z.object({
   targetDate: dateTime,
   submittedAt: dateTime,
   completedAt: dateTime,
+  cancellation: z
+    .object({
+      cancelledAt: z.iso.datetime({ offset: true }),
+      reason: z.string(),
+      cancelledBy: person,
+    })
+    .nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   progressPercent: z.number().int().min(0).max(100).nullable(),

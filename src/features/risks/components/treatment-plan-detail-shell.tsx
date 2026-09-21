@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, CalendarClock, ExternalLink } from "lucide-react";
+import { ArrowLeft, Ban, CalendarClock, ExternalLink, Pencil } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import {
   ProductPageHeader,
   ProductPanel,
@@ -12,6 +13,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useSessionUser } from "@/features/auth";
 import { useTreatmentPlanDetail } from "../hooks/use-treatment-plan-detail";
+import { EditTreatmentPlanDialog } from "./edit-treatment-plan-dialog";
+import { CancelTreatmentPlanDialog } from "./cancel-treatment-plan-dialog";
 
 const labels: Record<string, string> = {
   draft: "Draft",
@@ -48,6 +51,8 @@ export function TreatmentPlanDetailShell({
   treatmentPlanId: string;
 }) {
   const session = useSessionUser();
+  const [editing, setEditing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const canRead =
     session.data?.permissions.includes("risk-treatment-plans.read") ?? false;
   const detail = useTreatmentPlanDetail(treatmentPlanId, canRead);
@@ -80,6 +85,18 @@ export function TreatmentPlanDetailShell({
       </div>
     );
   const plan = detail.data;
+  const isAdmin = session.data?.roles.some(({ code }) => code === "ADMIN") ?? false;
+  const canUpdate =
+    (session.data?.permissions.includes("risk-treatment-plans.update") ?? false) &&
+    ["draft", "rejected"].includes(plan.status) &&
+    (isAdmin || plan.owner?.id === session.data?.id || plan.createdBy?.id === session.data?.id);
+  const canCancel =
+    (session.data?.permissions.includes("risk-treatment-plans.cancel") ?? false) &&
+    ["draft", "rejected"].includes(plan.status) &&
+    plan.actions.every((action) =>
+      ["pending", "cancelled"].includes(action.status) && action.progressPercent === 0,
+    ) &&
+    (isAdmin || plan.owner?.id === session.data?.id || plan.createdBy?.id === session.data?.id);
   return (
     <>
       <ProductPageHeader
@@ -87,15 +104,26 @@ export function TreatmentPlanDetailShell({
         description={`${plan.risk.riskCode} — ${plan.risk.title}`}
         showSampleNotice={false}
         additionalActions={
-          <Link
-            className="border-border bg-surface hover:bg-neutral-soft inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium"
-            href="/risks/treatment-plans"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Treatment plans
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {canUpdate ? <Button type="button" onClick={() => setEditing(true)}><Pencil className="size-4" aria-hidden="true" /> Edit plan</Button> : null}
+            {canCancel ? <Button type="button" variant="danger" onClick={() => setCancelling(true)}><Ban className="size-4" aria-hidden="true" /> Cancel plan</Button> : null}
+            <Link className="border-border bg-surface hover:bg-neutral-soft inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium" href="/risks/treatment-plans">
+              <ArrowLeft className="size-4" aria-hidden="true" /> Treatment plans
+            </Link>
+          </div>
         }
       />
+      <EditTreatmentPlanDialog plan={plan} open={editing} onClose={() => setEditing(false)} />
+      <CancelTreatmentPlanDialog plan={plan} open={cancelling} onClose={() => setCancelling(false)} />
+      {plan.cancellation ? (
+        <Alert className="mb-5 border-danger/25 bg-danger-soft text-danger">
+          <strong className="block">Treatment plan cancelled</strong>
+          <span className="block">
+            Cancelled by {plan.cancellation.cancelledBy?.fullName ?? "Unknown user"} on {date(plan.cancellation.cancelledAt)}.
+          </span>
+          <span className="mt-1 block">Reason: {plan.cancellation.reason}</span>
+        </Alert>
+      ) : null}
       <div className="grid gap-5 xl:grid-cols-3">
         <div className="space-y-5 xl:col-span-2">
           <ProductPanel title="Plan overview" description={plan.description}>
