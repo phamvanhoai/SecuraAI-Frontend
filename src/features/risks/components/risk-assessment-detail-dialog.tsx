@@ -8,6 +8,7 @@ import { useRiskAssessmentDetail } from "../hooks/use-risk-assessment-detail";
 import type { RiskDetail } from "../schemas/risk-detail-schema";
 import { SubmitTreatmentPlanDialog } from "./submit-treatment-plan-dialog";
 import { ApproveTreatmentPlanDialog } from "./approve-treatment-plan-dialog";
+import { ReturnTreatmentPlanForRevisionDialog } from "./return-treatment-plan-for-revision-dialog";
 
 const formatDate = (value: string | null): string =>
   value
@@ -39,8 +40,8 @@ function submissionIssues(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const targetDate = plan.targetDate ? new Date(plan.targetDate) : null;
-  if (!["approved", "in_treatment"].includes(riskStatus))
-    issues.push("The risk assessment is not approved.");
+  if (!["draft", "rejected"].includes(riskStatus))
+    issues.push("Only a draft or rejected risk assessment can be submitted.");
   if (plan.description.trim().length < 10)
     issues.push("Add a meaningful plan description.");
   if (!plan.owner || plan.owner.inactive)
@@ -86,6 +87,9 @@ export function RiskAssessmentDetailDialog({
     RiskDetail["treatmentPlans"][number] | null
   >(null);
   const [approvingPlan, setApprovingPlan] = useState<
+    RiskDetail["treatmentPlans"][number] | null
+  >(null);
+  const [returningPlan, setReturningPlan] = useState<
     RiskDetail["treatmentPlans"][number] | null
   >(null);
   useEffect(() => {
@@ -285,9 +289,18 @@ export function RiskAssessmentDetailDialog({
                       plan.status === "pending_approval" &&
                       plan.approval?.status === "pending" &&
                       plan.approval.submittedBy?.id !== session.data?.id ? (
-                        <Button type="button" onClick={() => setApprovingPlan(plan)}>
-                          Review and approve
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => setReturningPlan(plan)}
+                          >
+                            Return for revision
+                          </Button>
+                          <Button type="button" onClick={() => setApprovingPlan(plan)}>
+                            Review and approve
+                          </Button>
+                        </div>
                       ) : null}
                     </div>
                     {issues.length > 0 &&
@@ -322,6 +335,37 @@ export function RiskAssessmentDetailDialog({
                         </p>
                         {plan.approval.submissionNote ? (
                           <p className="mt-1">Note: {plan.approval.submissionNote}</p>
+                        ) : null}
+                        {plan.approval.latestDecision?.decision === "returned" ? (
+                          <div className="border-danger/25 bg-danger-soft text-danger mt-3 rounded-lg border p-3">
+                            <p className="font-medium">Returned for revision</p>
+                            <p className="mt-1 whitespace-pre-wrap">
+                              {plan.approval.latestDecision.comment ?? "No revision reason provided."}
+                            </p>
+                            <p className="mt-1">
+                              By {plan.approval.latestDecision.actedBy?.fullName ?? "Unknown"} ·{" "}
+                              {formatDate(plan.approval.latestDecision.actedAt)}
+                            </p>
+                          </div>
+                        ) : null}
+                        {plan.approval.history.length > 0 ? (
+                          <div className="mt-3 border-t border-current/15 pt-3">
+                            <p className="font-medium">Approval and revision history</p>
+                            <ol className="mt-2 space-y-2">
+                              {plan.approval.history.map((entry, index) => (
+                                <li className="rounded-md bg-background/60 p-2" key={`${entry.approvalRequestId}-${entry.actedAt}-${index}`}>
+                                  <p className="font-medium capitalize">
+                                    {entry.type === "revision" ? "Returned for revision" : entry.type}
+                                    {entry.decision && entry.type !== "revision" ? ` · ${entry.decision}` : ""}
+                                  </p>
+                                  <p className="mt-1">
+                                    {entry.actedBy?.fullName ?? "Unknown"} · {formatDate(entry.actedAt)}
+                                  </p>
+                                  {entry.comment ? <p className="mt-1 whitespace-pre-wrap">{entry.comment}</p> : null}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
                         ) : null}
                       </div>
                     ) : null}
@@ -409,13 +453,32 @@ export function RiskAssessmentDetailDialog({
       </Dialog>
       <SubmitTreatmentPlanDialog
         plan={submittingPlan}
-        riskCode={data?.assessment.riskCode ?? "Risk assessment"}
+        risk={data ? {
+          riskCode: data.assessment.riskCode,
+          title: data.assessment.title,
+          updatedAt: data.assessment.updatedAt,
+          score: data.inherentRisk.score,
+          level: data.inherentRisk.level,
+        } : null}
         onClose={() => setSubmittingPlan(null)}
       />
       <ApproveTreatmentPlanDialog
         plan={approvingPlan}
-        riskCode={data?.assessment.riskCode ?? "Risk assessment"}
+        risk={data ? {
+          riskCode: data.assessment.riskCode,
+          title: data.assessment.title,
+          score: data.inherentRisk.score,
+          level: data.inherentRisk.level,
+          target: { code: data.target.code, name: data.target.name },
+          threatCount: data.threats.length,
+          vulnerabilityCount: data.vulnerabilities.length,
+        } : null}
         onClose={() => setApprovingPlan(null)}
+      />
+      <ReturnTreatmentPlanForRevisionDialog
+        plan={returningPlan}
+        riskCode={data?.assessment.riskCode ?? "Risk assessment"}
+        onClose={() => setReturningPlan(null)}
       />
     </>
   );

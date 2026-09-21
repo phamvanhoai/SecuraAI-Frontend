@@ -20,8 +20,12 @@ function backendErrorCode(error: ApiError): string | undefined {
 }
 
 const messages: Readonly<Record<string, string>> = {
-  RISK_NOT_APPROVED:
-    "The risk assessment must be approved before submitting its treatment plan.",
+  RISK_ASSESSMENT_NOT_SUBMITTABLE:
+    "Only a draft or rejected risk assessment can be submitted with its treatment plan.",
+  RISK_ASSESSMENT_CHANGED:
+    "The risk assessment changed after this page loaded. Reload and try again.",
+  RISK_ASSESSMENT_INVALID:
+    "The risk assessment must have an active target, at least one threat, and at least one vulnerability.",
   TREATMENT_DESCRIPTION_REQUIRED:
     "Add a meaningful treatment plan description before submitting.",
   TREATMENT_OWNER_INVALID:
@@ -62,11 +66,14 @@ const messages: Readonly<Record<string, string>> = {
 
 export function SubmitTreatmentPlanDialog({
   plan,
-  riskCode,
+  risk,
   onClose,
 }: {
   plan: TreatmentPlan | null;
-  riskCode: string;
+  risk: (Pick<RiskDetail["assessment"], "riskCode" | "title" | "updatedAt"> & {
+    score: number;
+    level: string;
+  }) | null;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -86,19 +93,20 @@ export function SubmitTreatmentPlanDialog({
     if (!mutation.isPending) onClose();
   };
   const submit = async (): Promise<void> => {
-    if (!plan) return;
+    if (!plan || !risk) return;
     setMessage(undefined);
     try {
       await mutation.mutateAsync({
         id: plan.id,
         input: {
           expectedUpdatedAt: plan.updatedAt,
+          expectedRiskUpdatedAt: risk.updatedAt,
           ...(note.trim() ? { submissionNote: note } : {}),
         },
       });
       toast.success(
-        "Treatment plan submitted",
-        `${riskCode} is now awaiting approval.`,
+        "Risk assessment and treatment plan submitted",
+        `${risk.riskCode} is now awaiting approval.`,
       );
       onClose();
     } catch (error: unknown) {
@@ -113,7 +121,7 @@ export function SubmitTreatmentPlanDialog({
   };
   return (
     <Dialog
-      title="Submit Treatment Plan for Approval"
+      title="Submit Risk Assessment and Treatment Plan"
       dialogRef={ref}
       onCancel={(event) => {
         event.preventDefault();
@@ -121,16 +129,19 @@ export function SubmitTreatmentPlanDialog({
       }}
       onClose={close}
     >
-      {plan ? (
+      {plan && risk ? (
         <div className="space-y-4">
           <Alert>
-            After submission, the plan and its actions cannot be edited until
-            the approval process is completed.
+            After submission, the risk assessment, plan, and actions cannot be edited until the approval process is completed.
           </Alert>
           <dl className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-2">
             <div>
               <dt className="text-muted text-xs uppercase">Risk</dt>
-              <dd className="mt-1 font-medium">{riskCode}</dd>
+              <dd className="mt-1 font-medium">{risk.riskCode} — {risk.title}</dd>
+            </div>
+            <div>
+              <dt className="text-muted text-xs uppercase">Inherent risk</dt>
+              <dd className="mt-1 font-medium">{risk.score} — {risk.level}</dd>
             </div>
             <div>
               <dt className="text-muted text-xs uppercase">Strategy</dt>
