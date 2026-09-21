@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { CourseContentDialog } from "./course-content-dialog";
+import { CoursePublishDialog } from "./course-publish-dialog";
 import {
   ClipboardList,
   Ellipsis,
@@ -72,6 +73,8 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.assign") ?? false;
   const canUpdate =
     session.data?.permissions.includes("training-courses.update") ?? false;
+  const canPublish =
+    session.data?.permissions.includes("training-courses.publish") ?? false;
   const canTrack =
     session.data?.permissions.includes("training-completion.read") ?? false;
   const [courseToTrack, setCourseToTrack] = useState<Course>();
@@ -85,6 +88,7 @@ export function TrainingCoursesManager({
     course: Course;
     mode: "create" | "edit";
   }>();
+  const [courseToPublish, setCourseToPublish] = useState<Course>();
   const courses = useCourses(page, query, status, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
@@ -171,6 +175,20 @@ export function TrainingCoursesManager({
                       strokeWidth={1.8}
                     />
                     Edit draft
+                  </button>
+                ) : null}
+                {canPublish && course.status === "draft" ? (
+                  <button
+                    type="button"
+                    className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                    onClick={() => setCourseToPublish(course)}
+                  >
+                    <Send
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    Publish course
                   </button>
                 ) : null}
                 {canAssign && course.status === "published" ? (
@@ -360,6 +378,10 @@ export function TrainingCoursesManager({
         <CourseContentDialog
           course={courseToView}
           onClose={() => setCourseToView(undefined)}
+        />
+        <CoursePublishDialog
+          course={courseToPublish}
+          onClose={() => setCourseToPublish(undefined)}
         />
       </div>
     </>

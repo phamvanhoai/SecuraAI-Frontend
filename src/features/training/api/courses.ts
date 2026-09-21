@@ -28,6 +28,15 @@ export async function getCourseContent(courseId: string, signal?: AbortSignal) {
   );
 }
 
+export async function publishCourse(courseId: string) {
+  return courseSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}/publish`,
+      { method: "POST", target: "same-origin" },
+    ),
+  );
+}
+
 export async function listCourses(
   page: number,
   q: string,
