@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const submitTreatmentPlanRequestSchema = z.strictObject({
   expectedUpdatedAt: z.iso.datetime({ offset: true }),
+  expectedRiskUpdatedAt: z.iso.datetime({ offset: true }),
   submissionNote: z
     .string()
     .transform((value) => value.normalize("NFKC").replace(/\s+/gu, " ").trim())

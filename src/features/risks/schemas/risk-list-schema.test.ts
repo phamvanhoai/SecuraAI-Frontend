@@ -101,6 +101,7 @@ describe("submit treatment plan schema", () => {
   it("requires concurrency data and normalizes the optional submission note", () => {
     const parsed = submitTreatmentPlanRequestSchema.safeParse({
       expectedUpdatedAt: "2026-09-16T10:00:00.000Z",
+      expectedRiskUpdatedAt: "2026-09-16T10:00:00.000Z",
       submissionNote: "  Ready\n for executive review. ",
     });
     expect(parsed.success).toBe(true);

@@ -18,7 +18,7 @@ function errorCode(error: ApiError): string | undefined {
 }
 
 const messages: Readonly<Record<string, string>> = {
-  SELF_APPROVAL_NOT_ALLOWED: "You cannot approve a treatment plan that you submitted.",
+  SELF_APPROVAL_NOT_ALLOWED: "You cannot approve a risk assessment and treatment plan that you submitted.",
   NOT_CURRENT_APPROVER: "You are not an eligible approver for the current workflow step.",
   APPROVAL_ALREADY_RECORDED: "You have already approved this workflow step.",
   APPROVAL_REQUEST_NOT_PENDING: "This request has already been completed.",
@@ -31,9 +31,17 @@ const messages: Readonly<Record<string, string>> = {
   APPROVAL_TEMPORARILY_UNAVAILABLE: "Approval timed out. Please wait a moment and try again.",
 };
 
-export function ApproveTreatmentPlanDialog({ plan, riskCode, onClose }: {
+export function ApproveTreatmentPlanDialog({ plan, risk, onClose }: {
   plan: Plan | null;
-  riskCode: string;
+  risk: {
+    riskCode: string;
+    title: string;
+    score: number;
+    level: string;
+    target: { code: string; name: string };
+    threatCount: number;
+    vulnerabilityCount: number;
+  } | null;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -64,9 +72,9 @@ export function ApproveTreatmentPlanDialog({ plan, riskCode, onClose }: {
         },
       });
       toast.success(
-        result.approvalStatus === "approved" ? "Treatment plan approved" : "Approval recorded",
+        result.approvalStatus === "approved" ? "Risk assessment and treatment plan approved" : "Approval recorded",
         result.approvalStatus === "approved"
-          ? `${riskCode} completed its approval workflow.`
+          ? `${risk?.riskCode ?? "Risk assessment"} completed its approval workflow.`
           : `Step ${result.currentStep} is now awaiting approval.`,
       );
       onClose();
@@ -80,23 +88,26 @@ export function ApproveTreatmentPlanDialog({ plan, riskCode, onClose }: {
   };
   return (
     <Dialog
-      title="Approve Risk Treatment Plan"
+      title="Approve Risk Assessment and Treatment Plan"
       dialogRef={ref}
       onCancel={(event) => { event.preventDefault(); close(); }}
       onClose={close}
     >
-      {plan?.approval ? (
+      {plan?.approval && risk ? (
         <div className="space-y-4">
           <Alert>
-            Confirm that the submitted plan, assigned actions, owners, and dates are appropriate for the risk.
+            Confirm that the submitted risk assessment, treatment plan, assigned actions, owners, and dates are appropriate.
           </Alert>
           <dl className="grid gap-3 rounded-xl border border-border p-4 sm:grid-cols-2">
-            <div><dt className="text-muted text-xs uppercase">Risk</dt><dd className="mt-1 font-medium">{riskCode}</dd></div>
+            <div><dt className="text-muted text-xs uppercase">Risk</dt><dd className="mt-1 font-medium">{risk.riskCode}</dd></div>
+            <div><dt className="text-muted text-xs uppercase">Inherent risk</dt><dd className="mt-1 font-medium">{risk.score} - {risk.level}</dd></div>
+            <div><dt className="text-muted text-xs uppercase">Target</dt><dd className="mt-1 font-medium">{risk.target.code} - {risk.target.name}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Workflow step</dt><dd className="mt-1 font-medium">{plan.approval.currentStepName ?? `Step ${plan.approval.currentStep}`}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Strategy</dt><dd className="mt-1 font-medium capitalize">{plan.strategy}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Owner</dt><dd className="mt-1 font-medium">{plan.owner?.fullName ?? "Unassigned"}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Target date</dt><dd className="mt-1 font-medium">{plan.targetDate ? new Intl.DateTimeFormat("en-GB").format(new Date(plan.targetDate)) : "Not set"}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Actions</dt><dd className="mt-1 font-medium">{plan.actions.length}</dd></div>
+            <div><dt className="text-muted text-xs uppercase">Risk analysis</dt><dd className="mt-1 font-medium">{risk.threatCount} threats, {risk.vulnerabilityCount} vulnerabilities</dd></div>
           </dl>
           {plan.approval.submissionNote ? (
             <div className="rounded-lg border border-border bg-neutral-soft p-3 text-sm">
@@ -113,7 +124,7 @@ export function ApproveTreatmentPlanDialog({ plan, riskCode, onClose }: {
           <div className="flex justify-end gap-2">
             <Button variant="secondary" disabled={mutation.isPending} onClick={close}>Cancel</Button>
             <Button disabled={mutation.isPending} onClick={approve}>
-              {mutation.isPending ? "Approving…" : "Approve plan"}
+              {mutation.isPending ? "Approving…" : "Approve assessment and plan"}
             </Button>
           </div>
         </div>
