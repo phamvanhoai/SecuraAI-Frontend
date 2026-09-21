@@ -53,4 +53,28 @@ describe("TrainingSectionNavigation", () => {
       screen.queryByRole("link", { name: "Department report" }),
     ).not.toBeInTheDocument();
   });
+
+  it("shows issued certificates only when access is provided", () => {
+    const { rerender } = render(
+      <TrainingSectionNavigation
+        active="training"
+        primaryLabel="Courses"
+        showDepartmentReport={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("link", { name: "Issued certificates" }),
+    ).not.toBeInTheDocument();
+    rerender(
+      <TrainingSectionNavigation
+        active="certificates"
+        primaryLabel="Courses"
+        showDepartmentReport={false}
+        showIssuedCertificates
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Issued certificates" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
 });
