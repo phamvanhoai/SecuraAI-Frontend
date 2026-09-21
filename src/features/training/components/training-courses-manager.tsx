@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { CourseContentDialog } from "./course-content-dialog";
+import { CourseDuplicateDialog } from "./course-duplicate-dialog";
 import {
   ClipboardList,
   Ellipsis,
@@ -74,8 +75,11 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.update") ?? false;
   const canTrack =
     session.data?.permissions.includes("training-completion.read") ?? false;
+  const canDuplicate =
+    session.data?.permissions.includes("training-courses.duplicate") ?? false;
   const [courseToTrack, setCourseToTrack] = useState<Course>();
   const [courseToView, setCourseToView] = useState<Course>();
+  const [courseToDuplicate, setCourseToDuplicate] = useState<Course>();
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
@@ -118,7 +122,7 @@ export function TrainingCoursesManager({
           new Date(course.createdAt),
         ),
     },
-    ...(canRead || canUpdate || canAssign || canTrack
+    ...(canRead || canUpdate || canAssign || canTrack || canDuplicate
       ? [
           {
             key: "actions",
@@ -171,6 +175,20 @@ export function TrainingCoursesManager({
                       strokeWidth={1.8}
                     />
                     Edit draft
+                  </button>
+                ) : null}
+                {canDuplicate ? (
+                  <button
+                    type="button"
+                    className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                    onClick={() => setCourseToDuplicate(course)}
+                  >
+                    <ClipboardList
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    Duplicate course
                   </button>
                 ) : null}
                 {canAssign && course.status === "published" ? (
@@ -360,6 +378,10 @@ export function TrainingCoursesManager({
         <CourseContentDialog
           course={courseToView}
           onClose={() => setCourseToView(undefined)}
+        />
+        <CourseDuplicateDialog
+          {...(courseToDuplicate ? { course: courseToDuplicate } : {})}
+          onClose={() => setCourseToDuplicate(undefined)}
         />
       </div>
     </>
