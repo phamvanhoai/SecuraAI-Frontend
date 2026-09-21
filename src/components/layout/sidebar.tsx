@@ -13,6 +13,7 @@ import {
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { useSessionUser } from "@/features/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const sectionOrder: readonly NavigationItem["section"][] = [
   "Tổng quan",
@@ -24,10 +25,13 @@ const sectionOrder: readonly NavigationItem["section"][] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const panel = getPanelKind(pathname);
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
   const roles = session.data?.roles.map((role) => role.code) ?? [];
+  // Feature pages use shared direct URLs (for example /training). Keep the
+  // sidebar on the same shared dashboard navigation instead of falling back
+  // to the admin menu merely because the URL has no panel prefix.
+  const panel = getPanelKind(pathname, roles);
   const navigation = getPanelNavigation(panel).filter((item) =>
     canAccessNavigationItem(permissions, item, roles),
   );
@@ -37,6 +41,7 @@ export function Sidebar() {
       items: navigation.filter((item) => item.section === label),
     }))
     .filter((section) => section.items.length > 0);
+  const sessionLoading = session.isPending;
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -89,7 +94,16 @@ export function Sidebar() {
           aria-label={`Điều hướng panel ${panelLabels[panel]}`}
           className="flex-1 overflow-y-auto px-2 py-3"
         >
-          {sections.map((section, sectionIndex) => (
+          {sessionLoading ? (
+            <div aria-label="Loading navigation" className="space-y-3" role="status">
+              <span className="sr-only">Loading navigation</span>
+              {["nav-1", "nav-2", "nav-3", "nav-4", "nav-5", "nav-6", "nav-7", "nav-8"].map(
+                (item) => (
+                  <Skeleton className="h-9 w-full rounded-md bg-white/10" key={item} />
+                ),
+              )}
+            </div>
+          ) : sections.map((section, sectionIndex) => (
             <div
               className={cn(
                 sectionIndex > 0 && "mt-3 border-t border-white/8 pt-3",

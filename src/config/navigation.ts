@@ -36,6 +36,7 @@ const modules = {
   alerts: {
     title: "Cảnh báo",
     slug: "alerts",
+    requiredAnyPermission: ["ai-alerts.read"],
     icon: Bell,
     section: "Tổng quan",
   },
@@ -63,24 +64,39 @@ const modules = {
   risks: {
     title: "Rủi ro",
     slug: "risks",
+    requiredAnyPermission: ["risks.read", "risks.create", "risks.update"],
     icon: ShieldAlert,
     section: "Quản lý",
   },
   incidents: {
     title: "Sự cố",
     slug: "incidents",
+    requiredAnyPermission: [
+      "incidents.report",
+      "incidents.assign",
+      "incidents.update-progress",
+    ],
     icon: Bell,
     section: "Quản lý",
   },
   controls: {
     title: "Kiểm soát",
     slug: "controls",
+    requiredAnyPermission: [
+      "compliance.assess-controls",
+      "compliance.map-controls",
+    ],
     icon: ClipboardCheck,
     section: "Quản lý",
   },
   compliance: {
     title: "Tuân thủ",
     slug: "compliance",
+    requiredAnyPermission: [
+      "compliance.assess-controls",
+      "compliance.map-controls",
+      "compliance.evidence.upload",
+    ],
     icon: Library,
     section: "Quản lý",
   },
@@ -107,7 +123,12 @@ const modules = {
     slug: "training",
     icon: GraduationCap,
     section: "Quản lý",
-    requiredAnyPermission: ["training-courses.read"],
+    requiredAnyPermission: [
+      "training-courses.read",
+      "training-assessments.take",
+      "training-completion.read",
+      "training-certificates.read-own",
+    ],
   },
   workflowDefinitions: {
     title: "Quy trình phê duyệt",
@@ -174,10 +195,39 @@ const modules = {
     icon: Settings,
     section: "Cài đặt",
   },
+  loginHistory: {
+    title: "Login history",
+    slug: "login-history",
+    icon: History,
+    section: "Báo cáo",
+    requiredAnyPermission: ["login-history.read"],
+  },
 } as const satisfies Record<string, ModuleDefinition>;
 
 export const panelModules = {
-  dashboard: [] as const,
+  dashboard: [
+    modules.alerts,
+    modules.users,
+    modules.roles,
+    modules.assets,
+    modules.risks,
+    modules.incidents,
+    modules.controls,
+    modules.compliance,
+    modules.audits,
+    modules.policies,
+    modules.training,
+    modules.workflowDefinitions,
+    modules.anomalyMonitoring,
+    modules.aiModels,
+    modules.eventLogs,
+    modules.reports,
+    modules.customDashboard,
+    modules.notifications,
+    modules.files,
+    modules.settings,
+    modules.loginHistory,
+  ],
   admin: [
     modules.alerts,
     modules.users,
@@ -265,13 +315,16 @@ const panelPriority: readonly PanelKind[] = [
 export function allowedPanels(
   roleCodes: readonly string[],
 ): readonly PanelKind[] {
-  const assigned = new Set(roleCodes);
-  return panelPriority.filter((panel) => assigned.has(panelRoleCodes[panel]));
+  if (roleCodes.includes("ADMIN")) return ["admin"];
+  return roleCodes.length ? ["dashboard"] : [];
 }
 
 export function defaultPanelPath(roleCodes: readonly string[]): string {
-  const panel = allowedPanels(roleCodes)[0];
-  return panel ? `/${panel}` : "/profile";
+  return roleCodes.includes("ADMIN")
+    ? "/admin"
+    : roleCodes.length
+      ? "/dashboard"
+      : "/profile";
 }
 
 export function panelFromPath(pathname: string): PanelKind | null {
@@ -283,6 +336,8 @@ export function canAccessPanel(
   roleCodes: readonly string[],
   panel: PanelKind,
 ): boolean {
+  if (panel === "dashboard")
+    return roleCodes.length > 0 && !roleCodes.includes("ADMIN");
   return roleCodes.includes(panelRoleCodes[panel]);
 }
 
@@ -299,7 +354,10 @@ export function canAccessNavigationItem(
   );
 }
 
-export function getPanelKind(pathname: string | null): PanelKind {
+export function getPanelKind(
+  pathname: string | null,
+  roleCodes: readonly string[] = [],
+): PanelKind {
   const segment = pathname?.split("/")[1];
   return segment === "dashboard"
     ? "dashboard"
@@ -307,7 +365,7 @@ export function getPanelKind(pathname: string | null): PanelKind {
         segment === "employee" ||
         segment === "executive-auditor"
       ? segment
-      : "admin";
+      : roleCodes.includes("ADMIN") ? "admin" : "dashboard";
 }
 
 export function getPanelNavigation(
@@ -324,7 +382,7 @@ export function getPanelNavigation(
     },
     ...panelModules[panel].map((item) => ({
       ...item,
-      href: `/${panel}/${item.slug}`,
+      href: `/${item.slug}`,
     })),
   ];
 

@@ -1,5 +1,5 @@
 import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeletons";
 
 export default function Loading() {
-  return <DashboardLoadingSkeleton variant="overview" />;
+  return <DashboardLoadingSkeleton variant="dashboard" />;
 }
