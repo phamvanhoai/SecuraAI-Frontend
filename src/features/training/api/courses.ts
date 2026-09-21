@@ -202,3 +202,12 @@ export async function getLatestCourseAssignment(
     ),
   );
 }
+
+export async function duplicateCourse(courseId: string, title: string) {
+  return courseSchema.parse(
+    await apiRequest<unknown>(
+      `/api/training/courses/${encodeURIComponent(courseId)}/duplicate`,
+      { method: "POST", target: "same-origin", body: { title } },
+    ),
+  );
+}
