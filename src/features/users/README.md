@@ -9,6 +9,19 @@ MFA status and account activity with explicit loading, retry, empty-value and
 not-found/error states. The same-origin BFF keeps tokens in HttpOnly cookies and
 forwards the request to `/admin/users/{userId}`.
 
+## Add user accounts
+
+Administrators with `users.create` can open the **Add user** dialog. The form
+loads active departments and assignable roles from the backend instead of asking
+for internal UUIDs or manually entered role codes. It validates labeled profile
+fields, requires at least one role, disables submission until reference data is
+available, and provides inline error, retry, pending, and success feedback.
+
+The typed same-origin BFF forwards creation and option requests with HttpOnly
+cookie authentication. Successful creation refreshes the user list; the
+temporary password is delivered by the backend email flow and never enters the
+browser response.
+
 ## Lock and unlock user accounts (UC7)
 
 The user list exposes a Lock/Unlock button on each eligible account. Both the

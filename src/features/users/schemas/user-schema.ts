@@ -1,22 +1,22 @@
 import { z } from "zod";
 
 export const createUserSchema = z.object({
-  email: z.email("Enter a valid email address."),
-  fullName: z.string().trim().min(1, "Full name is required."),
-  employeeCode: z.string().trim().min(1, "Employee code is required."),
-  departmentId: z.uuid("Enter a valid department ID."),
-  roleCodes: z.string().trim().min(1, "Enter at least one role code."),
+  email: z
+    .email("Enter a valid email address.")
+    .max(255)
+    .transform((value) => value.toLowerCase()),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must contain at least 2 characters.")
+    .max(150),
+  employeeCode: z.string().trim().min(1, "Employee code is required.").max(50),
+  departmentId: z.uuid("Select a department."),
+  roleCodes: z.array(z.string()).min(1, "Select at least one role.").max(10),
 });
 
 export type CreateUserInput = z.input<typeof createUserSchema>;
-
-export type CreateUserPayload = {
-  email: string;
-  fullName: string;
-  employeeCode: string;
-  departmentId: string;
-  roleCodes: string[];
-};
+export type CreateUserPayload = z.output<typeof createUserSchema>;
 
 export const createdUserSchema = z.object({
   id: z.string(),
@@ -26,6 +26,23 @@ export const createdUserSchema = z.object({
 });
 
 export type CreatedUser = z.infer<typeof createdUserSchema>;
+
+export const userCreateOptionsSchema = z.object({
+  departments: z.array(
+    z.object({ id: z.uuid(), code: z.string(), name: z.string() }),
+  ),
+  roles: z.array(
+    z.object({
+      id: z.uuid(),
+      code: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      isSystem: z.boolean(),
+    }),
+  ),
+});
+
+export type UserCreateOptions = z.infer<typeof userCreateOptionsSchema>;
 
 const userStatusSchema = z.preprocess(
   (value) => (typeof value === "string" ? value.toLowerCase() : value),
@@ -80,7 +97,6 @@ export type UserListQuery = {
 };
 
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
-
 export const userDetailSchema = z.object({
   id: z.uuid(),
   email: z.email(),
