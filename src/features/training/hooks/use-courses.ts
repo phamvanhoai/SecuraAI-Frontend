@@ -9,8 +9,8 @@ import {
   getAssignmentOptions,
   getLatestCourseAssignment,
   listCourses,
-  publishCourse,
   updateCourseDraft,
+  duplicateCourse,
 } from "../api/courses";
 import type {
   AssignCourseInput,
@@ -55,14 +55,13 @@ export function useCreateCourse() {
   });
 }
 
-export function usePublishCourse() {
-  const queryClient = useQueryClient();
+export function useDuplicateCourse() {
+  const client = useQueryClient();
   return useMutation({
-    mutationFn: publishCourse,
+    mutationFn: ({ courseId, title }: { courseId: string; title: string }) =>
+      duplicateCourse(courseId, title),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["training", "courses"],
-      });
+      await client.invalidateQueries({ queryKey: ["training", "courses"] });
     },
     retry: false,
   });
