@@ -13,14 +13,28 @@ function LoadingRegion({ children }: { children: ReactNode }) {
 export function RootLoadingSkeleton() {
   return (
     <LoadingRegion>
-      <main className="mx-auto min-h-[100dvh] max-w-[1600px] space-y-6 px-4 py-8 md:px-6">
-        <div className="space-y-3">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-9 w-full max-w-xs" />
-          <Skeleton className="h-4 w-full max-w-xl" />
-        </div>
-        <Skeleton className="h-72 w-full rounded-xl" />
-      </main>
+      <div className="min-h-[100dvh] lg:flex">
+        <aside className="bg-sidebar hidden w-[196px] shrink-0 p-3 lg:block">
+          <div className="mb-6 flex h-9 items-center gap-2 px-1">
+            <Skeleton className="size-9 rounded-lg bg-white/10" />
+            <Skeleton className="h-4 w-20 bg-white/10" />
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 10 }, (_, index) => (
+              <Skeleton className="h-9 w-full rounded-md bg-white/10" key={index} />
+            ))}
+          </div>
+        </aside>
+        <main className="min-w-0 flex-1">
+          <div className="border-border flex h-14 items-center justify-between border-b px-4 md:px-5">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="size-9 rounded-full" />
+          </div>
+          <div className="mx-auto max-w-[1600px] px-4 py-5 md:px-5 md:py-5">
+            <DashboardLoadingSkeleton variant="dashboard" />
+          </div>
+        </main>
+      </div>
     </LoadingRegion>
   );
 }
@@ -55,7 +69,7 @@ const metricSkeletons = ["metric-1", "metric-2", "metric-3", "metric-4"];
 const rowSkeletons = ["row-1", "row-2", "row-3", "row-4", "row-5"];
 
 export type DashboardSkeletonVariant =
-  "overview" | "table" | "split" | "form" | "feed";
+  "overview" | "dashboard" | "table" | "split" | "form" | "feed";
 
 function SkeletonRows() {
   return (
@@ -79,6 +93,23 @@ function DashboardSkeletonContent({
 }: {
   variant: DashboardSkeletonVariant;
 }) {
+  if (variant === "dashboard") {
+    return (
+      <div className="space-y-4">
+        <div className="grid gap-4 xl:grid-cols-[1.35fr_0.75fr_0.95fr]">
+          {["dashboard-main", "dashboard-distribution", "dashboard-alerts"].map((item) => (
+            <Skeleton className="h-72 w-full rounded-[10px]" key={item} />
+          ))}
+        </div>
+        <div className="grid gap-4 xl:grid-cols-[0.95fr_1.15fr_0.9fr]">
+          {["dashboard-assets", "dashboard-incidents", "dashboard-training"].map((item) => (
+            <Skeleton className="h-64 w-full rounded-[10px]" key={item} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (variant === "overview") {
     return (
       <div className="grid gap-5 xl:grid-cols-2">
@@ -91,16 +122,13 @@ function DashboardSkeletonContent({
 
   if (variant === "form") {
     return (
-      <div className="grid gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
-        <Skeleton className="h-64 w-full rounded-[10px]" />
-        <div className="border-border bg-surface grid gap-5 rounded-[10px] border p-5 md:grid-cols-2">
-          {metricSkeletons.map((field) => (
-            <div className="space-y-2" key={field}>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-11 w-full" />
-            </div>
-          ))}
-        </div>
+      <div className="border-border bg-surface grid gap-5 rounded-[10px] border p-5 md:grid-cols-2">
+        {metricSkeletons.map((field) => (
+          <div className="space-y-2" key={field}>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-11 w-full" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -162,8 +190,8 @@ export function DashboardLoadingSkeleton({
           <Skeleton className="h-7 w-60" />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {metricSkeletons.map((item) => (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {(variant === "dashboard" ? [...metricSkeletons, "metric-5"] : metricSkeletons).map((item) => (
             <div
               className="border-border bg-surface space-y-3 rounded-[10px] border p-4"
               key={item}

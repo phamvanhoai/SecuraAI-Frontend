@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeletons";
+import { RootLoadingSkeleton } from "@/components/feedback/loading-skeletons";
 import { useSessionUser } from "@/features/auth";
 
 export function PasswordChangeGuard({ children }: { children: ReactNode }) {
@@ -35,7 +35,10 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
     !session.data ||
     (mustChangePassword && !changingPassword)
   ) {
-    return <DashboardLoadingSkeleton variant="form" />;
+    // The guard wraps the entire dashboard shell. Render the same shell while
+    // the session is pending so F5 cannot replace the sidebar with a body-only
+    // skeleton and then shift the layout when the session arrives.
+    return <RootLoadingSkeleton />;
   }
   return children;
 }
