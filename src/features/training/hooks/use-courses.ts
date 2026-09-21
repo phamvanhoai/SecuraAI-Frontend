@@ -10,6 +10,8 @@ import {
   getLatestCourseAssignment,
   listCourses,
   updateCourseDraft,
+  duplicateCourse,
+  publishCourse,
 } from "../api/courses";
 import type {
   AssignCourseInput,
@@ -49,6 +51,29 @@ export function useCreateCourse() {
       await queryClient.invalidateQueries({
         queryKey: ["training", "courses"],
       });
+    },
+    retry: false,
+  });
+}
+
+export function usePublishCourse() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) => publishCourse(courseId),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["training", "courses"] });
+    },
+    retry: false,
+  });
+}
+
+export function useDuplicateCourse() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ courseId, title }: { courseId: string; title: string }) =>
+      duplicateCourse(courseId, title),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["training", "courses"] });
     },
     retry: false,
   });

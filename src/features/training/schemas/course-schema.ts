@@ -113,7 +113,7 @@ export const createCourseSchema = z
       .trim()
       .min(10, "Enter at least 10 characters.")
       .max(50000),
-    status: z.enum(["draft", "published"]),
+    status: z.literal("draft"),
     lessons: z
       .array(courseLessonSchema)
       .min(1, "Add at least one lesson.")
@@ -133,12 +133,6 @@ export const createCourseSchema = z
       .optional(),
   })
   .superRefine((value, context) => {
-    if (value.lessons && value.status !== "draft")
-      context.addIssue({
-        code: "custom",
-        path: ["status"],
-        message: "Create the course as a draft first.",
-      });
     const keys =
       value.lessons?.flatMap((lesson) =>
         lesson.materials.flatMap((material) =>
@@ -169,13 +163,6 @@ export const createCourseSchema = z
         path: ["lessons"],
         message: "Use unique upload keys and at most 10 uploaded files.",
       });
-    if (value.status === "published" && !value.assessment) {
-      context.addIssue({
-        code: "custom",
-        path: ["assessment"],
-        message: "A published course requires an assessment.",
-      });
-    }
   });
 
 export const courseSchema = z.object({

@@ -46,6 +46,18 @@ vi.mock("./my-learning-manager", () => ({
 vi.mock("./my-certificates-manager", () => ({
   MyCertificatesManager: () => <h1>My certificates content</h1>,
 }));
+vi.mock("./issued-certificates-manager", () => ({
+  IssuedCertificatesManager: ({
+    sectionNavigation,
+  }: {
+    sectionNavigation?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Issued certificates content</h1>
+      {sectionNavigation}
+    </>
+  ),
+}));
 vi.mock("./department-report-manager", () => ({
   DepartmentReportManager: ({
     sectionNavigation,
@@ -83,12 +95,19 @@ describe("TrainingWorkspace entry flow", () => {
     }),
   );
   afterEach(cleanup);
-  it("starts with one course list, without duplicate navigation or campaign lists", () => {
+  it("starts with one course list and keeps its primary section tab visible", () => {
     render(<TrainingWorkspace />);
     expect(screen.getByText("Courses content")).toBeVisible();
     expect(screen.queryByText("Progress content")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("navigation", { name: "Training sections" }),
+      screen.getByRole("navigation", { name: "Training sections" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Courses" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Department report" }),
     ).not.toBeInTheDocument();
   });
   it("gives completion-only readers direct progress access without course management", () => {
@@ -112,6 +131,21 @@ describe("TrainingWorkspace entry flow", () => {
     });
     render(<TrainingWorkspace />);
     expect(screen.getByText("My certificates content")).toBeVisible();
+  });
+  it("lets Security Officers open issued certificates from training", () => {
+    mocks.session.mockReturnValue({
+      data: {
+        permissions: [
+          "training-courses.read",
+          "training-certificates.read-issued",
+        ],
+      },
+    });
+    render(<TrainingWorkspace />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Issued certificates" }),
+    );
+    expect(screen.getByText("Issued certificates content")).toBeVisible();
   });
   it("preserves assessment access for users who also manage courses", () => {
     mocks.session.mockReturnValue({

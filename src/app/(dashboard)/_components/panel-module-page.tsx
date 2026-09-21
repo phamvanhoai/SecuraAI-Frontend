@@ -19,6 +19,7 @@ import RolesPage from "../roles/page";
 import SettingsPage from "../settings/page";
 import TrainingPage from "../training/page";
 import UsersPage from "../users/page";
+import WorkflowDefinitionsPage from "../workflow-definitions/page";
 
 const modulePages = {
   "ai-models": AiModelsPage,
@@ -40,6 +41,7 @@ const modulePages = {
   settings: SettingsPage,
   training: TrainingPage,
   users: UsersPage,
+  "workflow-definitions": WorkflowDefinitionsPage,
 } as const;
 
 export function PanelModulePage({

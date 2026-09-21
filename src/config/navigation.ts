@@ -8,13 +8,12 @@ import {
   FileStack,
   FolderOpen,
   Gauge,
+  GitBranch,
   GraduationCap,
   History,
   KeyRound,
-  LifeBuoy,
   LayoutDashboard,
   Library,
-  ListRestart,
   ScrollText,
   Settings,
   ShieldAlert,
@@ -22,29 +21,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type PanelKind = "admin" | "dashboard";
+export type PanelKind =
+  "admin" | "dashboard" | "security-officer" | "employee" | "executive-auditor";
 export type NavigationItem = {
   title: string;
   href: string;
   icon: LucideIcon;
   section: "Tổng quan" | "Quản lý" | "AI & Giám sát" | "Báo cáo" | "Cài đặt";
   requiredAnyPermission?: readonly string[];
-  requiredAnyRole?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
 const modules = {
-  loginHistory: {
-    title: "Login History",
-    slug: "login-history",
-    icon: ListRestart,
-    section: "Quản lý",
-    requiredAnyPermission: ["login-history.read"],
-    requiredAnyRole: ["ADMIN", "SECURITY_OFFICER"],
-  },
   alerts: {
     title: "Cảnh báo",
     slug: "alerts",
+    requiredAnyPermission: ["ai-alerts.read"],
     icon: Bell,
     section: "Tổng quan",
   },
@@ -62,13 +54,6 @@ const modules = {
     section: "Quản lý",
     requiredAnyPermission: ["roles.read"],
   },
-  mfaRecovery: {
-    title: "Khôi phục MFA",
-    slug: "mfa-recovery",
-    icon: LifeBuoy,
-    section: "Quản lý",
-    requiredAnyPermission: ["mfa-recovery.manage"],
-  },
   assets: {
     title: "Tài sản",
     slug: "assets",
@@ -79,24 +64,39 @@ const modules = {
   risks: {
     title: "Rủi ro",
     slug: "risks",
+    requiredAnyPermission: ["risks.read", "risks.create", "risks.update"],
     icon: ShieldAlert,
     section: "Quản lý",
   },
   incidents: {
     title: "Sự cố",
     slug: "incidents",
+    requiredAnyPermission: [
+      "incidents.report",
+      "incidents.assign",
+      "incidents.update-progress",
+    ],
     icon: Bell,
     section: "Quản lý",
   },
   controls: {
     title: "Kiểm soát",
     slug: "controls",
+    requiredAnyPermission: [
+      "compliance.assess-controls",
+      "compliance.map-controls",
+    ],
     icon: ClipboardCheck,
     section: "Quản lý",
   },
   compliance: {
     title: "Tuân thủ",
     slug: "compliance",
+    requiredAnyPermission: [
+      "compliance.assess-controls",
+      "compliance.map-controls",
+      "compliance.evidence.upload",
+    ],
     icon: Library,
     section: "Quản lý",
   },
@@ -111,6 +111,12 @@ const modules = {
     slug: "policies",
     icon: ScrollText,
     section: "Quản lý",
+    requiredAnyPermission: [
+      "policies.create",
+      "policies.update",
+      "policies.publish",
+      "policies.acknowledge",
+    ],
   },
   training: {
     title: "Đào tạo",
@@ -121,9 +127,15 @@ const modules = {
       "training-courses.read",
       "training-assessments.take",
       "training-completion.read",
-      "training-department-reports.read",
       "training-certificates.read-own",
     ],
+  },
+  workflowDefinitions: {
+    title: "Quy trình phê duyệt",
+    slug: "workflow-definitions",
+    icon: GitBranch,
+    section: "Quản lý",
+    requiredAnyPermission: ["workflows.read"],
   },
   anomalyMonitoring: {
     title: "Giám sát bất thường",
@@ -183,15 +195,20 @@ const modules = {
     icon: Settings,
     section: "Cài đặt",
   },
+  loginHistory: {
+    title: "Login history",
+    slug: "login-history",
+    icon: History,
+    section: "Báo cáo",
+    requiredAnyPermission: ["login-history.read"],
+  },
 } as const satisfies Record<string, ModuleDefinition>;
 
 export const panelModules = {
-  admin: [
+  dashboard: [
     modules.alerts,
     modules.users,
     modules.roles,
-    modules.mfaRecovery,
-    modules.loginHistory,
     modules.assets,
     modules.risks,
     modules.incidents,
@@ -200,6 +217,30 @@ export const panelModules = {
     modules.audits,
     modules.policies,
     modules.training,
+    modules.workflowDefinitions,
+    modules.anomalyMonitoring,
+    modules.aiModels,
+    modules.eventLogs,
+    modules.reports,
+    modules.customDashboard,
+    modules.notifications,
+    modules.files,
+    modules.settings,
+    modules.loginHistory,
+  ],
+  admin: [
+    modules.alerts,
+    modules.users,
+    modules.roles,
+    modules.assets,
+    modules.risks,
+    modules.incidents,
+    modules.controls,
+    modules.compliance,
+    modules.audits,
+    modules.policies,
+    modules.training,
+    modules.workflowDefinitions,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,
@@ -209,21 +250,38 @@ export const panelModules = {
     modules.files,
     modules.settings,
   ],
-  dashboard: [
+  "security-officer": [
     modules.alerts,
-    modules.loginHistory,
     modules.assets,
     modules.risks,
     modules.incidents,
     modules.controls,
-    modules.compliance,
-    modules.audits,
     modules.policies,
     modules.training,
+    modules.workflowDefinitions,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,
-    modules.integrationSchedules,
+    modules.reports,
+    modules.notifications,
+    modules.files,
+  ],
+  employee: [
+    modules.assets,
+    modules.training,
+    modules.policies,
+    modules.incidents,
+    modules.notifications,
+    modules.files,
+  ],
+  "executive-auditor": [
+    modules.assets,
+    modules.anomalyMonitoring,
+    modules.risks,
+    modules.compliance,
+    modules.audits,
+    modules.policies,
+    modules.workflowDefinitions,
     modules.reports,
     modules.customDashboard,
     modules.notifications,
@@ -232,79 +290,99 @@ export const panelModules = {
 } as const satisfies Record<PanelKind, readonly ModuleDefinition[]>;
 
 export const panelLabels: Record<PanelKind, string> = {
+  dashboard: "Dashboard",
   admin: "Quản trị hệ thống",
-  dashboard: "Không gian làm việc",
+  "security-officer": "Chuyên viên ATTT",
+  employee: "Nhân viên",
+  "executive-auditor": "Lãnh đạo / Kiểm toán",
 };
 
-const nonAdminRoleCodes = new Set([
-  "SECURITY_OFFICER",
-  "EMPLOYEE",
-  "EXECUTIVE",
-  "EXECUTIVE_AUDITOR",
-]);
+export const panelRoleCodes: Record<PanelKind, string> = {
+  dashboard: "ADMIN",
+  admin: "ADMIN",
+  "security-officer": "SECURITY_OFFICER",
+  employee: "EMPLOYEE",
+  "executive-auditor": "EXECUTIVE_AUDITOR",
+};
+
+const panelPriority: readonly PanelKind[] = [
+  "admin",
+  "security-officer",
+  "executive-auditor",
+  "employee",
+];
 
 export function allowedPanels(
   roleCodes: readonly string[],
 ): readonly PanelKind[] {
-  const panels: PanelKind[] = [];
-  if (roleCodes.includes("ADMIN")) panels.push("admin");
-  if (roleCodes.some((roleCode) => nonAdminRoleCodes.has(roleCode)))
-    panels.push("dashboard");
-  return panels;
+  if (roleCodes.includes("ADMIN")) return ["admin"];
+  return roleCodes.length ? ["dashboard"] : [];
 }
 
 export function defaultPanelPath(roleCodes: readonly string[]): string {
-  const panel = allowedPanels(roleCodes)[0];
-  return panel ? `/${panel}` : "/profile";
+  return roleCodes.includes("ADMIN")
+    ? "/admin"
+    : roleCodes.length
+      ? "/dashboard"
+      : "/profile";
 }
 
 export function panelFromPath(pathname: string): PanelKind | null {
   const segment = pathname.split("/")[1];
-  if (segment === "admin") return "admin";
-  if (segment === "dashboard") return "dashboard";
-  return null;
+  return panelPriority.find((panel) => panel === segment) ?? null;
 }
 
 export function canAccessPanel(
   roleCodes: readonly string[],
   panel: PanelKind,
 ): boolean {
-  return allowedPanels(roleCodes).includes(panel);
+  if (panel === "dashboard")
+    return roleCodes.length > 0 && !roleCodes.includes("ADMIN");
+  return roleCodes.includes(panelRoleCodes[panel]);
 }
 
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
-  roles: readonly string[] = [],
+  _roleCodes: readonly string[] = [],
 ): boolean {
   return (
-    (!item.requiredAnyRole?.length ||
-      item.requiredAnyRole.some((role) => roles.includes(role))) &&
-    (!item.requiredAnyPermission?.length ||
-      item.requiredAnyPermission.some((permission) =>
-        permissions.includes(permission),
-      ))
+    !item.requiredAnyPermission?.length ||
+    item.requiredAnyPermission.some((permission) =>
+      permissions.includes(permission),
+    )
   );
 }
 
-export function getPanelKind(pathname: string | null): PanelKind {
+export function getPanelKind(
+  pathname: string | null,
+  roleCodes: readonly string[] = [],
+): PanelKind {
   const segment = pathname?.split("/")[1];
-  return segment === "admin" ? "admin" : "dashboard";
+  return segment === "dashboard"
+    ? "dashboard"
+    : segment === "security-officer" ||
+        segment === "employee" ||
+        segment === "executive-auditor"
+      ? segment
+      : roleCodes.includes("ADMIN") ? "admin" : "dashboard";
 }
 
 export function getPanelNavigation(
   panel: PanelKind,
+  _roleCodes: readonly string[] = [],
+  _permissions: readonly string[] = [],
 ): readonly NavigationItem[] {
   const base: NavigationItem[] = [
     {
       title: "Tổng quan",
-      href: panel === "admin" ? "/admin" : "/dashboard",
+      href: `/${panel}`,
       icon: Gauge,
       section: "Tổng quan",
     },
     ...panelModules[panel].map((item) => ({
       ...item,
-      href: panel === "admin" ? `/admin/${item.slug}` : `/${item.slug}`,
+      href: `/${item.slug}`,
     })),
   ];
 
