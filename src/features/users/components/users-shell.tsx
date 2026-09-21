@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, LockKeyhole, Pencil, Search, UnlockKeyhole } from "lucide-react";
+import { Ellipsis, Eye, LockKeyhole, Pencil, Search, UnlockKeyhole, UserMinus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   MetricStrip,
@@ -21,12 +21,15 @@ import {
   type AccountLockSelection,
 } from "./account-lock-dialog";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { AuthSessionUser } from "@/features/auth";
 import type { UserListQuery, UserListResponse } from "../schemas/user-schema";
 import { UserDetailDialog } from "./user-detail-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
+import { AccountAvailabilityDialog } from "./account-availability-dialog";
 
 function UserCell({ name, email }: { name: string; email: string }) {
   const initials = name
@@ -89,6 +92,9 @@ function userRows(
   view: (userId: string) => void,
   edit: (userId: string) => void,
   canUpdate: boolean,
+  manage: (user: UserListResponse["items"][number]) => void,
+  canDeactivate: boolean,
+  canRemove: boolean,
 ) {
   return data.items.map((user) => {
     const action = accountLockAction(actor, user);
@@ -106,53 +112,68 @@ function userRows(
         {statusLabel(user.status)}
       </StatusBadge>,
       <div
-        className="grid min-w-[23rem] grid-cols-3 items-center gap-2"
+        className="flex min-w-[12rem] items-center gap-2"
         key={user.id + "-actions"}
       >
         <Button
           aria-label={`View ${user.fullName}`}
-          className="w-full px-2"
+          className="min-w-24 px-3"
           onClick={() => view(user.id)}
           variant="secondary"
         >
           <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
           View
         </Button>
-        <Button
-          aria-label={`Edit ${user.fullName}`}
-          className="w-full px-2"
-          disabled={!canUpdate}
-          onClick={() => edit(user.id)}
-          title={canUpdate ? undefined : "Requires users.update permission"}
-          variant="secondary"
+        <DropdownMenu
+          label={
+            <span className="text-muted flex min-h-7 items-center gap-1.5 text-sm font-medium">
+              <Ellipsis aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              More
+              <span className="sr-only">actions for {user.fullName}</span>
+            </span>
+          }
         >
-          <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
-          Edit
-        </Button>
-        {action ? (
-          <Button
-            variant="secondary"
-            className={
-              action === "lock"
-                ? "text-danger w-full px-2"
-                : "text-brand w-full px-2"
-            }
-            aria-label={
-              (action === "lock" ? "Lock " : "Unlock ") + user.fullName
-            }
-            onClick={() => select({ user, action })}
-          >
-            <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
-            {action === "lock" ? "Lock" : "Unlock"}
-          </Button>
-        ) : (
-          <span
-            key={user.id + "-action"}
-            className="text-muted flex min-h-11 items-center justify-center text-center text-xs"
-          >
-            {user.id === actor.id ? "Your account" : "—"}
-          </span>
-        )}
+          <div className="space-y-1">
+            <button
+              aria-label={`Edit ${user.fullName}`}
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canUpdate}
+              onClick={() => edit(user.id)}
+              title={canUpdate ? undefined : "Requires users.update permission"}
+              type="button"
+            >
+              <Pencil aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Edit
+            </button>
+            {action ? (
+              <button
+                aria-label={`${action === "lock" ? "Lock" : "Unlock"} ${user.fullName}`}
+                className={cn(
+                  "hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2",
+                  action === "lock" ? "text-danger" : "text-brand",
+                )}
+                onClick={() => select({ user, action })}
+                type="button"
+              >
+                <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                {action === "lock" ? "Lock" : "Unlock"}
+              </button>
+            ) : null}
+            <div className="border-border border-t pt-1">
+              <button
+                aria-label={`Manage availability for ${user.fullName}`}
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={user.id === actor.id || (!canDeactivate && !canRemove) ||
+                  (user.status === "disabled" && !canRemove)}
+                onClick={() => manage(user)}
+                type="button"
+              >
+                <UserMinus aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                Manage availability
+              </button>
+            </div>
+          </div>
+        </DropdownMenu>
       </div>,
     ];
   });
@@ -169,11 +190,14 @@ export function UsersShell() {
   const [selection, setSelection] = useState<AccountLockSelection | null>(null);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [availabilityUser, setAvailabilityUser] = useState<UserListResponse["items"][number] | null>(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
   const canRead = session.data?.permissions.includes("users.read") ?? false;
   const canUpdate = session.data?.permissions.includes("users.update") ?? false;
+  const canDeactivate = isAdmin && (session.data?.permissions.includes("users.deactivate") ?? false);
+  const canRemove = isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
   const users = useUsers(
     {
       page,
@@ -424,6 +448,9 @@ export function UsersShell() {
               setDetailUserId,
               setEditUserId,
               canUpdate,
+              setAvailabilityUser,
+              canDeactivate,
+              canRemove,
             )}
           />
         )}
@@ -447,6 +474,12 @@ export function UsersShell() {
         onClose={() => setDetailUserId(null)}
       />
       <EditUserDialog userId={editUserId} onClose={() => setEditUserId(null)} />
+      <AccountAvailabilityDialog
+        user={availabilityUser}
+        canDeactivate={canDeactivate}
+        canRemove={canRemove}
+        onClose={() => setAvailabilityUser(null)}
+      />
       {isAdmin ? (
         <CreateUserDialog
           open={createOpen}

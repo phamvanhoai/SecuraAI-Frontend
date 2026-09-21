@@ -1,5 +1,14 @@
 # User management
 
+## Deactivate or remove users
+
+The **Manage** action offers Deactivate for `users.deactivate` and Remove for
+`users.remove`. Both require an audited reason. Deactivate blocks sign-in while
+keeping the profile visible; Remove performs a backend soft delete, hiding the
+account from the list while retaining historical references. Existing sessions
+are revoked by the backend. The current administrator cannot manage their own
+availability, and the backend protects the last active administrator.
+
 ## Edit user accounts
 
 Administrators with `users.update` can edit a user's name, phone, employee code,
