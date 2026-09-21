@@ -64,7 +64,7 @@ describe("createCourseSchema", () => {
       title: "Phishing basics",
       description: "",
       content: "Learn to identify phishing emails.",
-      status: "published" as const,
+      status: "draft" as const,
       assessment: {
         title: "Phishing assessment",
         passingScore: 80,
@@ -90,7 +90,7 @@ describe("createCourseSchema", () => {
       title: "Password security",
       description: "",
       content: "Learn how to protect corporate accounts.",
-      status: "published",
+      status: "draft",
       assessment: {
         title: "Password security assessment",
         passingScore: 80,

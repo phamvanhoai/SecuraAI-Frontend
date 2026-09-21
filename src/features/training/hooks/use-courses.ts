@@ -9,6 +9,7 @@ import {
   getAssignmentOptions,
   getLatestCourseAssignment,
   listCourses,
+  publishCourse,
   updateCourseDraft,
 } from "../api/courses";
 import type {
@@ -45,6 +46,19 @@ export function useCreateCourse() {
     mutationFn: (
       input: CreateCourseInput & { files?: Readonly<Record<string, File>> },
     ) => createCourse(input, input.files),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["training", "courses"],
+      });
+    },
+    retry: false,
+  });
+}
+
+export function usePublishCourse() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: publishCourse,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["training", "courses"],
