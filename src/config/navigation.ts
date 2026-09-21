@@ -123,6 +123,7 @@ const modules = {
       "training-completion.read",
       "training-department-reports.read",
       "training-certificates.read-own",
+      "training-certificates.read-issued",
     ],
   },
   anomalyMonitoring: {

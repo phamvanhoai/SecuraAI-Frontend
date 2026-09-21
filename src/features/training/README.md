@@ -7,6 +7,12 @@ issuer. Backend scopes records to the authenticated user and requires
 `training-certificates.read-own` (granted to Employee and Admin by a data-only
 migration). Existing certificates are metadata, not generated PDF files.
 
+UC164 **View Issued Training Certificates**: Security Officer opens **Training →
+Issued certificates** or `/training/certificates`. The backend-paginated list can
+be searched by employee, course, campaign or certificate number and exposes the
+saved issuance metadata. Access requires `training-certificates.read-issued`,
+granted to Security Officer and Admin. The UI does not claim a PDF exists.
+
 Real backend in-app reminders appear under **Notifications**, reachable from the
 header bell. Employee access
 uses the existing `training-assessments.take` permission; the inbox is restricted

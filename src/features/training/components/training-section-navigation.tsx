@@ -1,17 +1,21 @@
 import Link from "next/link";
-import { BookOpenCheck, ChartNoAxesCombined } from "lucide-react";
+import { Award, BookOpenCheck, ChartNoAxesCombined } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function TrainingSectionNavigation({
   active,
   primaryLabel,
   showDepartmentReport = true,
+  showIssuedCertificates = false,
   onSelect,
 }: {
-  active: "training" | "department-report";
+  active: "training" | "department-report" | "certificates";
   primaryLabel: "Courses" | "Training progress";
   showDepartmentReport?: boolean;
-  onSelect?: (section: "training" | "department-report") => void;
+  showIssuedCertificates?: boolean;
+  onSelect?: (
+    section: "training" | "department-report" | "certificates",
+  ) => void;
 }) {
   const items = [
     {
@@ -26,10 +30,19 @@ export function TrainingSectionNavigation({
       value: "department-report",
       Icon: ChartNoAxesCombined,
     },
+    {
+      href: "/training/certificates",
+      label: "Issued certificates",
+      value: "certificates",
+      Icon: Award,
+    },
   ] as const;
-  const visibleItems = showDepartmentReport
-    ? items
-    : items.filter(({ value }) => value === "training");
+  const visibleItems = items.filter(
+    ({ value }) =>
+      value === "training" ||
+      (value === "department-report" && showDepartmentReport) ||
+      (value === "certificates" && showIssuedCertificates),
+  );
 
   return (
     <nav aria-label="Training sections">

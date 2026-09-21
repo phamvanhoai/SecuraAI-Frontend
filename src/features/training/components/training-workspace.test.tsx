@@ -46,6 +46,18 @@ vi.mock("./my-learning-manager", () => ({
 vi.mock("./my-certificates-manager", () => ({
   MyCertificatesManager: () => <h1>My certificates content</h1>,
 }));
+vi.mock("./issued-certificates-manager", () => ({
+  IssuedCertificatesManager: ({
+    sectionNavigation,
+  }: {
+    sectionNavigation?: import("react").ReactNode;
+  }) => (
+    <>
+      <h1>Issued certificates content</h1>
+      {sectionNavigation}
+    </>
+  ),
+}));
 vi.mock("./department-report-manager", () => ({
   DepartmentReportManager: ({
     sectionNavigation,
@@ -119,6 +131,21 @@ describe("TrainingWorkspace entry flow", () => {
     });
     render(<TrainingWorkspace />);
     expect(screen.getByText("My certificates content")).toBeVisible();
+  });
+  it("lets Security Officers open issued certificates from training", () => {
+    mocks.session.mockReturnValue({
+      data: {
+        permissions: [
+          "training-courses.read",
+          "training-certificates.read-issued",
+        ],
+      },
+    });
+    render(<TrainingWorkspace />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Issued certificates" }),
+    );
+    expect(screen.getByText("Issued certificates content")).toBeVisible();
   });
   it("preserves assessment access for users who also manage courses", () => {
     mocks.session.mockReturnValue({
