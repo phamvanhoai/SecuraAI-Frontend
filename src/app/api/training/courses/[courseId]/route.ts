@@ -1,19 +1,28 @@
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
-type Context = { params: Promise<{ courseId: string }> };
+const path = (courseId: string) =>
+  `/training/courses/${encodeURIComponent(courseId)}`;
 
-function coursePath(courseId: string): string {
-  return `/training/courses/${encodeURIComponent(courseId)}`;
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ courseId: string }> },
+): Promise<Response> {
+  const { courseId } = await context.params;
+  return proxyAuthenticatedRequest(path(courseId));
 }
 
-export async function GET(_request: Request, context: Context): Promise<Response> {
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ courseId: string }> },
+): Promise<Response> {
   const { courseId } = await context.params;
-  return proxyAuthenticatedRequest(coursePath(courseId));
-}
-
-export async function PATCH(request: Request, context: Context): Promise<Response> {
-  const { courseId } = await context.params;
-  return proxyAuthenticatedRequest(coursePath(courseId), {
+  const contentType = request.headers.get("content-type") ?? "";
+  if (contentType.startsWith("multipart/form-data"))
+    return proxyAuthenticatedRequest(path(courseId), {
+      method: "PATCH",
+      body: await request.formData(),
+    });
+  return proxyAuthenticatedRequest(path(courseId), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: await request.text(),

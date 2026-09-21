@@ -36,7 +36,10 @@ export const userListItemSchema = z.object({
   id: z.coerce.string(),
   email: z.email(),
   fullName: z.string(),
-  employeeCode: z.string().nullish().transform((code) => code ?? "Not assigned"),
+  employeeCode: z
+    .string()
+    .nullish()
+    .transform((code) => code ?? "Not assigned"),
   status: userStatusSchema,
   department: z
     .object({
@@ -70,7 +73,42 @@ export const userListResponseSchema = z.object({
 export type UserListQuery = {
   page: number;
   limit: number;
-  search?: string;
+  q?: string;
+  departmentId?: string;
+  roleCode?: string;
+  status?: z.infer<typeof userStatusSchema>;
 };
 
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
+
+export const userDetailSchema = z.object({
+  id: z.uuid(),
+  email: z.email(),
+  fullName: z.string(),
+  phone: z.string().nullable(),
+  employeeCode: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  status: userStatusSchema,
+  mustChangePassword: z.boolean(),
+  emailVerifiedAt: z.iso.datetime().nullable(),
+  lastLoginAt: z.iso.datetime().nullable(),
+  lastLockedAt: z.iso.datetime().nullable(),
+  disabledAt: z.iso.datetime().nullable(),
+  mfaEnabled: z.boolean(),
+  department: z
+    .object({ id: z.uuid(), code: z.string(), name: z.string() })
+    .nullable(),
+  roles: z.array(
+    z.object({
+      id: z.uuid(),
+      code: z.string(),
+      name: z.string(),
+      description: z.string().nullable(),
+      assignedAt: z.iso.datetime(),
+    }),
+  ),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+
+export type UserDetail = z.infer<typeof userDetailSchema>;

@@ -1,5 +1,14 @@
 "use client";
-import { Ban, Eye, Pencil, Search, ShieldAlert, X } from "lucide-react";
+import {
+  Ban,
+  Eye,
+  ListChecks,
+  Pencil,
+  Search,
+  ShieldAlert,
+  X,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -278,7 +287,23 @@ export function RiskAssessmentsShell() {
             </p>
           </div>
         </div>
-        {canCreate ? <CreateRiskAssessmentDialog /> : null}
+        <div className="flex flex-wrap gap-2">
+          {(session.data?.permissions.includes("risk-treatment-plans.read") ??
+          false) ? (
+            <Link
+              className="border-border bg-surface hover:bg-neutral-soft focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg border px-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+              href="/risks/treatment-plans"
+            >
+              <ListChecks
+                className="size-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />{" "}
+              Treatment plans
+            </Link>
+          ) : null}
+          {canCreate ? <CreateRiskAssessmentDialog /> : null}
+        </div>
       </header>
       <section className="border-border bg-surface overflow-hidden rounded-xl border">
         <div className="border-border border-b px-5 py-4">

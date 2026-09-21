@@ -27,8 +27,9 @@ export function Sidebar() {
   const panel = getPanelKind(pathname);
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
-  const navigation = getPanelNavigation(panel).filter(
-    (item) => canAccessNavigationItem(permissions, item),
+  const roles = session.data?.roles.map((role) => role.code) ?? [];
+  const navigation = getPanelNavigation(panel).filter((item) =>
+    canAccessNavigationItem(permissions, item, roles),
   );
   const sections = sectionOrder
     .map((label) => ({
@@ -105,7 +106,9 @@ export function Sidebar() {
               </p>
               <div className="space-y-1">
                 {section.items.map((item) => {
-                  const active = pathname === item.href;
+                  const active =
+                    pathname === item.href ||
+                    pathname?.startsWith(`${item.href}/`);
                   const Icon = item.icon;
                   return (
                     <Link

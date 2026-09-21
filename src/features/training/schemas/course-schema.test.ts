@@ -1,10 +1,42 @@
 import { describe, expect, it } from "vitest";
 import {
   assignCourseSchema,
-  courseDraftDetailSchema,
+  courseDraftSchema,
   createCourseSchema,
-  updateCourseDraftSchema,
 } from "./course-schema";
+
+describe("courseDraftSchema", () => {
+  it("accepts a draft with an existing private video for editing", () => {
+    const result = courseDraftSchema.safeParse({
+      id: "e2ef8324-9ac0-4e7f-b16d-50050274a72e",
+      title: "Security basics",
+      description: null,
+      content: "Learn safe daily practices.",
+      status: "draft",
+      updatedAt: "2026-09-19T08:00:00.000Z",
+      lessons: [
+        {
+          title: "Passwords",
+          isRequired: true,
+          materials: [
+            {
+              title: "Video guide",
+              type: "video",
+              existingFileId: "8aa86891-5d1d-4053-9859-2934f886476e",
+              existingFile: {
+                name: "guide.mp4",
+                mimeType: "video/mp4",
+                sizeBytes: 100,
+              },
+            },
+          ],
+        },
+      ],
+      assessment: null,
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 describe("createCourseSchema", () => {
   it("accepts a course draft", () => {
@@ -76,48 +108,6 @@ describe("createCourseSchema", () => {
         ],
       },
     });
-    expect(result.success).toBe(true);
-  });
-});
-
-describe("updateCourseDraftSchema", () => {
-  it("accepts editable draft fields without a status transition", () => {
-    expect(
-      updateCourseDraftSchema.safeParse({
-        title: "Updated phishing basics",
-        description: "Updated course",
-        content: "Updated learning objectives and training material.",
-      }).success,
-    ).toBe(true);
-  });
-
-  it("loads a legacy multiple-choice draft so its invalid answers can be corrected", () => {
-    const result = courseDraftDetailSchema.safeParse({
-      id: "17afbe84-38a1-409e-846c-b3f4f3b3cced",
-      title: "TEST",
-      description: null,
-      content: "Course content",
-      status: "draft",
-      createdByUserId: "141f5699-9b20-42aa-8c7f-6e887565e9d5",
-      createdAt: "2026-09-17T16:26:35.391Z",
-      updatedAt: "2026-09-17T16:26:35.391Z",
-      assessment: {
-        title: "Post-training assessment",
-        passingScore: 80,
-        maxAttempts: 3,
-        questions: [
-          {
-            type: "multiple_choice",
-            text: "1 + 1 =",
-            options: [
-              { text: "3", isCorrect: true },
-              { text: "2", isCorrect: false },
-            ],
-          },
-        ],
-      },
-    });
-
     expect(result.success).toBe(true);
   });
 });

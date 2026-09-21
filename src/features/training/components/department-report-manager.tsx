@@ -26,10 +26,11 @@ import { TrainingSectionNavigation } from "./training-section-navigation";
 const headers = [
   "Department",
   "Employees",
+  "Training coverage",
   "Assignments",
   "Completed",
   "Overdue",
-  "Completion rate",
+  "Assignment completion",
 ];
 const columns: readonly DataTableColumn<DepartmentReportRow>[] = [
   {
@@ -43,12 +44,24 @@ const columns: readonly DataTableColumn<DepartmentReportRow>[] = [
     ),
   },
   { key: "employees", header: "Employees", cell: (row) => row.employees },
+  {
+    key: "coverage",
+    header: "Training coverage",
+    cell: (row) => (
+      <div className="tabular-nums">
+        <span className="block font-medium">
+          {row.assignedEmployees}/{row.employees}
+        </span>
+        <span className="text-muted text-xs">{row.coverageRate}%</span>
+      </div>
+    ),
+  },
   { key: "assigned", header: "Assignments", cell: (row) => row.assigned },
   { key: "completed", header: "Completed", cell: (row) => row.completed },
   { key: "overdue", header: "Overdue", cell: (row) => row.overdue },
   {
     key: "rate",
-    header: "Completion rate",
+    header: "Assignment completion",
     cell: (row) => (
       <span className="tabular-nums">
         {row.assigned ? `${row.completionRate}%` : "Not assigned"}
@@ -131,28 +144,34 @@ function DepartmentReportContent({
         ariaLabel="Organization training summary"
         metrics={[
           {
-            label: "Assigned employees",
+            label: "Employees",
             loading: report.isPending,
             value: summary ? String(summary.employees) : "—",
-            detail: "Across all departments",
+            detail: "Active and locked accounts",
           },
           {
-            label: "Assignments",
+            label: "Assigned employees",
             loading: report.isPending,
-            value: summary ? String(summary.assigned) : "—",
-            detail: "Excludes withdrawn assignments",
+            value: summary ? String(summary.assignedEmployees) : "—",
+            detail: "Unique employees with training",
           },
           {
-            label: "Completed",
+            label: "Training coverage",
             loading: report.isPending,
-            value: summary ? String(summary.completed) : "—",
-            detail: "Across all departments",
+            value: summary ? `${summary.coverageRate}%` : "—",
+            detail: "Assigned employees / employees",
           },
           {
-            label: "Completion rate",
+            label: "Assignment completion",
             loading: report.isPending,
             value: summary ? `${summary.completionRate}%` : "—",
             detail: "Completed / assignments",
+          },
+          {
+            label: "Overdue",
+            loading: report.isPending,
+            value: summary ? String(summary.overdue) : "—",
+            detail: "Incomplete past due date",
           },
         ]}
       />
@@ -192,7 +211,7 @@ function DepartmentReportContent({
             >
               <option value="all">All progress</option>
               <option value="overdue">Has overdue training</option>
-              <option value="completed">Fully completed</option>
+              <option value="completed">All assignments completed</option>
               <option value="no_assignments">No assignments</option>
             </Select>
           </label>
@@ -213,10 +232,26 @@ function DepartmentReportContent({
               </Button>
             </Alert>
           ) : !report.data?.items.length ? (
-            <p className="text-muted py-10 text-center text-sm">
-              No departments match your search and progress filter. Clear the
-              filters or ask your administrator to configure departments.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-muted max-w-md text-sm">
+                No departments match your search and progress filter. Clear the
+                filters or ask your administrator to configure departments.
+              </p>
+              {q || progress !== "all" ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setDraft("");
+                    setQuery("");
+                    setDraftProgress("all");
+                    setProgress("all");
+                    setPage(1);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <DataTable
               columns={columns}

@@ -233,16 +233,18 @@ export function MyAssessmentsManager({ onBack }: { onBack?: () => void }) {
   );
 }
 
-function AssessmentDialog({
+export function AssessmentDialog({
   enrollmentId,
+  lessonId,
   onClose,
 }: {
   enrollmentId: string | undefined;
+  lessonId?: string;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toast = useToast();
-  const detail = useAssessmentDetail(enrollmentId);
+  const detail = useAssessmentDetail(enrollmentId, lessonId);
   const submission = useSubmitAssessment();
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [result, setResult] = useState<AssessmentSubmission>();
@@ -292,6 +294,7 @@ function AssessmentDialog({
             ? [{ questionId: question.id, optionIds }]
             : [];
         }),
+        ...(lessonId ? { lessonId } : {}),
       });
       setResult(nextResult);
       toast.success(
