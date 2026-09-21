@@ -15,6 +15,8 @@ import { useSessionUser } from "@/features/auth";
 import { useTreatmentPlanDetail } from "../hooks/use-treatment-plan-detail";
 import { EditTreatmentPlanDialog } from "./edit-treatment-plan-dialog";
 import { CancelTreatmentPlanDialog } from "./cancel-treatment-plan-dialog";
+import { UpdateTreatmentActionProgressDialog } from "./update-treatment-action-progress-dialog";
+import type { TreatmentPlanDetail } from "../schemas/treatment-plan-detail-schema";
 
 const labels: Record<string, string> = {
   draft: "Draft",
@@ -53,6 +55,7 @@ export function TreatmentPlanDetailShell({
   const session = useSessionUser();
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [progressAction, setProgressAction] = useState<TreatmentPlanDetail["actions"][number] | null>(null);
   const canRead =
     session.data?.permissions.includes("risk-treatment-plans.read") ?? false;
   const detail = useTreatmentPlanDetail(treatmentPlanId, canRead);
@@ -115,6 +118,11 @@ export function TreatmentPlanDetailShell({
       />
       <EditTreatmentPlanDialog plan={plan} open={editing} onClose={() => setEditing(false)} />
       <CancelTreatmentPlanDialog plan={plan} open={cancelling} onClose={() => setCancelling(false)} />
+      {progressAction ? <UpdateTreatmentActionProgressDialog
+        treatmentPlanId={plan.id} action={progressAction}
+        onClose={() => setProgressAction(null)}
+        onReload={() => { setProgressAction(null); void detail.refetch(); }}
+      /> : null}
       {plan.cancellation ? (
         <Alert className="mb-5 border-danger/25 bg-danger-soft text-danger">
           <strong className="block">Treatment plan cancelled</strong>
@@ -209,6 +217,7 @@ export function TreatmentPlanDetailShell({
                       </span>
                       <span>Due: {date(action.dueDate)}</span>
                       <span>{action.progressPercent}% complete</span>
+                      {action.completedAt ? <span>Completed: {date(action.completedAt)}</span> : null}
                     </div>
                     <div
                       className="bg-neutral-soft mt-3 h-2 overflow-hidden rounded-full"
@@ -223,6 +232,17 @@ export function TreatmentPlanDetailShell({
                         style={{ width: `${action.progressPercent}%` }}
                       />
                     </div>
+                    {session.data?.permissions.includes("risk-treatment-actions.update-progress") &&
+                      ["approved", "in_progress"].includes(plan.status) &&
+                      ["approved", "in_treatment"].includes(plan.risk.status) &&
+                      action.status !== "cancelled" &&
+                      (isAdmin || plan.owner?.id === session.data.id || action.assignee?.id === session.data.id) ? (
+                        <Button type="button" variant="secondary" className="mt-3"
+                          onClick={() => setProgressAction(action)}
+                          aria-label={`Update progress for ${action.title}`}>
+                          <Pencil className="size-4" aria-hidden="true" /> Update progress
+                        </Button>
+                      ) : null}
                   </li>
                 ))}
               </ul>
