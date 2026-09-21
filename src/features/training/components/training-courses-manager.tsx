@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { CourseContentDialog } from "./course-content-dialog";
-import { CoursePublishDialog } from "./course-publish-dialog";
+import { CourseDuplicateDialog } from "./course-duplicate-dialog";
 import {
   ClipboardList,
   Ellipsis,
@@ -73,12 +73,13 @@ export function TrainingCoursesManager({
     session.data?.permissions.includes("training-courses.assign") ?? false;
   const canUpdate =
     session.data?.permissions.includes("training-courses.update") ?? false;
-  const canPublish =
-    session.data?.permissions.includes("training-courses.publish") ?? false;
   const canTrack =
     session.data?.permissions.includes("training-completion.read") ?? false;
+  const canDuplicate =
+    session.data?.permissions.includes("training-courses.duplicate") ?? false;
   const [courseToTrack, setCourseToTrack] = useState<Course>();
   const [courseToView, setCourseToView] = useState<Course>();
+  const [courseToDuplicate, setCourseToDuplicate] = useState<Course>();
   const [page, setPage] = useState(1);
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
@@ -88,7 +89,6 @@ export function TrainingCoursesManager({
     course: Course;
     mode: "create" | "edit";
   }>();
-  const [courseToPublish, setCourseToPublish] = useState<Course>();
   const courses = useCourses(page, query, status, canRead);
   const columns: readonly DataTableColumn<Course>[] = [
     {
@@ -122,7 +122,7 @@ export function TrainingCoursesManager({
           new Date(course.createdAt),
         ),
     },
-    ...(canRead || canUpdate || canAssign || canTrack
+    ...(canRead || canUpdate || canAssign || canTrack || canDuplicate
       ? [
           {
             key: "actions",
@@ -177,18 +177,18 @@ export function TrainingCoursesManager({
                     Edit draft
                   </button>
                 ) : null}
-                {canPublish && course.status === "draft" ? (
+                {canDuplicate ? (
                   <button
                     type="button"
                     className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                    onClick={() => setCourseToPublish(course)}
+                    onClick={() => setCourseToDuplicate(course)}
                   >
-                    <Send
+                    <ClipboardList
                       aria-hidden="true"
                       className="size-4"
                       strokeWidth={1.8}
                     />
-                    Publish course
+                    Duplicate course
                   </button>
                 ) : null}
                 {canAssign && course.status === "published" ? (
@@ -379,9 +379,9 @@ export function TrainingCoursesManager({
           course={courseToView}
           onClose={() => setCourseToView(undefined)}
         />
-        <CoursePublishDialog
-          course={courseToPublish}
-          onClose={() => setCourseToPublish(undefined)}
+        <CourseDuplicateDialog
+          {...(courseToDuplicate ? { course: courseToDuplicate } : {})}
+          onClose={() => setCourseToDuplicate(undefined)}
         />
       </div>
     </>
