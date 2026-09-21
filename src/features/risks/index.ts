@@ -30,3 +30,9 @@ export { updateRiskAssessmentRequestSchema } from "./schemas/update-risk-assessm
 export { cancelRiskAssessmentRequestSchema } from "./schemas/cancel-risk-assessment-schema";
 export { submitTreatmentPlanRequestSchema } from "./schemas/submit-treatment-plan-schema";
 export { approveTreatmentPlanRequestSchema } from "./schemas/approve-treatment-plan-schema";
+export {
+  createTreatmentPlanRequestSchema,
+  treatmentPlanCreateOptionsQuerySchema,
+} from "./schemas/create-treatment-plan-schema";
+export { updateTreatmentPlanRequestSchema } from "./schemas/update-treatment-plan-schema";
+export { cancelTreatmentPlanRequestSchema } from "./schemas/cancel-treatment-plan-schema";

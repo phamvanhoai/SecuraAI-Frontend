@@ -8,6 +8,7 @@ import { useRiskAssessmentDetail } from "../hooks/use-risk-assessment-detail";
 import type { RiskDetail } from "../schemas/risk-detail-schema";
 import { SubmitTreatmentPlanDialog } from "./submit-treatment-plan-dialog";
 import { ApproveTreatmentPlanDialog } from "./approve-treatment-plan-dialog";
+import { CreateTreatmentPlanDialog } from "./create-treatment-plan-dialog";
 
 const formatDate = (value: string | null): string =>
   value
@@ -39,8 +40,8 @@ function submissionIssues(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const targetDate = plan.targetDate ? new Date(plan.targetDate) : null;
-  if (!["approved", "in_treatment"].includes(riskStatus))
-    issues.push("The risk assessment is not approved.");
+  if (!["draft", "rejected"].includes(riskStatus))
+    issues.push("The risk assessment is not ready for submission.");
   if (plan.description.trim().length < 10)
     issues.push("Add a meaningful plan description.");
   if (!plan.owner || plan.owner.inactive)
@@ -88,6 +89,7 @@ export function RiskAssessmentDetailDialog({
   const [approvingPlan, setApprovingPlan] = useState<
     RiskDetail["treatmentPlans"][number] | null
   >(null);
+  const [creatingPlan, setCreatingPlan] = useState(false);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -99,6 +101,8 @@ export function RiskAssessmentDetailDialog({
     session.data?.permissions.includes("risk-treatment-plans.submit") ?? false;
   const canApprove =
     session.data?.permissions.includes("risk-treatment-plans.approve") ?? false;
+  const canCreate =
+    session.data?.permissions.includes("risk-treatment-plans.create") ?? false;
   const isAdmin =
     session.data?.roles.some(({ code }) => code === "ADMIN") ?? false;
   return (
@@ -238,7 +242,17 @@ export function RiskAssessmentDetailDialog({
             />
           </div>
           <section>
-            <h3 className="font-semibold">Treatment plans</h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-semibold">Treatment plans</h3>
+              {canCreate &&
+              data.treatmentPlans.every(({ status }) => status === "cancelled") &&
+              ["draft", "rejected"].includes(data.assessment.status) &&
+              (isAdmin || data.assessment.assessedBy?.id === session.data?.id) ? (
+                <Button type="button" onClick={() => setCreatingPlan(true)}>
+                  Create treatment plan
+                </Button>
+              ) : null}
+            </div>
             {data.treatmentPlans.length === 0 ? (
               <p className="text-muted mt-2 text-sm">No treatment plan</p>
             ) : (
@@ -417,6 +431,15 @@ export function RiskAssessmentDetailDialog({
         riskCode={data?.assessment.riskCode ?? "Risk assessment"}
         onClose={() => setApprovingPlan(null)}
       />
+      {data ? (
+        <CreateTreatmentPlanDialog
+          riskAssessmentId={data.assessment.id}
+          riskCode={data.assessment.riskCode}
+          expectedRiskUpdatedAt={data.assessment.updatedAt}
+          open={creatingPlan}
+          onClose={() => setCreatingPlan(false)}
+        />
+      ) : null}
     </>
   );
 }
