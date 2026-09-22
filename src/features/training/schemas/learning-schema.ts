@@ -65,6 +65,12 @@ export const learningDetailSchema = z.object({
                 sizeBytes: z.number(),
               })
               .nullable(),
+            progress: z
+              .object({
+                status: z.string(),
+                completedAt: z.string().nullable(),
+              })
+              .nullable(),
           }),
         ),
       }),
