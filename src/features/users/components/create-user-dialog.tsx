@@ -23,6 +23,7 @@ import {
 const defaults: CreateUserInput = {
   email: "",
   fullName: "",
+  phone: "",
   employeeCode: "",
   departmentId: "",
   roleCodes: [],
@@ -172,6 +173,22 @@ export function CreateUserDialog({
               />
             </FormField>
             <FormField
+              id="user-phone"
+              label="Phone"
+              error={errors.phone?.message}
+            >
+              <Input
+                id="user-phone"
+                autoComplete="tel"
+                maxLength={30}
+                placeholder="0901234567"
+                type="tel"
+                aria-invalid={Boolean(errors.phone)}
+                aria-describedby={errors.phone ? "user-phone-error" : undefined}
+                {...register("phone")}
+              />
+            </FormField>
+            <FormField
               id="user-employee-code"
               label="Employee code"
               error={errors.employeeCode?.message}
@@ -188,7 +205,7 @@ export function CreateUserDialog({
                 {...register("employeeCode")}
               />
             </FormField>
-            <div>
+            <div className="sm:col-span-2">
               <FormField
                 id="user-department"
                 label="Department"

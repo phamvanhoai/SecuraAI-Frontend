@@ -103,9 +103,14 @@ export function UserDetailDialog({
             }
             title="Account information"
           >
+            <Detail label="Full name" value={detail.data.fullName} />
             <Detail
               label="Employee code"
               value={detail.data.employeeCode ?? "Not assigned"}
+            />
+            <Detail
+              label="Phone"
+              value={detail.data.phone ?? "Not provided"}
             />
             <Detail
               icon={
