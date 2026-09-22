@@ -7,7 +7,6 @@ import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -25,7 +24,6 @@ const emptyValues: UpdateUserInput = {
   phone: "",
   employeeCode: "",
   departmentId: "",
-  roleCodes: [],
 };
 
 export function EditUserDialog({
@@ -64,7 +62,6 @@ export function EditUserDialog({
       phone: detail.data.phone ?? "",
       employeeCode: detail.data.employeeCode ?? "",
       departmentId: detail.data.department?.id ?? "",
-      roleCodes: detail.data.roles.map((role) => role.code),
     });
   }, [detail.data, reset]);
 
@@ -103,7 +100,7 @@ export function EditUserDialog({
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           <strong className="block">Unable to load user information</strong>
           <span>
-            Reload the profile, departments, and roles before editing.
+            Reload the profile and departments before editing.
           </span>
           <Button
             className="mt-3"
@@ -189,30 +186,6 @@ export function EditUserDialog({
               </FormField>
             </div>
           </div>
-          <fieldset className="border-border space-y-3 rounded-xl border p-4">
-            <legend className="text-sm font-semibold">Role assignment</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(options.data?.roles ?? []).map((role) => (
-                <label
-                  className="flex cursor-pointer items-start gap-3 rounded-lg p-2"
-                  key={role.id}
-                >
-                  <Checkbox value={role.code} {...register("roleCodes")} />
-                  <span>
-                    <span className="block text-sm font-medium">
-                      {role.name}
-                    </span>
-                    <span className="text-muted block text-xs">
-                      {role.code}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            {errors.roleCodes ? (
-              <p className="text-danger text-sm">{errors.roleCodes.message}</p>
-            ) : null}
-          </fieldset>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               disabled={mutation.isPending}

@@ -89,7 +89,6 @@ describe("EditUserDialog", () => {
         phone: "0901111111",
         employeeCode: "SEC-010",
         departmentId: "00000000-0000-4000-8000-000000000020",
-        roleCodes: ["EMPLOYEE"],
       }),
     );
   });

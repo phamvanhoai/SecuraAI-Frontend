@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, LockKeyhole, Pencil, Search, UnlockKeyhole, UserMinus } from "lucide-react";
+import { Ellipsis, Eye, LockKeyhole, Pencil, Search, ShieldPlus, UnlockKeyhole, UserMinus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   MetricStrip,
@@ -30,6 +30,7 @@ import type { UserListQuery, UserListResponse } from "../schemas/user-schema";
 import { UserDetailDialog } from "./user-detail-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { AccountAvailabilityDialog } from "./account-availability-dialog";
+import { AssignUserRolesDialog } from "./assign-user-roles-dialog";
 
 function UserCell({ name, email }: { name: string; email: string }) {
   const initials = name
@@ -95,6 +96,8 @@ function userRows(
   manage: (user: UserListResponse["items"][number]) => void,
   canDeactivate: boolean,
   canRemove: boolean,
+  assignRoles: (userId: string) => void,
+  canAssignRoles: boolean,
 ) {
   return data.items.map((user) => {
     const action = accountLockAction(actor, user);
@@ -145,6 +148,16 @@ function userRows(
               <Pencil aria-hidden="true" className="size-4" strokeWidth={1.8} />
               Edit
             </button>
+            <button
+              aria-label={`Assign roles to ${user.fullName}`}
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canAssignRoles || user.status === "disabled"}
+              onClick={() => assignRoles(user.id)}
+              type="button"
+            >
+              <ShieldPlus aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Assign roles
+            </button>
             {action ? (
               <button
                 aria-label={`${action === "lock" ? "Lock" : "Unlock"} ${user.fullName}`}
@@ -190,12 +203,14 @@ export function UsersShell() {
   const [selection, setSelection] = useState<AccountLockSelection | null>(null);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [assignRoleUserId, setAssignRoleUserId] = useState<string | null>(null);
   const [availabilityUser, setAvailabilityUser] = useState<UserListResponse["items"][number] | null>(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
   const canRead = session.data?.permissions.includes("users.read") ?? false;
   const canUpdate = session.data?.permissions.includes("users.update") ?? false;
+  const canAssignRoles = isAdmin && (session.data?.permissions.includes("users.assign-role") ?? false);
   const canDeactivate = isAdmin && (session.data?.permissions.includes("users.deactivate") ?? false);
   const canRemove = isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
   const users = useUsers(
@@ -302,7 +317,7 @@ export function UsersShell() {
         description="Manage user accounts, departments, roles, and access status across the organization."
         secondaryAction="Export list"
         showSampleNotice={false}
-        {...(isAdmin
+        {...(isAdmin && canAssignRoles && (session.data?.permissions.includes("users.create") ?? false)
           ? {
               primaryAction: "Add user",
               onPrimaryAction: () => setCreateOpen(true),
@@ -451,6 +466,8 @@ export function UsersShell() {
               setAvailabilityUser,
               canDeactivate,
               canRemove,
+              setAssignRoleUserId,
+              canAssignRoles,
             )}
           />
         )}
@@ -474,13 +491,14 @@ export function UsersShell() {
         onClose={() => setDetailUserId(null)}
       />
       <EditUserDialog userId={editUserId} onClose={() => setEditUserId(null)} />
+      <AssignUserRolesDialog userId={assignRoleUserId} onClose={() => setAssignRoleUserId(null)} />
       <AccountAvailabilityDialog
         user={availabilityUser}
         canDeactivate={canDeactivate}
         canRemove={canRemove}
         onClose={() => setAvailabilityUser(null)}
       />
-      {isAdmin ? (
+      {isAdmin && canAssignRoles && session.data?.permissions.includes("users.create") ? (
         <CreateUserDialog
           open={createOpen}
           onClose={() => setCreateOpen(false)}

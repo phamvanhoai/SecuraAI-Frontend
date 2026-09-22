@@ -39,7 +39,6 @@ export const updateUserSchema = z.object({
     ),
   employeeCode: z.string().trim().max(50),
   departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
-  roleCodes: z.array(z.string()).min(1, "Select at least one role.").max(10),
 });
 
 export type UpdateUserInput = z.input<typeof updateUserSchema>;

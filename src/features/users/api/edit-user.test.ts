@@ -37,7 +37,6 @@ describe("edit user API", () => {
         phone: "",
         employeeCode: "",
         departmentId: "",
-        roleCodes: ["EMPLOYEE"],
       }),
     ).resolves.toEqual(response);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -49,7 +48,6 @@ describe("edit user API", () => {
           phone: null,
           employeeCode: null,
           departmentId: null,
-          roleCodes: ["EMPLOYEE"],
         }),
       }),
     );

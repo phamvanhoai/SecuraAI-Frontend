@@ -68,7 +68,6 @@ export async function updateUser(
     phone: input.phone || null,
     employeeCode: input.employeeCode || null,
     departmentId: input.departmentId || null,
-    roleCodes: input.roleCodes,
   };
   const data = await apiRequest<unknown>(
     `/api/users/${encodeURIComponent(userId)}`,
