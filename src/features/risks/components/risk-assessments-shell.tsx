@@ -1,13 +1,5 @@
 "use client";
-import {
-  Ban,
-  Eye,
-  ListChecks,
-  Pencil,
-  Search,
-  ShieldAlert,
-  X,
-} from "lucide-react";
+import { Ban, Eye, ListChecks, Pencil, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -274,9 +266,6 @@ export function RiskAssessmentsShell() {
     <div className="space-y-5">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span className="bg-danger-soft text-danger grid size-11 place-items-center rounded-xl">
-            <ShieldAlert className="size-5" aria-hidden="true" />
-          </span>
           <div>
             <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
               Risk Assessments
