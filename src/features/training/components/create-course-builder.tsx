@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { useSessionUser } from "@/features/auth";
 import { useToast } from "@/components/feedback/toast";
 import {
@@ -236,6 +237,9 @@ export function CreateCourseBuilder({ courseId }: { courseId?: string } = {}) {
             ? "Update the draft's ordered lessons, materials and assessments. Published or assigned courses remain immutable."
             : "Prepare a draft with ordered lessons and optional assessments. Files are uploaded only when you create the draft."
         }
+        secondaryAction="Back to courses"
+        secondaryActionIcon={<ArrowLeft aria-hidden="true" className="size-4" />}
+        onSecondaryAction={() => router.push("/training")}
       />
       <form
         noValidate
