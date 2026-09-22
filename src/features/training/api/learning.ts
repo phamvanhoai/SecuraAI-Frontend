@@ -26,16 +26,3 @@ export const completeLesson = async (enrollmentId: string, lessonId: string) =>
       { method: "PATCH", target: "same-origin" },
     ),
   );
-export const updateMaterialProgress = async (
-  enrollmentId: string,
-  materialId: string,
-  status: "in_progress" | "completed",
-) =>
-  apiRequest<unknown>(
-    `/api/training/learning/${encodeURIComponent(enrollmentId)}/materials/${encodeURIComponent(materialId)}/progress`,
-    {
-      method: "PATCH",
-      target: "same-origin",
-      body: { status },
-    },
-  );

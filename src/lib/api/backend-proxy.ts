@@ -29,7 +29,6 @@ export async function proxyAuthenticatedRequest(
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
         Authorization: `Bearer ${accessToken}`,
         ...init.headers,
       },
