@@ -4,18 +4,37 @@ import {
   permissionListSchema,
   roleListSchema,
   roleSchema,
+  configuredRoleSchema,
   type Role,
   type PermissionList,
   type RoleFormValues,
+  type ConfigureRolePermissionsValues,
   type RoleList,
 } from "../schemas/role-schema";
 
-export function listPermissions(signal?: AbortSignal): Promise<PermissionList> {
-  return roleRequest(
-    "/api/access-control/permissions?page=1&limit=200&sortBy=code&sortOrder=asc",
+export async function listPermissions(
+  signal?: AbortSignal,
+): Promise<PermissionList> {
+  const page = await roleRequest(
+    "/api/access-control/permissions?page=1&limit=100&sortBy=code&sortOrder=asc",
     permissionListSchema,
     signal ? { signal } : undefined,
   );
+  const rest = await Promise.all(
+    Array.from(
+      { length: Math.max(page.pagination.totalPages - 1, 0) },
+      (_, index) =>
+        roleRequest(
+          `/api/access-control/permissions?page=${index + 2}&limit=100&sortBy=code&sortOrder=asc`,
+          permissionListSchema,
+          signal ? { signal } : undefined,
+        ),
+    ),
+  );
+  return {
+    items: [page, ...rest].flatMap((part) => part.items),
+    pagination: page.pagination,
+  };
 }
 
 export type ListRolesInput = {
@@ -138,7 +157,10 @@ export function createRole(input: RoleFormValues): Promise<Role> {
   });
 }
 
-export function updateRole(id: string, input: RoleFormValues): Promise<Role> {
+export function updateRole(
+  id: string,
+  input: Pick<RoleFormValues, "code" | "name" | "description">,
+): Promise<Role> {
   return roleRequest(
     `/api/access-control/roles/${encodeURIComponent(id)}`,
     roleSchema,
@@ -146,9 +168,24 @@ export function updateRole(id: string, input: RoleFormValues): Promise<Role> {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...input,
+        code: input.code,
+        name: input.name,
         description: input.description || null,
       }),
+    },
+  );
+}
+export function configureRolePermissions(
+  id: string,
+  input: ConfigureRolePermissionsValues & { expectedUpdatedAt: string },
+) {
+  return roleRequest(
+    `/api/access-control/roles/${encodeURIComponent(id)}`,
+    configuredRoleSchema,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
     },
   );
 }

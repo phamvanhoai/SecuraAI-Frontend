@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { roleFormSchema, roleListSchema } from "./role-schema";
+import {
+  configureRolePermissionsSchema,
+  roleFormSchema,
+  roleListSchema,
+} from "./role-schema";
 
 const permissionId = "11111111-1111-4111-8111-111111111111";
 const roleId = "22222222-2222-4222-8222-222222222222";
@@ -57,5 +61,25 @@ describe("role schemas", () => {
       description: "Reviews risks",
       permissionIds: [permissionId],
     });
+  });
+  it("requires a reason and unique permission IDs for configuration", () => {
+    expect(
+      configureRolePermissionsSchema.safeParse({
+        permissionIds: [permissionId],
+        reason: "Quarterly access review",
+      }).success,
+    ).toBe(true);
+    expect(
+      configureRolePermissionsSchema.safeParse({
+        permissionIds: [permissionId, permissionId],
+        reason: "Quarterly access review",
+      }).success,
+    ).toBe(false);
+    expect(
+      configureRolePermissionsSchema.safeParse({
+        permissionIds: [],
+        reason: "short",
+      }).success,
+    ).toBe(false);
   });
 });
