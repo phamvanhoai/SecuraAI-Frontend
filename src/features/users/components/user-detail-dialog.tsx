@@ -19,7 +19,6 @@ import type { UserDetail } from "../schemas/user-schema";
 const statusPresentation = {
   active: { label: "Active", tone: "success" },
   inactive: { label: "Inactive", tone: "neutral" },
-  locked: { label: "Locked", tone: "warning" },
   disabled: { label: "Disabled", tone: "danger" },
 } as const;
 
@@ -200,10 +199,6 @@ export function UserDetailDialog({
             <Detail
               label="Last login"
               value={formatDate(detail.data.lastLoginAt)}
-            />
-            <Detail
-              label="Last locked"
-              value={formatDate(detail.data.lastLockedAt)}
             />
             <Detail label="Created" value={formatDate(detail.data.createdAt)} />
             <Detail

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, LockKeyhole, Pencil, Search, ShieldPlus, UnlockKeyhole, UserMinus } from "lucide-react";
+import { Ellipsis, Eye, Pencil, Search, ShieldPlus, UserMinus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   MetricStrip,
@@ -15,14 +15,8 @@ import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeleton
 import { useSessionUser } from "@/features/auth";
 import { CreateUserDialog } from "./create-user-dialog";
 import { useUsers } from "../hooks/use-users";
-import { accountLockAction } from "../lib/account-lock";
-import {
-  AccountLockDialog,
-  type AccountLockSelection,
-} from "./account-lock-dialog";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { AuthSessionUser } from "@/features/auth";
@@ -60,7 +54,6 @@ function statusLabel(
   return {
     active: "Active",
     inactive: "Inactive",
-    locked: "Locked",
     disabled: "Disabled",
   }[status];
 }
@@ -69,7 +62,6 @@ function statusTone(
   status: UserListResponse["items"][number]["status"],
 ): "success" | "warning" | "danger" | "neutral" {
   if (status === "active") return "success";
-  if (status === "locked") return "warning";
   if (status === "disabled") return "danger";
   return "neutral";
 }
@@ -78,7 +70,6 @@ function parseStatus(value: string): UserListQuery["status"] | "" {
   if (
     value === "active" ||
     value === "inactive" ||
-    value === "locked" ||
     value === "disabled"
   ) {
     return value;
@@ -89,7 +80,6 @@ function parseStatus(value: string): UserListQuery["status"] | "" {
 function userRows(
   data: UserListResponse,
   actor: AuthSessionUser,
-  select: (selection: AccountLockSelection) => void,
   view: (userId: string) => void,
   edit: (userId: string) => void,
   canUpdate: boolean,
@@ -100,8 +90,6 @@ function userRows(
   canAssignRoles: boolean,
 ) {
   return data.items.map((user) => {
-    const action = accountLockAction(actor, user);
-    const Icon = action === "unlock" ? UnlockKeyhole : LockKeyhole;
     return [
       <UserCell
         email={user.email}
@@ -158,20 +146,6 @@ function userRows(
               <ShieldPlus aria-hidden="true" className="size-4" strokeWidth={1.8} />
               Assign roles
             </button>
-            {action ? (
-              <button
-                aria-label={`${action === "lock" ? "Lock" : "Unlock"} ${user.fullName}`}
-                className={cn(
-                  "hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2",
-                  action === "lock" ? "text-danger" : "text-brand",
-                )}
-                onClick={() => select({ user, action })}
-                type="button"
-              >
-                <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
-                {action === "lock" ? "Lock" : "Unlock"}
-              </button>
-            ) : null}
             <div className="border-border border-t pt-1">
               <button
                 aria-label={`Manage availability for ${user.fullName}`}
@@ -200,7 +174,6 @@ export function UsersShell() {
   const [roleCode, setRoleCode] = useState("");
   const [status, setStatus] = useState<UserListQuery["status"] | "">("");
   const [createOpen, setCreateOpen] = useState(false);
-  const [selection, setSelection] = useState<AccountLockSelection | null>(null);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [assignRoleUserId, setAssignRoleUserId] = useState<string | null>(null);
@@ -340,12 +313,6 @@ export function UsersShell() {
             tone: "brand",
           },
           {
-            label: "Locked users",
-            value: String(data.summary.locked),
-            detail: "Needs attention",
-            tone: "warning",
-          },
-          {
             label: "Disabled users",
             value: String(data.summary.disabled),
             detail: "Disabled accounts",
@@ -434,7 +401,6 @@ export function UsersShell() {
                 <option value="">All statuses</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-                <option value="locked">Locked</option>
                 <option value="disabled">Disabled</option>
               </Select>
             </label>
@@ -459,7 +425,6 @@ export function UsersShell() {
             rows={userRows(
               data,
               session.data,
-              setSelection,
               setDetailUserId,
               setEditUserId,
               canUpdate,
@@ -482,10 +447,6 @@ export function UsersShell() {
           />
         </div>
       </ProductPanel>
-      <AccountLockDialog
-        selection={selection}
-        onClose={() => setSelection(null)}
-      />
       <UserDetailDialog
         userId={detailUserId}
         onClose={() => setDetailUserId(null)}

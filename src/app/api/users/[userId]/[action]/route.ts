@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  accountLockBodySchema,
-} from "@/features/users";
+import { accountAvailabilityBodySchema } from "@/features/users";
 import { clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
 import { authenticatedPost } from "@/lib/auth/authenticated-request";
 
@@ -12,7 +10,7 @@ export async function POST(
 ): Promise<NextResponse> {
   const params = z.strictObject({
     userId: z.uuid(),
-    action: z.enum(["lock", "unlock", "deactivate"]),
+    action: z.literal("deactivate"),
   }).safeParse(await context.params);
   if (!params.success) {
     return NextResponse.json(
@@ -26,7 +24,7 @@ export async function POST(
       { status: 422 },
     );
   }
-  const body = accountLockBodySchema.safeParse(
+  const body = accountAvailabilityBodySchema.safeParse(
     await request.json().catch(() => undefined),
   );
   if (!body.success) {

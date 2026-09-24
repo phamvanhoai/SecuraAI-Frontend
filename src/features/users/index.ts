@@ -7,8 +7,5 @@ export { useUserCreateOptions } from "./hooks/use-user-create-options";
 export { useUsers } from "./hooks/use-users";
 export { useUserDetail } from "./hooks/use-user-detail";
 export { useUpdateUser } from "./hooks/use-update-user";
-export {
-  accountLockBodySchema,
-  accountLockParamsSchema,
-} from "./schemas/account-lock-schema";
 export type { UserDetail, UserListResponse } from "./schemas/user-schema";
+export { accountAvailabilityBodySchema } from "./schemas/account-availability-schema";

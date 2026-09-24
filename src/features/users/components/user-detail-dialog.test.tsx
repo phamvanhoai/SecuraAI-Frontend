@@ -47,9 +47,7 @@ describe("UserDetailDialog", () => {
         mustChangePassword: false,
         emailVerifiedAt: "2026-09-01T00:00:00.000Z",
         lastLoginAt: "2026-09-19T01:00:00.000Z",
-        lastLockedAt: null,
         disabledAt: null,
-        mfaEnabled: true,
         department: {
           id: "00000000-0000-4000-8000-000000000020",
           code: "SEC",

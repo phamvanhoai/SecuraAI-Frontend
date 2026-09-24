@@ -72,7 +72,7 @@ export type UserCreateOptions = z.infer<typeof userCreateOptionsSchema>;
 
 const userStatusSchema = z.preprocess(
   (value) => (typeof value === "string" ? value.toLowerCase() : value),
-  z.enum(["active", "inactive", "locked", "disabled"]),
+  z.enum(["active", "inactive", "disabled"]),
 );
 
 export const userListItemSchema = z.object({
@@ -108,7 +108,6 @@ export const userListResponseSchema = z.object({
   summary: z.object({
     active: z.coerce.number().int().nonnegative(),
     inactive: z.coerce.number().int().nonnegative(),
-    locked: z.coerce.number().int().nonnegative(),
     disabled: z.coerce.number().int().nonnegative(),
   }),
 });
@@ -134,9 +133,7 @@ export const userDetailSchema = z.object({
   mustChangePassword: z.boolean(),
   emailVerifiedAt: z.iso.datetime().nullable(),
   lastLoginAt: z.iso.datetime().nullable(),
-  lastLockedAt: z.iso.datetime().nullable(),
   disabledAt: z.iso.datetime().nullable(),
-  mfaEnabled: z.boolean(),
   department: z
     .object({ id: z.uuid(), code: z.string(), name: z.string() })
     .nullable(),

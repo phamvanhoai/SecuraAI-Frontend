@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { loginSchema } from "@/features/auth";
-import { setAuthCookies, setMfaChallengeCookie } from "@/lib/auth/auth-cookies";
+import { setAuthCookies } from "@/lib/auth/auth-cookies";
 import { publicAuthError, requestLogin } from "@/lib/auth/backend-auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -22,18 +22,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const result = await requestLogin(input.data, request);
-    if (result.challenge) {
-      const response = NextResponse.json({
-        success: true,
-        data: { mfaRequired: true, expiresIn: result.challenge.expiresIn },
-      });
-      setMfaChallengeCookie(
-        response,
-        result.challenge.challengeToken,
-        result.challenge.expiresIn,
-      );
-      return response;
-    }
     if (!result.tokens) {
       return NextResponse.json(
         { success: false, error: publicAuthError(result.response.status) },

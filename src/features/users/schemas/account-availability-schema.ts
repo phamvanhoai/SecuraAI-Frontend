@@ -7,7 +7,7 @@ export const accountAvailabilityBodySchema = z.strictObject({
 });
 export const accountAvailabilityResultSchema = z.object({
   id: z.uuid(),
-  status: z.enum(["active", "inactive", "locked", "disabled"]),
+  status: z.enum(["active", "inactive", "disabled"]),
   disabledAt: z.iso.datetime({ offset: true }).nullable(),
   deletedAt: z.iso.datetime({ offset: true }).nullable(),
   updatedAt: z.iso.datetime({ offset: true }),

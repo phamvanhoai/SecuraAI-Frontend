@@ -17,14 +17,6 @@ const tokenEnvelopeSchema = z.object({
   success: z.literal(true),
   data: tokenPairSchema,
 });
-const mfaChallengeEnvelopeSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    mfaRequired: z.literal(true),
-    challengeToken: z.string().min(32).max(256),
-    expiresIn: z.number().int().positive().max(300),
-  }),
-});
 
 const userEnvelopeSchema = z.object({
   success: z.literal(true),
@@ -32,7 +24,6 @@ const userEnvelopeSchema = z.object({
 });
 
 export type AuthTokenPair = z.infer<typeof tokenPairSchema>;
-export type MfaChallenge = z.infer<typeof mfaChallengeEnvelopeSchema>["data"];
 
 function backendUrl(path: string): string {
   return `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}${path}`;
@@ -44,7 +35,6 @@ export async function requestLogin(
 ): Promise<{
   response: Response;
   tokens?: AuthTokenPair;
-  challenge?: MfaChallenge;
 }> {
   const userAgent = request.headers.get("user-agent");
   const response = await fetch(backendUrl("/auth/login"), {
@@ -61,14 +51,11 @@ export async function requestLogin(
   const payload: unknown = await response.json();
   const tokens = tokenEnvelopeSchema.safeParse(payload);
   if (tokens.success) return { response, tokens: tokens.data.data };
-  const challenge = mfaChallengeEnvelopeSchema.safeParse(payload);
-  return challenge.success
-    ? { response, challenge: challenge.data.data }
-    : { response };
+  return { response };
 }
 
 export async function requestTokenPair(
-  path: "/auth/login" | "/auth/refresh" | "/auth/mfa/challenge/verify",
+  path: "/auth/login" | "/auth/refresh",
   body: unknown,
   request: Request,
 ): Promise<{ response: Response; tokens?: AuthTokenPair }> {

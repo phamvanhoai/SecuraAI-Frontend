@@ -195,13 +195,6 @@ const modules = {
     icon: Settings,
     section: "Cài đặt",
   },
-  loginHistory: {
-    title: "Login history",
-    slug: "login-history",
-    icon: History,
-    section: "Báo cáo",
-    requiredAnyPermission: ["login-history.read"],
-  },
 } as const satisfies Record<string, ModuleDefinition>;
 
 export const panelModules = {
@@ -226,7 +219,6 @@ export const panelModules = {
     modules.notifications,
     modules.files,
     modules.settings,
-    modules.loginHistory,
   ],
   admin: [
     modules.alerts,

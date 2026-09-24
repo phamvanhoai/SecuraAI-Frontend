@@ -27,17 +27,18 @@ const result = {
   success: true,
   data: {
     id: userId,
-    status: "locked",
-    lastLockedAt: "2026-09-17T08:00:00.000Z",
+    status: "disabled",
+    disabledAt: "2026-09-17T08:00:00.000Z",
+    deletedAt: null,
     updatedAt: "2026-09-17T08:00:00.000Z",
     changed: true,
   },
 };
-const context = (action = "lock", id = userId) => ({
+const context = (action = "deactivate", id = userId) => ({
   params: Promise.resolve({ userId: id, action }),
 });
 function request(body: unknown = input): Request {
-  return new Request(`http://frontend.test/api/users/${userId}/lock`, {
+  return new Request(`http://frontend.test/api/users/${userId}/deactivate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -51,7 +52,7 @@ beforeEach(() => {
   );
 });
 
-describe("account lock BFF", () => {
+describe("account deactivation BFF", () => {
   it("forwards only normalized input with the server-side access token", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -61,7 +62,7 @@ describe("account lock BFF", () => {
       context(),
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      `http://backend.test/api/v1/admin/users/${userId}/lock`,
+      `http://backend.test/api/v1/admin/users/${userId}/deactivate`,
       expect.objectContaining({
         method: "POST",
         cache: "no-store",
@@ -76,20 +77,20 @@ describe("account lock BFF", () => {
 
   it("rejects malformed parameters, unknown actions and invalid bodies before backend calls", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    for (const params of [context("delete"), context("lock", "invalid")]) {
+    for (const params of [context("delete"), context("deactivate", "invalid")]) {
       expect((await POST(request(), params)).status).toBe(422);
     }
     for (const body of [
       {},
       { reason: "short" },
-      { ...input, status: "locked" },
+      { ...input, status: "disabled" },
     ]) {
       expect((await POST(request(body), context())).status).toBe(422);
     }
     expect(
       (
         await POST(
-          new Request("http://frontend.test/api/users/x/lock", {
+          new Request("http://frontend.test/api/users/x/deactivate", {
             method: "POST",
             body: "{",
           }),
@@ -109,9 +110,9 @@ describe("account lock BFF", () => {
     expect(mocks.clearCookies).toHaveBeenCalledWith(response);
   });
 
-  it.each(["lock", "unlock"])(
-    "refreshes a missing access cookie before %s without exposing tokens",
-    async (action) => {
+  it(
+    "refreshes a missing access cookie before deactivation without exposing tokens",
+    async () => {
       mocks.cookieGet.mockImplementation((name: string) =>
         name === "refresh" ? { value: "refresh-token" } : undefined,
       );
@@ -124,9 +125,9 @@ describe("account lock BFF", () => {
       const fetchMock = vi
         .spyOn(globalThis, "fetch")
         .mockResolvedValue(Response.json(result));
-      const response = await POST(request(), context(action));
+      const response = await POST(request(), context());
       expect(fetchMock).toHaveBeenCalledWith(
-        `http://backend.test/api/v1/admin/users/${userId}/${action}`,
+        `http://backend.test/api/v1/admin/users/${userId}/deactivate`,
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: "Bearer fresh-access",
@@ -153,7 +154,7 @@ describe("account lock BFF", () => {
       success: false,
       error: {
         code: "LAST_ACCOUNT_MANAGER",
-        message: "Last manager cannot be locked",
+        message: "Last administrator cannot be deactivated",
       },
     };
     const fetchMock = vi

@@ -147,7 +147,7 @@ function DepartmentReportContent({
             label: "Employees",
             loading: report.isPending,
             value: summary ? String(summary.employees) : "—",
-            detail: "Active and locked accounts",
+            detail: "Active accounts",
           },
           {
             label: "Assigned employees",
