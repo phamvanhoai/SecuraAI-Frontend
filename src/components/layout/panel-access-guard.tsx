@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { canAccessPanel, defaultPanelPath, type PanelKind } from "@/config/navigation";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 
 export function PanelAccessGuard({ panel, children }: { panel: PanelKind; children: ReactNode }) {
   const pathname = usePathname();

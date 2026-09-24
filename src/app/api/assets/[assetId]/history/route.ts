@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { assetHistoryQuerySchema } from "@/features/assets";
+import { assetHistoryQuerySchema } from "@/features/it-asset-management";
 import { authCookieNames, clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
 import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";

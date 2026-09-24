@@ -1,4 +1,4 @@
-import { LogSourcesManager } from "@/features/security-monitoring";
+import { LogSourcesManager } from "@/features/event-ingestion";
 export default function Page() {
   return <LogSourcesManager />;
 }

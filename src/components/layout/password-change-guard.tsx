@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { RootLoadingSkeleton } from "@/components/feedback/loading-skeletons";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 
 export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();

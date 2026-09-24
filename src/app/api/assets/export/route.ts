@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { assetListQuerySchema } from "@/features/assets";
+import { assetListQuerySchema } from "@/features/it-asset-management";
 import {
   authCookieNames,
   clearAuthCookies,

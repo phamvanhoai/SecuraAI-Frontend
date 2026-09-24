@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MyCertificatesManager } from "./my-certificates-manager";
 
 const mocks = vi.hoisted(() => ({ session: vi.fn(), query: vi.fn() }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("../hooks/use-my-certificates", () => ({
   useMyCertificates: mocks.query,
 }));

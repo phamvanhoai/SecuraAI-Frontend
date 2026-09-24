@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { classifyAssetCriticalitySchema } from "@/features/assets";
+import { classifyAssetCriticalitySchema } from "@/features/it-asset-management";
 import {
   authCookieNames,
   clearAuthCookies,

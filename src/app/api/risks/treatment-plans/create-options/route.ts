@@ -1,4 +1,4 @@
-import { treatmentPlanCreateOptionsQuerySchema } from "@/features/risks";
+import { treatmentPlanCreateOptionsQuerySchema } from "@/features/risk-assessment";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 export async function GET(request: Request): Promise<Response> {

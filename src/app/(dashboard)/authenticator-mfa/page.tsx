@@ -3,7 +3,7 @@ import {
   ProductPageHeader,
   ProductPanel,
 } from "@/components/data-display/static-product";
-import { MfaSetupCard } from "@/features/auth";
+import { MfaSetupCard } from "@/features/authentication-account";
 
 export const metadata: Metadata = { title: "Authenticator MFA" };
 

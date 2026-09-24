@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AuthSessionUser } from "@/features/auth";
+import type { AuthSessionUser } from "@/features/authentication-account";
 import { canViewLoginHistory } from "./access";
 const user: AuthSessionUser = {
   id: "user",

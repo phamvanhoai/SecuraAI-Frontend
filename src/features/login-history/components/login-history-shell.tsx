@@ -20,7 +20,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { ApiError } from "@/lib/api/api-error";
 import { useLoginHistory } from "../hooks/use-login-history";
 import { canViewLoginHistory } from "../lib/access";

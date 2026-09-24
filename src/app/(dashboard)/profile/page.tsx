@@ -9,7 +9,7 @@ import {
   StatusBadge,
 } from "@/components/data-display/static-product";
 import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeletons";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 
 export default function ProfilePage() {
   const session = useSessionUser();

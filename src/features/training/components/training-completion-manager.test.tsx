@@ -27,7 +27,7 @@ vi.mock("../hooks/use-certificate", () => ({
 vi.mock("./training-certificate-panel", () => ({
   TrainingCertificatePanel: () => null,
 }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: vi.fn() }),
 }));

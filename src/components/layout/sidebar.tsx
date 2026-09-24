@@ -12,7 +12,7 @@ import {
   type NavigationItem,
 } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const sectionOrder: readonly NavigationItem["section"][] = [

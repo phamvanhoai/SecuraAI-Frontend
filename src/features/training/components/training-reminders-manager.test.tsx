@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
 }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("../hooks/use-reminders", () => ({
   useTrainingReminders: mocks.query,
   useMarkTrainingReminderRead: () => ({

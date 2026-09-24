@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthSessionUser } from "@/features/auth";
+import type { AuthSessionUser } from "@/features/authentication-account";
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   user: null as AuthSessionUser | null,
@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mocks.replace }),
   usePathname: () => "/admin/login-history",
 }));
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/authentication-account", () => ({
   useSessionUser: () => ({
     isSuccess: true,
     isPending: false,

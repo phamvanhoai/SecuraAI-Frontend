@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
-import { updateTreatmentPlanRequestSchema } from "@/features/risks";
+import { updateTreatmentPlanRequestSchema } from "@/features/risk-assessment";
 
 const paramsSchema = z.object({ treatmentPlanId: z.uuid() });
 
