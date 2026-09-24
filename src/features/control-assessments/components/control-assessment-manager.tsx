@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { useAssessmentHistory, useControlAssessments, useCreateControlAssessment } from "../hooks/use-control-assessments";
 import type { ControlAssessmentItem } from "../schemas/control-assessment-schema";
 

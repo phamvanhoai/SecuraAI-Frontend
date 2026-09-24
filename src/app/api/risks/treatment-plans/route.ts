@@ -1,7 +1,7 @@
 import {
   createTreatmentPlanRequestSchema,
   treatmentPlanListQuerySchema,
-} from "@/features/risks";
+} from "@/features/risk-assessment";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 export async function GET(request: Request): Promise<Response> {

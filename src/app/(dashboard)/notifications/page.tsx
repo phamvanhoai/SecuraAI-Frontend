@@ -3,8 +3,8 @@ import { GraduationCap, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { ProductPageHeader } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
-import { useSessionUser } from "@/features/auth";
-import { ComplianceRemindersManager } from "@/features/notifications";
+import { useSessionUser } from "@/features/authentication-account";
+import { ComplianceRemindersManager } from "@/features/notification-system-logs";
 import { TrainingRemindersManager } from "@/features/training";
 import { cn } from "@/lib/utils";
 

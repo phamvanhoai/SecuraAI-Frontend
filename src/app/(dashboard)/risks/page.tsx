@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { RiskAssessmentsShell } from "@/features/risks";
+import { RiskAssessmentsShell } from "@/features/risk-assessment";
 
 export default function RisksPage() {
   return (

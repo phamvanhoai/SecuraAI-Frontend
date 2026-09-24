@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { ThemeToggle } from "./theme-toggle";
 import {
   allowedPanels,

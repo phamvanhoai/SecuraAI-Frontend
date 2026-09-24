@@ -11,7 +11,7 @@ import {
 import { IssuedCertificatesManager } from "./issued-certificates-manager";
 
 const mocks = vi.hoisted(() => ({ session: vi.fn(), query: vi.fn() }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("../hooks/use-issued-certificates", () => ({
   useIssuedCertificates: mocks.query,
 }));

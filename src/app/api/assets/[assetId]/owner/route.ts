@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { assignAssetOwnerSchema } from "@/features/assets";
+import { assignAssetOwnerSchema } from "@/features/it-asset-management";
 import {
   authCookieNames,
   clearAuthCookies,

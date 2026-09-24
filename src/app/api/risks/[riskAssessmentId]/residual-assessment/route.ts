@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { performResidualRiskAssessmentRequestSchema } from "@/features/risks";
+import { performResidualRiskAssessmentRequestSchema } from "@/features/risk-assessment";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 const paramsSchema = z.object({ riskAssessmentId: z.uuid() });

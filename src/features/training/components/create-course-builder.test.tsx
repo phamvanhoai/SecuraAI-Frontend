@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.push }),
   usePathname: () => "/training/create",
 }));
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/authentication-account", () => ({
   useSessionUser: () => ({
     data: { permissions: mocks.permissions },
     isPending: false,

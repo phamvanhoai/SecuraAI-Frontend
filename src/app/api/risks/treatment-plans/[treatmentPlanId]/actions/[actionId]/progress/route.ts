@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { updateTreatmentActionProgressRequestSchema } from "@/features/risks";
+import { updateTreatmentActionProgressRequestSchema } from "@/features/risk-assessment";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 const paramsSchema = z.object({ treatmentPlanId: z.uuid(), actionId: z.uuid() });

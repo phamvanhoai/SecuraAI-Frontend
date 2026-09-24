@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { useIssuedCertificates } from "../hooks/use-issued-certificates";
 import type { IssuedCertificate } from "../schemas/issued-certificates-schema";
 

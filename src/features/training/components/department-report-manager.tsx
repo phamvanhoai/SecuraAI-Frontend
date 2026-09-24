@@ -1,6 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import {
   DataTable,
   type DataTableColumn,

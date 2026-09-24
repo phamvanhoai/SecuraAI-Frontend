@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { MetricStrip, ProductPageHeader, ProductPanel } from "@/components/data-display/static-product";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { useWorkflowDefinitions } from "../hooks/use-workflows";
 import { WorkflowListFilters } from "./workflow-list-filters";
 import { WorkflowListTable } from "./workflow-list-table";

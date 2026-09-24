@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   accountLockBodySchema,
-} from "@/features/users";
+} from "@/features/user-management-authorization";
 import { clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
 import { authenticatedPost } from "@/lib/auth/authenticated-request";
 

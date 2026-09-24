@@ -16,7 +16,7 @@ SecuraAI is an enterprise information-security risk management frontend. Use Nod
 
 ## Sources of truth
 
-In order: current user requirement; this file; backend `AGENTS.md`, `src/modules/README.md`, implemented routes/DTOs and OpenAPI; frontend README. Backend at `D:\GITHUB\SecuraAI-Backend` is read-only from this repository. Never edit, move, execute database references from, or otherwise mutate it.
+In order: current user requirement; this file; backend `AGENTS.md`, the backend `project-docs/new/` baseline, implemented routes/DTOs and OpenAPI; frontend README. Backend is a sibling repository at `C:\Users\Admin\Documents\GITHUB\SecuraAI-Backend`; treat it as read-only while working on Frontend and consume its published API contract.
 
 ## Architecture and boundaries
 
@@ -24,6 +24,7 @@ In order: current user requirement; this file; backend `AGENTS.md`, `src/modules
 - Domain code lives in `features/<domain>/` and exports its public surface through `index.ts`.
 - Reusable UI lives in `components/`; shared infrastructure lives in `lib/`.
 - Flow is page/layout → feature component → hook → feature API → shared API client → backend.
+- Backend V2 domains follow the current Project Tracking names: Authentication & Account, User Management & Authorization, IT Asset Management, Risk Assessment, AI Anomaly Detection & Alerts, Policy & Compliance Control, Information Security Incident Management, Notification & System Logs, Audit, Security & Reporting and Event Ingestion. Frontend feature names and API paths must follow the backend contract for the selected domain.
 - Do not call APIs directly from visual components or place business rules in pages.
 - Do not create one-use abstractions. Never invent API contracts or fake production behavior.
 - Unimplemented modules display an honest “Chưa triển khai” state without fake metrics.

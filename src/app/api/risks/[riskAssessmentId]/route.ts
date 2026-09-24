@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth/auth-cookies";
 import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";
-import { updateRiskAssessmentRequestSchema } from "@/features/risks";
+import { updateRiskAssessmentRequestSchema } from "@/features/risk-assessment";
 
 const paramsSchema = z.object({ riskAssessmentId: z.uuid() });
 export async function GET(

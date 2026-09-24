@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { mfaChallengeSchema } from "@/features/auth/schemas/mfa-challenge-schema";
+import { mfaChallengeSchema } from "@/features/authentication-account/schemas/mfa-challenge-schema";
 import {
   authCookieNames,
   clearMfaChallengeCookie,

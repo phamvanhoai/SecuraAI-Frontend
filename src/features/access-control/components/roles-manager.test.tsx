@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { RolesManager } from "./roles-manager";
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/authentication-account", () => ({
   useSessionUser: () => ({
     data: {
       roles: [{ code: "ADMIN", name: "Administrator" }],

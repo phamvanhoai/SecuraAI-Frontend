@@ -86,7 +86,7 @@ Backend nhận refresh token và trả token pair trong JSON. Next.js BFF trao �
 
 ## Khóa và mở khóa tài khoản (UC7)
 
-Danh sách người dùng có nút Lock/Unlock trên từng tài khoản đủ điều kiện. Cả hai thao tác yêu cầu ADMIN, quyền tương ứng và lý do 10–1000 ký tự. Backend kiểm tra trạng thái, chặn tự khóa/mở khóa và bảo vệ quản trị viên cuối cùng; mở khóa yêu cầu đăng nhập lại. Chi tiết contract và kiểm thử tại [features/users/README.md](./src/features/users/README.md).
+Danh sách người dùng có nút Lock/Unlock trên từng tài khoản đủ điều kiện. Cả hai thao tác yêu cầu ADMIN, quyền tương ứng và lý do 10–1000 ký tự. Backend kiểm tra trạng thái, chặn tự khóa/mở khóa và bảo vệ quản trị viên cuối cùng; mở khóa yêu cầu đăng nhập lại. Chi tiết contract và kiểm thử tại [features/user-management-authorization/README.md](./src/features/user-management-authorization/README.md).
 
 Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có thể đặt `PLAYWRIGHT_PORT=3001` để tránh cổng backend; nếu chưa tải Chromium của Playwright, đặt `PLAYWRIGHT_CHANNEL=chrome` để dùng Chrome đã cài. Screenshot fixture xem trước được ghi vào `test-results/`.
 

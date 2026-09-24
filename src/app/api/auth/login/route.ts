@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loginSchema } from "@/features/auth";
+import { loginSchema } from "@/features/authentication-account";
 import { setAuthCookies, setMfaChallengeCookie } from "@/lib/auth/auth-cookies";
 import { publicAuthError, requestLogin } from "@/lib/auth/backend-auth";
 
