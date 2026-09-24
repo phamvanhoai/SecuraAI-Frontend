@@ -47,13 +47,19 @@ export const roleFormSchema = z.object({
     .trim()
     .min(2, "Role code must contain at least 2 characters")
     .max(50, "Role code must not exceed 50 characters")
-    .regex(/^[A-Z][A-Z0-9_]*$/, "Use uppercase letters, numbers, and underscores only"),
+    .regex(
+      /^[A-Z][A-Z0-9_]*$/,
+      "Use uppercase letters, numbers, and underscores only",
+    ),
   name: z
     .string()
     .trim()
     .min(2, "Role name must contain at least 2 characters")
     .max(100, "Role name must not exceed 100 characters"),
-  description: z.string().trim().max(1000, "Description must not exceed 1,000 characters"),
+  description: z
+    .string()
+    .trim()
+    .max(1000, "Description must not exceed 1,000 characters"),
   permissionIds: z.array(z.uuid()).max(200),
 });
 
@@ -63,3 +69,22 @@ export type Role = z.infer<typeof roleSchema>;
 export type RoleList = z.infer<typeof roleListSchema>;
 export type RoleFormInput = z.input<typeof roleFormSchema>;
 export type RoleFormValues = z.output<typeof roleFormSchema>;
+export const configureRolePermissionsSchema = z.object({
+  permissionIds: z
+    .array(z.uuid())
+    .max(200)
+    .refine((ids) => new Set(ids).size === ids.length),
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Provide a reason of at least 10 characters")
+    .max(1000),
+});
+export type ConfigureRolePermissionsValues = z.infer<
+  typeof configureRolePermissionsSchema
+>;
+export const configuredRoleSchema = z.object({
+  role: roleSchema,
+  changed: z.boolean(),
+  affectedUserCount: z.number().int().nonnegative(),
+});

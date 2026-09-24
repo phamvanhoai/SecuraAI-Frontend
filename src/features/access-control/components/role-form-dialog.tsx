@@ -2,17 +2,17 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  roleFormSchema,
+  configureRolePermissionsSchema,
   type Permission,
   type Role,
-  type RoleFormInput,
-  type RoleFormValues,
+  type ConfigureRolePermissionsValues,
 } from "../schemas/role-schema";
 
 type RoleFormDialogProps = {
@@ -22,7 +22,7 @@ type RoleFormDialogProps = {
   pending: boolean;
   errorMessage: string | null;
   onClose: () => void;
-  onSubmit: (values: RoleFormValues) => Promise<void>;
+  onSubmit: (values: ConfigureRolePermissionsValues) => Promise<void>;
 };
 
 export function RoleFormDialog({
@@ -35,21 +35,33 @@ export function RoleFormDialog({
   onSubmit,
 }: RoleFormDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const { register, reset, handleSubmit } = useForm<
-    RoleFormInput,
-    unknown,
-    RoleFormValues
-  >({
-    resolver: zodResolver(roleFormSchema),
-    defaultValues: { code: "", name: "", description: "", permissionIds: [] },
+  const {
+    register,
+    reset,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm<ConfigureRolePermissionsValues>({
+    resolver: zodResolver(configureRolePermissionsSchema),
+    defaultValues: { permissionIds: [], reason: "" },
   });
+  const selectedIds = useWatch({ control, name: "permissionIds" }) ?? [];
+  const previousIds = new Set(
+    role?.permissions.map((permission) => permission.id) ?? [],
+  );
+  const selected = new Set(selectedIds);
+  const added = permissions.filter(
+    (permission) =>
+      selected.has(permission.id) && !previousIds.has(permission.id),
+  );
+  const removed =
+    role?.permissions.filter((permission) => !selected.has(permission.id)) ??
+    [];
 
   useEffect(() => {
     reset({
-      code: role?.code ?? "",
-      name: role?.name ?? "",
-      description: role?.description ?? "",
       permissionIds: role?.permissions.map((permission) => permission.id) ?? [],
+      reason: "",
     });
   }, [reset, role, open]);
 
@@ -144,6 +156,38 @@ export function RoleFormDialog({
             </div>
           )}
         </fieldset>
+        {errors.permissionIds ? (
+          <p className="text-danger mt-2 text-sm">Select valid permissions.</p>
+        ) : null}
+        <div
+          className="bg-neutral-soft mt-4 rounded-lg p-4 text-sm"
+          aria-live="polite"
+        >
+          <p className="font-semibold">Review changes</p>
+          <p className="mt-1">
+            Add {added.length}:{" "}
+            {added.map((item) => item.code).join(", ") || "None"}
+          </p>
+          <p>
+            Remove {removed.length}:{" "}
+            {removed.map((item) => item.code).join(", ") || "None"}
+          </p>
+          <p className="text-muted mt-2">
+            Affected users will need to sign in again.
+          </p>
+        </div>
+        <div className="mt-4">
+          <Label htmlFor="permission-reason">Reason for change</Label>
+          <Textarea
+            id="permission-reason"
+            className="mt-2"
+            {...register("reason")}
+            maxLength={1000}
+          />
+          {errors.reason ? (
+            <p className="text-danger mt-1 text-sm">{errors.reason.message}</p>
+          ) : null}
+        </div>
         <div className="mt-6 flex justify-end gap-2">
           <Button
             disabled={pending}
@@ -153,7 +197,14 @@ export function RoleFormDialog({
           >
             Cancel
           </Button>
-          <Button disabled={pending} type="submit">
+          <Button
+            disabled={
+              pending ||
+              permissions.length === 0 ||
+              (added.length === 0 && removed.length === 0)
+            }
+            type="submit"
+          >
             {pending ? "Saving..." : "Save permissions"}
           </Button>
         </div>

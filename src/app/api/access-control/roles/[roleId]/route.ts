@@ -31,3 +31,15 @@ export async function DELETE(
   const { roleId } = await context.params;
   return proxyAuthenticatedRequest(rolePath(roleId), { method: "DELETE" });
 }
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ roleId: string }> },
+): Promise<Response> {
+  const { roleId } = await context.params;
+  return proxyAuthenticatedRequest(`${rolePath(roleId)}/permissions`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: await request.text(),
+  });
+}

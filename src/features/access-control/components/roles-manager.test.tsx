@@ -4,6 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { RolesManager } from "./roles-manager";
+vi.mock("@/features/auth", () => ({
+  useSessionUser: () => ({
+    data: {
+      roles: [{ code: "ADMIN", name: "Administrator" }],
+      permissions: ["roles.update"],
+    },
+  }),
+}));
 
 const permissionId = "11111111-1111-4111-8111-111111111111";
 const systemRole = {
@@ -48,8 +56,15 @@ describe("RolesManager", () => {
 
   it("keeps Admin read-only and updates permissions for another fixed role", async () => {
     const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
-      if (init?.method === "PATCH") {
-        return Response.json({ success: true, data: securityOfficerRole });
+      if (init?.method === "PUT") {
+        return Response.json({
+          success: true,
+          data: {
+            role: { ...securityOfficerRole, permissions: [] },
+            changed: true,
+            affectedUserCount: 1,
+          },
+        });
       }
       if (String(input).includes("/api/access-control/permissions")) {
         return Response.json({
@@ -118,12 +133,16 @@ describe("RolesManager", () => {
     await user.click(
       permissionDialog.getByRole("checkbox", { name: /roles\.read/ }),
     );
+    await user.type(
+      permissionDialog.getByLabelText("Reason for change"),
+      "Quarterly access review",
+    );
     await user.click(
       permissionDialog.getByRole("button", { name: "Save permissions" }),
     );
     expect(await screen.findByText("Permissions updated")).toBeVisible();
     expect(
-      fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH"),
+      fetchMock.mock.calls.some(([, init]) => init?.method === "PUT"),
     ).toBe(true);
   });
 });
