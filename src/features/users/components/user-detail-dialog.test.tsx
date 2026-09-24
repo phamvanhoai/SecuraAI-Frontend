@@ -40,7 +40,7 @@ describe("UserDetailDialog", () => {
         id: "00000000-0000-4000-8000-000000000010",
         email: "analyst@example.com",
         fullName: "Security Analyst",
-        phone: null,
+        phone: "0901234567",
         employeeCode: "SEC-010",
         avatarUrl: null,
         status: "active",
@@ -77,10 +77,12 @@ describe("UserDetailDialog", () => {
     );
 
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
-    expect(screen.getByText("Security Analyst")).toBeInTheDocument();
+    expect(screen.getByText("Full name")).toBeInTheDocument();
+    expect(screen.getAllByText("Security Analyst")).toHaveLength(2);
     expect(screen.getByText("Security Officer")).toBeInTheDocument();
     expect(screen.getByText("Verified")).toBeInTheDocument();
-    expect(screen.queryByText("Phone")).not.toBeInTheDocument();
+    expect(screen.getByText("Phone")).toBeInTheDocument();
+    expect(screen.getByText("0901234567")).toBeInTheDocument();
     expect(screen.queryByText("MFA")).not.toBeInTheDocument();
   });
 

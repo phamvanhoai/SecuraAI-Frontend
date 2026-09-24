@@ -176,6 +176,23 @@ export const courseSchema = z.object({
   updatedAt: z.iso.datetime({ offset: true }),
 });
 
+// Existing drafts may be incomplete while they are being authored. Keep the
+// strict answer/lesson rules for create and update, but allow the editor to
+// load an incomplete draft so the user can repair it instead of seeing a
+// misleading "unable to load" message.
+const draftAssessmentSchema = z.object({
+  title: z.string(),
+  passingScore: z.number().min(0).max(100),
+  maxAttempts: z.number().int().min(1).max(10),
+  questions: z.array(
+    z.object({
+      type: z.enum(["single_choice", "multiple_choice"]),
+      text: z.string(),
+      options: z.array(z.object({ text: z.string(), isCorrect: z.boolean() })),
+    }),
+  ),
+});
+
 export const courseDraftSchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -184,7 +201,7 @@ export const courseDraftSchema = z.object({
   status: z.literal("draft"),
   updatedAt: z.iso.datetime({ offset: true }),
   lessons: z.array(courseLessonSchema),
-  assessment: courseAssessmentSchema.nullable(),
+  assessment: draftAssessmentSchema.nullable(),
 });
 
 export const updateCourseDraftSchema = z

@@ -10,6 +10,15 @@ export const createUserSchema = z.object({
     .trim()
     .min(2, "Full name must contain at least 2 characters.")
     .max(150),
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .refine(
+      (value) => value.length === 0 || value.length >= 3,
+      "Phone number must contain at least 3 characters.",
+    )
+    .optional(),
   employeeCode: z.string().trim().min(1, "Employee code is required.").max(50),
   departmentId: z.uuid("Select a department."),
   roleCodes: z.array(z.string()).min(1, "Select at least one role.").max(10),
@@ -17,6 +26,23 @@ export const createUserSchema = z.object({
 
 export type CreateUserInput = z.input<typeof createUserSchema>;
 export type CreateUserPayload = z.output<typeof createUserSchema>;
+
+export const updateUserSchema = z.object({
+  fullName: z.string().trim().min(2).max(150),
+  phone: z
+    .string()
+    .trim()
+    .max(30)
+    .refine(
+      (value) => value.length === 0 || value.length >= 3,
+      "Phone number must contain at least 3 characters.",
+    ),
+  employeeCode: z.string().trim().max(50),
+  departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
+});
+
+export type UpdateUserInput = z.input<typeof updateUserSchema>;
+export type UpdateUserPayload = z.output<typeof updateUserSchema>;
 
 export const createdUserSchema = z.object({
   id: z.string(),

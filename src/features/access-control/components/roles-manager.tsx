@@ -20,14 +20,19 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
+import { useSessionUser } from "@/features/auth";
 import {
   usePermissions,
   useRoleMetrics,
   useRoles,
-  useUpdateRole,
+  useConfigureRolePermissions,
 } from "../hooks/use-roles";
 import { isFixedRoleCode } from "../lib/fixed-roles";
-import type { Permission, Role, RoleFormValues } from "../schemas/role-schema";
+import type {
+  Permission,
+  Role,
+  ConfigureRolePermissionsValues,
+} from "../schemas/role-schema";
 import { RoleDetailDialog } from "./role-detail-dialog";
 import { RoleFormDialog } from "./role-form-dialog";
 
@@ -61,7 +66,11 @@ export function RolesManager() {
   });
   const metrics = useRoleMetrics();
   const permissionCatalog = usePermissions();
-  const updateMutation = useUpdateRole();
+  const session = useSessionUser();
+  const canConfigure =
+    (session.data?.roles.some((role) => role.code === "ADMIN") ?? false) &&
+    (session.data?.permissions.includes("roles.update") ?? false);
+  const updateMutation = useConfigureRolePermissions();
 
   const permissions: readonly Permission[] =
     permissionCatalog.data?.items ?? [];
@@ -99,7 +108,7 @@ export function RolesManager() {
       header: "Type",
       cell: (role) => (
         <StatusBadge tone={isFixedRoleCode(role.code) ? "success" : "info"}>
-          {isFixedRoleCode(role.code) ? "System role" : "Legacy role"}
+          {isFixedRoleCode(role.code) ? "System role" : "Custom role"}
         </StatusBadge>
       ),
     },
@@ -128,7 +137,7 @@ export function RolesManager() {
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
             View details
           </button>
-          {isFixedRoleCode(role.code) && role.code !== "ADMIN" ? (
+          {canConfigure && role.code !== "ADMIN" ? (
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => {
@@ -152,15 +161,20 @@ export function RolesManager() {
     setSearch(searchDraft.trim());
   }
 
-  async function savePermissions(values: RoleFormValues): Promise<void> {
+  async function savePermissions(
+    values: ConfigureRolePermissionsValues,
+  ): Promise<void> {
     if (!editingRole || editingRole.code === "ADMIN") return;
     setFormError(null);
     try {
-      await updateMutation.mutateAsync({ id: editingRole.id, input: values });
+      const result = await updateMutation.mutateAsync({
+        id: editingRole.id,
+        input: { ...values, expectedUpdatedAt: editingRole.updatedAt },
+      });
       setEditingRole(null);
       toast.success(
         "Permissions updated",
-        `${editingRole.name} now uses the selected permissions.`,
+        `${editingRole.name} updated. ${result.affectedUserCount} affected user(s) must sign in again.`,
       );
     } catch (error: unknown) {
       setFormError(userError(error));
@@ -173,7 +187,7 @@ export function RolesManager() {
     <>
       <ProductPageHeader
         title="Roles and permissions"
-        description="Review system roles and manage permission assignments for non-admin roles."
+        description="Review roles and configure module permissions for non-admin roles."
         showSampleNotice={false}
       />
       <MetricStrip
@@ -203,11 +217,11 @@ export function RolesManager() {
             loading: metrics.isPending,
           },
           {
-            label: "Legacy roles",
+            label: "Custom roles",
             value: metrics.data
               ? String(metrics.data.total - metrics.data.fixed)
               : "—",
-            detail: "Read-only until removed from the access model",
+            detail: "Custom roles",
             tone: "neutral",
             loading: metrics.isPending,
           },
@@ -282,7 +296,7 @@ export function RolesManager() {
         errorMessage={formError}
         onClose={() => setEditingRole(null)}
         onSubmit={savePermissions}
-        open={editingRole !== null}
+        open={editingRole !== null && canConfigure}
         pending={updateMutation.isPending}
         permissions={permissions}
         role={editingRole}

@@ -21,7 +21,9 @@ export function ProductPageHeader({
   onPrimaryAction,
   onSecondaryAction,
   secondaryActionIcon,
-  showSampleNotice = true,
+  // Real API-backed pages should not advertise their content as mock data.
+  // Opt in only on an explicitly static prototype page.
+  showSampleNotice = false,
   breadcrumbLabel,
 }: {
   title: string;

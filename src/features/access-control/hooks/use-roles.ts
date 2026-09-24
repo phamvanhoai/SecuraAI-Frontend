@@ -8,9 +8,13 @@ import {
   listPermissions,
   listRoles,
   updateRole,
+  configureRolePermissions,
   type ListRolesInput,
 } from "../api/roles";
-import type { RoleFormValues } from "../schemas/role-schema";
+import type {
+  ConfigureRolePermissionsValues,
+  RoleFormValues,
+} from "../schemas/role-schema";
 
 export const roleKeys = {
   all: ["access-control", "roles"] as const,
@@ -49,8 +53,26 @@ export function useCreateRole() {
 export function useUpdateRole() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: RoleFormValues }) =>
-      updateRole(id, input),
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: Pick<RoleFormValues, "code" | "name" | "description">;
+    }) => updateRole(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roleKeys.all }),
+  });
+}
+export function useConfigureRolePermissions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: ConfigureRolePermissionsValues & { expectedUpdatedAt: string };
+    }) => configureRolePermissions(id, input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: roleKeys.all }),
   });
 }

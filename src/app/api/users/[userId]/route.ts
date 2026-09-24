@@ -25,3 +25,45 @@ export async function GET(
     { method: "GET" },
   );
 }
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ userId: string }> },
+): Promise<Response> {
+  const parsed = paramsSchema.safeParse(await context.params);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Invalid user identifier" },
+      },
+      { status: 422 },
+    );
+  }
+  return forwardUsersRequest(
+    request,
+    `admin/users/${encodeURIComponent(parsed.data.userId)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: await request.text(),
+    },
+  );
+}
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ userId: string }> },
+): Promise<Response> {
+  const parsed = paramsSchema.safeParse(await context.params);
+  if (!parsed.success) {
+    return NextResponse.json({ success: false, error: {
+      code: "VALIDATION_ERROR", message: "Invalid user identifier",
+    } }, { status: 422 });
+  }
+  return forwardUsersRequest(
+    request,
+    `admin/users/${encodeURIComponent(parsed.data.userId)}`,
+    { method: "DELETE", headers: { "Content-Type": "application/json" }, body: await request.text() },
+  );
+}

@@ -81,10 +81,9 @@ describe("CreateUserDialog", () => {
     const user = userEvent.setup();
     render(<CreateUserDialog open onClose={onClose} />);
 
-    expect(screen.queryByLabelText(/Phone/i)).not.toBeInTheDocument();
-
     await user.type(screen.getByLabelText("Email"), "NEW@EXAMPLE.COM");
     await user.type(screen.getByLabelText("Full name"), "New User");
+    await user.type(screen.getByLabelText("Phone"), "0901234567");
     await user.type(screen.getByLabelText("Employee code"), "EMP-010");
     await user.selectOptions(screen.getByLabelText("Department"), [
       "00000000-0000-4000-8000-000000000020",
@@ -96,6 +95,7 @@ describe("CreateUserDialog", () => {
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
         email: "new@example.com",
         fullName: "New User",
+        phone: "0901234567",
         employeeCode: "EMP-010",
         departmentId: "00000000-0000-4000-8000-000000000020",
         roleCodes: ["EMPLOYEE"],

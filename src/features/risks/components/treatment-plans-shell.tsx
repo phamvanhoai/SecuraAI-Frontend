@@ -99,8 +99,11 @@ const columns: readonly DataTableColumn<TreatmentPlanListItem>[] = [
           <span className="mb-1 flex justify-between gap-3 text-xs">
             <span>{plan.progressPercent}%</span>
             <span className="text-muted">
-              {plan.completedActions}/{plan.totalActions} actions
+              {plan.completedActions}/{plan.totalActions} completed
             </span>
+          </span>
+          <span className="text-muted mb-1 block text-[11px]">
+            {plan.inProgressActions} in progress · {plan.pendingActions} pending
           </span>
           <span
             aria-label={`${plan.progressPercent}% complete`}
@@ -130,6 +133,11 @@ const columns: readonly DataTableColumn<TreatmentPlanListItem>[] = [
         </span>
         {plan.isOverdue ? (
           <span className="text-danger text-xs font-medium">Overdue</span>
+        ) : null}
+        {plan.overdueActions > 0 ? (
+          <span className="text-danger block text-xs font-medium">
+            {plan.overdueActions} overdue action{plan.overdueActions === 1 ? "" : "s"}
+          </span>
         ) : null}
       </span>
     ),
@@ -448,8 +456,8 @@ export function TreatmentPlansShell() {
       </ProductPanel>
       <p className="text-muted mt-3 flex items-center gap-2 text-xs">
         <CalendarClock className="size-4" aria-hidden="true" /> Progress
-        excludes cancelled actions. Overdue plans exclude completed and
-        cancelled plans.
+        excludes cancelled actions. Deadline warnings include overdue plans or
+        active actions; completed and cancelled items are excluded.
       </p>
     </>
   );

@@ -63,6 +63,7 @@ describe("add user API", () => {
     await createUser({
       email: "new@example.com",
       fullName: "New User",
+      phone: "0901234567",
       employeeCode: "EMP-010",
       departmentId: "00000000-0000-4000-8000-000000000020",
       roleCodes: ["EMPLOYEE"],
@@ -74,6 +75,7 @@ describe("add user API", () => {
         body: JSON.stringify({
           email: "new@example.com",
           fullName: "New User",
+          phone: "0901234567",
           employeeCode: "EMP-010",
           departmentId: "00000000-0000-4000-8000-000000000020",
           roleCodes: ["EMPLOYEE"],
