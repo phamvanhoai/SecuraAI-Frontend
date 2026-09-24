@@ -1,4 +1,4 @@
-import type { AuthSessionUser } from "@/features/auth";
+import type { AuthSessionUser } from "@/features/authentication-account";
 
 export function canViewLoginHistory(
   user: AuthSessionUser | null | undefined,

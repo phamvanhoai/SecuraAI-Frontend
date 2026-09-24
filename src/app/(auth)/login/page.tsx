@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LoginForm } from "@/features/auth";
+import { LoginForm } from "@/features/authentication-account";
 import { safeReturnUrl } from "@/lib/auth/permissions";
 
 export const metadata: Metadata = { title: "Sign in" };

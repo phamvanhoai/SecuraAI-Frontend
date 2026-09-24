@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { AssetsShell } from "@/features/assets";
+import { AssetsShell } from "@/features/it-asset-management";
 
 export default function AssetsPage() {
   return (

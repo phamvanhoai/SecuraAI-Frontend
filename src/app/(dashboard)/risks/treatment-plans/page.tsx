@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { TreatmentPlansShell } from "@/features/risks";
+import { TreatmentPlansShell } from "@/features/risk-assessment";
 
 export default function TreatmentPlansPage() {
   return (

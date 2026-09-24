@@ -17,7 +17,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { useMyCertificates } from "../hooks/use-my-certificates";
 import type { MyCertificate } from "../schemas/my-certificates-schema";
 

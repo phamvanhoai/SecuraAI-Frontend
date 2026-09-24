@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ session: vi.fn() }));
 
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
-vi.mock("@/features/policies", () => ({
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/policy-compliance-control", () => ({
   EmployeePolicyAcknowledgementManager: () => (
     <p>Employee policy acknowledgement</p>
   ),

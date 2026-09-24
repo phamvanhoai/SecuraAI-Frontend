@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { cancelRiskAssessmentRequestSchema } from "@/features/risks";
+import { cancelRiskAssessmentRequestSchema } from "@/features/risk-assessment";
 import {
   authCookieNames,
   clearAuthCookies,

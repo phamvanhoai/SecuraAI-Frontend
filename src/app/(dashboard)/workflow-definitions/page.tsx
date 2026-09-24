@@ -1,7 +1,7 @@
 "use client";
 
 import { EmptyState } from "@/components/feedback/empty-state";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { WorkflowManagementView } from "@/features/workflows";
 
 export default function WorkflowDefinitionsPage() {

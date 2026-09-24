@@ -16,7 +16,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
   useRouter: () => ({ replace: mocks.replace }),
 }));
-vi.mock("@/features/auth", () => ({
+vi.mock("@/features/authentication-account", () => ({
   useSessionUser: () => mocks.session,
 }));
 

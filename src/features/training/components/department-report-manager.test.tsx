@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({ query: vi.fn(), session: vi.fn() }));
 vi.mock("../hooks/use-department-report", () => ({
   useDepartmentReport: mocks.query,
 }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();

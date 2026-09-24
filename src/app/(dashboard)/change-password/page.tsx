@@ -3,7 +3,7 @@ import {
   ProductPageHeader,
   ProductPanel,
 } from "@/components/data-display/static-product";
-import { ChangePasswordForm } from "@/features/auth";
+import { ChangePasswordForm } from "@/features/authentication-account";
 
 export const metadata: Metadata = { title: "Change password" };
 

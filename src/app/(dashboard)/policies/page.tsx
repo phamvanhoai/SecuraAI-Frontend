@@ -2,7 +2,7 @@
 import { History } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import {
   EmployeePolicyAcknowledgementManager,
   PolicyDraftsManager,
@@ -11,7 +11,7 @@ import {
   PolicyPublicationManager,
   PolicyVersionHistoryManager,
   UpdatePolicyVersionManager,
-} from "@/features/policies";
+} from "@/features/policy-compliance-control";
 
 type View =
   "default" | "new-version" | "assign-departments" | "map-controls" | "history";

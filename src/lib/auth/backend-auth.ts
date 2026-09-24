@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   sessionUserSchema,
   type AuthSessionUser,
-} from "@/features/auth/types/session-user";
+} from "@/features/authentication-account/types/session-user";
 import { env } from "@/lib/env";
 
 const tokenPairSchema = z.object({

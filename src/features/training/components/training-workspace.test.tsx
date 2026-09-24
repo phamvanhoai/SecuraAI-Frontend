@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TrainingWorkspace } from "./training-workspace";
 const mocks = vi.hoisted(() => ({ session: vi.fn() }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("./training-courses-manager", () => ({
   TrainingCoursesManager: ({
     onAssessments,

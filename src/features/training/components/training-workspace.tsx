@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { ProductPageHeader } from "@/components/data-display/static-product";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import { TrainingCoursesManager } from "./training-courses-manager";
 import { TrainingCompletionManager } from "./training-completion-manager";
 import { MyAssessmentsManager } from "./my-assessments-manager";

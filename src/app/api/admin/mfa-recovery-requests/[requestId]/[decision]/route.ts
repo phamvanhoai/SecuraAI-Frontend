@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { decideMfaRecoverySchema } from "@/features/auth/schemas/mfa-recovery-schema";
+import { decideMfaRecoverySchema } from "@/features/authentication-account/schemas/mfa-recovery-schema";
 import { authenticatedPost } from "@/lib/auth/authenticated-request";
 import { clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
 

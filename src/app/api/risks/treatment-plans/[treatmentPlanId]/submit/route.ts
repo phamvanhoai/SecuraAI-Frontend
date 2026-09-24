@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { submitTreatmentPlanRequestSchema } from "@/features/risks/schemas/submit-treatment-plan-schema";
+import { submitTreatmentPlanRequestSchema } from "@/features/risk-assessment/schemas/submit-treatment-plan-schema";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 const paramsSchema = z.object({ treatmentPlanId: z.uuid() });

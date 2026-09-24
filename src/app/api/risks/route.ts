@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import {
   createRiskAssessmentRequestSchema,
   riskListQuerySchema,
-} from "@/features/risks";
+} from "@/features/risk-assessment";
 import {
   authCookieNames,
   clearAuthCookies,

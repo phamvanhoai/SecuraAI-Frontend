@@ -2,7 +2,7 @@ import {
   ProductPageHeader,
   ProductPanel,
 } from "@/components/data-display/static-product";
-import { MfaRecoveryAdmin } from "@/features/auth/components/mfa-recovery-admin";
+import { MfaRecoveryAdmin } from "@/features/authentication-account/components/mfa-recovery-admin";
 
 export default function MfaRecoveryPage() {
   return (

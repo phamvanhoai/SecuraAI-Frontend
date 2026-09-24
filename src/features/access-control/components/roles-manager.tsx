@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/api-error";
-import { useSessionUser } from "@/features/auth";
+import { useSessionUser } from "@/features/authentication-account";
 import {
   usePermissions,
   useRoleMetrics,

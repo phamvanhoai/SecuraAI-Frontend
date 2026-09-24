@@ -18,7 +18,7 @@ vi.mock("../hooks/use-certificate", () => ({
   useTrainingCertificate: mocks.query,
   useIssueTrainingCertificate: mocks.mutation,
 }));
-vi.mock("@/features/auth", () => ({ useSessionUser: mocks.session }));
+vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
