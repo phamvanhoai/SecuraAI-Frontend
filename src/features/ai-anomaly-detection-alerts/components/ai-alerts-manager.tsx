@@ -125,6 +125,18 @@ export function AiAlertsManager() {
       ),
     },
     {
+      key: "riskLevel",
+      header: "AI risk level",
+      cell: (item) =>
+        item.riskLevel ? (
+          <StatusBadge tone={riskLevelTone(item.riskLevel)}>
+            {formatRiskLevel(item.riskLevel)}
+          </StatusBadge>
+        ) : (
+          <span className="text-muted">Not available</span>
+        ),
+    },
+    {
       key: "status",
       header: "Status",
       cell: (item) => (
@@ -161,7 +173,7 @@ export function AiAlertsManager() {
             type="button"
           >
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            View details
+            View XAI explanation
           </button>
           {canEvaluate ? (
             <>
@@ -405,6 +417,7 @@ export function AiAlertsManager() {
                 "Log source",
                 "Asset",
                 "Anomaly score",
+                "AI risk level",
                 "Status",
                 "Detected",
                 "Actions",
@@ -476,6 +489,18 @@ function formatDate(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatRiskLevel(level: string): string {
+  return level.replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
+}
+
+function riskLevelTone(level: string) {
+  const normalized = level.toLowerCase();
+  if (normalized === "critical" || normalized === "high") return "danger" as const;
+  if (normalized === "medium") return "warning" as const;
+  if (normalized === "low") return "success" as const;
+  return "neutral" as const;
 }
 
 function formatTime(value: string): string {
