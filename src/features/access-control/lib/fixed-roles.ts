@@ -3,7 +3,6 @@ export const FIXED_ROLE_CODES = [
   "SECURITY_OFFICER",
   "EMPLOYEE",
   "EXECUTIVE",
-  "EXECUTIVE_AUDITOR",
 ] as const;
 
 const fixedRoleCodeSet = new Set<string>(FIXED_ROLE_CODES);

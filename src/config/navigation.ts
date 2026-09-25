@@ -6,10 +6,8 @@ import {
   CalendarClock,
   ClipboardCheck,
   FileStack,
-  FolderOpen,
   Gauge,
   GitBranch,
-  GraduationCap,
   History,
   KeyRound,
   LayoutDashboard,
@@ -72,6 +70,7 @@ const modules = {
     title: "Sự cố",
     slug: "incidents",
     requiredAnyPermission: [
+      "incidents.read",
       "incidents.report",
       "incidents.assign",
       "incidents.update-progress",
@@ -104,6 +103,7 @@ const modules = {
     title: "Kiểm toán",
     slug: "audits",
     icon: History,
+    requiredAnyPermission: ["audit.read"],
     section: "Quản lý",
   },
   policies: {
@@ -116,18 +116,6 @@ const modules = {
       "policies.update",
       "policies.publish",
       "policies.acknowledge",
-    ],
-  },
-  training: {
-    title: "Đào tạo",
-    slug: "training",
-    icon: GraduationCap,
-    section: "Quản lý",
-    requiredAnyPermission: [
-      "training-courses.read",
-      "training-assessments.take",
-      "training-completion.read",
-      "training-certificates.read-own",
     ],
   },
   workflowDefinitions: {
@@ -169,12 +157,14 @@ const modules = {
     title: "Báo cáo",
     slug: "reports",
     icon: FileStack,
+    requiredAnyPermission: ["reports.read"],
     section: "Báo cáo",
   },
   customDashboard: {
     title: "Dashboard tùy chỉnh",
     slug: "custom-dashboard",
     icon: LayoutDashboard,
+    requiredAnyPermission: ["reports.read"],
     section: "Báo cáo",
   },
   notifications: {
@@ -183,16 +173,11 @@ const modules = {
     icon: Bell,
     section: "Báo cáo",
   },
-  files: {
-    title: "Tệp tin",
-    slug: "files",
-    icon: FolderOpen,
-    section: "Báo cáo",
-  },
   settings: {
     title: "Cài đặt",
     slug: "settings",
     icon: Settings,
+    requiredAnyPermission: ["system-settings.read"],
     section: "Cài đặt",
   },
   loginHistory: {
@@ -216,7 +201,6 @@ export const panelModules = {
     modules.compliance,
     modules.audits,
     modules.policies,
-    modules.training,
     modules.workflowDefinitions,
     modules.anomalyMonitoring,
     modules.aiModels,
@@ -224,7 +208,6 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
-    modules.files,
     modules.settings,
     modules.loginHistory,
   ],
@@ -239,7 +222,6 @@ export const panelModules = {
     modules.compliance,
     modules.audits,
     modules.policies,
-    modules.training,
     modules.workflowDefinitions,
     modules.anomalyMonitoring,
     modules.aiModels,
@@ -247,8 +229,8 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
-    modules.files,
     modules.settings,
+    modules.loginHistory,
   ],
   "security-officer": [
     modules.alerts,
@@ -257,22 +239,18 @@ export const panelModules = {
     modules.incidents,
     modules.controls,
     modules.policies,
-    modules.training,
     modules.workflowDefinitions,
     modules.anomalyMonitoring,
     modules.aiModels,
     modules.eventLogs,
     modules.reports,
     modules.notifications,
-    modules.files,
   ],
   employee: [
     modules.assets,
-    modules.training,
     modules.policies,
     modules.incidents,
     modules.notifications,
-    modules.files,
   ],
   "executive-auditor": [
     modules.assets,
@@ -285,7 +263,6 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
-    modules.files,
   ],
 } as const satisfies Record<PanelKind, readonly ModuleDefinition[]>;
 
@@ -302,7 +279,7 @@ export const panelRoleCodes: Record<PanelKind, string> = {
   admin: "ADMIN",
   "security-officer": "SECURITY_OFFICER",
   employee: "EMPLOYEE",
-  "executive-auditor": "EXECUTIVE_AUDITOR",
+  "executive-auditor": "EXECUTIVE",
 };
 
 const panelPriority: readonly PanelKind[] = [
@@ -312,17 +289,23 @@ const panelPriority: readonly PanelKind[] = [
   "employee",
 ];
 
+const nonAdminRoles = ["SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"] as const;
+
+function hasKnownNonAdminRole(roleCodes: readonly string[]): boolean {
+  return nonAdminRoles.some((role) => roleCodes.includes(role));
+}
+
 export function allowedPanels(
   roleCodes: readonly string[],
 ): readonly PanelKind[] {
   if (roleCodes.includes("ADMIN")) return ["admin"];
-  return roleCodes.length ? ["dashboard"] : [];
+  return hasKnownNonAdminRole(roleCodes) ? ["dashboard"] : [];
 }
 
 export function defaultPanelPath(roleCodes: readonly string[]): string {
   return roleCodes.includes("ADMIN")
     ? "/admin"
-    : roleCodes.length
+    : hasKnownNonAdminRole(roleCodes)
       ? "/dashboard"
       : "/profile";
 }
@@ -337,7 +320,7 @@ export function canAccessPanel(
   panel: PanelKind,
 ): boolean {
   if (panel === "dashboard")
-    return roleCodes.length > 0 && !roleCodes.includes("ADMIN");
+    return hasKnownNonAdminRole(roleCodes) && !roleCodes.includes("ADMIN");
   return roleCodes.includes(panelRoleCodes[panel]);
 }
 
@@ -365,7 +348,9 @@ export function getPanelKind(
         segment === "employee" ||
         segment === "executive-auditor"
       ? segment
-      : roleCodes.includes("ADMIN") ? "admin" : "dashboard";
+      : roleCodes.includes("ADMIN")
+        ? "admin"
+        : "dashboard";
 }
 
 export function getPanelNavigation(
