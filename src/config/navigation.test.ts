@@ -5,7 +5,6 @@ import {
   canAccessPanel,
   defaultPanelPath,
   getPanelNavigation,
-  panelHasModule,
 } from "./navigation";
 
 function visiblePaths(panel: "admin" | "dashboard", capabilities: string[]) {
@@ -32,14 +31,12 @@ describe("V2 role navigation", () => {
     );
   });
 
-  it("uses direct module paths and excludes retired training", () => {
+  it("uses direct module paths", () => {
     const adminPaths = getPanelNavigation("admin").map((item) => item.href);
     expect(adminPaths).toContain("/users");
     expect(adminPaths).toContain("/settings");
     expect(adminPaths).toContain("/integrations/schedules");
     expect(adminPaths).toContain("/login-history");
-    expect(adminPaths).not.toContain("/training");
-    expect(panelHasModule("dashboard", "training")).toBe(false);
   });
 
   it("shows admin management but not ungranted modules", () => {

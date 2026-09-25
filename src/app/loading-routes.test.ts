@@ -33,7 +33,6 @@ const routeGroups = {
     "risks",
     "roles",
     "settings",
-    "training",
     "users",
   ],
 } as const;

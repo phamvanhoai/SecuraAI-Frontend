@@ -28,7 +28,7 @@ export function Sidebar() {
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
   const roles = session.data?.roles.map((role) => role.code) ?? [];
-  // Feature pages use shared direct URLs (for example /training). Keep the
+  // Feature pages use shared direct URLs (for example /risks). Keep the
   // sidebar on the same shared dashboard navigation instead of falling back
   // to the admin menu merely because the URL has no panel prefix.
   const panel = getPanelKind(pathname, roles);
