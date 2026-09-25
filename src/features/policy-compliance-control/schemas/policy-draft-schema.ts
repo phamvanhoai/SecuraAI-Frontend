@@ -107,6 +107,22 @@ export const createdPolicyDraftSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const submittedPolicyDraftSchema = z.object({
+  policyId: z.uuid(),
+  policyCode: z.string(),
+  title: z.string(),
+  policyStatus: z.string(),
+  ownerUserId: z.uuid().nullable(),
+  version: z.object({
+    id: z.uuid(),
+    versionNumber: z.string(),
+    status: z.literal("IN_REVIEW"),
+    createdByUserId: z.uuid(),
+    createdAt: z.string(),
+  }),
+  submittedAt: z.string(),
+});
+
 export type CreatePolicyDraftInput = z.input<typeof createPolicyDraftSchema>;
 export type CreatePolicyDraftRequest = z.output<typeof createPolicyDraftSchema>;
 export type UpdatePolicyDraftInput = z.input<typeof updatePolicyDraftSchema>;
@@ -115,3 +131,4 @@ export type PolicyDraftQuery = z.infer<typeof policyDraftQuerySchema>;
 export type OwnedPolicyDraft = z.infer<typeof ownedPolicyDraftSchema>;
 export type PolicyDraftList = z.infer<typeof policyDraftListSchema>;
 export type CreatedPolicyDraft = z.infer<typeof createdPolicyDraftSchema>;
+export type SubmittedPolicyDraft = z.infer<typeof submittedPolicyDraftSchema>;

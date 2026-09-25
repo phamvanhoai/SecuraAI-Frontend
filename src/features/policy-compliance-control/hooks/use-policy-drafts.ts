@@ -5,6 +5,7 @@ import {
   createPolicyDraft,
   getPolicyDraft,
   listPolicyDrafts,
+  submitPolicyForReview,
   updatePolicyDraft,
 } from "../api/policy-drafts";
 import type {
@@ -69,5 +70,16 @@ export function useUpdatePolicyDraft() {
       );
       return queryClient.invalidateQueries({ queryKey: policyDraftKeys.all });
     },
+  });
+}
+
+export function useSubmitPolicyForReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ policyId, versionId }: { policyId: string; versionId: string }) =>
+      submitPolicyForReview(policyId, versionId),
+    retry: false,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: policyDraftKeys.all }),
   });
 }
