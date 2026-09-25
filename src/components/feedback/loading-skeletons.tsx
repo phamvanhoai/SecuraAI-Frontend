@@ -102,7 +102,7 @@ function DashboardSkeletonContent({
           ))}
         </div>
         <div className="grid gap-4 xl:grid-cols-[0.95fr_1.15fr_0.9fr]">
-          {["dashboard-assets", "dashboard-incidents", "dashboard-training"].map((item) => (
+          {["dashboard-assets", "dashboard-incidents", "dashboard-risks"].map((item) => (
             <Skeleton className="h-64 w-full rounded-[10px]" key={item} />
           ))}
         </div>

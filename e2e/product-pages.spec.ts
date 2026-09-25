@@ -18,7 +18,6 @@ const pages = [
   ["/settings", "Cài đặt hệ thống"],
   ["/alerts", "Cảnh báo an toàn thông tin"],
   ["/policies", "Quản lý chính sách"],
-  ["/training", "Đào tạo nhận thức"],
   ["/anomaly-monitoring", "Giám sát bất thường"],
   ["/ai-models", "Mô hình AI"],
   ["/event-logs", "Log và sự kiện"],

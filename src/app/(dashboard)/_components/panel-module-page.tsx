@@ -17,7 +17,6 @@ import ReportsPage from "../reports/page";
 import RisksPage from "../risks/page";
 import RolesPage from "../roles/page";
 import SettingsPage from "../settings/page";
-import TrainingPage from "../training/page";
 import UsersPage from "../users/page";
 import WorkflowDefinitionsPage from "../workflow-definitions/page";
 
@@ -39,7 +38,6 @@ const modulePages = {
   risks: RisksPage,
   roles: RolesPage,
   settings: SettingsPage,
-  training: TrainingPage,
   users: UsersPage,
   "workflow-definitions": WorkflowDefinitionsPage,
 } as const;
