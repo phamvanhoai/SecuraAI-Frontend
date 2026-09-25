@@ -5,127 +5,84 @@ import {
   canAccessPanel,
   defaultPanelPath,
   getPanelNavigation,
-  panelHasModule,
 } from "./navigation";
 
-describe("panel navigation", () => {
-  it("shows login history only to permitted admins and security officers", () => {
-    const item = getPanelNavigation("admin").find(
-      (entry) => entry.href === "/admin/login-history",
-    );
-    if (!item) throw new Error("Missing login history navigation");
-    expect(
-      getPanelNavigation("dashboard").some(
-        (entry) => entry.href === "/login-history",
-      ),
-    ).toBe(true);
-    expect(
-      canAccessNavigationItem(["login-history.read"], item, ["ADMIN"]),
-    ).toBe(true);
-    expect(
-      canAccessNavigationItem(["login-history.read"], item, [
-        "SECURITY_OFFICER",
-      ]),
-    ).toBe(true);
-    expect(
-      canAccessNavigationItem(["login-history.read"], item, ["EMPLOYEE"]),
-    ).toBe(false);
-    expect(canAccessNavigationItem([], item, ["ADMIN"])).toBe(false);
-    expect(canAccessNavigationItem(["login-history.read"], item)).toBe(false);
-  });
-  it("gives the admin every management module under the admin prefix", () => {
-    const links = getPanelNavigation("admin").map((item) => item.href);
-    expect(links).toContain("/admin/users");
-    expect(links).toContain("/admin/settings");
-    // Sync Schedules is a direct-href item (not panel-prefixed)
-    expect(links).toContain("/integrations/schedules");
-    const panelLinks = links.filter(
-      (href) => href !== "/integrations/schedules",
-    );
-    expect(panelLinks.every((href) => href.startsWith("/admin"))).toBe(true);
-  });
+function visiblePaths(panel: "admin" | "dashboard", capabilities: string[]) {
+  return getPanelNavigation(panel)
+    .filter((item) => canAccessNavigationItem(capabilities, item))
+    .map((item) => item.href);
+}
 
-  it("uses one shared navigation for every non-admin role", () => {
-    const links = getPanelNavigation("dashboard").map((item) => item.href);
-    expect(links).toContain("/training");
-    expect(links).toContain("/policies");
-    expect(links).not.toContain("/users");
-  });
-
-  it("combines every module assigned to non-admin roles", () => {
-    expect(panelHasModule("dashboard", "risks")).toBe(true);
-    expect(panelHasModule("dashboard", "policies")).toBe(true);
-    expect(panelHasModule("dashboard", "training")).toBe(true);
-    expect(panelHasModule("dashboard", "audits")).toBe(true);
-    expect(panelHasModule("dashboard", "users")).toBe(false);
-  });
-
-  it("allows only panels backed by assigned system roles", () => {
+describe("V2 role navigation", () => {
+  it("recognizes only the four database roles", () => {
     expect(allowedPanels(["ADMIN"])).toEqual(["admin"]);
-    expect(allowedPanels(["SECURITY_OFFICER", "EMPLOYEE"])).toEqual([
-      "dashboard",
-    ]);
-    expect(canAccessPanel(["ADMIN"], "dashboard")).toBe(false);
-  });
-
-  it("chooses a deterministic default panel for multi-role users", () => {
+    expect(allowedPanels(["SECURITY_OFFICER"])).toEqual(["dashboard"]);
+    expect(allowedPanels(["EXECUTIVE"])).toEqual(["dashboard"]);
+    expect(allowedPanels(["EMPLOYEE"])).toEqual(["dashboard"]);
+    expect(allowedPanels(["CUSTOM_ROLE"])).toEqual([]);
+    expect(defaultPanelPath(["CUSTOM_ROLE"])).toBe("/profile");
     expect(defaultPanelPath(["EMPLOYEE", "SECURITY_OFFICER"])).toBe(
       "/dashboard",
     );
-    expect(defaultPanelPath(["CUSTOM_ROLE"])).toBe("/profile");
-  });
-
-  it("filters permission-bound navigation items", () => {
-    const assets = getPanelNavigation("admin").find((item) =>
-      item.href.endsWith("/assets"),
-    );
-    expect(assets).toBeDefined();
-    if (!assets) return;
-    expect(canAccessNavigationItem([], assets)).toBe(false);
-    expect(canAccessNavigationItem(["assets.read"], assets)).toBe(true);
-  });
-
-  it("shows policies navigation for the framework mapping permission", () => {
-    const policies = getPanelNavigation("dashboard").find((item) =>
-      item.href.endsWith("/policies"),
-    );
-    expect(policies).toBeDefined();
-    if (!policies) return;
-    expect(canAccessNavigationItem(["compliance.map-controls"], policies)).toBe(
-      true,
-    );
-  });
-  it("shows policy navigation to every authenticated role for version history", () => {
-    const policies = getPanelNavigation("dashboard").find(
-      (item) => item.href === "/policies",
-    );
-    expect(policies).toBeDefined();
-    if (!policies) return;
-
-    expect(canAccessNavigationItem([], policies)).toBe(true);
-    expect(canAccessNavigationItem(["policies.acknowledge"], policies)).toBe(
-      true,
+    expect(canAccessPanel(["ADMIN"], "dashboard")).toBe(false);
+    expect(canAccessPanel(["EXECUTIVE"], "executive-auditor")).toBe(true);
+    expect(canAccessPanel(["EXECUTIVE_AUDITOR"], "executive-auditor")).toBe(
+      false,
     );
   });
 
-  it("shows training for course managers, completion viewers, and employees", () => {
-    const training = getPanelNavigation("dashboard").find(
-      (item) => item.href === "/training",
-    );
-    expect(training).toBeDefined();
-    if (!training) return;
-    expect(canAccessNavigationItem([], training)).toBe(false);
-    expect(canAccessNavigationItem(["training-courses.read"], training)).toBe(
-      true,
-    );
-    expect(
-      canAccessNavigationItem(["training-assessments.take"], training),
-    ).toBe(true);
-    expect(
-      canAccessNavigationItem(["training-completion.read"], training),
-    ).toBe(true);
-    expect(
-      canAccessNavigationItem(["training-certificates.read-own"], training),
-    ).toBe(true);
+  it("uses direct module paths", () => {
+    const adminPaths = getPanelNavigation("admin").map((item) => item.href);
+    expect(adminPaths).toContain("/users");
+    expect(adminPaths).toContain("/settings");
+    expect(adminPaths).toContain("/integrations/schedules");
+    expect(adminPaths).toContain("/login-history");
+  });
+
+  it("shows admin management but not ungranted modules", () => {
+    const paths = visiblePaths("admin", [
+      "users.read",
+      "audit.read",
+      "system-settings.read",
+      "login-history.read",
+    ]);
+    expect(paths).toContain("/users");
+    expect(paths).toContain("/audits");
+    expect(paths).toContain("/settings");
+    expect(paths).toContain("/login-history");
+    expect(paths).not.toContain("/roles");
+    expect(paths).not.toContain("/reports");
+  });
+
+  it("shows security officer operational modules", () => {
+    const paths = visiblePaths("dashboard", [
+      "assets.read",
+      "risks.read",
+      "incidents.read",
+      "ai-alerts.read",
+      "reports.read",
+    ]);
+    expect(paths).toContain("/assets");
+    expect(paths).toContain("/risks");
+    expect(paths).toContain("/incidents");
+    expect(paths).toContain("/reports");
+    expect(paths).not.toContain("/users");
+    expect(paths).not.toContain("/audits");
+  });
+
+  it("limits executive navigation to assigned work", () => {
+    const paths = visiblePaths("dashboard", ["incidents.read", "reports.read"]);
+    expect(paths).toContain("/incidents");
+    expect(paths).toContain("/reports");
+    expect(paths).not.toContain("/users");
+    expect(paths).not.toContain("/policies");
+  });
+
+  it("limits employee navigation to policy acknowledgement", () => {
+    const paths = visiblePaths("dashboard", ["policies.acknowledge"]);
+    expect(paths).toContain("/policies");
+    expect(paths).not.toContain("/risks");
+    expect(paths).not.toContain("/incidents");
+    expect(paths).not.toContain("/reports");
   });
 });

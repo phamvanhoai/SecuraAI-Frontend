@@ -20,6 +20,12 @@ import {
   type MarkFalsePositiveRequest,
   type MarkFalsePositiveResult,
 } from "../schemas/ai-alert-schema";
+import {
+  anomalyDetectionRunInputSchema,
+  anomalyDetectionRunResultSchema,
+  type AnomalyDetectionRunInput,
+  type AnomalyDetectionRunResult,
+} from "../schemas/anomaly-detection-run-schema";
 
 export type AiAlertQuery = {
   page: number;
@@ -29,6 +35,18 @@ export type AiAlertQuery = {
   detectedAfter?: string;
   sortOrder?: "asc" | "desc";
 };
+
+export async function runAnomalyDetection(
+  input: AnomalyDetectionRunInput,
+): Promise<AnomalyDetectionRunResult> {
+  return anomalyDetectionRunResultSchema.parse(
+    await apiRequest<unknown>("/api/anomaly-detections/runs", {
+      method: "POST",
+      target: "same-origin",
+      body: anomalyDetectionRunInputSchema.parse(input),
+    }),
+  );
+}
 
 export type AiAlertMetrics = {
   total: number;

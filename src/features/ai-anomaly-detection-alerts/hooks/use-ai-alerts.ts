@@ -14,6 +14,7 @@ import {
   listAiAlertFeedback,
   listAiAlerts,
   markAiAlertFalsePositive,
+  runAnomalyDetection,
   type AiAlertQuery,
 } from "../api/ai-alerts";
 import type {
@@ -21,6 +22,21 @@ import type {
   EvaluateAiAlertReliabilityRequest,
   MarkFalsePositiveRequest,
 } from "../schemas/ai-alert-schema";
+import type { AnomalyDetectionRunInput } from "../schemas/anomaly-detection-run-schema";
+
+export function useRunAnomalyDetection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AnomalyDetectionRunInput) => runAnomalyDetection(input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+      ]);
+    },
+    retry: false,
+  });
+}
 
 export function useAiAlerts(query: AiAlertQuery) {
   return useQuery({

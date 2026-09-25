@@ -7,6 +7,7 @@ import {
   FilePenLine,
   Pencil,
   Search,
+  Send,
   Link2,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -32,11 +33,16 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useToast } from "@/components/feedback/toast";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useSessionUser } from "@/features/authentication-account";
-import { usePolicyDraft, usePolicyDrafts } from "../hooks/use-policy-drafts";
+import {
+  usePolicyDraft,
+  usePolicyDrafts,
+  useSubmitPolicyForReview,
+} from "../hooks/use-policy-drafts";
 import {
   policyDraftQuerySchema,
   type OwnedPolicyDraft,
@@ -74,8 +80,11 @@ export function PolicyDraftsManager({
   const searchParams = useSearchParams();
   const query = useMemo(() => queryFromParams(searchParams), [searchParams]);
   const session = useSessionUser();
+  const toast = useToast();
   const canManageDrafts =
     session.data?.permissions.includes("policies.create") ?? false;
+  const canSubmitDrafts =
+    session.data?.permissions.includes("policies.submit") ?? false;
   const drafts = usePolicyDrafts(query, canManageDrafts);
   const metricDrafts = usePolicyDrafts(overviewQuery, canManageDrafts);
   const [search, setSearch] = useState(query.q ?? "");
@@ -85,6 +94,8 @@ export function PolicyDraftsManager({
     versionId: string;
   } | null>(null);
   const [editing, setEditing] = useState<OwnedPolicyDraft | null>(null);
+  const [submitting, setSubmitting] = useState<OwnedPolicyDraft | null>(null);
+  const submitMutation = useSubmitPolicyForReview();
   const detail = usePolicyDraft(
     selected?.policyId ?? null,
     selected?.versionId ?? null,
@@ -190,11 +201,24 @@ export function PolicyDraftsManager({
               <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
               Edit
             </button>
+            {canSubmitDrafts ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={(event) => {
+                  closeActionMenu(event);
+                  setSubmitting(draft);
+                }}
+                type="button"
+              >
+                <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                Submit for review
+              </button>
+            ) : null}
           </DropdownMenu>
         ),
       },
     ],
-    [],
+    [canSubmitDrafts],
   );
 
   if (session.isPending)
@@ -415,7 +439,86 @@ export function PolicyDraftsManager({
         }}
         onClose={() => setSelected(null)}
       />
+      <SubmitPolicyDraftDialog
+        draft={submitting}
+        pending={submitMutation.isPending}
+        onClose={() => setSubmitting(null)}
+        onSubmit={async (draft) => {
+          try {
+            await submitMutation.mutateAsync({
+              policyId: draft.policyId,
+              versionId: draft.version.id,
+            });
+            setSubmitting(null);
+            toast.success(
+              "Policy submitted for review",
+              `${draft.policyCode} is now available to Admin reviewers.`,
+            );
+          } catch (reason: unknown) {
+            toast.error(
+              "Unable to submit policy",
+              reason instanceof Error
+                ? reason.message
+                : "Review the draft and try again.",
+            );
+          }
+        }}
+      />
     </>
+  );
+}
+
+function SubmitPolicyDraftDialog({
+  draft,
+  pending,
+  onClose,
+  onSubmit,
+}: {
+  draft: OwnedPolicyDraft | null;
+  pending: boolean;
+  onClose: () => void;
+  onSubmit: (draft: OwnedPolicyDraft) => Promise<void>;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (draft && !dialog.open) dialog.showModal();
+    if (!draft && dialog.open) dialog.close();
+  }, [draft]);
+
+  return (
+    <Dialog
+      dialogRef={dialogRef}
+      title="Submit policy for review"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!pending) onClose();
+      }}
+      onClose={onClose}
+    >
+      {draft ? (
+        <div className="space-y-5">
+          <p className="text-muted text-sm leading-6">
+            Submit <strong className="text-foreground">{draft.title}</strong>{" "}
+            (v{draft.version.versionNumber}) to Admin for review. The draft can
+            no longer be edited after submission.
+          </p>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="secondary" disabled={pending} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              disabled={pending}
+              onClick={() => void onSubmit(draft)}
+            >
+              <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
+              {pending ? "Submitting…" : "Submit for review"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </Dialog>
   );
 }
 

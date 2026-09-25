@@ -4,7 +4,6 @@ import {
   Monitor,
   ShieldAlert,
   Siren,
-  Target,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -128,7 +127,7 @@ export default function DashboardPage() {
           </Link>
         </ProductPanel>
       </div>
-      <div className="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.15fr_0.9fr]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         <ProductPanel title="Tài sản có rủi ro cao">
           <div className="divide-border divide-y">
             {[
@@ -174,23 +173,6 @@ export default function DashboardPage() {
                 </StatusBadge>
               </div>
             ))}
-          </div>
-        </ProductPanel>
-        <ProductPanel title="Đào tạo và nhận thức">
-          <div className="p-5">
-            <div className="border-brand-soft mx-auto grid size-36 place-items-center rounded-full border-[16px] text-center">
-              <div>
-                <strong className="text-brand block text-3xl">72%</strong>
-                <span className="text-muted text-xs">Hoàn thành</span>
-              </div>
-            </div>
-            <div className="mt-5 flex items-center justify-between text-sm">
-              <span className="text-muted flex items-center gap-2">
-                <Target className="size-4" />
-                Đã hoàn thành
-              </span>
-              <strong>215 học viên</strong>
-            </div>
           </div>
         </ProductPanel>
       </div>

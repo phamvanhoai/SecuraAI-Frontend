@@ -1,6 +1,5 @@
 import {
   ArrowUpRight,
-  BookOpenCheck,
   CheckCircle2,
   Clock3,
   FileCheck2,
@@ -93,14 +92,8 @@ const panels: Record<
   employee: {
     title: "Panel Nhân viên",
     description:
-      "Theo dõi nhiệm vụ bảo mật cá nhân, chính sách và chương trình đào tạo được giao.",
+      "Theo dõi nhiệm vụ bảo mật cá nhân, chính sách và thông báo được giao.",
     metrics: [
-      {
-        label: "Khóa học đang học",
-        value: "2",
-        detail: "1 khóa sắp đến hạn",
-        tone: "warning",
-      },
       {
         label: "Chính sách cần đọc",
         value: "3",
@@ -122,19 +115,16 @@ const panels: Record<
     ],
     tasksTitle: "Việc cần hoàn thành",
     tasks: [
-      ["Hoàn thành khóa học phòng chống phishing", "Hạn 12/09/2026", "warning"],
       ["Xác nhận chính sách bảo mật dữ liệu", "Hạn 15/09/2026", "info"],
       ["Rà soát thông tin Laptop SEC-LT-083", "Hạn 18/09/2026", "success"],
     ],
     actions: [
-      ["Đào tạo của tôi", "/training"],
       ["Chính sách", "/policies"],
       ["Báo cáo sự cố", "/incidents"],
       ["Thông báo", "/notifications"],
     ],
     secondaryTitle: "Tiến độ cá nhân",
     secondaryItems: [
-      ["Đào tạo hoàn thành", "4 / 6"],
       ["Chính sách đã xác nhận", "12 / 15"],
       ["Nhiệm vụ đúng hạn", "96%"],
     ],
@@ -203,7 +193,7 @@ export function RolePanel({ kind }: { kind: RolePanelKind }) {
               <div className="flex items-center gap-3 p-4" key={title}>
                 <span className="bg-brand-soft text-brand grid size-9 place-items-center rounded-lg">
                   {kind === "employee" ? (
-                    <BookOpenCheck className="size-4" />
+                    <UserRound className="size-4" />
                   ) : kind === "security-officer" ? (
                     <ShieldAlert className="size-4" />
                   ) : (

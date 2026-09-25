@@ -4,12 +4,14 @@ import {
   createdPolicyDraftSchema,
   ownedPolicyDraftSchema,
   policyDraftListSchema,
+  submittedPolicyDraftSchema,
   type CreatePolicyDraftRequest,
   type CreatedPolicyDraft,
   type OwnedPolicyDraft,
   type PolicyDraftList,
   type PolicyDraftQuery,
   type UpdatePolicyDraftRequest,
+  type SubmittedPolicyDraft,
 } from "../schemas/policy-draft-schema";
 
 function parseContract<T>(
@@ -93,5 +95,20 @@ export async function updatePolicyDraft(
     ownedPolicyDraftSchema,
     data,
     "The update policy draft response has an invalid format.",
+  );
+}
+
+export async function submitPolicyForReview(
+  policyId: string,
+  versionId: string,
+): Promise<SubmittedPolicyDraft> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${policyId}/versions/${versionId}/submit`,
+    { method: "POST", target: "same-origin" },
+  );
+  return parseContract(
+    submittedPolicyDraftSchema,
+    data,
+    "The submitted policy draft response has an invalid format.",
   );
 }

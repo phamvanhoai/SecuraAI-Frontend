@@ -7,6 +7,10 @@ const mocks = vi.hoisted(() => ({
   useSessionUser: vi.fn(),
   usePolicyDrafts: vi.fn(),
   usePolicyDraft: vi.fn(),
+  useSubmitPolicyForReview: vi.fn(),
+  submitPolicyForReview: vi.fn(),
+  toastSuccess: vi.fn(),
+  toastError: vi.fn(),
   searchParams: "",
 }));
 
@@ -19,6 +23,10 @@ vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.useS
 vi.mock("../hooks/use-policy-drafts", () => ({
   usePolicyDrafts: mocks.usePolicyDrafts,
   usePolicyDraft: mocks.usePolicyDraft,
+  useSubmitPolicyForReview: mocks.useSubmitPolicyForReview,
+}));
+vi.mock("@/components/feedback/toast", () => ({
+  useToast: () => ({ success: mocks.toastSuccess, error: mocks.toastError }),
 }));
 vi.mock("./policy-draft-form-dialog", () => ({
   PolicyDraftFormDialog: () => null,
@@ -28,7 +36,18 @@ afterEach(cleanup);
 
 describe("PolicyDraftsManager", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    HTMLDialogElement.prototype.showModal = function showModal() {
+      this.setAttribute("open", "");
+    };
+    HTMLDialogElement.prototype.close = function close() {
+      this.removeAttribute("open");
+    };
     mocks.searchParams = "";
+    mocks.useSubmitPolicyForReview.mockReturnValue({
+      mutateAsync: mocks.submitPolicyForReview,
+      isPending: false,
+    });
     mocks.usePolicyDraft.mockReturnValue({
       data: undefined,
       isPending: false,
@@ -101,6 +120,37 @@ describe("PolicyDraftsManager", () => {
       screen.getByRole("button", { name: "Create new version" }),
     );
     expect(onCreateNewVersion).toHaveBeenCalledOnce();
+  });
+
+  it("confirms and submits a draft for Admin review", async () => {
+    const user = userEvent.setup();
+    mocks.useSessionUser.mockReturnValue({
+      data: { permissions: ["policies.create", "policies.submit"] },
+      isPending: false,
+    });
+    mocks.submitPolicyForReview.mockResolvedValue({});
+
+    render(<PolicyDraftsManager />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /Actions for/,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Submit for review" }));
+    expect(
+      screen.getByRole("heading", { name: "Submit policy for review" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Submit for review" }));
+    expect(mocks.submitPolicyForReview).toHaveBeenCalledWith({
+      policyId: "00000000-0000-4000-8000-000000000010",
+      versionId: "00000000-0000-4000-8000-000000000020",
+    });
+    expect(mocks.toastSuccess).toHaveBeenCalledWith(
+      "Policy submitted for review",
+      "POL-SEC-001 is now available to Admin reviewers.",
+    );
   });
 
   it("opens department assignment when the action is available", async () => {
