@@ -52,6 +52,13 @@ export const aiAlertListSchema = z.object({
   }),
 });
 
+export const aiAlertMetricsSchema = z.object({
+  total: z.number().int().nonnegative(),
+  newAlerts: z.number().int().nonnegative(),
+  reviewing: z.number().int().nonnegative(),
+  confirmed: z.number().int().nonnegative(),
+});
+
 export const aiAlertExplanationSchema = z.object({
   id: z.uuid(),
   alertId: z.uuid(),
