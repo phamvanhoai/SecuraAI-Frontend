@@ -5,6 +5,7 @@ import {
   Eye,
   History,
   MessageSquareText,
+  Radar,
   RefreshCw,
   Search,
   SlidersHorizontal,
@@ -25,12 +26,17 @@ import {
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/feedback/toast";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
-import { useAiAlertMetrics, useAiAlerts } from "../hooks/use-ai-alerts";
+import {
+  useAiAlertMetrics,
+  useAiAlerts,
+  useRunAnomalyDetection,
+} from "../hooks/use-ai-alerts";
 import {
   aiAlertStatuses,
   type AiAlert,
@@ -64,6 +70,10 @@ export function AiAlertsManager() {
     useState<AiAlert | null>(null);
   const [thresholdsOpen, setThresholdsOpen] = useState(false);
   const session = useSessionUser();
+  const toast = useToast();
+  const runDetection = useRunAnomalyDetection();
+  const canRunDetection =
+    session.data?.permissions.includes("anomaly-detection.run") ?? false;
   const canEvaluate =
     session.data?.permissions.includes("ai-alerts.feedback") ?? false;
   const canConfirm =
@@ -220,6 +230,40 @@ export function AiAlertsManager() {
     <>
       <ProductPageHeader
         description="Monitor AI-generated anomaly alerts from connected security log sources."
+        additionalActions={
+          canRunDetection ? (
+            <Button
+              disabled={runDetection.isPending}
+              onClick={() => {
+                void runDetection
+                  .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
+                  .then((result) => {
+                    toast.success(
+                      "Anomaly detection completed",
+                      `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created.`,
+                    );
+                  })
+                  .catch((error: unknown) => {
+                    toast.error(
+                      "Detection run failed",
+                      error instanceof Error
+                        ? error.message
+                        : "Try again after checking the deployed model and backend connection.",
+                    );
+                  });
+              }}
+            >
+              <Radar
+                aria-hidden="true"
+                className={`size-4 ${runDetection.isPending ? "animate-pulse" : ""}`}
+                strokeWidth={1.8}
+              />
+              {runDetection.isPending
+                ? "Running detection…"
+                : "Run anomaly detection"}
+            </Button>
+          ) : undefined
+        }
         {...(canManageThresholds
           ? {
               onSecondaryAction: () => setThresholdsOpen(true),
