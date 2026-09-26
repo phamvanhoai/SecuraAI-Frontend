@@ -30,7 +30,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   usePolicyReview,
   usePublishablePolicies,
-  usePublishPolicyVersion,
+  useApprovePolicyForPublication,
   useRequestPolicyRevision,
 } from "../hooks/use-policy-publication";
 import type {
@@ -65,7 +65,6 @@ export function PolicyPublicationManager() {
     policyId: string;
     versionId: string;
   } | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState("");
   const [requestingRevision, setRequestingRevision] = useState(false);
   const [revisionComment, setRevisionComment] = useState("");
   const [revisionError, setRevisionError] = useState<string | null>(null);
@@ -76,12 +75,11 @@ export function PolicyPublicationManager() {
     selected?.policyId ?? null,
     selected?.versionId ?? null,
   );
-  const publish = usePublishPolicyVersion();
+  const approve = useApprovePolicyForPublication();
   const requestRevision = useRequestPolicyRevision();
 
   function closeReview(): void {
     setSelected(null);
-    setEffectiveDate("");
     setRequestingRevision(false);
     setRevisionComment("");
     setRevisionError(null);
@@ -114,9 +112,7 @@ export function PolicyPublicationManager() {
       {
         key: "status",
         header: "Status",
-        cell: () => (
-          <StatusBadge tone="warning">Pending publication</StatusBadge>
-        ),
+        cell: () => <StatusBadge tone="warning">Awaiting approval</StatusBadge>,
       },
       {
         key: "updatedAt",
@@ -176,28 +172,30 @@ export function PolicyPublicationManager() {
     });
   }
 
-  async function confirmPublish(): Promise<void> {
+  async function confirmApproval(): Promise<void> {
     if (!selected) return;
     try {
-      await publish.mutateAsync({
-        ...selected,
-        ...(effectiveDate ? { effectiveDate } : {}),
-      });
+      await approve.mutateAsync(selected);
       toast.success(
-        "Policy published",
-        "The official version was published and recorded in the audit log.",
+        "Policy approved",
+        "The reviewed version is approved and ready for publication.",
       );
       closeReview();
     } catch (error: unknown) {
-      toast.error("Unable to publish policy", errorMessage(error));
+      toast.error("Unable to approve policy", errorMessage(error));
     }
   }
 
   async function confirmRevisionRequest(): Promise<void> {
     if (!selected) return;
-    const parsed = requestPolicyRevisionInputSchema.safeParse({ comment: revisionComment });
+    const parsed = requestPolicyRevisionInputSchema.safeParse({
+      comment: revisionComment,
+    });
     if (!parsed.success) {
-      setRevisionError(parsed.error.issues[0]?.message ?? "Revision instructions are required.");
+      setRevisionError(
+        parsed.error.issues[0]?.message ??
+          "Revision instructions are required.",
+      );
       return;
     }
     setRevisionError(null);
@@ -222,15 +220,15 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
-        description="Review draft content and publish official information security policy versions."
+        description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
-        title="Publish official policy versions"
+        title="Approve policy versions"
       />
       <MetricStrip
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Pending publication",
+            label: "Awaiting approval",
             value: String(total),
             detail: "Draft versions ready for review",
             tone: "warning",
@@ -265,7 +263,7 @@ export function PolicyPublicationManager() {
             ? `${policies.data.pagination.total} policy drafts found`
             : "Backend-managed policy drafts ready for publication"
         }
-        title="Policy drafts awaiting publication"
+        title="Policy drafts awaiting approval"
       >
         <form
           className="border-border flex gap-2 border-b p-4"
@@ -303,7 +301,7 @@ export function PolicyPublicationManager() {
             </Alert>
           ) : policies.data?.items.length === 0 ? (
             <p className="text-muted py-10 text-center">
-              No policy drafts awaiting publication were found.
+              No policy drafts awaiting approval were found.
             </p>
           ) : policies.data ? (
             <DataTable
@@ -373,7 +371,9 @@ export function PolicyPublicationManager() {
                     Revision instructions
                   </span>
                   <Textarea
-                    aria-describedby={revisionError ? "policy-revision-error" : undefined}
+                    aria-describedby={
+                      revisionError ? "policy-revision-error" : undefined
+                    }
                     aria-invalid={revisionError ? true : undefined}
                     id="policy-revision-comment"
                     maxLength={5_000}
@@ -391,24 +391,15 @@ export function PolicyPublicationManager() {
                   </p>
                 ) : (
                   <p className="text-muted text-xs">
-                    These instructions will be recorded with the review decision.
+                    These instructions will be recorded with the review
+                    decision.
                   </p>
                 )}
               </div>
             ) : (
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium">
-                  Effective date
-                </span>
-                <Input
-                  onChange={(event) => setEffectiveDate(event.target.value)}
-                  type="date"
-                  value={effectiveDate}
-                />
-                <span className="text-muted mt-1 block text-xs">
-                  Leave blank to use the current publication date.
-                </span>
-              </label>
+              <Alert>
+                Approval records an auditable decision. It does not publish the policy immediately.
+              </Alert>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {requestingRevision ? (
@@ -427,7 +418,9 @@ export function PolicyPublicationManager() {
                     disabled={requestRevision.isPending}
                     onClick={confirmRevisionRequest}
                   >
-                    {requestRevision.isPending ? "Sending..." : "Send revision request"}
+                    {requestRevision.isPending
+                      ? "Sending..."
+                      : "Send revision request"}
                   </Button>
                 </>
               ) : (
@@ -435,11 +428,19 @@ export function PolicyPublicationManager() {
                   <Button onClick={closeReview} variant="secondary">
                     Cancel
                   </Button>
-                  <Button onClick={() => setRequestingRevision(true)} variant="secondary">
+                  <Button
+                    onClick={() => setRequestingRevision(true)}
+                    variant="secondary"
+                  >
                     Request revision
                   </Button>
-                  <Button disabled={publish.isPending} onClick={confirmPublish}>
-                    {publish.isPending ? "Publishing..." : "Publish version"}
+                  <Button
+                    disabled={approve.isPending}
+                    onClick={confirmApproval}
+                  >
+                    {approve.isPending
+                      ? "Approving..."
+                      : "Approve for publication"}
                   </Button>
                 </>
               )}
