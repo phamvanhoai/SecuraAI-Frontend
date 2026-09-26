@@ -1,25 +1,20 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listAlertThresholds, setAlertThreshold } from "../api/alert-thresholds";
-import type { SetAlertThresholdRequest } from "../schemas/alert-threshold-schema";
+import { configureDetectionThreshold, getDetectionThreshold } from "../api/alert-thresholds";
+import type { ConfigureDetectionThresholdRequest } from "../schemas/alert-threshold-schema";
 
-export function useAlertThresholds(page: number, enabled: boolean) {
-  return useQuery({
-    queryKey: ["ai-alerts", "thresholds", page],
-    queryFn: ({ signal }) => listAlertThresholds(page, signal),
-    enabled,
-  });
+const queryKey = ["ai-alerts", "detection-threshold"] as const;
+
+export function useDetectionThreshold(enabled: boolean) {
+  return useQuery({ queryKey, queryFn: ({ signal }) => getDetectionThreshold(signal), enabled });
 }
 
-export function useSetAlertThreshold() {
+export function useConfigureDetectionThreshold() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ assetId, input }: { assetId: string; input: SetAlertThresholdRequest }) =>
-      setAlertThreshold(assetId, input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["ai-alerts", "thresholds"] });
-    },
+    mutationFn: (input: ConfigureDetectionThresholdRequest) => configureDetectionThreshold(input),
+    onSuccess: (data) => queryClient.setQueryData(queryKey, data),
     retry: false,
   });
 }

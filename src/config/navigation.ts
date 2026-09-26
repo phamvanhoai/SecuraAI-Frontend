@@ -34,7 +34,7 @@ const modules = {
   alerts: {
     title: "Cảnh báo",
     slug: "alerts",
-    requiredAnyPermission: ["ai-alerts.read"],
+    requiredAnyPermission: ["ai-alerts.read", "ai-alerts.thresholds.manage"],
     icon: Bell,
     section: "Tổng quan",
   },
