@@ -49,26 +49,20 @@ export const policyReviewDetailSchema = z.object({
   }),
 });
 
-export const publishedPolicySchema = z.object({
-  policyId: z.string().uuid(),
-  policyCode: z.string(),
-  title: z.string(),
-  status: z.string(),
-  publishedVersion: z.object({
+export const approvedPolicySchema = policyReviewDetailSchema.extend({
+  decision: z.object({
     id: z.string().uuid(),
-    versionNumber: z.string(),
-    status: z.string(),
-    effectiveDate: z.string().datetime().nullable(),
-    publishedByUserId: z.string().uuid().nullable(),
-    publishedAt: z.string().datetime().nullable(),
-    createdAt: z.string().datetime(),
+    action: z.literal("APPROVED"),
+    comment: z.string().nullable(),
+    actorUserId: z.string().uuid(),
+    decidedAt: z.string().datetime(),
   }),
 });
 
 export type PublishablePolicy = z.infer<typeof publishablePolicySchema>;
 export type PublishablePolicyList = z.infer<typeof publishablePolicyListSchema>;
 export type PolicyReviewDetail = z.infer<typeof policyReviewDetailSchema>;
-export type PublishedPolicy = z.infer<typeof publishedPolicySchema>;
+export type ApprovedPolicy = z.infer<typeof approvedPolicySchema>;
 
 export type PublishablePolicyQuery = {
   page: number;

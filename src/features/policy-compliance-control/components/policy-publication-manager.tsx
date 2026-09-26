@@ -30,7 +30,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import {
   usePolicyReview,
   usePublishablePolicies,
-  usePublishPolicyVersion,
+  useApprovePolicyForPublication,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
@@ -62,7 +62,6 @@ export function PolicyPublicationManager() {
     policyId: string;
     versionId: string;
   } | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const policies = usePublishablePolicies(query);
   const metricPolicies = usePublishablePolicies(initialQuery);
@@ -70,7 +69,7 @@ export function PolicyPublicationManager() {
     selected?.policyId ?? null,
     selected?.versionId ?? null,
   );
-  const publish = usePublishPolicyVersion();
+  const approve = useApprovePolicyForPublication();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -100,7 +99,7 @@ export function PolicyPublicationManager() {
         key: "status",
         header: "Status",
         cell: () => (
-          <StatusBadge tone="warning">Pending publication</StatusBadge>
+          <StatusBadge tone="warning">Awaiting approval</StatusBadge>
         ),
       },
       {
@@ -161,21 +160,17 @@ export function PolicyPublicationManager() {
     });
   }
 
-  async function confirmPublish(): Promise<void> {
+  async function confirmApproval(): Promise<void> {
     if (!selected) return;
     try {
-      await publish.mutateAsync({
-        ...selected,
-        ...(effectiveDate ? { effectiveDate } : {}),
-      });
+      await approve.mutateAsync(selected);
       toast.success(
-        "Policy published",
-        "The official version was published and recorded in the audit log.",
+        "Policy approved",
+        "The reviewed version is approved and ready for the separate publication step.",
       );
       setSelected(null);
-      setEffectiveDate("");
     } catch (error: unknown) {
-      toast.error("Unable to publish policy", errorMessage(error));
+      toast.error("Unable to approve policy", errorMessage(error));
     }
   }
 
@@ -188,17 +183,17 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
-        description="Review draft content and publish official information security policy versions."
+        description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
-        title="Publish official policy versions"
+        title="Approve policy versions"
       />
       <MetricStrip
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Pending publication",
+            label: "Awaiting approval",
             value: String(total),
-            detail: "Draft versions ready for review",
+            detail: "Submitted versions requiring a decision",
             tone: "warning",
             loading: metricPolicies.isPending,
           },
@@ -229,9 +224,9 @@ export function PolicyPublicationManager() {
         description={
           policies.data
             ? `${policies.data.pagination.total} policy drafts found`
-            : "Backend-managed policy drafts ready for publication"
+            : "Backend-managed policy drafts awaiting an approval decision"
         }
-        title="Policy drafts awaiting publication"
+        title="Policy drafts awaiting approval"
       >
         <form
           className="border-border flex gap-2 border-b p-4"
@@ -258,18 +253,18 @@ export function PolicyPublicationManager() {
           {policies.isPending ? (
             <TableSkeleton
               columns={5}
-              label="Loading policy drafts awaiting publication"
+              label="Loading policy drafts awaiting approval"
             />
           ) : policies.isError ? (
             <Alert>
               <strong className="block">
-                Unable to load policy drafts awaiting publication
+                Unable to load policy drafts awaiting approval
               </strong>
               <span>{errorMessage(policies.error)}</span>
             </Alert>
           ) : policies.data?.items.length === 0 ? (
             <p className="text-muted py-10 text-center">
-              No policy drafts awaiting publication were found.
+              No policy drafts awaiting approval were found.
             </p>
           ) : policies.data ? (
             <DataTable
@@ -332,25 +327,16 @@ export function PolicyPublicationManager() {
                 {review.data.version.changeSummary}
               </p>
             ) : null}
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">
-                Effective date
-              </span>
-              <Input
-                onChange={(event) => setEffectiveDate(event.target.value)}
-                type="date"
-                value={effectiveDate}
-              />
-              <span className="text-muted mt-1 block text-xs">
-                Leave blank to use the current publication date.
-              </span>
-            </label>
+            <Alert>
+              Approval records an auditable decision and makes this version eligible for
+              publication. It does not publish the policy immediately.
+            </Alert>
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button onClick={() => setSelected(null)} variant="secondary">
                 Cancel
               </Button>
-              <Button disabled={publish.isPending} onClick={confirmPublish}>
-                {publish.isPending ? "Publishing..." : "Publish version"}
+              <Button disabled={approve.isPending} onClick={confirmApproval}>
+                {approve.isPending ? "Approving..." : "Approve for publication"}
               </Button>
             </div>
           </div>

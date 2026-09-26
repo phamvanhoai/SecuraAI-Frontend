@@ -1,12 +1,12 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  approvedPolicySchema,
   policyReviewDetailSchema,
   publishablePolicyListSchema,
-  publishedPolicySchema,
+  type ApprovedPolicy,
   type PolicyReviewDetail,
   type PublishablePolicyList,
   type PublishablePolicyQuery,
-  type PublishedPolicy,
 } from "../schemas/policy-publication-schema";
 
 export async function listPublishablePolicies(
@@ -32,18 +32,16 @@ export async function getPolicyReview(
   return policyReviewDetailSchema.parse(data);
 }
 
-export async function publishPolicyVersion(input: {
+export async function approvePolicyForPublication(input: {
   policyId: string;
   versionId: string;
-  effectiveDate?: string;
-}): Promise<PublishedPolicy> {
+}): Promise<ApprovedPolicy> {
   const data = await apiRequest<unknown>(
-    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/publish`,
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/approve`,
     {
       target: "same-origin",
       method: "POST",
-      body: input.effectiveDate ? { effectiveDate: input.effectiveDate } : {},
     },
   );
-  return publishedPolicySchema.parse(data);
+  return approvedPolicySchema.parse(data);
 }
