@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   configureDetectionThreshold,
   getDetectionThreshold,
+  listAlertThresholdAssetOptions,
   listAlertThresholds,
   setAlertThreshold,
 } from "../api/alert-thresholds";
@@ -26,6 +27,13 @@ export function useAlertThresholds(page: number, enabled: boolean) {
   return useQuery({
     queryKey: ["ai-alerts", "asset-thresholds", page],
     queryFn: ({ signal }) => listAlertThresholds(page, signal),
+    enabled,
+  });
+}
+export function useAlertThresholdAssetOptions(enabled: boolean) {
+  return useQuery({
+    queryKey: ["ai-alerts", "asset-threshold-options"],
+    queryFn: ({ signal }) => listAlertThresholdAssetOptions(signal),
     enabled,
   });
 }

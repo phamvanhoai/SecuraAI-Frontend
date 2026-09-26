@@ -49,6 +49,16 @@ export const alertThresholdListSchema = z.object({
     totalPages: z.number().int(),
   }),
 });
+export const alertThresholdAssetOptionsSchema = z.array(
+  z.object({
+    id: z.uuid(),
+    assetCode: z.string().min(1),
+    name: z.string().min(1),
+  }),
+);
+export type AlertThresholdAssetOption = z.infer<
+  typeof alertThresholdAssetOptionsSchema
+>[number];
 export const alertThresholdFormSchema = z.object({
   assetId: z.uuid("Select an asset."),
   thresholdPercent: z.coerce.number().min(1).max(100),
