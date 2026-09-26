@@ -49,6 +49,24 @@ export const policyReviewDetailSchema = z.object({
   }),
 });
 
+export const requestPolicyRevisionInputSchema = z.object({
+  comment: z
+    .string()
+    .trim()
+    .min(3, "Revision instructions must contain at least 3 characters.")
+    .max(5_000, "Revision instructions must not exceed 5,000 characters."),
+});
+
+export const policyRevisionRequestSchema = policyReviewDetailSchema.extend({
+  decision: z.object({
+    id: z.string().uuid(),
+    action: z.literal("REVISION_REQUESTED"),
+    comment: z.string(),
+    actorUserId: z.string().uuid(),
+    decidedAt: z.string().datetime(),
+  }),
+});
+
 export const publishedPolicySchema = z.object({
   policyId: z.string().uuid(),
   policyCode: z.string(),
@@ -68,6 +86,8 @@ export const publishedPolicySchema = z.object({
 export type PublishablePolicy = z.infer<typeof publishablePolicySchema>;
 export type PublishablePolicyList = z.infer<typeof publishablePolicyListSchema>;
 export type PolicyReviewDetail = z.infer<typeof policyReviewDetailSchema>;
+export type RequestPolicyRevisionInput = z.infer<typeof requestPolicyRevisionInputSchema>;
+export type PolicyRevisionRequest = z.infer<typeof policyRevisionRequestSchema>;
 export type PublishedPolicy = z.infer<typeof publishedPolicySchema>;
 
 export type PublishablePolicyQuery = {

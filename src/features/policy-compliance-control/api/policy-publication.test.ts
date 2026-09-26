@@ -3,6 +3,7 @@ import {
   getPolicyReview,
   listPublishablePolicies,
   publishPolicyVersion,
+  requestPolicyRevision,
 } from "./policy-publication";
 
 const policyId = "00000000-0000-4000-8000-000000000010";
@@ -121,5 +122,53 @@ describe("policy publication API", () => {
       method: "POST",
       body: JSON.stringify({ effectiveDate: "2026-09-11" }),
     });
+  });
+
+  it("requests revision through the same-origin BFF", async () => {
+    const revision = {
+      policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      description: null,
+      ownerUserId: null,
+      policyStatus: "draft",
+      updatedAt: timestamp,
+      version: {
+        id: versionId,
+        versionNumber: "1.0",
+        content: "Policy content",
+        changeSummary: null,
+        status: "draft",
+        effectiveDate: null,
+        createdByUserId: null,
+        createdAt: timestamp,
+      },
+      decision: {
+        id: "00000000-0000-4000-8000-000000000013",
+        action: "REVISION_REQUESTED",
+        comment: "Clarify the access scope.",
+        actorUserId: "00000000-0000-4000-8000-000000000014",
+        decidedAt: timestamp,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: revision }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      requestPolicyRevision({
+        policyId,
+        versionId,
+        body: { comment: "Clarify the access scope." },
+      }),
+    ).resolves.toMatchObject({ decision: { action: "REVISION_REQUESTED" } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/compliance/policies/${policyId}/versions/${versionId}/revision-requests`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ comment: "Clarify the access scope." }),
+      }),
+    );
   });
 });
