@@ -21,6 +21,7 @@ import type {
   PolicyVersionHistoryItem,
   PolicyVersionHistoryQuery,
 } from "../schemas/policy-version-history-schema";
+import { PolicyViewTabs } from "./policy-view-tabs";
 
 const initialQuery: PolicyVersionHistoryQuery = {
   page: 1,
@@ -43,8 +44,10 @@ const tone = (status: string): "success" | "warning" | "neutral" =>
 
 export function PolicyVersionHistoryManager({
   onBack,
+  backLabel = "Drafts",
 }: {
   onBack?: () => void;
+  backLabel?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
@@ -110,7 +113,7 @@ export function PolicyVersionHistoryManager({
         description="Review every recorded version of information security policies."
         showSampleNotice={false}
         additionalActions={
-          onBack ? (
+          onBack && backLabel !== "Published" ? (
             <Button variant="secondary" onClick={onBack}>
               Back to policy workspace
             </Button>
@@ -125,6 +128,17 @@ export function PolicyVersionHistoryManager({
             : "Search and review policy versions"
         }
       >
+        {onBack && backLabel === "Published" ? (
+          <PolicyViewTabs
+            activeId="history"
+            tabs={[
+              ...(onBack
+                ? [{ id: "default", label: backLabel, onSelect: onBack }]
+                : []),
+              { id: "history", label: "Version history", onSelect: () => undefined },
+            ]}
+          />
+        ) : null}
         <form
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submit}

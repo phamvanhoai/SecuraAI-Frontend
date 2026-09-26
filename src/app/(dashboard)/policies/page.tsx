@@ -1,20 +1,25 @@
 "use client";
-import { History } from "lucide-react";
+
 import { useState, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   EmployeePolicyAcknowledgementManager,
-  PolicyDraftsManager,
-  PolicyDepartmentAssignmentManager,
   PolicyControlMappingManager,
+  PolicyDepartmentAssignmentManager,
+  PolicyDraftsManager,
   PolicyPublicationManager,
   PolicyVersionHistoryManager,
+  PublishedPolicyManager,
   UpdatePolicyVersionManager,
 } from "@/features/policy-compliance-control";
 
 type View =
-  "default" | "new-version" | "assign-departments" | "map-controls" | "history";
+  | "default"
+  | "new-version"
+  | "published"
+  | "assign-departments"
+  | "map-controls"
+  | "history";
 
 export default function Page() {
   const session = useSessionUser();
@@ -23,79 +28,51 @@ export default function Page() {
   const canCreateDrafts = permissions.includes("policies.create");
   const canPublish = permissions.includes("policies.publish");
   const canUpdate = permissions.includes("policies.update");
-  const canAssignDepartments = permissions.includes(
-    "policies.assign-department",
-  );
+  const canAssignDepartments = permissions.includes("policies.assign-department");
   const canMapControls = permissions.includes("compliance.map-controls");
   const canAcknowledge = permissions.includes("policies.acknowledge");
 
   if (session.isPending)
-    return (
-      <div
-        aria-label="Loading policy management"
-        className="bg-neutral-soft h-56 animate-pulse rounded-xl"
-      />
-    );
-  if (view === "history")
-    return <PolicyVersionHistoryManager onBack={() => setView("default")} />;
+    return <div aria-label="Loading policy management" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />;
 
+  const goHome = () => setView("default");
+  const goPublished = () => setView("published");
+  const goHistory = () => setView("history");
   let workspace: ReactNode;
-  let historyActionIntegrated = false;
-  if (view === "new-version" && canUpdate)
+
+  if (view === "history")
     workspace = (
-      <UpdatePolicyVersionManager
-        {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
+      <PolicyVersionHistoryManager
+        backLabel={canAcknowledge && !canCreateDrafts ? "Published" : "Drafts"}
+        onBack={goHome}
       />
     );
+  else if (view === "published" && canUpdate)
+    workspace = (
+      <PublishedPolicyManager onViewDrafts={goHome} onViewHistory={goHistory} />
+    );
+  else if (view === "new-version" && canUpdate)
+    workspace = <UpdatePolicyVersionManager {...(canCreateDrafts ? { onBack: goHome } : {})} />;
   else if (view === "assign-departments" && canAssignDepartments)
-    workspace = (
-      <PolicyDepartmentAssignmentManager
-        {...(canCreateDrafts ? { onBack: () => setView("default") } : {})}
-      />
-    );
+    workspace = <PolicyDepartmentAssignmentManager {...(canCreateDrafts ? { onBack: goHome } : {})} />;
   else if (view === "map-controls" && canMapControls)
-    workspace = (
-      <PolicyControlMappingManager onBack={() => setView("default")} />
-    );
+    workspace = <PolicyControlMappingManager onBack={goHome} />;
   else if (canCreateDrafts)
     workspace = (
       <PolicyDraftsManager
-        {...(canAssignDepartments
-          ? { onAssignDepartments: () => setView("assign-departments") }
-          : {})}
-        {...(canUpdate
-          ? { onCreateNewVersion: () => setView("new-version") }
-          : {})}
-        {...(canMapControls
-          ? { onMapControls: () => setView("map-controls") }
-          : {})}
+        {...(canAssignDepartments ? { onAssignDepartments: () => setView("assign-departments") } : {})}
+        {...(canUpdate ? { onCreateNewVersion: () => setView("new-version"), onViewPublished: goPublished } : {})}
+        {...(canMapControls ? { onMapControls: () => setView("map-controls") } : {})}
+        onViewHistory={goHistory}
       />
     );
-  else if (canAcknowledge) {
-    historyActionIntegrated = true;
-    workspace = (
-      <EmployeePolicyAcknowledgementManager
-        onViewHistory={() => setView("history")}
-      />
-    );
-  } else if (canAssignDepartments)
-    workspace = <PolicyDepartmentAssignmentManager />;
+  else if (canAcknowledge)
+    workspace = <EmployeePolicyAcknowledgementManager onViewHistory={goHistory} />;
+  else if (canAssignDepartments) workspace = <PolicyDepartmentAssignmentManager />;
   else if (canMapControls) workspace = <PolicyControlMappingManager />;
   else if (canUpdate) workspace = <UpdatePolicyVersionManager />;
   else if (canPublish) workspace = <PolicyPublicationManager />;
-  else return <PolicyVersionHistoryManager />;
+  else workspace = <PolicyVersionHistoryManager />;
 
-  return (
-    <div className="space-y-3">
-      {!historyActionIntegrated ? (
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={() => setView("history")}>
-            <History aria-hidden="true" className="size-4" />
-            View version history
-          </Button>
-        </div>
-      ) : null}
-      {workspace}
-    </div>
-  );
+  return workspace;
 }

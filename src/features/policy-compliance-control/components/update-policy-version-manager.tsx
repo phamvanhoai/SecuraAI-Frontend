@@ -97,6 +97,9 @@ export function UpdatePolicyVersionManager({
   const canUpdate =
     session.data?.permissions.includes("policies.update") ?? false;
   const policies = usePublishedPoliciesForNewVersion(canUpdate);
+  const eligiblePolicies = policies.data?.filter(
+    (policy) => policy.eligibleForNewVersion !== false,
+  );
 
   const closeDialog = (): void => {
     if (
@@ -269,7 +272,7 @@ export function UpdatePolicyVersionManager({
             title="Published policies"
           >
             <div className="p-5">
-              {policies.data.length === 0 ? (
+              {eligiblePolicies?.length === 0 ? (
                 <EmptyState
                   description="Publish a policy first, or complete its existing draft before creating another version."
                   title="No policies available for a new version"
@@ -277,7 +280,7 @@ export function UpdatePolicyVersionManager({
               ) : (
                 <DataTable
                   columns={columns}
-                  rows={policies.data}
+                  rows={eligiblePolicies ?? []}
                   getRowKey={(policy) => policy.id}
                 />
               )}
