@@ -112,9 +112,7 @@ export function PolicyPublicationManager() {
       {
         key: "status",
         header: "Status",
-        cell: () => (
-          <StatusBadge tone="warning">Pending publication</StatusBadge>
-        ),
+        cell: () => <StatusBadge tone="warning">Awaiting approval</StatusBadge>,
       },
       {
         key: "updatedAt",
@@ -222,15 +220,15 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
-        description="Review draft content and publish official information security policy versions."
+        description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
-        title="Publish official policy versions"
+        title="Approve policy versions"
       />
       <MetricStrip
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Pending publication",
+            label: "Awaiting approval",
             value: String(total),
             detail: "Draft versions ready for review",
             tone: "warning",
@@ -265,7 +263,7 @@ export function PolicyPublicationManager() {
             ? `${policies.data.pagination.total} policy drafts found`
             : "Backend-managed policy drafts ready for publication"
         }
-        title="Policy drafts awaiting publication"
+        title="Policy drafts awaiting approval"
       >
         <form
           className="border-border flex gap-2 border-b p-4"
@@ -303,7 +301,7 @@ export function PolicyPublicationManager() {
             </Alert>
           ) : policies.data?.items.length === 0 ? (
             <p className="text-muted py-10 text-center">
-              No policy drafts awaiting publication were found.
+              No policy drafts awaiting approval were found.
             </p>
           ) : policies.data ? (
             <DataTable
@@ -400,7 +398,7 @@ export function PolicyPublicationManager() {
               </div>
             ) : (
               <Alert>
-                Approval is recorded before the separate publication step.
+                Approval records an auditable decision. It does not publish the policy immediately.
               </Alert>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
