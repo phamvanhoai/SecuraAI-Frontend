@@ -38,13 +38,14 @@ export function useRunAnomalyDetection() {
   });
 }
 
-export function useAiAlerts(query: AiAlertQuery) {
+export function useAiAlerts(query: AiAlertQuery, enabled = true) {
   return useQuery({
     queryKey: ["ai-alerts", "list", query],
     queryFn: ({ signal }) => listAiAlerts(query, signal),
     placeholderData: keepPreviousData,
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
+    enabled,
   });
 }
 
@@ -91,12 +92,13 @@ export function useAiAlertFeedback(
   });
 }
 
-export function useAiAlertMetrics() {
+export function useAiAlertMetrics(enabled = true) {
   return useQuery({
     queryKey: ["ai-alerts", "metrics", "24h"],
     queryFn: ({ signal }) => getAiAlertMetrics(signal),
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
+    enabled,
   });
 }
 

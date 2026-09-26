@@ -1,6 +1,14 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const explanationState = vi.hoisted(() => ({
   current: {
@@ -77,27 +85,37 @@ describe("AiAlertDetailDialog", () => {
     };
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
     expect(screen.getByText("AI decision explanation")).toBeInTheDocument();
-    expect(screen.getByText("Five failed sign-ins exceeded the baseline.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Five failed sign-ins exceeded the baseline."),
+    ).toBeInTheDocument();
     expect(screen.getByText(/"failedSignIns": 5/)).toBeInTheDocument();
     expect(screen.getByText(/"normalFailedSignIns": 1/)).toBeInTheDocument();
   });
 
   it("explains when no stored explanation exists", () => {
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
-    expect(screen.getByText("No AI explanation has been recorded for this alert.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No AI explanation has been recorded for this alert."),
+    ).toBeInTheDocument();
   });
 
   it("shows a loading state while the explanation is fetched", () => {
     explanationState.current.isPending = true;
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
-    expect(screen.getByRole("status", { name: "Loading AI explanation" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("status", { name: "Loading AI explanation" }),
+    ).toBeInTheDocument();
   });
 
   it("offers a retry when the explanation request fails", async () => {
     explanationState.current.isError = true;
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
-    expect(screen.getByText("Unable to load the AI explanation.")).toBeInTheDocument();
-    await userEvent.setup().click(screen.getByRole("button", { name: "Try again" }));
+    expect(
+      screen.getByText("Unable to load the AI explanation."),
+    ).toBeInTheDocument();
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Try again" }));
     expect(explanationState.current.refetch).toHaveBeenCalledOnce();
   });
 
@@ -115,9 +133,18 @@ describe("AiAlertDetailDialog", () => {
   });
 
   it("identifies alerts without an AI risk suggestion", () => {
-    render(<AiAlertDetailDialog alert={{ ...alert, riskScore: null, riskLevel: null }} onClose={vi.fn()} />);
-    expect(screen.getByText("AI-suggested risk level").parentElement).toHaveTextContent("Not available");
-    expect(screen.getByText("AI risk score").parentElement).toHaveTextContent("Not available");
+    render(
+      <AiAlertDetailDialog
+        alert={{ ...alert, riskScore: null, riskLevel: null }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText("AI-suggested risk level").parentElement,
+    ).toHaveTextContent("Not available");
+    expect(screen.getByText("AI risk score").parentElement).toHaveTextContent(
+      "Not available",
+    );
   });
 
   it("closes through the secondary action", async () => {

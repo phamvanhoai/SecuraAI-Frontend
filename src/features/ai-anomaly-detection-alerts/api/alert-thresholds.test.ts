@@ -34,7 +34,7 @@ describe("alert threshold API", () => {
       items: [threshold],
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/ai-alerts/thresholds?page=1&limit=100",
+      "/api/ai-alerts/thresholds/assets?page=1&limit=100",
       expect.objectContaining({ credentials: "include" }),
     );
   });
