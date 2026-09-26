@@ -5,6 +5,7 @@ import {
   approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
+  requestPolicyRevision,
 } from "../api/policy-publication";
 import type { PublishablePolicyQuery } from "../schemas/policy-publication-schema";
 
@@ -26,6 +27,14 @@ export function usePolicyReview(
     queryFn: ({ signal }) =>
       getPolicyReview(policyId ?? "", versionId ?? "", signal),
     enabled: policyId !== null && versionId !== null,
+  });
+}
+
+export function useRequestPolicyRevision() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: requestPolicyRevision,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
   });
 }
 

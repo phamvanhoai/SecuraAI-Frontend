@@ -5,8 +5,6 @@ import { PolicyPublicationManager } from "./policy-publication-manager";
 
 afterEach(cleanup);
 
-const mocks = vi.hoisted(() => ({ approve: vi.fn() }));
-
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
     this.setAttribute("open", "");
@@ -14,8 +12,10 @@ beforeEach(() => {
   HTMLDialogElement.prototype.close = vi.fn(function close(this: HTMLDialogElement) {
     this.removeAttribute("open");
   });
-  mocks.approve.mockReset();
+  mocks.requestRevision.mockReset();
 });
+
+const mocks = vi.hoisted(() => ({ requestRevision: vi.fn() }));
 
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
@@ -64,20 +64,24 @@ vi.mock("../hooks/use-policy-publication", () => ({
       version: {
         id: "00000000-0000-4000-8000-000000000011",
         versionNumber: "1.0",
-        status: "in_review",
         content: "Policy content",
-        changeSummary: null,
+        changeSummary: "Initial submission",
+        status: "in_review",
         effectiveDate: null,
-        createdByUserId: null,
+        createdByUserId: "00000000-0000-4000-8000-000000000012",
         createdAt: "2026-09-11T08:00:00.000Z",
       },
     } : undefined,
     isPending: false,
     isError: false,
   }),
-  useApprovePolicyForPublication: () => ({
+  usePublishPolicyVersion: () => ({
     isPending: false,
-    mutateAsync: mocks.approve,
+    mutateAsync: vi.fn(),
+  }),
+  useRequestPolicyRevision: () => ({
+    isPending: false,
+    mutateAsync: mocks.requestRevision,
   }),
 }));
 
@@ -87,11 +91,11 @@ describe("PolicyPublicationManager", () => {
 
     expect(
       screen.getByRole("heading", {
-        name: "Approve policy versions",
+        name: "Publish official policy versions",
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Information Security Policy")).toBeInTheDocument();
-    expect(screen.getAllByText("Awaiting approval")).toHaveLength(2);
+    expect(screen.getAllByText("Pending publication")).toHaveLength(2);
     expect(
       screen.getByPlaceholderText("Search by policy code or title"),
     ).toBeInTheDocument();
@@ -114,15 +118,15 @@ describe("PolicyPublicationManager", () => {
 
     expect(
       await screen.findByText(
-        "No policy drafts awaiting approval were found.",
+        "No policy drafts awaiting publication were found.",
       ),
     ).toBeInTheDocument();
     expect(screen.getAllByText("1")).toHaveLength(4);
   });
 
-  it("approves a reviewed policy without publishing it", async () => {
+  it("requires instructions and sends a revision request from the review dialog", async () => {
     const user = userEvent.setup();
-    mocks.approve.mockResolvedValue({});
+    mocks.requestRevision.mockResolvedValue({});
     render(<PolicyPublicationManager />);
 
     await user.click(
@@ -132,16 +136,22 @@ describe("PolicyPublicationManager", () => {
     );
     await user.click(screen.getByRole("button", { name: "Review details" }));
     expect(screen.getByText("Policy content")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Request revision" }));
+    await user.click(screen.getByRole("button", { name: "Send revision request" }));
     expect(
-      screen.getByText(/It does not publish the policy immediately/),
+      screen.getByText("Revision instructions must contain at least 3 characters."),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "Approve for publication" }),
+    await user.type(
+      screen.getByLabelText("Revision instructions"),
+      "Clarify the access scope.",
     );
-    expect(mocks.approve).toHaveBeenCalledWith({
+    await user.click(screen.getByRole("button", { name: "Send revision request" }));
+    expect(mocks.requestRevision).toHaveBeenCalledWith({
       policyId: "00000000-0000-4000-8000-000000000010",
       versionId: "00000000-0000-4000-8000-000000000011",
+      body: { comment: "Clarify the access scope." },
     });
   });
 });

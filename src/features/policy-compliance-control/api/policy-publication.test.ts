@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
+  publishPolicyVersion,
+  requestPolicyRevision,
 } from "./policy-publication";
 
 const policyId = "00000000-0000-4000-8000-000000000010";
@@ -58,7 +59,7 @@ describe("policy publication API", () => {
     );
   });
 
-  it("loads review detail and approves the selected version", async () => {
+  it("loads review detail and publishes the selected version", async () => {
     const detail = {
       policyId,
       policyCode: "ISP-001",
@@ -78,18 +79,19 @@ describe("policy publication API", () => {
         createdAt: timestamp,
       },
     };
-    const approved = {
-      ...detail,
-      version: {
-        ...detail.version,
-        status: "approved",
-      },
-      decision: {
-        id: "00000000-0000-4000-8000-000000000013",
-        action: "APPROVED",
-        comment: null,
-        actorUserId: "00000000-0000-4000-8000-000000000014",
-        decidedAt: timestamp,
+    const published = {
+      policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      status: "published",
+      publishedVersion: {
+        id: versionId,
+        versionNumber: "1.0",
+        status: "published",
+        effectiveDate: timestamp,
+        publishedByUserId: null,
+        publishedAt: timestamp,
+        createdAt: timestamp,
       },
     };
     const fetchMock = vi
@@ -100,7 +102,7 @@ describe("policy publication API", () => {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: approved }), {
+        new Response(JSON.stringify({ success: true, data: published }), {
           status: 200,
         }),
       );
@@ -110,16 +112,63 @@ describe("policy publication API", () => {
       policyCode: "ISP-001",
     });
     await expect(
-      approvePolicyForPublication({ policyId, versionId }),
-    ).resolves.toMatchObject({
-      version: { status: "approved" },
-      decision: { action: "APPROVED" },
-    });
-    expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      `/api/compliance/policies/${policyId}/versions/${versionId}/approve`,
-    );
+      publishPolicyVersion({
+        policyId,
+        versionId,
+        effectiveDate: "2026-09-11",
+      }),
+    ).resolves.toMatchObject({ status: "published" });
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: "POST",
+      body: JSON.stringify({ effectiveDate: "2026-09-11" }),
     });
+  });
+
+  it("requests revision through the same-origin BFF", async () => {
+    const revision = {
+      policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      description: null,
+      ownerUserId: null,
+      policyStatus: "draft",
+      updatedAt: timestamp,
+      version: {
+        id: versionId,
+        versionNumber: "1.0",
+        content: "Policy content",
+        changeSummary: null,
+        status: "draft",
+        effectiveDate: null,
+        createdByUserId: null,
+        createdAt: timestamp,
+      },
+      decision: {
+        id: "00000000-0000-4000-8000-000000000013",
+        action: "REVISION_REQUESTED",
+        comment: "Clarify the access scope.",
+        actorUserId: "00000000-0000-4000-8000-000000000014",
+        decidedAt: timestamp,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: revision }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      requestPolicyRevision({
+        policyId,
+        versionId,
+        body: { comment: "Clarify the access scope." },
+      }),
+    ).resolves.toMatchObject({ decision: { action: "REVISION_REQUESTED" } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/compliance/policies/${policyId}/versions/${versionId}/revision-requests`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ comment: "Clarify the access scope." }),
+      }),
+    );
   });
 });

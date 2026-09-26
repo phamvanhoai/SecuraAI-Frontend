@@ -31,11 +31,14 @@ import {
   usePolicyReview,
   usePublishablePolicies,
   useApprovePolicyForPublication,
+  useRequestPolicyRevision,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
   PublishablePolicyQuery,
 } from "../schemas/policy-publication-schema";
+import { requestPolicyRevisionInputSchema } from "../schemas/policy-publication-schema";
+import { Textarea } from "@/components/ui/textarea";
 
 const initialQuery: PublishablePolicyQuery = {
   page: 1,
@@ -62,6 +65,9 @@ export function PolicyPublicationManager() {
     policyId: string;
     versionId: string;
   } | null>(null);
+  const [requestingRevision, setRequestingRevision] = useState(false);
+  const [revisionComment, setRevisionComment] = useState("");
+  const [revisionError, setRevisionError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const policies = usePublishablePolicies(query);
   const metricPolicies = usePublishablePolicies(initialQuery);
@@ -70,6 +76,14 @@ export function PolicyPublicationManager() {
     selected?.versionId ?? null,
   );
   const approve = useApprovePolicyForPublication();
+  const requestRevision = useRequestPolicyRevision();
+
+  function closeReview(): void {
+    setSelected(null);
+    setRequestingRevision(false);
+    setRevisionComment("");
+    setRevisionError(null);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,7 +113,7 @@ export function PolicyPublicationManager() {
         key: "status",
         header: "Status",
         cell: () => (
-          <StatusBadge tone="warning">Awaiting approval</StatusBadge>
+          <StatusBadge tone="warning">Pending publication</StatusBadge>
         ),
       },
       {
@@ -166,11 +180,36 @@ export function PolicyPublicationManager() {
       await approve.mutateAsync(selected);
       toast.success(
         "Policy approved",
-        "The reviewed version is approved and ready for the separate publication step.",
+        "The reviewed version is approved and ready for publication.",
       );
-      setSelected(null);
+      closeReview();
     } catch (error: unknown) {
       toast.error("Unable to approve policy", errorMessage(error));
+    }
+  }
+
+  async function confirmRevisionRequest(): Promise<void> {
+    if (!selected) return;
+    const parsed = requestPolicyRevisionInputSchema.safeParse({
+      comment: revisionComment,
+    });
+    if (!parsed.success) {
+      setRevisionError(
+        parsed.error.issues[0]?.message ??
+          "Revision instructions are required.",
+      );
+      return;
+    }
+    setRevisionError(null);
+    try {
+      await requestRevision.mutateAsync({ ...selected, body: parsed.data });
+      toast.success(
+        "Revision requested",
+        "The draft was returned to the Security Officer with your instructions.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to request revision", errorMessage(error));
     }
   }
 
@@ -183,17 +222,17 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
-        description="Review submitted policy content and approve eligible versions for publication."
+        description="Review draft content and publish official information security policy versions."
         showSampleNotice={false}
-        title="Approve policy versions"
+        title="Publish official policy versions"
       />
       <MetricStrip
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Awaiting approval",
+            label: "Pending publication",
             value: String(total),
-            detail: "Submitted versions requiring a decision",
+            detail: "Draft versions ready for review",
             tone: "warning",
             loading: metricPolicies.isPending,
           },
@@ -224,9 +263,9 @@ export function PolicyPublicationManager() {
         description={
           policies.data
             ? `${policies.data.pagination.total} policy drafts found`
-            : "Backend-managed policy drafts awaiting an approval decision"
+            : "Backend-managed policy drafts ready for publication"
         }
-        title="Policy drafts awaiting approval"
+        title="Policy drafts awaiting publication"
       >
         <form
           className="border-border flex gap-2 border-b p-4"
@@ -253,18 +292,18 @@ export function PolicyPublicationManager() {
           {policies.isPending ? (
             <TableSkeleton
               columns={5}
-              label="Loading policy drafts awaiting approval"
+              label="Loading policy drafts awaiting publication"
             />
           ) : policies.isError ? (
             <Alert>
               <strong className="block">
-                Unable to load policy drafts awaiting approval
+                Unable to load policy drafts awaiting publication
               </strong>
               <span>{errorMessage(policies.error)}</span>
             </Alert>
           ) : policies.data?.items.length === 0 ? (
             <p className="text-muted py-10 text-center">
-              No policy drafts awaiting approval were found.
+              No policy drafts awaiting publication were found.
             </p>
           ) : policies.data ? (
             <DataTable
@@ -290,7 +329,7 @@ export function PolicyPublicationManager() {
       <Dialog
         className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
         dialogRef={dialogRef}
-        onClose={() => setSelected(null)}
+        onClose={closeReview}
         title="Review policy version"
       >
         {review.isPending ? (
@@ -327,17 +366,86 @@ export function PolicyPublicationManager() {
                 {review.data.version.changeSummary}
               </p>
             ) : null}
-            <Alert>
-              Approval records an auditable decision and makes this version eligible for
-              publication. It does not publish the policy immediately.
-            </Alert>
+            {requestingRevision ? (
+              <div className="border-border bg-neutral-soft space-y-2 rounded-lg border p-4">
+                <label className="block" htmlFor="policy-revision-comment">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    Revision instructions
+                  </span>
+                  <Textarea
+                    aria-describedby={
+                      revisionError ? "policy-revision-error" : undefined
+                    }
+                    aria-invalid={revisionError ? true : undefined}
+                    id="policy-revision-comment"
+                    maxLength={5_000}
+                    onChange={(event) => {
+                      setRevisionComment(event.target.value);
+                      if (revisionError) setRevisionError(null);
+                    }}
+                    placeholder="Explain what must be revised before approval."
+                    value={revisionComment}
+                  />
+                </label>
+                {revisionError ? (
+                  <p className="text-danger text-sm" id="policy-revision-error">
+                    {revisionError}
+                  </p>
+                ) : (
+                  <p className="text-muted text-xs">
+                    These instructions will be recorded with the review
+                    decision.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Alert>
+                Approval is recorded before the separate publication step.
+              </Alert>
+            )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button onClick={() => setSelected(null)} variant="secondary">
-                Cancel
-              </Button>
-              <Button disabled={approve.isPending} onClick={confirmApproval}>
-                {approve.isPending ? "Approving..." : "Approve for publication"}
-              </Button>
+              {requestingRevision ? (
+                <>
+                  <Button
+                    disabled={requestRevision.isPending}
+                    onClick={() => {
+                      setRequestingRevision(false);
+                      setRevisionError(null);
+                    }}
+                    variant="secondary"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    disabled={requestRevision.isPending}
+                    onClick={confirmRevisionRequest}
+                  >
+                    {requestRevision.isPending
+                      ? "Sending..."
+                      : "Send revision request"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={closeReview} variant="secondary">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setRequestingRevision(true)}
+                    variant="secondary"
+                  >
+                    Request revision
+                  </Button>
+                  <Button
+                    disabled={approve.isPending}
+                    onClick={confirmApproval}
+                  >
+                    {approve.isPending
+                      ? "Approving..."
+                      : "Approve for publication"}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         ) : null}
