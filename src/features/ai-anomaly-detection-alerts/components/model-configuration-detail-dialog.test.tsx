@@ -11,7 +11,11 @@ const configuration = {
   status: "deployed" as const,
   featureDefinition: null,
   parameters: null,
-  dataset: { id: "11111111-1111-4111-8111-111111111111", name: "Security events", version: "2.0" },
+  dataset: {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Security events",
+    version: "2.0",
+  },
   latestEvaluation: {
     id: "22222222-2222-4222-8222-222222222222",
     precision: 0.91,
@@ -58,7 +62,9 @@ describe("ModelConfigurationDetailDialog", () => {
     expect(screen.getByText("security-anomaly 1.1.0")).toBeInTheDocument();
     expect(screen.getByText("Security events 2.0")).toBeInTheDocument();
     expect(screen.getByText("91.0%")).toBeInTheDocument();
-    expect(screen.getByText("Validated against the holdout set.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Validated against the holdout set."),
+    ).toBeInTheDocument();
   });
 
   it("closes through the secondary action", async () => {

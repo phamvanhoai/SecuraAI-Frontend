@@ -24,14 +24,23 @@ export const modelConfigurationSchema = z.object({
   status: z.enum(["development", "validated", "deployed", "retired"]),
   featureDefinition: z.unknown().nullable(),
   parameters: z.unknown().nullable(),
-  dataset: z.object({ id: z.uuid(), name: z.string(), version: z.string() }).nullable(),
-  latestEvaluation: z.object({
-    id: z.uuid(), precision: z.number().nullable(), recall: z.number().nullable(),
-    f1Score: z.number().nullable(), prAuc: z.number().nullable(),
-    falsePositiveRate: z.number().nullable(), alertsPerDay: z.number().nullable(),
-    detectionLatencyMs: z.number().nullable(), notes: z.string().nullable(),
-    evaluatedAt: z.iso.datetime(),
-  }).nullable(),
+  dataset: z
+    .object({ id: z.uuid(), name: z.string(), version: z.string() })
+    .nullable(),
+  latestEvaluation: z
+    .object({
+      id: z.uuid(),
+      precision: z.number().nullable(),
+      recall: z.number().nullable(),
+      f1Score: z.number().nullable(),
+      prAuc: z.number().nullable(),
+      falsePositiveRate: z.number().nullable(),
+      alertsPerDay: z.number().nullable(),
+      detectionLatencyMs: z.number().nullable(),
+      notes: z.string().nullable(),
+      evaluatedAt: z.iso.datetime(),
+    })
+    .nullable(),
   deployedAt: z.iso.datetime().nullable(),
   retiredAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),

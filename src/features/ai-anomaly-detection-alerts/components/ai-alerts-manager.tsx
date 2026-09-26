@@ -83,8 +83,6 @@ export function AiAlertsManager() {
     false;
   const canManageThresholds =
     session.data?.permissions.includes("ai-alerts.thresholds.manage") ?? false;
-  const canReadAlerts =
-    session.data?.permissions.includes("ai-alerts.read") ?? false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
   const alerts = useAiAlerts({
     page,
@@ -93,28 +91,8 @@ export function AiAlertsManager() {
     ...(search ? { q: search } : {}),
     ...(status === "all" ? {} : { status }),
     ...(after ? { detectedAfter: after } : {}),
-  }, canReadAlerts);
-  const metrics = useAiAlertMetrics(canReadAlerts);
-
-  if (!canReadAlerts && canManageThresholds) {
-    return (
-      <>
-        <ProductPageHeader
-          description="Configure the anomaly score boundary used by the currently deployed AI model."
-          onPrimaryAction={() => setThresholdsOpen(true)}
-          primaryAction="Configure detection threshold"
-          showSampleNotice={false}
-          title="Detection threshold"
-        />
-        <ProductPanel title="Threshold behavior">
-          <p className="text-muted max-w-2xl text-sm leading-6">
-            Lower thresholds detect more unusual events but can increase false positives. Changes apply only to future detection runs and are recorded for audit.
-          </p>
-        </ProductPanel>
-        <AlertThresholdsDialog open={thresholdsOpen} onClose={() => setThresholdsOpen(false)} />
-      </>
-    );
-  }
+  });
+  const metrics = useAiAlertMetrics();
 
   const columns: readonly DataTableColumn<AiAlert>[] = [
     {
@@ -301,9 +279,13 @@ export function AiAlertsManager() {
         {...(canManageThresholds
           ? {
               onSecondaryAction: () => setThresholdsOpen(true),
-              secondaryAction: "Detection threshold",
+              secondaryAction: "Custom alert thresholds",
               secondaryActionIcon: (
-                <SlidersHorizontal aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                <SlidersHorizontal
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
               ),
             }
           : {})}
@@ -494,7 +476,10 @@ export function AiAlertsManager() {
         alert={markingFalsePositive}
         onClose={() => setMarkingFalsePositive(null)}
       />
-      <AlertThresholdsDialog open={thresholdsOpen} onClose={() => setThresholdsOpen(false)} />
+      <AlertThresholdsDialog
+        open={thresholdsOpen}
+        onClose={() => setThresholdsOpen(false)}
+      />
     </>
   );
 }
@@ -514,12 +499,15 @@ function formatDate(value: string): string {
 }
 
 function formatRiskLevel(level: string): string {
-  return level.replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
+  return level
+    .replaceAll("_", " ")
+    .replace(/^./, (value) => value.toUpperCase());
 }
 
 function riskLevelTone(level: string) {
   const normalized = level.toLowerCase();
-  if (normalized === "critical" || normalized === "high") return "danger" as const;
+  if (normalized === "critical" || normalized === "high")
+    return "danger" as const;
   if (normalized === "medium") return "warning" as const;
   if (normalized === "low") return "success" as const;
   return "neutral" as const;

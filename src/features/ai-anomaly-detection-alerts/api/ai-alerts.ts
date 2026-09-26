@@ -73,12 +73,14 @@ export async function getAiAlertExplanation(
   alertId: string,
   signal?: AbortSignal,
 ): Promise<AiAlertExplanation | null> {
-  return aiAlertExplanationSchema.nullable().parse(
-    await apiRequest<unknown>(
-      `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
-      { target: "same-origin", ...(signal ? { signal } : {}) },
-    ),
-  );
+  return aiAlertExplanationSchema
+    .nullable()
+    .parse(
+      await apiRequest<unknown>(
+        `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
+        { target: "same-origin", ...(signal ? { signal } : {}) },
+      ),
+    );
 }
 
 export async function evaluateAiAlertReliability(

@@ -1,5 +1,8 @@
 import { apiRequest } from "@/lib/api/api-client";
-import { modelConfigurationListSchema, type ModelConfigurationList } from "../schemas/model-configuration-schema";
+import {
+  modelConfigurationListSchema,
+  type ModelConfigurationList,
+} from "../schemas/model-configuration-schema";
 
 export type ModelConfigurationQuery = {
   page: number;

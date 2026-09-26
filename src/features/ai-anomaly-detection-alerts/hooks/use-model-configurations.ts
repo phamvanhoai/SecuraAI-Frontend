@@ -1,7 +1,10 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { listModelConfigurations, type ModelConfigurationQuery } from "../api/model-configurations";
+import {
+  listModelConfigurations,
+  type ModelConfigurationQuery,
+} from "../api/model-configurations";
 
 const key = ["ai-alerts", "models"] as const;
 
