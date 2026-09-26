@@ -4,11 +4,24 @@ import {
   type ConfigureDetectionThresholdRequest,
   type DetectionThreshold,
   alertThresholdListSchema,
+  alertThresholdAssetOptionsSchema,
   alertThresholdSchema,
   type AlertThreshold,
   type AlertThresholdList,
   type SetAlertThresholdRequest,
+  type AlertThresholdAssetOption,
 } from "../schemas/alert-threshold-schema";
+
+export async function listAlertThresholdAssetOptions(
+  signal?: AbortSignal,
+): Promise<AlertThresholdAssetOption[]> {
+  return alertThresholdAssetOptionsSchema.parse(
+    await apiRequest<unknown>("/api/ai-alerts/thresholds/assets/options", {
+      target: "same-origin",
+      ...(signal ? { signal } : {}),
+    }),
+  );
+}
 
 export async function getDetectionThreshold(
   signal?: AbortSignal,

@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { listAlertThresholds, setAlertThreshold } from "./alert-thresholds";
+import {
+  listAlertThresholdAssetOptions,
+  listAlertThresholds,
+  setAlertThreshold,
+} from "./alert-thresholds";
 
 const threshold = {
   id: "00000000-0000-4000-8000-000000000003",
@@ -18,6 +22,26 @@ const threshold = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("alert threshold API", () => {
+  it("loads active asset options through the dedicated V2 endpoint", async () => {
+    const assets = [
+      {
+        id: threshold.asset.id,
+        assetCode: threshold.asset.assetCode,
+        name: threshold.asset.name,
+      },
+    ];
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json({ success: true, data: assets }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(listAlertThresholdAssetOptions()).resolves.toEqual(assets);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai-alerts/thresholds/assets/options",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
   it("loads the bounded threshold list through the BFF", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       Response.json({

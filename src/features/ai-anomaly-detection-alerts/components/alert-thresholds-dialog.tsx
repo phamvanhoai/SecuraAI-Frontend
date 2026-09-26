@@ -11,8 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useAssets } from "@/features/it-asset-management";
 import {
+  useAlertThresholdAssetOptions,
   useAlertThresholds,
   useSetAlertThreshold,
 } from "../hooks/use-alert-thresholds";
@@ -40,16 +40,7 @@ export function AlertThresholdsDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const thresholds = useAlertThresholds(1, open);
-  const assets = useAssets(
-    {
-      page: 1,
-      limit: 100,
-      sortBy: "assetCode",
-      sortOrder: "asc",
-      status: "active",
-    },
-    open,
-  );
+  const assets = useAlertThresholdAssetOptions(open);
   const mutation = useSetAlertThreshold();
   const toast = useToast();
   const {
@@ -145,7 +136,7 @@ export function AlertThresholdsDialog({
             value={selectedAssetId}
           >
             <option value="">Select an active asset</option>
-            {assets.data?.items.map((asset) => (
+            {assets.data?.map((asset) => (
               <option key={asset.id} value={asset.id}>
                 {asset.assetCode} — {asset.name}
               </option>
