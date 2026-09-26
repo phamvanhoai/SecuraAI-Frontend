@@ -83,6 +83,8 @@ export function AiAlertsManager() {
     false;
   const canManageThresholds =
     session.data?.permissions.includes("ai-alerts.thresholds.manage") ?? false;
+  const canReadAlerts =
+    session.data?.permissions.includes("ai-alerts.read") ?? false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
   const alerts = useAiAlerts({
     page,
@@ -91,8 +93,28 @@ export function AiAlertsManager() {
     ...(search ? { q: search } : {}),
     ...(status === "all" ? {} : { status }),
     ...(after ? { detectedAfter: after } : {}),
-  });
-  const metrics = useAiAlertMetrics();
+  }, canReadAlerts);
+  const metrics = useAiAlertMetrics(canReadAlerts);
+
+  if (!canReadAlerts && canManageThresholds) {
+    return (
+      <>
+        <ProductPageHeader
+          description="Configure the anomaly score boundary used by the currently deployed AI model."
+          onPrimaryAction={() => setThresholdsOpen(true)}
+          primaryAction="Configure detection threshold"
+          showSampleNotice={false}
+          title="Detection threshold"
+        />
+        <ProductPanel title="Threshold behavior">
+          <p className="text-muted max-w-2xl text-sm leading-6">
+            Lower thresholds detect more unusual events but can increase false positives. Changes apply only to future detection runs and are recorded for audit.
+          </p>
+        </ProductPanel>
+        <AlertThresholdsDialog open={thresholdsOpen} onClose={() => setThresholdsOpen(false)} />
+      </>
+    );
+  }
 
   const columns: readonly DataTableColumn<AiAlert>[] = [
     {
@@ -279,7 +301,7 @@ export function AiAlertsManager() {
         {...(canManageThresholds
           ? {
               onSecondaryAction: () => setThresholdsOpen(true),
-              secondaryAction: "Alert thresholds",
+              secondaryAction: "Detection threshold",
               secondaryActionIcon: (
                 <SlidersHorizontal aria-hidden="true" className="size-4" strokeWidth={1.8} />
               ),
