@@ -122,7 +122,7 @@ export function AiAlertDetailDialog({
               </p>
             ) : explanation.data ? (
               <div className="space-y-4 text-sm">
-                <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                <p className="[overflow-wrap:anywhere] whitespace-pre-wrap">
                   {explanation.data.explanationText}
                 </p>
                 <ExplanationData
@@ -154,8 +154,10 @@ function ExplanationData({ label, value }: { label: string; value: unknown }) {
   if (value === null) return null;
   return (
     <div className="space-y-1">
-      <h5 className="text-muted text-xs font-medium tracking-wide uppercase">{label}</h5>
-      <pre className="bg-neutral-soft max-h-48 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap [overflow-wrap:anywhere]">
+      <h5 className="text-muted text-xs font-medium tracking-wide uppercase">
+        {label}
+      </h5>
+      <pre className="bg-neutral-soft max-h-48 overflow-auto rounded-lg p-3 text-xs [overflow-wrap:anywhere] whitespace-pre-wrap">
         {JSON.stringify(value, null, 2)}
       </pre>
     </div>
@@ -176,7 +178,9 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 function formatRiskLevel(level: string): string {
-  return level.replaceAll("_", " ").replace(/^./, (value) => value.toUpperCase());
+  return level
+    .replaceAll("_", " ")
+    .replace(/^./, (value) => value.toUpperCase());
 }
 
 export function formatStatus(status: AiAlert["status"]): string {

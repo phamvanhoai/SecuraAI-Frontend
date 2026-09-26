@@ -11,8 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useAssets } from "@/features/it-asset-management";
-import { useAlertThresholds, useSetAlertThreshold } from "../hooks/use-alert-thresholds";
+import {
+  useAlertThresholdAssetOptions,
+  useAlertThresholds,
+  useSetAlertThreshold,
+} from "../hooks/use-alert-thresholds";
 import {
   alertThresholdFormSchema,
   thresholdRiskLevels,
@@ -27,14 +30,17 @@ const defaults: AlertThresholdFormInput = {
   enabled: true,
 };
 
-export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function AlertThresholdsDialog({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const thresholds = useAlertThresholds(1, open);
-  const assets = useAssets(
-    { page: 1, limit: 100, sortBy: "assetCode", sortOrder: "asc", status: "active" },
-    open,
-  );
+  const assets = useAlertThresholdAssetOptions(open);
   const mutation = useSetAlertThreshold();
   const toast = useToast();
   const {
@@ -65,7 +71,9 @@ export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClos
 
   const chooseAsset = (assetId: string): void => {
     setValue("assetId", assetId, { shouldValidate: true });
-    const existing = thresholds.data?.items.find((item) => item.asset.id === assetId);
+    const existing = thresholds.data?.items.find(
+      (item) => item.asset.id === assetId,
+    );
     setValue("thresholdPercent", existing ? existing.threshold * 100 : 80);
     setValue("riskLevelMin", existing?.riskLevelMin ?? "");
     setValue("enabled", existing?.enabled ?? true);
@@ -82,9 +90,16 @@ export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClos
           enabled: values.enabled,
         },
       });
-      toast.success("Alert threshold saved", "The custom asset threshold is now active.");
+      toast.success(
+        "Alert threshold saved",
+        "The custom asset threshold is now active.",
+      );
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "Unable to save the alert threshold.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save the alert threshold.",
+      );
     }
   };
 
@@ -93,35 +108,71 @@ export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClos
       className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
-      title="Alert thresholds"
+      title="Custom alert thresholds"
     >
       <p className="text-muted text-sm leading-6">
-        Set an asset-specific anomaly score threshold. Lower values create alerts more readily.
+        Override the deployed model threshold for an individual asset. Lower
+        values create alerts more readily; disabling an override restores the
+        model threshold for future detection runs.
       </p>
-      {message ? <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">{message}</Alert> : null}
-      <form className="mt-5 space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-        <FormField error={errors.assetId?.message} id="threshold-asset" label="Asset">
+      {message ? (
+        <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">
+          {message}
+        </Alert>
+      ) : null}
+      <form
+        className="mt-5 space-y-4"
+        noValidate
+        onSubmit={handleSubmit(submit)}
+      >
+        <FormField
+          error={errors.assetId?.message}
+          id="threshold-asset"
+          label="Asset"
+        >
           <Select
             id="threshold-asset"
             onChange={(event) => chooseAsset(event.target.value)}
             value={selectedAssetId}
           >
             <option value="">Select an active asset</option>
-            {assets.data?.items.map((asset) => (
-              <option key={asset.id} value={asset.id}>{asset.assetCode} — {asset.name}</option>
+            {assets.data?.map((asset) => (
+              <option key={asset.id} value={asset.id}>
+                {asset.assetCode} — {asset.name}
+              </option>
             ))}
           </Select>
         </FormField>
         {assets.isError ? <Alert>Unable to load active assets.</Alert> : null}
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField error={errors.thresholdPercent?.message} id="threshold-percent" label="Anomaly score threshold (%)">
-            <Input id="threshold-percent" inputMode="decimal" min={1} max={100} step={1} type="number" {...register("thresholdPercent")} />
+          <FormField
+            error={errors.thresholdPercent?.message}
+            id="threshold-percent"
+            label="Anomaly score threshold (%)"
+          >
+            <Input
+              id="threshold-percent"
+              inputMode="decimal"
+              min={1}
+              max={100}
+              step={1}
+              type="number"
+              {...register("thresholdPercent")}
+            />
             <p className="text-muted text-xs">Accepted range: 1% to 100%.</p>
           </FormField>
-          <FormField error={errors.riskLevelMin?.message} id="threshold-risk" label="Minimum risk level (optional)">
+          <FormField
+            error={errors.riskLevelMin?.message}
+            id="threshold-risk"
+            label="Minimum risk level (optional)"
+          >
             <Select id="threshold-risk" {...register("riskLevelMin")}>
               <option value="">Any risk level</option>
-              {thresholdRiskLevels.map((level) => <option key={level} value={level}>{formatLevel(level)}</option>)}
+              {thresholdRiskLevels.map((level) => (
+                <option key={level} value={level}>
+                  {formatLevel(level)}
+                </option>
+              ))}
             </Select>
           </FormField>
         </div>
@@ -130,14 +181,26 @@ export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClos
           Enable this threshold
         </label>
         <div className="border-border flex justify-end gap-2 border-t pt-4">
-          <Button onClick={close} type="button" variant="secondary">Cancel</Button>
-          <Button disabled={mutation.isPending || assets.isPending} type="submit">
+          <Button onClick={close} type="button" variant="secondary">
+            Cancel
+          </Button>
+          <Button
+            disabled={
+              mutation.isPending || assets.isPending || !selectedAssetId
+            }
+            type="submit"
+          >
             {mutation.isPending ? "Saving…" : "Save threshold"}
           </Button>
         </div>
       </form>
-      <section className="border-border mt-6 border-t pt-5" aria-labelledby="configured-thresholds-title">
-        <h3 className="font-semibold" id="configured-thresholds-title">Configured thresholds</h3>
+      <section
+        className="border-border mt-6 border-t pt-5"
+        aria-labelledby="configured-thresholds-title"
+      >
+        <h3 className="font-semibold" id="configured-thresholds-title">
+          Configured thresholds
+        </h3>
         {thresholds.isPending ? (
           <p className="text-muted mt-3 text-sm">Loading thresholds…</p>
         ) : thresholds.data?.items.length ? (
@@ -149,15 +212,23 @@ export function AlertThresholdsDialog({ open, onClose }: { open: boolean; onClos
                 onClick={() => chooseAsset(item.asset.id)}
                 type="button"
               >
-                <span><strong>{item.asset.assetCode}</strong><span className="text-muted ml-2">{item.asset.name}</span></span>
-                <span className="shrink-0 tabular-nums">{Math.round(item.threshold * 100)}% · {item.enabled ? "Enabled" : "Disabled"}</span>
+                <span>
+                  <strong>{item.asset.assetCode}</strong>
+                  <span className="text-muted ml-2">{item.asset.name}</span>
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  {Math.round(item.threshold * 100)}% ·{" "}
+                  {item.enabled ? "Enabled" : "Disabled"}
+                </span>
               </button>
             ))}
           </div>
         ) : thresholds.isError ? (
           <Alert className="mt-3">Unable to load configured thresholds.</Alert>
         ) : (
-          <p className="text-muted mt-3 text-sm">No custom thresholds have been configured.</p>
+          <p className="text-muted mt-3 text-sm">
+            No custom thresholds have been configured.
+          </p>
         )}
       </section>
     </Dialog>

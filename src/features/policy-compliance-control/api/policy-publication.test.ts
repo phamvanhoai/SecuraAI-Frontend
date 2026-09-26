@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
-  publishPolicyVersion,
 } from "./policy-publication";
 
 const policyId = "00000000-0000-4000-8000-000000000010";
@@ -58,7 +58,7 @@ describe("policy publication API", () => {
     );
   });
 
-  it("loads review detail and publishes the selected version", async () => {
+  it("loads review detail and approves the selected version", async () => {
     const detail = {
       policyId,
       policyCode: "ISP-001",
@@ -78,19 +78,18 @@ describe("policy publication API", () => {
         createdAt: timestamp,
       },
     };
-    const published = {
-      policyId,
-      policyCode: "ISP-001",
-      title: "Information Security Policy",
-      status: "published",
-      publishedVersion: {
-        id: versionId,
-        versionNumber: "1.0",
-        status: "published",
-        effectiveDate: timestamp,
-        publishedByUserId: null,
-        publishedAt: timestamp,
-        createdAt: timestamp,
+    const approved = {
+      ...detail,
+      version: {
+        ...detail.version,
+        status: "approved",
+      },
+      decision: {
+        id: "00000000-0000-4000-8000-000000000013",
+        action: "APPROVED",
+        comment: null,
+        actorUserId: "00000000-0000-4000-8000-000000000014",
+        decidedAt: timestamp,
       },
     };
     const fetchMock = vi
@@ -101,7 +100,7 @@ describe("policy publication API", () => {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: published }), {
+        new Response(JSON.stringify({ success: true, data: approved }), {
           status: 200,
         }),
       );
@@ -111,15 +110,16 @@ describe("policy publication API", () => {
       policyCode: "ISP-001",
     });
     await expect(
-      publishPolicyVersion({
-        policyId,
-        versionId,
-        effectiveDate: "2026-09-11",
-      }),
-    ).resolves.toMatchObject({ status: "published" });
+      approvePolicyForPublication({ policyId, versionId }),
+    ).resolves.toMatchObject({
+      version: { status: "approved" },
+      decision: { action: "APPROVED" },
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      `/api/compliance/policies/${policyId}/versions/${versionId}/approve`,
+    );
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: "POST",
-      body: JSON.stringify({ effectiveDate: "2026-09-11" }),
     });
   });
 });

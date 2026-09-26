@@ -13,14 +13,16 @@ import {
 
 describe("aiAlertExplanationSchema", () => {
   it("accepts stored explanation text and JSON factors", () => {
-    expect(aiAlertExplanationSchema.safeParse({
-      id: "11111111-1111-4111-8111-111111111111",
-      alertId: "22222222-2222-4222-8222-222222222222",
-      explanationText: "The event exceeded its baseline.",
-      featureContributions: { failedSignIns: 5 },
-      baselineData: null,
-      createdAt: "2026-09-13T00:00:00.000Z",
-    }).success).toBe(true);
+    expect(
+      aiAlertExplanationSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertId: "22222222-2222-4222-8222-222222222222",
+        explanationText: "The event exceeded its baseline.",
+        featureContributions: { failedSignIns: 5 },
+        baselineData: null,
+        createdAt: "2026-09-13T00:00:00.000Z",
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -65,10 +67,12 @@ describe("aiAlertListSchema", () => {
     expect(aiAlertListSchema.safeParse(response).success).toBe(true);
   });
   it("accepts alerts without an AI risk suggestion", () => {
-    expect(aiAlertListSchema.safeParse({
-      ...response,
-      items: [{ ...response.items[0], riskScore: null, riskLevel: null }],
-    }).success).toBe(true);
+    expect(
+      aiAlertListSchema.safeParse({
+        ...response,
+        items: [{ ...response.items[0], riskScore: null, riskLevel: null }],
+      }).success,
+    ).toBe(true);
   });
   it("rejects an unsupported alert status", () => {
     expect(

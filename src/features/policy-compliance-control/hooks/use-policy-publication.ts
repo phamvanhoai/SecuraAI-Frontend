@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
-  publishPolicyVersion,
+  requestPolicyRevision,
 } from "../api/policy-publication";
 import type { PublishablePolicyQuery } from "../schemas/policy-publication-schema";
 
@@ -29,10 +30,18 @@ export function usePolicyReview(
   });
 }
 
-export function usePublishPolicyVersion() {
+export function useRequestPolicyRevision() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: publishPolicyVersion,
+    mutationFn: requestPolicyRevision,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function useApprovePolicyForPublication() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: approvePolicyForPublication,
     onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
   });
 }

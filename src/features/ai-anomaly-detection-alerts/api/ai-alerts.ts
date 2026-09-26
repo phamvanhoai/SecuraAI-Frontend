@@ -3,6 +3,7 @@ import {
   aiAlertFeedbackSchema,
   aiAlertFeedbackListSchema,
   aiAlertListSchema,
+  aiAlertMetricsSchema,
   aiAlertExplanationSchema,
   confirmAiAlertResultSchema,
   confirmAiAlertSchema,
@@ -72,12 +73,14 @@ export async function getAiAlertExplanation(
   alertId: string,
   signal?: AbortSignal,
 ): Promise<AiAlertExplanation | null> {
-  return aiAlertExplanationSchema.nullable().parse(
-    await apiRequest<unknown>(
-      `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
-      { target: "same-origin", ...(signal ? { signal } : {}) },
-    ),
-  );
+  return aiAlertExplanationSchema
+    .nullable()
+    .parse(
+      await apiRequest<unknown>(
+        `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
+        { target: "same-origin", ...(signal ? { signal } : {}) },
+      ),
+    );
 }
 
 export async function evaluateAiAlertReliability(
@@ -143,23 +146,10 @@ export async function markAiAlertFalsePositive(
 export async function getAiAlertMetrics(
   signal?: AbortSignal,
 ): Promise<AiAlertMetrics> {
-  const detectedAfter = new Date(Date.now() - 86_400_000).toISOString();
-  const [all, newAlerts, reviewing, confirmed] = await Promise.all([
-    listAiAlerts({ page: 1, limit: 1, detectedAfter }, signal),
-    listAiAlerts({ page: 1, limit: 1, status: "new", detectedAfter }, signal),
-    listAiAlerts(
-      { page: 1, limit: 1, status: "reviewing", detectedAfter },
-      signal,
-    ),
-    listAiAlerts(
-      { page: 1, limit: 1, status: "confirmed", detectedAfter },
-      signal,
-    ),
-  ]);
-  return {
-    total: all.pagination.total,
-    newAlerts: newAlerts.pagination.total,
-    reviewing: reviewing.pagination.total,
-    confirmed: confirmed.pagination.total,
-  };
+  return aiAlertMetricsSchema.parse(
+    await apiRequest<unknown>("/api/ai-alerts/metrics", {
+      target: "same-origin",
+      ...(signal ? { signal } : {}),
+    }),
+  );
 }
