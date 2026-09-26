@@ -14,7 +14,7 @@ export async function listAlertThresholds(
   return alertThresholdListSchema.parse(
     await apiRequest<unknown>("/api/ai-alerts/thresholds", {
       target: "same-origin",
-      query: { page, limit: 20 },
+      query: { page, limit: 100 },
       ...(signal ? { signal } : {}),
     }),
   );

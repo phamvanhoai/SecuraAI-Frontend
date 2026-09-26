@@ -19,15 +19,30 @@ export const detectionRuleSchema = z.object({
 export const modelConfigurationSchema = z.object({
   id: z.uuid(),
   modelName: z.string(),
-  algorithm: z.string(),
+  modelType: z.string(),
   version: z.string(),
-  provider: z.string(),
-  modelPath: z.string().nullable(),
-  parameters: z.object({
-    ollamaModel: z.string(),
-    rules: z.array(detectionRuleSchema),
-  }),
-  active: z.boolean(),
+  status: z.enum(["development", "validated", "deployed", "retired"]),
+  featureDefinition: z.unknown().nullable(),
+  parameters: z.unknown().nullable(),
+  dataset: z
+    .object({ id: z.uuid(), name: z.string(), version: z.string() })
+    .nullable(),
+  latestEvaluation: z
+    .object({
+      id: z.uuid(),
+      precision: z.number().nullable(),
+      recall: z.number().nullable(),
+      f1Score: z.number().nullable(),
+      prAuc: z.number().nullable(),
+      falsePositiveRate: z.number().nullable(),
+      alertsPerDay: z.number().nullable(),
+      detectionLatencyMs: z.number().nullable(),
+      notes: z.string().nullable(),
+      evaluatedAt: z.iso.datetime(),
+    })
+    .nullable(),
+  deployedAt: z.iso.datetime().nullable(),
+  retiredAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
 });
 export const modelConfigurationListSchema = z.object({
