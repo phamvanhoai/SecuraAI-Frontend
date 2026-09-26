@@ -1,13 +1,16 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
   policyReviewDetailSchema,
+  policyRevisionRequestSchema,
   publishablePolicyListSchema,
   publishedPolicySchema,
   type PolicyReviewDetail,
+  type PolicyRevisionRequest,
   type PublishablePolicyList,
   type PublishablePolicyQuery,
   type PublishedPolicy,
 } from "../schemas/policy-publication-schema";
+import type { RequestPolicyRevisionInput } from "../schemas/policy-publication-schema";
 
 export async function listPublishablePolicies(
   query: PublishablePolicyQuery,
@@ -46,4 +49,16 @@ export async function publishPolicyVersion(input: {
     },
   );
   return publishedPolicySchema.parse(data);
+}
+
+export async function requestPolicyRevision(input: {
+  policyId: string;
+  versionId: string;
+  body: RequestPolicyRevisionInput;
+}): Promise<PolicyRevisionRequest> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/revision-requests`,
+    { target: "same-origin", method: "POST", body: input.body },
+  );
+  return policyRevisionRequestSchema.parse(data);
 }
