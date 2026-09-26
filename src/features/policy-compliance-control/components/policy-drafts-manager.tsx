@@ -5,6 +5,7 @@ import {
   Ellipsis,
   Eye,
   FilePenLine,
+  History,
   Pencil,
   Search,
   Send,
@@ -37,7 +38,6 @@ import { useToast } from "@/components/feedback/toast";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   usePolicyDraft,
@@ -55,6 +55,7 @@ import type {
   RejectedPolicyQuery,
 } from "../schemas/policy-publication-schema";
 import { PolicyDraftFormDialog } from "./policy-draft-form-dialog";
+import { PolicyViewTabs } from "./policy-view-tabs";
 
 function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
   const parsed = policyDraftQuerySchema.safeParse(
@@ -111,10 +112,14 @@ export function PolicyDraftsManager({
   onAssignDepartments,
   onCreateNewVersion,
   onMapControls,
+  onViewPublished,
+  onViewHistory,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
   onMapControls?: () => void;
+  onViewPublished?: () => void;
+  onViewHistory?: () => void;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -298,7 +303,7 @@ export function PolicyDraftsManager({
   return (
     <>
       <ProductPageHeader
-        {...(onAssignDepartments || onMapControls
+        {...(onAssignDepartments || onMapControls || onViewHistory
           ? {
               additionalActions: (
                 <>
@@ -328,6 +333,16 @@ export function PolicyDraftsManager({
                         strokeWidth={1.8}
                       />
                       Assign departments
+                    </Button>
+                  ) : null}
+                  {onViewHistory ? (
+                    <Button
+                      className="min-h-10 px-3.5 font-medium"
+                      onClick={onViewHistory}
+                      variant="secondary"
+                    >
+                      <History aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                      Version history
                     </Button>
                   ) : null}
                 </>
@@ -396,47 +411,26 @@ export function PolicyDraftsManager({
         }
         title="Policy drafts"
       >
-        <div
-          aria-label="Policy draft views"
-          className="border-border flex overflow-x-auto border-b px-4"
-          role="tablist"
-        >
-          {([
+        <PolicyViewTabs
+          activeId={activeTab}
+          tabs={[
             {
-              id: "drafts" as const,
+              id: "drafts",
               label: "Drafts",
               count: drafts.data?.pagination.total,
+              onSelect: () => setActiveTab("drafts"),
             },
             {
-              id: "rejected" as const,
+              id: "rejected",
               label: "Rejected",
               count: rejectedPolicies.data?.pagination.total,
+              onSelect: () => setActiveTab("rejected"),
             },
-          ]).map((tab) => (
-            <button
-              aria-controls={`${tab.id}-policies-panel`}
-              aria-selected={activeTab === tab.id}
-              className={cn(
-                "focus-visible:outline-brand flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]",
-                activeTab === tab.id
-                  ? "border-brand text-foreground"
-                  : "text-muted hover:text-foreground border-transparent",
-              )}
-              id={`${tab.id}-policies-tab`}
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              role="tab"
-              type="button"
-            >
-              {tab.label}
-              {tab.count !== undefined ? (
-                <span className="bg-neutral-soft rounded-full px-2 py-0.5 text-xs tabular-nums">
-                  {tab.count}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
+            ...(onViewPublished
+              ? [{ id: "published", label: "Published", onSelect: onViewPublished }]
+              : []),
+          ]}
+        />
         {activeTab === "drafts" ? (
           <div
             aria-labelledby="drafts-policies-tab"
