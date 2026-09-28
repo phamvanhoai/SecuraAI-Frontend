@@ -78,7 +78,7 @@ export const registerEventSourceFormSchema = z
 export type RegisterEventSourceFormValues = z.infer<typeof registerEventSourceFormSchema>;
 
 export const eventSourceResponseSchema = z.object({
-  id: z.uuid(),
+  id: z.string().uuid(),
   name: z.string(),
   sourceType: z.string(),
   endpoint: z.string().nullable(),
@@ -87,9 +87,33 @@ export const eventSourceResponseSchema = z.object({
   status: z.enum(eventSourceStatuses),
   description: z.string().nullable(),
   eventFamilies: z.array(z.enum(eventFamilies)),
-  createdBy: z.uuid(),
+  createdBy: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 export type EventSourceResponse = z.infer<typeof eventSourceResponseSchema>;
+
+export const eventSourceListQuerySchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  q: z.string().trim().optional(),
+  sourceType: z.string().trim().optional(),
+  status: z.enum(eventSourceStatuses).optional(),
+  sortBy: z.enum(["name", "sourceType", "status", "updatedAt", "createdAt"]).default("updatedAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export type EventSourceListQuery = z.infer<typeof eventSourceListQuerySchema>;
+
+export const paginatedEventSourcesSchema = z.object({
+  items: z.array(eventSourceResponseSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+});
+
+export type PaginatedEventSources = z.infer<typeof paginatedEventSourcesSchema>;

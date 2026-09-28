@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   registerEventSourceFormSchema,
   eventSourceResponseSchema,
+  eventSourceListQuerySchema,
+  paginatedEventSourcesSchema,
 } from "./event-source-schema";
 
 describe("registerEventSourceFormSchema", () => {
@@ -86,5 +88,46 @@ describe("eventSourceResponseSchema", () => {
     const parsed = eventSourceResponseSchema.parse(response);
     expect(parsed.id).toBe("3a9bf33a-02db-48e4-a8ad-90517278d7f2");
     expect(parsed.eventFamilies).toContain("AUTHENTICATION");
+  });
+});
+
+describe("eventSourceListQuerySchema and paginatedEventSourcesSchema", () => {
+  it("parses query parameters with defaults", () => {
+    const parsed = eventSourceListQuerySchema.parse({});
+    expect(parsed.page).toBe(1);
+    expect(parsed.limit).toBe(20);
+    expect(parsed.sortBy).toBe("updatedAt");
+    expect(parsed.sortOrder).toBe("desc");
+  });
+
+  it("validates paginated event sources payload", () => {
+    const payload = {
+      items: [
+        {
+          id: "3a9bf33a-02db-48e4-a8ad-90517278d7f2",
+          name: "Wazuh Agent",
+          sourceType: "WAZUH",
+          endpoint: "https://wazuh.local",
+          ingestionMethod: "API",
+          authenticationType: "BEARER_TOKEN",
+          status: "ACTIVE",
+          description: null,
+          eventFamilies: ["AUTHENTICATION"],
+          createdBy: "9a9bf33a-02db-48e4-a8ad-90517278d7f2",
+          createdAt: "2026-09-27T10:00:00Z",
+          updatedAt: "2026-09-27T10:00:00Z",
+        },
+      ],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    };
+
+    const parsed = paginatedEventSourcesSchema.parse(payload);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.pagination.total).toBe(1);
   });
 });
