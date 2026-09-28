@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Pencil, Search, Trash2 } from "lucide-react";
+import { Ellipsis, Eye, Pencil, Search, Server, Trash2 } from "lucide-react";
 import { useState, type FormEvent, type MouseEvent } from "react";
 import {
   DataTable,
@@ -36,6 +36,7 @@ import {
 } from "../schemas/log-source-schema";
 import { DeleteLogSourceDialog } from "./delete-log-source-dialog";
 import { LogSourceDetailDialog } from "./log-source-detail-dialog";
+import { RegisterEventSourceForm } from "./register-event-source-form";
 
 const defaults: LogSourceForm = {
   name: "",
@@ -58,6 +59,7 @@ export function LogSourcesManager() {
   const [deleting, setDeleting] = useState<LogSource | null>(null);
   const [form, setForm] = useState<LogSourceForm>(defaults);
   const [formOpen, setFormOpen] = useState(false);
+  const [registerEventSourceOpen, setRegisterEventSourceOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LogSourceFormErrors>({});
   const sources = useLogSources({
@@ -97,9 +99,9 @@ export function LogSourcesManager() {
       cell: (item) =>
         item.lastReceivedAt
           ? new Intl.DateTimeFormat("en-US", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            }).format(new Date(item.lastReceivedAt))
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(item.lastReceivedAt))
           : "Never",
     },
     {
@@ -244,7 +246,12 @@ export function LogSourcesManager() {
       <ProductPageHeader
         description="Configure the sources used to collect security logs and events."
         onPrimaryAction={openCreate}
+        onSecondaryAction={() => setRegisterEventSourceOpen(true)}
         primaryAction="Configure log source"
+        secondaryAction="Register event source"
+        secondaryActionIcon={
+          <Server aria-hidden="true" className="size-4" strokeWidth={1.8} />
+        }
         showSampleNotice={false}
         title="Log sources"
       />
@@ -567,6 +574,18 @@ export function LogSourcesManager() {
               </Button>
             </div>
           </form>
+        </div>
+      ) : null}
+      {registerEventSourceOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="bg-surface border-border max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border p-6 shadow-xl">
+            <RegisterEventSourceForm
+              onCancel={() => setRegisterEventSourceOpen(false)}
+              onSuccess={() => {
+                setRegisterEventSourceOpen(false);
+              }}
+            />
+          </div>
         </div>
       ) : null}
     </>
