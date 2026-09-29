@@ -68,7 +68,11 @@ export async function requestLogin(
 }
 
 export async function requestTokenPair(
-  path: "/auth/login" | "/auth/refresh" | "/auth/mfa/challenge/verify",
+  path:
+    | "/auth/login"
+    | "/auth/google"
+    | "/auth/refresh"
+    | "/auth/mfa/challenge/verify",
   body: unknown,
   request: Request,
 ): Promise<{ response: Response; tokens?: AuthTokenPair }> {
