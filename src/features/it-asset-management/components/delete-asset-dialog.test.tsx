@@ -53,7 +53,7 @@ describe("DeleteAssetDialog", () => {
   it("requires the exact asset code before deleting", async () => {
     const user = userEvent.setup();
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
-    const deleteButton = screen.getByRole("button", { name: "Delete Asset" });
+    const deleteButton = screen.getByRole("button", { name: "Archive Asset" });
     expect(deleteButton).toBeDisabled();
 
     await user.type(screen.getByLabelText(/Enter code/), "AST-001");
@@ -71,10 +71,10 @@ describe("DeleteAssetDialog", () => {
     );
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/Enter code/), "AST-001");
-    await user.click(screen.getByRole("button", { name: "Delete Asset" }));
+    await user.click(screen.getByRole("button", { name: "Archive Asset" }));
 
     expect(
-      await screen.findByText(/Unable to delete because the asset has active business dependencies./),
+      await screen.findByText(/The asset could not be archived in its current state./),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
   });
