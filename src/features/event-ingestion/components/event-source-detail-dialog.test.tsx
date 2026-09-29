@@ -10,6 +10,10 @@ vi.mock("../hooks/use-event-sources", () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
+  useTestEventSourceConnection: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({

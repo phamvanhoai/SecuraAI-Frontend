@@ -197,3 +197,43 @@ export const eventSourceDetailResponseSchema = eventSourceResponseSchema.extend(
 });
 
 export type EventSourceDetailResponse = z.infer<typeof eventSourceDetailResponseSchema>;
+
+export const testEventSourceConnectionSchema = z.object({
+  endpoint: z
+    .string()
+    .trim()
+    .min(1, "Endpoint cannot be empty")
+    .max(2048, "Endpoint cannot exceed 2048 characters"),
+  username: z.string().trim().max(255).optional().or(z.literal("")),
+  password: z.string().max(255).optional().or(z.literal("")),
+  verifySsl: z.boolean().default(true),
+  timeoutMs: z
+    .coerce
+    .number()
+    .int()
+    .min(1000, "Timeout must be at least 1000ms")
+    .max(30000, "Timeout cannot exceed 30000ms")
+    .default(5000),
+});
+
+export type TestEventSourceConnectionValues = z.infer<typeof testEventSourceConnectionSchema>;
+
+export const testEventSourceDiagnosticSchema = z.object({
+  connected: z.boolean(),
+  statusCode: z.number().nullable(),
+  latencyMs: z.number(),
+  message: z.string(),
+  provider: z.string(),
+  details: z
+    .object({
+      title: z.string().nullable(),
+      apiVersion: z.string().nullable(),
+      hostname: z.string().nullable(),
+    })
+    .nullable(),
+  verifySslWarning: z.boolean(),
+});
+
+export type TestEventSourceDiagnosticResponse = z.infer<
+  typeof testEventSourceDiagnosticSchema
+>;
