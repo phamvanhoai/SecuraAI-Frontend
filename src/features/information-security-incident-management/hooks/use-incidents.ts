@@ -14,7 +14,32 @@ import {
   reportIncident,
   getIncidentAssetOptions,
   linkIncidentToAsset,
+  getIncidentControlOptions,
+  linkIncidentToControl,
 } from "../api/incidents";
+
+export const useIncidentControlOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "control-options", id],
+    queryFn: ({ signal }) => getIncidentControlOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+export function useLinkIncidentToControl() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToControl,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["controls"] });
+    },
+  });
+}
 
 export const useIncidentAssetOptions = (id: string | undefined) =>
   useQuery({
