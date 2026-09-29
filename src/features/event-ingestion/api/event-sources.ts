@@ -1,7 +1,9 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  eventSourceDetailResponseSchema,
   eventSourceResponseSchema,
   paginatedEventSourcesSchema,
+  type EventSourceDetailResponse,
   type EventSourceListQuery,
   type EventSourceResponse,
   type PaginatedEventSources,
@@ -59,3 +61,13 @@ export async function listEventSources(
 
   return paginatedEventSourcesSchema.parse(data);
 }
+
+export async function getEventSource(id: string): Promise<EventSourceDetailResponse> {
+  const data = await apiRequest<unknown>(`/api/event-sources/${encodeURIComponent(id)}`, {
+    target: "same-origin",
+    method: "GET",
+  });
+
+  return eventSourceDetailResponseSchema.parse(data);
+}
+

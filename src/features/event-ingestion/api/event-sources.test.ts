@@ -5,7 +5,11 @@ vi.mock("@/lib/api/api-client", () => ({
   apiRequest: (...args: unknown[]) => apiRequestMock(...args),
 }));
 
-import { createEventSource, listEventSources } from "./event-sources";
+import {
+  createEventSource,
+  getEventSource,
+  listEventSources,
+} from "./event-sources";
 
 describe("event-sources API client", () => {
   beforeEach(() => {
@@ -99,6 +103,50 @@ describe("event-sources API client", () => {
 
       expect(apiRequestMock).toHaveBeenCalledWith(
         "/api/event-sources?page=1&limit=20&q=Wazuh&status=ACTIVE",
+        {
+          target: "same-origin",
+          method: "GET",
+        },
+      );
+
+      expect(result).toEqual(rawResult);
+    });
+  });
+
+  describe("getEventSource", () => {
+    it("fetches event source detail by ID and parses result", async () => {
+      const rawResult = {
+        id: "ec178d52-2959-47fd-93db-aa693158668c",
+        name: "Wazuh SIEM",
+        sourceType: "WAZUH",
+        endpoint: "https://wazuh.corp:55000",
+        ingestionMethod: "API",
+        authenticationType: "BEARER_TOKEN",
+        status: "ACTIVE",
+        description: "SIEM collector",
+        eventFamilies: ["AUTHENTICATION"],
+        createdBy: "ac178d52-2959-47fd-93db-aa693158668d",
+        creator: {
+          id: "ac178d52-2959-47fd-93db-aa693158668d",
+          email: "admin@secura.ai",
+          fullName: "Admin",
+        },
+        apiKeys: [],
+        stats: {
+          totalIngestedEvents: 120,
+          totalBatches: 5,
+          lastIngestedAt: null,
+        },
+        createdAt: "2026-09-27T10:00:00Z",
+        updatedAt: "2026-09-27T10:00:00Z",
+      };
+
+      apiRequestMock.mockResolvedValue(rawResult);
+
+      const result = await getEventSource("ec178d52-2959-47fd-93db-aa693158668c");
+
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        "/api/event-sources/ec178d52-2959-47fd-93db-aa693158668c",
         {
           target: "same-origin",
           method: "GET",

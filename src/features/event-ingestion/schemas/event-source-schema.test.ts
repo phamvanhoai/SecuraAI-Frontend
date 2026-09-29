@@ -4,6 +4,7 @@ import {
   eventSourceResponseSchema,
   eventSourceListQuerySchema,
   paginatedEventSourcesSchema,
+  eventSourceDetailResponseSchema,
 } from "./event-source-schema";
 
 describe("registerEventSourceFormSchema", () => {
@@ -129,5 +130,53 @@ describe("eventSourceListQuerySchema and paginatedEventSourcesSchema", () => {
     const parsed = paginatedEventSourcesSchema.parse(payload);
     expect(parsed.items).toHaveLength(1);
     expect(parsed.pagination.total).toBe(1);
+  });
+});
+
+describe("eventSourceDetailResponseSchema", () => {
+  it("validates comprehensive event source detail payload", () => {
+    const detailPayload = {
+      id: "3a9bf33a-02db-48e4-a8ad-90517278d7f2",
+      name: "Wazuh Production SIEM",
+      sourceType: "WAZUH",
+      endpoint: "https://wazuh.internal:55000",
+      ingestionMethod: "API",
+      authenticationType: "API_KEY",
+      status: "ACTIVE",
+      description: "Production event log collector",
+      eventFamilies: ["AUTHENTICATION", "VPN_SSO"],
+      createdBy: "9a9bf33a-02db-48e4-a8ad-90517278d7f2",
+      creator: {
+        id: "9a9bf33a-02db-48e4-a8ad-90517278d7f2",
+        email: "secops@secura.ai",
+        fullName: "Security Operations",
+      },
+      apiKeys: [
+        {
+          id: "3a9bf33a-02db-48e4-a8ad-90517278d7f9",
+          name: "Agent Key",
+          keyPrefix: "sec_live_1234",
+          maskedKey: "sec_live_1234...****",
+          status: "ACTIVE",
+          expiresAt: null,
+          lastUsedAt: "2026-09-28T14:00:00Z",
+          lastUsedIp: "127.0.0.1",
+          createdAt: "2026-09-20T10:00:00Z",
+        },
+      ],
+      stats: {
+        totalIngestedEvents: 1000,
+        totalBatches: 20,
+        lastIngestedAt: "2026-09-28T14:00:00Z",
+      },
+      createdAt: "2026-09-20T10:00:00Z",
+      updatedAt: "2026-09-27T12:00:00Z",
+    };
+
+    const parsed = eventSourceDetailResponseSchema.parse(detailPayload);
+    expect(parsed.id).toBe("3a9bf33a-02db-48e4-a8ad-90517278d7f2");
+    expect(parsed.apiKeys[0]?.maskedKey).toBe("sec_live_1234...****");
+    expect(parsed.stats.totalIngestedEvents).toBe(1000);
+    expect(parsed.creator?.email).toBe("secops@secura.ai");
   });
 });

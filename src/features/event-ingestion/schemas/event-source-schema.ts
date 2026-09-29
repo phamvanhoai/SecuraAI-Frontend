@@ -117,3 +117,37 @@ export const paginatedEventSourcesSchema = z.object({
 });
 
 export type PaginatedEventSources = z.infer<typeof paginatedEventSourcesSchema>;
+
+export const apiKeyStatuses = ["ACTIVE", "REVOKED", "EXPIRED", "ROTATED"] as const;
+
+export const maskedApiKeySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  keyPrefix: z.string(),
+  maskedKey: z.string(),
+  status: z.enum(apiKeyStatuses),
+  expiresAt: z.string().nullable(),
+  lastUsedAt: z.string().nullable(),
+  lastUsedIp: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type MaskedApiKey = z.infer<typeof maskedApiKeySchema>;
+
+export const eventSourceDetailResponseSchema = eventSourceResponseSchema.extend({
+  creator: z
+    .object({
+      id: z.string().uuid(),
+      email: z.string().email(),
+      fullName: z.string().nullable(),
+    })
+    .nullable(),
+  apiKeys: z.array(maskedApiKeySchema),
+  stats: z.object({
+    totalIngestedEvents: z.number(),
+    totalBatches: z.number(),
+    lastIngestedAt: z.string().nullable(),
+  }),
+});
+
+export type EventSourceDetailResponse = z.infer<typeof eventSourceDetailResponseSchema>;
