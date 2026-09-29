@@ -43,33 +43,32 @@ export function DeleteAssetDialog({
     try {
       await mutation.mutateAsync(asset.id);
       close();
-      toast.success("Asset deleted", `${asset.assetCode} – ${asset.name}`);
+      toast.success("Asset archived", `${asset.assetCode} – ${asset.name}`);
     } catch (error: unknown) {
       setMessage(
         error instanceof ApiError && error.status === 409
-          ? "Unable to delete because the asset has active business dependencies."
+          ? "The asset could not be archived in its current state."
           : error instanceof Error
             ? error.message
-            : "Unable to delete asset. Please try again.",
+            : "Unable to archive asset. Please try again.",
       );
     }
   };
 
   return (
     <Dialog
-      title="Delete Asset"
+      title="Archive Asset"
       dialogRef={dialogRef}
       onClose={close}
       className="w-[min(32rem,calc(100%-2rem))]"
     >
       {asset ? (
         <div className="space-y-4">
-          <Alert className="border-danger/25 bg-danger-soft text-danger">
-            The asset will be removed from the list. The system will reject
-            deletion if it has active business dependencies.
+          <Alert className="border-warning/25 bg-warning/10">
+            The asset will leave the active list. Its details and related records remain available for audit and review.
           </Alert>
           <p className="text-sm leading-6">
-            You are deleting <strong>{asset.assetCode}</strong> – {asset.name}.
+            You are archiving <strong>{asset.assetCode}</strong> – {asset.name}.
           </p>
           <label
             className="block space-y-2"
@@ -101,7 +100,7 @@ export function DeleteAssetDialog({
               }
               onClick={remove}
             >
-              {mutation.isPending ? "Deleting…" : "Delete Asset"}
+              {mutation.isPending ? "Archiving…" : "Archive Asset"}
             </Button>
           </div>
         </div>

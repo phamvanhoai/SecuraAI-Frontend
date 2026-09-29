@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Search, Server, X } from "lucide-react";
+import { Archive, Eye, Pencil, Search, Server, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -27,6 +27,8 @@ import {
 } from "../schemas/asset-list-schema";
 import { AssetDetailDialog } from "./asset-detail-dialog";
 import { CreateAssetDialog } from "./create-asset-dialog";
+import { EditAssetDialog } from "./edit-asset-dialog";
+import { DeleteAssetDialog } from "./delete-asset-dialog";
 const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "asset",
@@ -112,31 +114,25 @@ export function AssetsShell() {
   const canRead = session.data?.permissions.includes("assets.read") ?? false;
   const canCreate =
     session.data?.permissions.includes("assets.create") ?? false;
+  const canEdit = session.data?.permissions.includes("assets.update") ?? false;
   const assets = useAssets(query, canRead);
   const [search, setSearch] = useState(query.q ?? "");
   const [type, setType] = useState(query.assetType ?? "");
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [archivingAsset, setArchivingAsset] = useState<AssetListItem | null>(null);
   const tableColumns = useMemo<readonly DataTableColumn<AssetListItem>[]>(
     () => [
       ...columns,
       {
         key: "actions",
         header: "Actions",
-        cell: (item) => (
-          <Button
-            variant="secondary"
-            onClick={() => setSelectedId(item.id)}
-            aria-label={`View ${item.assetCode} details`}
-          >
-            <Eye className="size-4" />
-            View
-          </Button>
-        ),
+        cell: (item) => <span className="flex gap-2"><Button variant="secondary" onClick={() => setSelectedId(item.id)} aria-label={`View ${item.assetCode} details`}><Eye className="size-4" />View</Button>{canEdit ? <><Button variant="secondary" onClick={() => setEditingId(item.id)} aria-label={`Edit ${item.assetCode}`}><Pencil className="size-4" />Edit</Button>{item.status === "active" ? <Button variant="secondary" onClick={() => setArchivingAsset(item)} aria-label={`Archive ${item.assetCode}`}><Archive className="size-4" />Archive</Button> : null}</> : null}</span>,
       },
     ],
-    [],
+    [canEdit],
   );
   const navigate = (next: Partial<AssetListQuery>) => {
     const searchParams = new URLSearchParams();
@@ -285,6 +281,8 @@ export function AssetsShell() {
         assetId={selectedId}
         onClose={() => setSelectedId(null)}
       />
+      <EditAssetDialog assetId={editingId} onClose={() => setEditingId(null)} />
+      <DeleteAssetDialog asset={archivingAsset} onClose={() => setArchivingAsset(null)} />
     </div>
   );
 }

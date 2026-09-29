@@ -7,6 +7,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams
 vi.mock("../hooks/use-assets", () => ({ useAssets }));
 vi.mock("@/features/authentication-account", () => ({ useSessionUser }));
 vi.mock("./asset-detail-dialog", () => ({ AssetDetailDialog: () => null }));
+vi.mock("./edit-asset-dialog", () => ({ EditAssetDialog: () => null }));
+vi.mock("./delete-asset-dialog", () => ({ DeleteAssetDialog: () => null }));
 import { AssetsShell } from "./assets-shell";
 afterEach(cleanup);
 const response = { items: [{ id: "00000000-0000-4000-8000-000000000001", assetCode: "AST-001", name: "Core Server", assetType: "server", criticality: "high", dataClassification: "confidential", description: null, status: "active", owner: { id: "00000000-0000-4000-8000-000000000002", fullName: "Asset Owner", inactive: false }, businessService: null, createdAt: "2026-09-10T00:00:00.000Z", updatedAt: "2026-09-11T00:00:00.000Z" }], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } };
