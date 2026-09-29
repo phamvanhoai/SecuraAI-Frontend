@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { confirmPasswordResetSchema } from "./password-reset-schema";
+import {
+  confirmPasswordResetSchema,
+  requestPasswordResetSchema,
+} from "./password-reset-schema";
 
 const validInput = {
   token: "123456",
@@ -70,5 +73,22 @@ describe("confirmPasswordResetSchema", () => {
         message: "Passwords do not match.",
       }),
     );
+  });
+});
+
+describe("requestPasswordResetSchema", () => {
+  it("normalizes the email sent to the V2 API", () => {
+    expect(
+      requestPasswordResetSchema.parse({ email: "  User@Example.COM " }),
+    ).toEqual({ email: "user@example.com" });
+  });
+
+  it("rejects fields outside the published contract", () => {
+    expect(
+      requestPasswordResetSchema.safeParse({
+        email: "user@example.com",
+        userId: "not-part-of-v2",
+      }).success,
+    ).toBe(false);
   });
 });
