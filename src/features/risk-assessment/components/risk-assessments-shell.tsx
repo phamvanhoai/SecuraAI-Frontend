@@ -44,6 +44,7 @@ import { AssessInherentRiskDialog } from "./assess-inherent-risk-dialog";
 import { AssessResidualRiskDialog } from "./assess-residual-risk-dialog";
 import { DefineTargetRiskDialog } from "./define-target-risk-dialog";
 import { CreateRiskTreatmentPlanDialog } from "./create-risk-treatment-plan-dialog";
+import { RiskReassessmentReviewPanel } from "./risk-reassessment-review-panel";
 
 const labels = {
   open: "Open",
@@ -273,6 +274,7 @@ export function RiskAssessmentsShell() {
           description="Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
           additionalActions={canCreate ? <CreateRiskAssessmentDialog /> : null}
         />
+        <RiskReassessmentReviewPanel enabled={canRead} />
         <ProductPanel title="Risk records">
           <form
             className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]"
