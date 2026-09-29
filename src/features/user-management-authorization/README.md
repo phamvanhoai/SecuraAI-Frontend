@@ -35,14 +35,12 @@ forwards the request to `/admin/users/{userId}`.
 
 ## Add user accounts
 
-Administrators with both `users.create` and `users.assign-role` can open the **Add user** dialog. The form
-loads active departments and assignable roles from the backend instead of asking
-for internal UUIDs or manually entered role codes. It validates labeled profile
-fields, requires at least one role, disables submission until reference data is
-available, and provides inline error, retry, pending, and success feedback.
+Administrators with `users.create` can open the **Add user** dialog. The V2 form
+accepts email, full name, and exactly one non-Admin database role. It provides
+labeled fields, inline validation, pending feedback, and a responsive dialog.
 
-The typed same-origin BFF forwards creation and option requests with HttpOnly
-cookie authentication. Successful creation refreshes the user list; the
+The typed same-origin BFF forwards `POST /users` with HttpOnly-cookie
+authentication. Successful creation refreshes the user list; the
 temporary password is delivered by the backend email flow and never enters the
 browser response.
 

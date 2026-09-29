@@ -10,18 +10,9 @@ export const createUserSchema = z.object({
     .trim()
     .min(2, "Full name must contain at least 2 characters.")
     .max(150),
-  phone: z
-    .string()
-    .trim()
-    .max(30)
-    .refine(
-      (value) => value.length === 0 || value.length >= 3,
-      "Phone number must contain at least 3 characters.",
-    )
-    .optional(),
-  employeeCode: z.string().trim().min(1, "Employee code is required.").max(50),
-  departmentId: z.uuid("Select a department."),
-  roleCodes: z.array(z.string()).min(1, "Select at least one role.").max(10),
+  role: z.enum(["SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"], {
+    error: "Select a role.",
+  }),
 });
 
 export type CreateUserInput = z.input<typeof createUserSchema>;
@@ -48,6 +39,9 @@ export const createdUserSchema = z.object({
   id: z.string(),
   email: z.email(),
   fullName: z.string(),
+  username: z.string(),
+  role: z.enum(["SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"]),
+  status: z.literal("ACTIVE"),
   message: z.string().optional(),
 });
 

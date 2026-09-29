@@ -12,7 +12,10 @@ const passwordSchema = z
 
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required."),
+    currentPassword: z
+      .string()
+      .min(1, "Current password is required.")
+      .max(128, "Current password must not exceed 128 characters."),
     newPassword: passwordSchema,
     confirmPassword: passwordSchema,
   })
