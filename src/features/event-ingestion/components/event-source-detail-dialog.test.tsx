@@ -1,10 +1,23 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseEventSource = vi.fn();
+const mockMutateAsync = vi.fn();
 
 vi.mock("../hooks/use-event-sources", () => ({
   useEventSource: (id: string | null) => mockUseEventSource(id),
+  useUpdateEventSource: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/components/feedback/toast", () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 import { EventSourceDetailDialog } from "./event-source-detail-dialog";
@@ -133,5 +146,29 @@ describe("EventSourceDetailDialog", () => {
     expect(screen.getByText("310")).toBeInTheDocument();
 
     expect(screen.getByText("Security Operations")).toBeInTheDocument();
+  });
+
+  it("switches to inline edit configuration mode when clicking Configure", async () => {
+    mockUseEventSource.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: mockDetailData,
+    });
+
+    render(
+      <EventSourceDetailDialog
+        onClose={vi.fn()}
+        sourceId="3a9bf33a-02db-48e4-a8ad-90517278d7f2"
+      />,
+    );
+
+    const configButton = screen.getAllByRole("button", { name: /Configure/i })[0];
+    if (configButton) {
+      fireEvent.click(configButton);
+    }
+
+    expect(screen.getByText("Update Event Source Configuration")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Event source name/i)).toHaveValue("Wazuh Production SIEM");
+    expect(screen.getByRole("button", { name: /Save configuration/i })).toBeInTheDocument();
   });
 });

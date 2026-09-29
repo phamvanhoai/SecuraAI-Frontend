@@ -9,6 +9,7 @@ import {
   createEventSource,
   getEventSource,
   listEventSources,
+  updateEventSource,
 } from "./event-sources";
 
 describe("event-sources API client", () => {
@@ -150,6 +151,56 @@ describe("event-sources API client", () => {
         {
           target: "same-origin",
           method: "GET",
+        },
+      );
+
+      expect(result).toEqual(rawResult);
+    });
+  });
+
+  describe("updateEventSource", () => {
+    it("sends PUT payload to /api/event-sources/:id and returns parsed response", async () => {
+      const rawResult = {
+        id: "ec178d52-2959-47fd-93db-aa693158668c",
+        name: "Wazuh Updated Name",
+        sourceType: "WAZUH",
+        endpoint: "https://wazuh-updated.internal:55000",
+        ingestionMethod: "API",
+        authenticationType: "BEARER_TOKEN",
+        status: "INACTIVE",
+        description: "Updated notes",
+        eventFamilies: ["AUTHENTICATION"],
+        createdBy: "ac178d52-2959-47fd-93db-aa693158668d",
+        createdAt: "2026-09-27T10:00:00Z",
+        updatedAt: "2026-09-29T14:00:00Z",
+      };
+
+      apiRequestMock.mockResolvedValue(rawResult);
+
+      const result = await updateEventSource("ec178d52-2959-47fd-93db-aa693158668c", {
+        name: "  Wazuh Updated Name  ",
+        endpoint: "https://wazuh-updated.internal:55000",
+        ingestionMethod: "API",
+        authenticationType: "BEARER_TOKEN",
+        status: "INACTIVE",
+        description: "Updated notes",
+        eventFamilies: ["AUTHENTICATION"],
+      });
+
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        "/api/event-sources/ec178d52-2959-47fd-93db-aa693158668c",
+        {
+          target: "same-origin",
+          method: "PUT",
+          body: {
+            name: "Wazuh Updated Name",
+            endpoint: "https://wazuh-updated.internal:55000",
+            ingestionMethod: "API",
+            authenticationType: "BEARER_TOKEN",
+            status: "INACTIVE",
+            description: "Updated notes",
+            eventFamilies: ["AUTHENTICATION"],
+          },
         },
       );
 

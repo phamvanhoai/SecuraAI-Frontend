@@ -77,6 +77,52 @@ export const registerEventSourceFormSchema = z
 
 export type RegisterEventSourceFormValues = z.infer<typeof registerEventSourceFormSchema>;
 
+export const updateEventSourceFormSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Source name cannot be empty")
+      .max(255, "Source name cannot exceed 255 characters"),
+    endpoint: z
+      .string()
+      .trim()
+      .max(2048, "Endpoint cannot exceed 2048 characters")
+      .optional()
+      .or(z.literal("")),
+    ingestionMethod: z.enum(ingestionMethods).default("API"),
+    authenticationType: z
+      .string()
+      .trim()
+      .max(100, "Authentication method cannot exceed 100 characters")
+      .optional()
+      .or(z.literal("")),
+    status: z.enum(eventSourceStatuses).default("ACTIVE"),
+    description: z
+      .string()
+      .trim()
+      .max(2000, "Description cannot exceed 2000 characters")
+      .optional()
+      .or(z.literal("")),
+    eventFamilies: z
+      .array(z.enum(eventFamilies))
+      .min(1, "Select at least one event family"),
+  })
+  .refine(
+    (data) => {
+      if (data.ingestionMethod === "API") {
+        return Boolean(data.endpoint && data.endpoint.trim().length > 0);
+      }
+      return true;
+    },
+    {
+      message: "Connection endpoint is required when ingestion method is API",
+      path: ["endpoint"],
+    },
+  );
+
+export type UpdateEventSourceFormValues = z.infer<typeof updateEventSourceFormSchema>;
+
 export const eventSourceResponseSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
