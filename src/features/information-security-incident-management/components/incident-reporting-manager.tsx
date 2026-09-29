@@ -15,6 +15,7 @@ import {
   Link2,
   ShieldCheck,
   GitBranch,
+  ShieldX,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -70,6 +71,7 @@ import {
 import { LinkIncidentAssetDialog } from "./link-incident-asset-dialog";
 import { LinkIncidentControlDialog } from "./link-incident-control-dialog";
 import { LinkIncidentRiskDialog } from "./link-incident-risk-dialog";
+import { RecordControlWeaknessDialog } from "./record-control-weakness-dialog";
 
 const defaults: ReportIncidentForm = {
   title: "",
@@ -156,6 +158,9 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.link-controls") ?? false;
   const canLinkRisks =
     session.data?.permissions.includes("incidents.link-risks") ?? false;
+  const canRecordControlWeakness =
+    session.data?.permissions.includes("incidents.record-control-weakness") ??
+    false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -173,6 +178,8 @@ export function IncidentReportingManager() {
   const [assetLinkTarget, setAssetLinkTarget] = useState<Incident>();
   const [controlLinkTarget, setControlLinkTarget] = useState<Incident>();
   const [riskLinkTarget, setRiskLinkTarget] = useState<Incident>();
+  const [controlWeaknessTarget, setControlWeaknessTarget] =
+    useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
@@ -653,6 +660,20 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Link existing risk
+              </button>
+            ) : null}
+            {canRecordControlWeakness ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setControlWeaknessTarget(item)}
+                type="button"
+              >
+                <ShieldX
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Record control weakness
               </button>
             ) : null}
             {canManageEvidence ? (
@@ -1702,6 +1723,10 @@ export function IncidentReportingManager() {
       <LinkIncidentRiskDialog
         incident={riskLinkTarget}
         onClose={() => setRiskLinkTarget(undefined)}
+      />
+      <RecordControlWeaknessDialog
+        incident={controlWeaknessTarget}
+        onClose={() => setControlWeaknessTarget(undefined)}
       />
     </>
   );
