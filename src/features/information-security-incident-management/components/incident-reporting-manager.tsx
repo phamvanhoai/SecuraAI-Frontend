@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Trash2,
   UserPlus,
+  Link2,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -64,6 +65,7 @@ import {
   type RemoveIncidentEvidenceForm,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
+import { LinkIncidentAssetDialog } from "./link-incident-asset-dialog";
 
 const defaults: ReportIncidentForm = {
   title: "",
@@ -144,6 +146,8 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.update-progress") ?? false;
   const canManageEvidence =
     session.data?.permissions.includes("incidents.evidence.manage") ?? false;
+  const canLinkAssets =
+    session.data?.permissions.includes("incidents.link-assets") ?? false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -158,6 +162,7 @@ export function IncidentReportingManager() {
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
   const [progressTarget, setProgressTarget] = useState<Incident>();
   const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
+  const [assetLinkTarget, setAssetLinkTarget] = useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
@@ -596,6 +601,20 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Update progress
+              </button>
+            ) : null}
+            {canLinkAssets ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setAssetLinkTarget(item)}
+                type="button"
+              >
+                <Link2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Link asset
               </button>
             ) : null}
             {canManageEvidence ? (
@@ -1634,6 +1653,10 @@ export function IncidentReportingManager() {
           </div>
         ) : null}
       </Dialog>
+      <LinkIncidentAssetDialog
+        incident={assetLinkTarget}
+        onClose={() => setAssetLinkTarget(undefined)}
+      />
     </>
   );
 }

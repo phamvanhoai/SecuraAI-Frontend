@@ -13,6 +13,42 @@ import {
   type ReportIncidentForm,
   type RemoveIncidentEvidenceForm,
 } from "../schemas/report-incident-schema";
+import {
+  incidentAssetOptionsSchema,
+  linkedIncidentAssetSchema,
+  type LinkIncidentAssetForm,
+} from "../schemas/incident-asset-schema";
+
+export async function getIncidentAssetOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return incidentAssetOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/assets/options`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function linkIncidentToAsset(input: {
+  id: string;
+  values: LinkIncidentAssetForm;
+}) {
+  return linkedIncidentAssetSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/assets`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: input.values,
+      },
+    ),
+  );
+}
 export async function reportIncident(input: ReportIncidentForm) {
   return incidentSchema.parse(
     await apiRequest<unknown>("/api/incidents", {
