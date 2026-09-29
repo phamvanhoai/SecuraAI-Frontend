@@ -3,6 +3,7 @@ import {
   createEventSource,
   getEventSource,
   listEventSources,
+  testEventSourceConnection,
   updateEventSource,
 } from "../api/event-sources";
 import type {
@@ -11,6 +12,8 @@ import type {
   EventSourceResponse,
   PaginatedEventSources,
   RegisterEventSourceFormValues,
+  TestEventSourceConnectionValues,
+  TestEventSourceDiagnosticResponse,
   UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
@@ -56,5 +59,15 @@ export function useUpdateEventSource() {
       await queryClient.invalidateQueries({ queryKey: ["event-sources"] });
       await queryClient.invalidateQueries({ queryKey: ["event-sources", variables.id] });
     },
+  });
+}
+
+export function useTestEventSourceConnection() {
+  return useMutation<
+    TestEventSourceDiagnosticResponse,
+    Error,
+    TestEventSourceConnectionValues
+  >({
+    mutationFn: (values) => testEventSourceConnection(values),
   });
 }

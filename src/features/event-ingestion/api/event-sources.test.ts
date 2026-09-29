@@ -9,6 +9,7 @@ import {
   createEventSource,
   getEventSource,
   listEventSources,
+  testEventSourceConnection,
   updateEventSource,
 } from "./event-sources";
 
@@ -200,6 +201,51 @@ describe("event-sources API client", () => {
             status: "INACTIVE",
             description: "Updated notes",
             eventFamilies: ["AUTHENTICATION"],
+          },
+        },
+      );
+
+      expect(result).toEqual(rawResult);
+    });
+  });
+
+  describe("testEventSourceConnection", () => {
+    it("sends test connection parameters to /api/event-sources/test-connection and parses diagnostic response", async () => {
+      const rawResult = {
+        connected: true,
+        statusCode: 200,
+        latencyMs: 140,
+        message: "Wazuh API connected and authenticated successfully",
+        provider: "wazuh",
+        details: {
+          title: "Wazuh REST API",
+          apiVersion: "v4.8.0",
+          hostname: "wazuh-manager",
+        },
+        verifySslWarning: false,
+      };
+
+      apiRequestMock.mockResolvedValue(rawResult);
+
+      const result = await testEventSourceConnection({
+        endpoint: "  https://192.168.56.101:55000  ",
+        username: "  wazuh-wui  ",
+        password: "secret_password",
+        verifySsl: false,
+        timeoutMs: 6000,
+      });
+
+      expect(apiRequestMock).toHaveBeenCalledWith(
+        "/api/event-sources/test-connection",
+        {
+          target: "same-origin",
+          method: "POST",
+          body: {
+            endpoint: "https://192.168.56.101:55000",
+            username: "wazuh-wui",
+            password: "secret_password",
+            verifySsl: false,
+            timeoutMs: 6000,
           },
         },
       );

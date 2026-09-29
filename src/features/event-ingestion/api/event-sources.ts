@@ -3,11 +3,14 @@ import {
   eventSourceDetailResponseSchema,
   eventSourceResponseSchema,
   paginatedEventSourcesSchema,
+  testEventSourceDiagnosticSchema,
   type EventSourceDetailResponse,
   type EventSourceListQuery,
   type EventSourceResponse,
   type PaginatedEventSources,
   type RegisterEventSourceFormValues,
+  type TestEventSourceConnectionValues,
+  type TestEventSourceDiagnosticResponse,
   type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
@@ -101,3 +104,22 @@ export async function updateEventSource(
   return eventSourceResponseSchema.parse(data);
 }
 
+export async function testEventSourceConnection(
+  values: TestEventSourceConnectionValues,
+): Promise<TestEventSourceDiagnosticResponse> {
+  const payload = {
+    endpoint: values.endpoint.trim(),
+    username: values.username && values.username.trim().length > 0 ? values.username.trim() : undefined,
+    password: values.password && values.password.length > 0 ? values.password : undefined,
+    verifySsl: values.verifySsl,
+    timeoutMs: values.timeoutMs,
+  };
+
+  const data = await apiRequest<unknown>("/api/event-sources/test-connection", {
+    target: "same-origin",
+    method: "POST",
+    body: payload,
+  });
+
+  return testEventSourceDiagnosticSchema.parse(data);
+}

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  Activity,
+  AlertCircle,
   Check,
   CheckCircle2,
   Copy,
@@ -33,6 +35,7 @@ import {
   type EventSourceResponse,
   type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
+import { TestEventSourceDialog } from "./test-event-source-dialog";
 
 const statusTones = {
   ACTIVE: "success",
@@ -96,6 +99,12 @@ export function EventSourceDetailDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionHealth, setConnectionHealth] = useState<{
+    connected: boolean;
+    message: string;
+    latencyMs: number;
+  } | null>(null);
 
   const detailQuery = useEventSource(sourceId);
 
@@ -104,10 +113,12 @@ export function EventSourceDetailDialog({
     if (!dialog) return;
     if (sourceId && !dialog.open) {
       setIsEditing(false);
+      setConnectionHealth(null);
       dialog.showModal();
     }
     if (!sourceId && dialog.open) {
       setIsEditing(false);
+      setConnectionHealth(null);
       dialog.close();
     }
   }, [sourceId]);
@@ -128,12 +139,13 @@ export function EventSourceDetailDialog({
   const source = detailQuery.data;
 
   return (
-    <Dialog
-      className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
-      dialogRef={dialogRef}
-      onClose={handleClose}
-      title={isEditing ? "Update Event Source Configuration" : "Event Source Details"}
-    >
+    <>
+      <Dialog
+        className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
+        dialogRef={dialogRef}
+        onClose={handleClose}
+        title={isEditing ? "Update Event Source Configuration" : "Event Source Details"}
+      >
       {detailQuery.isPending ? (
         <div className="space-y-4 py-2">
           <Skeleton className="h-8 w-3/4 rounded-lg" />
@@ -196,6 +208,11 @@ export function EventSourceDetailDialog({
                 <StatusBadge tone={statusTones[source.status]}>
                   {source.status === "ACTIVE" ? "Active" : "Inactive"}
                 </StatusBadge>
+                {connectionHealth ? (
+                  <StatusBadge tone={connectionHealth.connected ? "success" : "danger"}>
+                    {connectionHealth.connected ? `Reachable (${connectionHealth.latencyMs}ms)` : "Connection Failed"}
+                  </StatusBadge>
+                ) : null}
                 <Button
                   className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                   onClick={() => setIsEditing(true)}
@@ -207,6 +224,26 @@ export function EventSourceDetailDialog({
                 </Button>
               </div>
             </div>
+
+            {/* Live Connection Health Diagnostic Banner */}
+            {connectionHealth ? (
+              connectionHealth.connected ? (
+                <div className="border-border bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center gap-2.5 rounded-lg border border-emerald-500/20 px-3.5 py-2.5 text-xs">
+                  <Activity className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <div>
+                    <span className="font-semibold">Connection Verified:</span> Wazuh Manager is reachable and responding ({connectionHealth.latencyMs}ms latency).
+                  </div>
+                </div>
+              ) : (
+                <div className="border-border bg-rose-500/10 text-rose-700 dark:text-rose-400 flex items-start gap-2.5 rounded-lg border border-rose-500/20 p-3 text-xs">
+                  <AlertCircle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-semibold">Connection Check Failed</p>
+                    <p className="text-muted-foreground">{connectionHealth.message}</p>
+                  </div>
+                </div>
+              )
+            ) : null}
 
             {/* Configuration Grid */}
             <section aria-labelledby="configuration-heading">
@@ -414,14 +451,25 @@ export function EventSourceDetailDialog({
             </div>
 
             <div className="flex justify-between items-center pt-2">
-              <Button
-                onClick={() => setIsEditing(true)}
-                type="button"
-                className="flex items-center gap-1.5"
-              >
-                <SlidersHorizontal aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-                <span>Configure Source</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  type="button"
+                  className="flex items-center gap-1.5"
+                >
+                  <SlidersHorizontal aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                  <span>Configure Source</span>
+                </Button>
+                <Button
+                  onClick={() => setIsTestingConnection(true)}
+                  type="button"
+                  variant="secondary"
+                  className="flex items-center gap-1.5"
+                >
+                  <Activity aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                  <span>Test connection</span>
+                </Button>
+              </div>
               <Button
                 onClick={handleClose}
                 type="button"
@@ -434,6 +482,22 @@ export function EventSourceDetailDialog({
         )
       ) : null}
     </Dialog>
+
+    {isTestingConnection ? (
+      <TestEventSourceDialog
+        initialEndpoint={source?.endpoint ?? ""}
+        isOpen={isTestingConnection}
+        onClose={() => setIsTestingConnection(false)}
+        onTestComplete={(result) => {
+          setConnectionHealth({
+            connected: result.connected,
+            message: result.message,
+            latencyMs: result.latencyMs,
+          });
+        }}
+      />
+    ) : null}
+  </>
   );
 }
 

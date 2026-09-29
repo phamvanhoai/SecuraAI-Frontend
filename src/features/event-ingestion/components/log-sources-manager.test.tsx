@@ -40,6 +40,7 @@ vi.mock("../hooks/use-event-sources", () => ({
   }),
   useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useUpdateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useTestEventSourceConnection: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({
