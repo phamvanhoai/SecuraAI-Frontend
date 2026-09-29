@@ -16,6 +16,7 @@ export {
 } from "./schemas/asset-list-schema";
 export {
   createAssetSchema,
+  createAssetRequestSchema,
   assetDetailSchema,
   assetCreateOptionsSchema,
   type CreateAssetInput,

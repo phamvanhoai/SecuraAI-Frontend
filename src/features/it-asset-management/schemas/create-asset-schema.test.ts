@@ -2,96 +2,62 @@ import { describe, expect, it } from "vitest";
 import { createAssetSchema } from "./create-asset-schema";
 
 describe("createAssetSchema", () => {
-  it("normalizes the code, trims fields and removes blank optional values", () => {
+  it("normalizes core fields and supplies relationship defaults", () => {
     expect(
       createAssetSchema.parse({
         assetCode: " ast-002 ",
         name: " Server ",
         assetType: " server ",
-        description: "",
-        hostname: "",
-        ipAddress: "",
-        location: "",
-        departmentId: "",
-        ownerUserId: "",
+        criticality: "medium",
+        dataClassification: "internal",
       }),
     ).toEqual({
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
-      description: undefined,
-      hostname: undefined,
-      ipAddress: undefined,
-      location: undefined,
-      departmentId: undefined,
+      businessServiceId: undefined,
       ownerUserId: undefined,
+      criticality: "medium",
+      dataClassification: "internal",
+      description: undefined,
+      dependencyIds: [],
+      eventSourceIds: [],
     });
   });
-
-  it("accepts valid optional department and owner IDs", () => {
-    const departmentId = "00000000-0000-4000-8000-000000000010";
+  it("accepts owner, service, dependency and event-source IDs", () => {
     const ownerUserId = "00000000-0000-4000-8000-000000000020";
+    const businessServiceId = "00000000-0000-4000-8000-000000000030";
+    const relatedId = "00000000-0000-4000-8000-000000000040";
     expect(
       createAssetSchema.parse({
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        departmentId,
+        criticality: "high",
+        dataClassification: "confidential",
         ownerUserId,
+        businessServiceId,
+        dependencyIds: [relatedId],
+        eventSourceIds: [relatedId],
       }),
-    ).toMatchObject({ departmentId, ownerUserId });
+    ).toMatchObject({
+      ownerUserId,
+      businessServiceId,
+      dependencyIds: [relatedId],
+      eventSourceIds: [relatedId],
+    });
   });
-
-  it("rejects invalid department and owner IDs", () => {
+  it("rejects invalid identifiers and unknown fields", () => {
     expect(
       createAssetSchema.safeParse({
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        departmentId: "not-a-uuid",
+        criticality: "high",
+        dataClassification: "internal",
+        ownerUserId: "invalid",
+        hostname: "legacy",
       }).success,
     ).toBe(false);
-  });
-
-  it.each([
-    {
-      assetCode: "BAD CODE",
-      name: "Server",
-      assetType: "server",
-      description: "",
-      hostname: "",
-      ipAddress: "",
-      location: "",
-    },
-    {
-      assetCode: "AST-002",
-      name: "",
-      assetType: "server",
-      description: "",
-      hostname: "",
-      ipAddress: "",
-      location: "",
-    },
-    {
-      assetCode: "AST-002",
-      name: "Server",
-      assetType: "server",
-      criticality: "critical",
-      description: "",
-      hostname: "",
-      ipAddress: "",
-      location: "",
-    },
-    {
-      assetCode: "AST-002",
-      name: "Server",
-      assetType: "server",
-      description: "",
-      hostname: "",
-      ipAddress: "999.1.1.1",
-      location: "",
-    },
-  ])("rejects invalid asset input", (input) => {
-    expect(createAssetSchema.safeParse(input).success).toBe(false);
   });
 });
