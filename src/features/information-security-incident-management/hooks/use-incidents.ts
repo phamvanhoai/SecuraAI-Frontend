@@ -20,7 +20,31 @@ import {
   linkIncidentToRisk,
   getControlWeaknessOptions,
   recordControlWeakness,
+  getRiskReassessmentRequestOptions,
+  createRiskReassessmentRequest,
 } from "../api/incidents";
+
+export const useRiskReassessmentRequestOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "risk-reassessment-request-options", id],
+    queryFn: ({ signal }) => getRiskReassessmentRequestOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useCreateRiskReassessmentRequest() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: createRiskReassessmentRequest,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-reassessment-request-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["risks"] });
+    },
+  });
+}
 
 export const useControlWeaknessOptions = (id: string | undefined) =>
   useQuery({
