@@ -18,6 +18,42 @@ import {
   linkedIncidentAssetSchema,
   type LinkIncidentAssetForm,
 } from "../schemas/incident-asset-schema";
+import {
+  incidentControlOptionsSchema,
+  linkedIncidentControlSchema,
+  type LinkIncidentControlForm,
+} from "../schemas/incident-control-schema";
+
+export async function getIncidentControlOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return incidentControlOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/controls/options`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function linkIncidentToControl(input: {
+  id: string;
+  values: LinkIncidentControlForm;
+}) {
+  return linkedIncidentControlSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/controls`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: input.values,
+      },
+    ),
+  );
+}
 
 export async function getIncidentAssetOptions(
   id: string,
