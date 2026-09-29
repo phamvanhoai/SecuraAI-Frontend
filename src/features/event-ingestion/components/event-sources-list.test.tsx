@@ -1,11 +1,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseEventSources = vi.fn();
 
 vi.mock("../hooks/use-event-sources", () => ({
   useEventSources: (params?: unknown) => mockUseEventSources(params),
+  useEventSource: () => ({ isPending: false, isError: false, data: undefined }),
   useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 
@@ -27,6 +28,22 @@ const mockItems = [
     updatedAt: "2026-09-27T12:00:00.000Z",
   },
 ];
+
+beforeAll(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    },
+  });
+});
 
 afterEach(cleanup);
 
@@ -103,5 +120,24 @@ describe("EventSourcesList", () => {
         q: "Wazuh",
       }),
     );
+  });
+
+  it("opens EventSourceDetailDialog when clicking Details button", async () => {
+    mockUseEventSources.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: mockItems,
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<EventSourcesList />);
+
+    const detailsButton = screen.getByRole("button", { name: /Details/i });
+    await user.click(detailsButton);
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

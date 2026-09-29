@@ -33,6 +33,11 @@ vi.mock("../hooks/use-event-sources", () => ({
     isError: false,
     isPending: false,
   }),
+  useEventSource: () => ({
+    data: undefined,
+    isError: false,
+    isPending: false,
+  }),
   useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 

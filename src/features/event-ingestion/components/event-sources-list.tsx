@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Server, X } from "lucide-react";
+import { Eye, Search, Server, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -21,6 +21,7 @@ import type {
   EventSourceResponse,
   eventSourceStatuses,
 } from "../schemas/event-source-schema";
+import { EventSourceDetailDialog } from "./event-source-detail-dialog";
 
 const statusTones = {
   ACTIVE: "success",
@@ -53,6 +54,7 @@ export function EventSourcesList({
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
 
   const eventSourcesQuery = useEventSources({
     page,
@@ -149,6 +151,21 @@ export function EventSourcesList({
         </span>
       ),
     },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (item) => (
+        <Button
+          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
+          onClick={() => setSelectedSourceId(item.id)}
+          type="button"
+          variant="secondary"
+        >
+          <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+          <span>Details</span>
+        </Button>
+      ),
+    },
   ];
 
   function handleSearchSubmit(e: FormEvent) {
@@ -172,117 +189,125 @@ export function EventSourcesList({
   const isFiltered = Boolean(query || statusFilter !== "ALL");
 
   return (
-    <ProductPanel
-      description={
-        eventSourcesQuery.data
-          ? `${eventSourcesQuery.data.pagination.total} event sources found`
-          : "Backend-managed security event sources"
-      }
-      title="Event source list"
-    >
-      <form
-        className="border-border flex flex-wrap items-center gap-2 border-b p-4"
-        onSubmit={handleSearchSubmit}
+    <>
+      <ProductPanel
+        description={
+          eventSourcesQuery.data
+            ? `${eventSourcesQuery.data.pagination.total} event sources found`
+            : "Backend-managed security event sources"
+        }
+        title="Event source list"
       >
-        <label className="relative block min-w-[220px] max-w-md flex-1">
-          <span className="sr-only">Search event sources</span>
-          <Search
-            aria-hidden="true"
-            className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            strokeWidth={1.8}
-          />
-          <Input
-            className="bg-background min-h-10 pl-9"
-            maxLength={100}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Search by name or source type"
-            value={draft}
-          />
-        </label>
-        <Select
-          aria-label="Filter by status"
-          className="min-h-10 w-36"
-          value={statusFilter}
-          onChange={(e) => handleStatusChange(e.target.value)}
+        <form
+          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
+          onSubmit={handleSearchSubmit}
         >
-          <option value="ALL">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </Select>
-        <Button className="min-h-10" type="submit">
-          Search
-        </Button>
-        {isFiltered ? (
-          <Button
-            className="min-h-10 gap-1.5"
-            onClick={handleClearFilters}
-            type="button"
-            variant="secondary"
+          <label className="relative block min-w-[220px] max-w-md flex-1">
+            <span className="sr-only">Search event sources</span>
+            <Search
+              aria-hidden="true"
+              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              strokeWidth={1.8}
+            />
+            <Input
+              className="bg-background min-h-10 pl-9"
+              maxLength={100}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Search by name or source type"
+              value={draft}
+            />
+          </label>
+          <Select
+            aria-label="Filter by status"
+            className="min-h-10 w-36"
+            value={statusFilter}
+            onChange={(e) => handleStatusChange(e.target.value)}
           >
-            <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            Clear
+            <option value="ALL">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </Select>
+          <Button className="min-h-10" type="submit">
+            Search
           </Button>
-        ) : null}
-      </form>
+          {isFiltered ? (
+            <Button
+              className="min-h-10 gap-1.5"
+              onClick={handleClearFilters}
+              type="button"
+              variant="secondary"
+            >
+              <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Clear
+            </Button>
+          ) : null}
+        </form>
 
-      <div className="p-4">
-        {eventSourcesQuery.isPending ? (
-          <TableSkeleton
-            headers={[
-              "Source name",
-              "Type",
-              "Status",
-              "Method / Endpoint",
-              "Event families",
-              "Last updated",
-            ]}
-            label="Loading event sources"
-            rows={4}
-          />
-        ) : eventSourcesQuery.isError ? (
-          <Alert>
-            Unable to load event sources. Please check your backend connection
-            and session.
-          </Alert>
-        ) : eventSourcesQuery.data?.items.length === 0 ? (
-          <div className="py-12 text-center">
-            <Server className="text-muted mx-auto size-10 stroke-1" />
-            <h4 className="mt-2 text-base font-semibold">
-              No event sources found
-            </h4>
-            <p className="text-muted mt-1 text-sm">
-              {isFiltered
-                ? "No configured event sources match the current filter criteria."
-                : "No normalized event sources have been registered yet."}
-            </p>
-            {onRegisterClick && !isFiltered ? (
-              <Button
-                className="mt-4 min-h-9 gap-2 text-xs"
-                onClick={onRegisterClick}
-              >
-                Register first source
-              </Button>
-            ) : null}
-          </div>
-        ) : eventSourcesQuery.data ? (
-          <DataTable
-            columns={columns}
-            getRowKey={(item) => item.id}
-            rows={eventSourcesQuery.data.items}
-          />
-        ) : null}
-      </div>
-
-      {eventSourcesQuery.data && eventSourcesQuery.data.items.length > 0 ? (
-        <div className="border-border border-t p-4">
-          <Pagination
-            page={eventSourcesQuery.data.pagination.page}
-            pageCount={eventSourcesQuery.data.pagination.totalPages}
-            onPageChange={setPage}
-          />
+        <div className="p-4">
+          {eventSourcesQuery.isPending ? (
+            <TableSkeleton
+              headers={[
+                "Source name",
+                "Type",
+                "Status",
+                "Method / Endpoint",
+                "Event families",
+                "Last updated",
+                "Actions",
+              ]}
+              label="Loading event sources"
+              rows={4}
+            />
+          ) : eventSourcesQuery.isError ? (
+            <Alert>
+              Unable to load event sources. Please check your backend connection
+              and session.
+            </Alert>
+          ) : eventSourcesQuery.data?.items.length === 0 ? (
+            <div className="py-12 text-center">
+              <Server className="text-muted mx-auto size-10 stroke-1" />
+              <h4 className="mt-2 text-base font-semibold">
+                No event sources found
+              </h4>
+              <p className="text-muted mt-1 text-sm">
+                {isFiltered
+                  ? "No configured event sources match the current filter criteria."
+                  : "No normalized event sources have been registered yet."}
+              </p>
+              {onRegisterClick && !isFiltered ? (
+                <Button
+                  className="mt-4 min-h-9 gap-2 text-xs"
+                  onClick={onRegisterClick}
+                >
+                  Register first source
+                </Button>
+              ) : null}
+            </div>
+          ) : eventSourcesQuery.data ? (
+            <DataTable
+              columns={columns}
+              getRowKey={(item) => item.id}
+              rows={eventSourcesQuery.data.items}
+            />
+          ) : null}
         </div>
-      ) : null}
-    </ProductPanel>
+
+        {eventSourcesQuery.data && eventSourcesQuery.data.items.length > 0 ? (
+          <div className="border-border border-t p-4">
+            <Pagination
+              page={eventSourcesQuery.data.pagination.page}
+              pageCount={eventSourcesQuery.data.pagination.totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : null}
+      </ProductPanel>
+
+      <EventSourceDetailDialog
+        onClose={() => setSelectedSourceId(null)}
+        sourceId={selectedSourceId}
+      />
+    </>
   );
 }
 
