@@ -1,5 +1,5 @@
 import {
-  createTreatmentPlanRequestSchema,
+  createRiskTreatmentPlanSchema,
   treatmentPlanListQuerySchema,
 } from "@/features/risk-assessment";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -41,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
       { status: 422 },
     );
   }
-  const parsed = createTreatmentPlanRequestSchema.safeParse(body);
+  const parsed = createRiskTreatmentPlanSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
       {

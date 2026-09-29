@@ -1,0 +1,4 @@
+import { z } from "zod";
+import { decideRiskAcceptanceSchema } from "@/features/risk-assessment";
+import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
+export async function PATCH(request: Request, context: { params: Promise<{ acceptanceId: string }> }) { const params = z.object({ acceptanceId: z.uuid() }).safeParse(await context.params); let body: unknown; try { body = await request.json(); } catch { body = null; } const parsed = decideRiskAcceptanceSchema.safeParse(body); if (!params.success || !parsed.success) return Response.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Invalid acceptance decision" } }, { status: 422 }); return proxyAuthenticatedRequest(`/risks/acceptances/${params.data.acceptanceId}/decision`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(parsed.data) }); }
