@@ -28,6 +28,38 @@ import {
   linkedIncidentRiskSchema,
   type LinkIncidentRiskForm,
 } from "../schemas/incident-risk-schema";
+import {
+  controlWeaknessOptionsSchema,
+  recordedControlWeaknessSchema,
+  type RecordControlWeaknessForm,
+} from "../schemas/control-weakness-schema";
+
+export async function getControlWeaknessOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return controlWeaknessOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/control-weaknesses/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function recordControlWeakness(input: {
+  id: string;
+  values: RecordControlWeaknessForm;
+}) {
+  return recordedControlWeaknessSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/control-weaknesses`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: { ...input.values, description: input.values.description.trim() },
+      },
+    ),
+  );
+}
 
 export async function getIncidentRiskOptions(id: string, signal?: AbortSignal) {
   return incidentRiskOptionsSchema.parse(

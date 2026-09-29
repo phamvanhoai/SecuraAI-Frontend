@@ -18,7 +18,31 @@ import {
   linkIncidentToControl,
   getIncidentRiskOptions,
   linkIncidentToRisk,
+  getControlWeaknessOptions,
+  recordControlWeakness,
 } from "../api/incidents";
+
+export const useControlWeaknessOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "control-weakness-options", id],
+    queryFn: ({ signal }) => getControlWeaknessOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useRecordControlWeakness() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: recordControlWeakness,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-weakness-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["controls"] });
+    },
+  });
+}
 
 export const useIncidentRiskOptions = (id: string | undefined) =>
   useQuery({
