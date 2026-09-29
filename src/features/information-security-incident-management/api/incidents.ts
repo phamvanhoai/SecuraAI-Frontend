@@ -23,6 +23,31 @@ import {
   linkedIncidentControlSchema,
   type LinkIncidentControlForm,
 } from "../schemas/incident-control-schema";
+import {
+  incidentRiskOptionsSchema,
+  linkedIncidentRiskSchema,
+  type LinkIncidentRiskForm,
+} from "../schemas/incident-risk-schema";
+
+export async function getIncidentRiskOptions(id: string, signal?: AbortSignal) {
+  return incidentRiskOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risks/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function linkIncidentToRisk(input: {
+  id: string;
+  values: LinkIncidentRiskForm;
+}) {
+  return linkedIncidentRiskSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/risks`,
+      { target: "same-origin", method: "POST", body: input.values },
+    ),
+  );
+}
 
 export async function getIncidentControlOptions(
   id: string,

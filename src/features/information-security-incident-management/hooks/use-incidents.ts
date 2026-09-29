@@ -16,7 +16,31 @@ import {
   linkIncidentToAsset,
   getIncidentControlOptions,
   linkIncidentToControl,
+  getIncidentRiskOptions,
+  linkIncidentToRisk,
 } from "../api/incidents";
+
+export const useIncidentRiskOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "risk-options", id],
+    queryFn: ({ signal }) => getIncidentRiskOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useLinkIncidentToRisk() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToRisk,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["risks"] });
+    },
+  });
+}
 
 export const useIncidentControlOptions = (id: string | undefined) =>
   useQuery({
