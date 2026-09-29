@@ -1,6 +1,15 @@
 "use client";
 
-import { Ellipsis, Eye, LockKeyhole, Pencil, Search, ShieldPlus, UnlockKeyhole, UserMinus } from "lucide-react";
+import {
+  Ellipsis,
+  Eye,
+  LockKeyhole,
+  Pencil,
+  Search,
+  ShieldPlus,
+  UnlockKeyhole,
+  UserMinus,
+} from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   MetricStrip,
@@ -130,7 +139,11 @@ function userRows(
         <DropdownMenu
           label={
             <span className="text-muted flex min-h-7 items-center gap-1.5 text-sm font-medium">
-              <Ellipsis aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              <Ellipsis
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
               More
               <span className="sr-only">actions for {user.fullName}</span>
             </span>
@@ -155,7 +168,11 @@ function userRows(
               onClick={() => assignRoles(user.id)}
               type="button"
             >
-              <ShieldPlus aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              <ShieldPlus
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
               Assign roles
             </button>
             {action ? (
@@ -176,12 +193,19 @@ function userRows(
               <button
                 aria-label={`Manage availability for ${user.fullName}`}
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={user.id === actor.id || (!canDeactivate && !canRemove) ||
-                  (user.status === "disabled" && !canRemove)}
+                disabled={
+                  user.id === actor.id ||
+                  (!canDeactivate && !canRemove) ||
+                  (user.status === "disabled" && !canRemove)
+                }
                 onClick={() => manage(user)}
                 type="button"
               >
-                <UserMinus aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                <UserMinus
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
                 Manage availability
               </button>
             </div>
@@ -204,15 +228,22 @@ export function UsersShell() {
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [assignRoleUserId, setAssignRoleUserId] = useState<string | null>(null);
-  const [availabilityUser, setAvailabilityUser] = useState<UserListResponse["items"][number] | null>(null);
+  const [availabilityUser, setAvailabilityUser] = useState<
+    UserListResponse["items"][number] | null
+  >(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
   const canRead = session.data?.permissions.includes("users.read") ?? false;
   const canUpdate = session.data?.permissions.includes("users.update") ?? false;
-  const canAssignRoles = isAdmin && (session.data?.permissions.includes("users.assign-role") ?? false);
-  const canDeactivate = isAdmin && (session.data?.permissions.includes("users.deactivate") ?? false);
-  const canRemove = isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
+  const canAssignRoles =
+    isAdmin &&
+    (session.data?.permissions.includes("users.assign-role") ?? false);
+  const canDeactivate =
+    isAdmin &&
+    (session.data?.permissions.includes("users.deactivate") ?? false);
+  const canRemove =
+    isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
   const users = useUsers(
     {
       page,
@@ -317,7 +348,9 @@ export function UsersShell() {
         description="Manage user accounts, departments, roles, and access status across the organization."
         secondaryAction="Export list"
         showSampleNotice={false}
-        {...(isAdmin && canAssignRoles && (session.data?.permissions.includes("users.create") ?? false)
+        {...(isAdmin &&
+        canAssignRoles &&
+        (session.data?.permissions.includes("users.create") ?? false)
           ? {
               primaryAction: "Add user",
               onPrimaryAction: () => setCreateOpen(true),
@@ -374,7 +407,7 @@ export function UsersShell() {
                   className="pl-9"
                   id="user-search"
                   onChange={(event) => setSearchDraft(event.target.value)}
-                  placeholder="Name, email, or employee code"
+                  placeholder="Name, email, or username"
                   type="search"
                   value={searchDraft}
                 />
@@ -491,14 +524,19 @@ export function UsersShell() {
         onClose={() => setDetailUserId(null)}
       />
       <EditUserDialog userId={editUserId} onClose={() => setEditUserId(null)} />
-      <AssignUserRolesDialog userId={assignRoleUserId} onClose={() => setAssignRoleUserId(null)} />
+      <AssignUserRolesDialog
+        userId={assignRoleUserId}
+        onClose={() => setAssignRoleUserId(null)}
+      />
       <AccountAvailabilityDialog
         user={availabilityUser}
         canDeactivate={canDeactivate}
         canRemove={canRemove}
         onClose={() => setAvailabilityUser(null)}
       />
-      {isAdmin && canAssignRoles && session.data?.permissions.includes("users.create") ? (
+      {isAdmin &&
+      canAssignRoles &&
+      session.data?.permissions.includes("users.create") ? (
         <CreateUserDialog
           open={createOpen}
           onClose={() => setCreateOpen(false)}

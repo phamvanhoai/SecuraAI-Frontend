@@ -6,8 +6,13 @@ import {
   getPolicyReview,
   listPublishablePolicies,
   requestPolicyRevision,
+  rejectPolicy,
+  listRejectedPolicies,
 } from "../api/policy-publication";
-import type { PublishablePolicyQuery } from "../schemas/policy-publication-schema";
+import type {
+  PublishablePolicyQuery,
+  RejectedPolicyQuery,
+} from "../schemas/policy-publication-schema";
 
 const publicationKeys = ["policies", "publication"] as const;
 
@@ -42,6 +47,25 @@ export function useApprovePolicyForPublication() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: approvePolicyForPublication,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function useRejectedPolicies(
+  query: RejectedPolicyQuery,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...publicationKeys, "rejected", query],
+    queryFn: ({ signal }) => listRejectedPolicies(query, signal),
+    enabled,
+  });
+}
+
+export function useRejectPolicy() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: rejectPolicy,
     onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
   });
 }

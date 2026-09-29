@@ -1,5 +1,5 @@
 "use client";
-import { Eye, History, Search } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -29,6 +29,7 @@ import type {
   EmployeePolicy,
   EmployeePolicyQuery,
 } from "../schemas/policy-acknowledgement-schema";
+import { PolicyViewTabs } from "./policy-view-tabs";
 const initial: EmployeePolicyQuery = { page: 1, limit: 20, status: "all" };
 export function EmployeePolicyAcknowledgementManager({
   onViewHistory,
@@ -138,14 +139,6 @@ export function EmployeePolicyAcknowledgementManager({
         title="Policies requiring acknowledgement"
         description="Read policies applicable to your department and confirm your understanding."
         showSampleNotice={false}
-        additionalActions={
-          onViewHistory ? (
-            <Button variant="secondary" onClick={onViewHistory}>
-              <History aria-hidden="true" className="size-4" />
-              View version history
-            </Button>
-          ) : undefined
-        }
       />
       <ProductPanel
         title="Applicable policies"
@@ -155,6 +148,15 @@ export function EmployeePolicyAcknowledgementManager({
             : "Published policies assigned to your department"
         }
       >
+        {onViewHistory ? (
+          <PolicyViewTabs
+            activeId="published"
+            tabs={[
+              { id: "published", label: "Published", onSelect: () => undefined },
+              { id: "history", label: "Version history", onSelect: onViewHistory },
+            ]}
+          />
+        ) : null}
         <form
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submit}

@@ -23,6 +23,19 @@ vi.mock("../hooks/use-log-sources", () => ({
   useUpdateLogSource: () => ({ isPending: false, mutateAsync: updateMock }),
   useDeleteLogSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
+
+vi.mock("../hooks/use-event-sources", () => ({
+  useEventSources: () => ({
+    data: {
+      items: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
+    },
+    isError: false,
+    isPending: false,
+  }),
+  useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: vi.fn() }),
 }));

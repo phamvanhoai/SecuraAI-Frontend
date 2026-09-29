@@ -22,7 +22,12 @@ vi.mock("../hooks/use-change-password", () => ({
   }),
 }));
 vi.mock("../hooks/use-session-user", () => ({
-  useSessionUser: () => ({ data: { mustChangePassword: false } }),
+  useSessionUser: () => ({
+    data: {
+      mustChangePassword: false,
+      roles: [{ code: "EXECUTIVE", name: "Executive" }],
+    },
+  }),
 }));
 
 import { ChangePasswordForm } from "./change-password-form";
@@ -68,7 +73,7 @@ describe("ChangePasswordForm", () => {
 
     expect(mocks.success).toHaveBeenCalledWith(
       "Password changed successfully",
-      "Please sign out and sign in again with your new password.",
+      "Your password has been updated.",
     );
     expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
   });
