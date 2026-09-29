@@ -26,7 +26,7 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe("AssetDetailDialog", () => {
-  it("shows hostname, IP and location returned by the backend", () => {
+  it("shows V2 ownership and linked security context", () => {
     useAssetDetailMock.mockReturnValue({
       isPending: false,
       isError: false,
@@ -36,13 +36,18 @@ describe("AssetDetailDialog", () => {
         name: "Frontend Test Server",
         assetType: "server",
         criticality: "medium",
+        dataClassification: "confidential",
         status: "active",
-        hostname: "fe-test-server",
-        ipAddress: "192.168.1.50",
-        location: "Server Room",
+        archivedAt: null,
         description: "Test server",
-        department: null,
-        owner: null,
+        owner: { id: "00000000-0000-4000-8000-000000000002", fullName: "Asset Owner", inactive: false },
+        createdBy: null,
+        businessService: { id: "00000000-0000-4000-8000-000000000003", name: "Payment Service", inactive: false },
+        dependencies: [],
+        controls: [{ id: "00000000-0000-4000-8000-000000000004", code: "CTRL-01", name: "MFA", implementationStatus: "implemented" }],
+        eventSources: [],
+        risks: [],
+        incidents: [],
         createdAt: "2026-09-10T08:00:00.000Z",
         updatedAt: "2026-09-10T08:30:00.000Z",
       },
@@ -50,9 +55,9 @@ describe("AssetDetailDialog", () => {
 
     render(<AssetDetailDialog assetId="00000000-0000-4000-8000-000000000001" onClose={vi.fn()} />);
 
-    expect(screen.getByText("fe-test-server")).toBeInTheDocument();
-    expect(screen.getByText("192.168.1.50")).toBeInTheDocument();
-    expect(screen.getByText("Server Room")).toBeInTheDocument();
+    expect(screen.getByText("Asset Owner")).toBeInTheDocument();
+    expect(screen.getByText("Payment Service")).toBeInTheDocument();
+    expect(screen.getByText("CTRL-01 — MFA")).toBeInTheDocument();
   });
 
   it("closes the dialog and clears the selected asset", async () => {
