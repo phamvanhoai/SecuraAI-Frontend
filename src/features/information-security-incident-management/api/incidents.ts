@@ -33,6 +33,41 @@ import {
   recordedControlWeaknessSchema,
   type RecordControlWeaknessForm,
 } from "../schemas/control-weakness-schema";
+import {
+  riskReassessmentRequestOptionsSchema,
+  riskReassessmentRequestSchema,
+  type CreateRiskReassessmentRequestForm,
+} from "../schemas/risk-reassessment-request-schema";
+
+export async function getRiskReassessmentRequestOptions(id: string, signal?: AbortSignal) {
+  return riskReassessmentRequestOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function createRiskReassessmentRequest(input: {
+  id: string;
+  values: CreateRiskReassessmentRequestForm;
+}) {
+  return riskReassessmentRequestSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/risk-reassessment-requests`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: {
+          riskId: input.values.riskId,
+          reason: input.values.reason.trim(),
+          ...(input.values.controlFindingId
+            ? { controlFindingId: input.values.controlFindingId }
+            : {}),
+        },
+      },
+    ),
+  );
+}
 
 export async function getControlWeaknessOptions(
   id: string,
