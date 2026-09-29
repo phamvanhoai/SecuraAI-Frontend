@@ -12,7 +12,32 @@ import {
   listIncidentAssignmentOptions,
   listMyIncidents,
   reportIncident,
+  getIncidentAssetOptions,
+  linkIncidentToAsset,
 } from "../api/incidents";
+
+export const useIncidentAssetOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "asset-options", id],
+    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+export function useLinkIncidentToAsset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToAsset,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "asset-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["assets"] });
+    },
+  });
+}
 const key = ["incidents", "mine"] as const;
 export const useMyIncidents = (page: number, enabled: boolean) =>
   useQuery({
