@@ -1,11 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createEventSource, getEventSource, listEventSources } from "../api/event-sources";
+import {
+  createEventSource,
+  getEventSource,
+  listEventSources,
+  updateEventSource,
+} from "../api/event-sources";
 import type {
   EventSourceDetailResponse,
   EventSourceListQuery,
   EventSourceResponse,
   PaginatedEventSources,
   RegisterEventSourceFormValues,
+  UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
 export function useEventSources(params?: Partial<EventSourceListQuery>) {
@@ -33,6 +39,22 @@ export function useCreateEventSource() {
     mutationFn: (values) => createEventSource(values),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["event-sources"] });
+    },
+  });
+}
+
+export function useUpdateEventSource() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    EventSourceResponse,
+    Error,
+    { id: string; values: UpdateEventSourceFormValues }
+  >({
+    mutationFn: ({ id, values }) => updateEventSource(id, values),
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["event-sources"] });
+      await queryClient.invalidateQueries({ queryKey: ["event-sources", variables.id] });
     },
   });
 }

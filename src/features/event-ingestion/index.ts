@@ -2,6 +2,7 @@ export { LogSourcesManager } from "./components/log-sources-manager";
 export { RegisterEventSourceForm } from "./components/register-event-source-form";
 export { EventSourcesList } from "./components/event-sources-list";
 export { EventSourceDetailDialog } from "./components/event-source-detail-dialog";
+export { EditEventSourceDialog } from "./components/edit-event-source-dialog";
 export {
   eventFamilies,
   eventSourceStatuses,
@@ -13,12 +14,14 @@ export {
   eventSourceDetailResponseSchema,
   ingestionMethods,
   registerEventSourceFormSchema,
+  updateEventSourceFormSchema,
   type EventSourceResponse,
   type EventSourceListQuery,
   type PaginatedEventSources,
   type MaskedApiKey,
   type EventSourceDetailResponse,
   type RegisterEventSourceFormValues,
+  type UpdateEventSourceFormValues,
 } from "./schemas/event-source-schema";
 export {
   logSourceFormSchema,
@@ -28,9 +31,15 @@ export {
   type LogSourceForm,
   type LogSourceList,
 } from "./schemas/log-source-schema";
-export { createEventSource, listEventSources, getEventSource } from "./api/event-sources";
+export {
+  createEventSource,
+  listEventSources,
+  getEventSource,
+  updateEventSource,
+} from "./api/event-sources";
 export {
   useCreateEventSource,
   useEventSources,
   useEventSource,
+  useUpdateEventSource,
 } from "./hooks/use-event-sources";

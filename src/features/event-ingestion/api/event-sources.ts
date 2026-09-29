@@ -8,6 +8,7 @@ import {
   type EventSourceResponse,
   type PaginatedEventSources,
   type RegisterEventSourceFormValues,
+  type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
 export async function createEventSource(
@@ -69,5 +70,34 @@ export async function getEventSource(id: string): Promise<EventSourceDetailRespo
   });
 
   return eventSourceDetailResponseSchema.parse(data);
+}
+
+export async function updateEventSource(
+  id: string,
+  values: UpdateEventSourceFormValues,
+): Promise<EventSourceResponse> {
+  const payload = {
+    name: values.name.trim(),
+    endpoint: values.endpoint && values.endpoint.trim().length > 0 ? values.endpoint.trim() : null,
+    ingestionMethod: values.ingestionMethod,
+    authenticationType:
+      values.authenticationType && values.authenticationType.trim().length > 0
+        ? values.authenticationType.trim()
+        : null,
+    status: values.status,
+    description:
+      values.description && values.description.trim().length > 0
+        ? values.description.trim()
+        : null,
+    eventFamilies: values.eventFamilies,
+  };
+
+  const data = await apiRequest<unknown>(`/api/event-sources/${encodeURIComponent(id)}`, {
+    target: "same-origin",
+    method: "PUT",
+    body: payload,
+  });
+
+  return eventSourceResponseSchema.parse(data);
 }
 

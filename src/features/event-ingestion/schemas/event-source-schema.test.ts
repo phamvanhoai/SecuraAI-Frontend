@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   registerEventSourceFormSchema,
+  updateEventSourceFormSchema,
   eventSourceResponseSchema,
   eventSourceListQuerySchema,
   paginatedEventSourcesSchema,
@@ -178,5 +179,46 @@ describe("eventSourceDetailResponseSchema", () => {
     expect(parsed.apiKeys[0]?.maskedKey).toBe("sec_live_1234...****");
     expect(parsed.stats.totalIngestedEvents).toBe(1000);
     expect(parsed.creator?.email).toBe("secops@secura.ai");
+  });
+});
+
+describe("updateEventSourceFormSchema", () => {
+  it("validates a complete update payload", () => {
+    const valid = {
+      name: "Updated Wazuh Manager",
+      endpoint: "https://wazuh-new.internal:55000",
+      ingestionMethod: "API" as const,
+      authenticationType: "BEARER_TOKEN",
+      status: "INACTIVE" as const,
+      description: "Updated operational notes",
+      eventFamilies: ["AUTHENTICATION" as const],
+    };
+
+    const parsed = updateEventSourceFormSchema.parse(valid);
+    expect(parsed.name).toBe("Updated Wazuh Manager");
+    expect(parsed.status).toBe("INACTIVE");
+    expect(parsed.eventFamilies).toEqual(["AUTHENTICATION"]);
+  });
+
+  it("fails when name is empty", () => {
+    const invalid = {
+      name: "   ",
+      endpoint: "https://wazuh.internal:55000",
+      ingestionMethod: "API" as const,
+      eventFamilies: ["AUTHENTICATION" as const],
+    };
+
+    expect(() => updateEventSourceFormSchema.parse(invalid)).toThrow(/Source name cannot be empty/i);
+  });
+
+  it("fails when API ingestion method has empty endpoint", () => {
+    const invalid = {
+      name: "Wazuh SIEM",
+      endpoint: "   ",
+      ingestionMethod: "API" as const,
+      eventFamilies: ["AUTHENTICATION" as const],
+    };
+
+    expect(() => updateEventSourceFormSchema.parse(invalid)).toThrow(/Connection endpoint is required/i);
   });
 });

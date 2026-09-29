@@ -7,7 +7,6 @@ import {
   Pencil,
   Radio,
   Search,
-  Server,
   Trash2,
 } from "lucide-react";
 import { useState, type FormEvent, type MouseEvent } from "react";
@@ -274,23 +273,10 @@ export function LogSourcesManager() {
             ? setRegisterEventSourceOpen(true)
             : openCreate()
         }
-        onSecondaryAction={() =>
-          activeTab === "event-sources"
-            ? openCreate()
-            : setRegisterEventSourceOpen(true)
-        }
         primaryAction={
           activeTab === "event-sources"
             ? "Register event source"
             : "Configure log source"
-        }
-        secondaryAction={
-          activeTab === "event-sources"
-            ? "Configure log source"
-            : "Register event source"
-        }
-        secondaryActionIcon={
-          <Server aria-hidden="true" className="size-4" strokeWidth={1.8} />
         }
         showSampleNotice={false}
         title="Event & Log sources"

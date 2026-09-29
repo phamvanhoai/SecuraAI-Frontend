@@ -1,0 +1,490 @@
+"use client";
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  CheckCircle2,
+  Copy,
+  Database,
+  Globe,
+  Info,
+  KeyRound,
+  Layers,
+  Loader2,
+  ShieldCheck,
+  User,
+} from "lucide-react";
+import { FormField } from "@/components/forms/form-field";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/feedback/toast";
+import { useEventSource, useUpdateEventSource } from "../hooks/use-event-sources";
+import {
+  eventFamilies,
+  eventSourceStatuses,
+  updateEventSourceFormSchema,
+  type EventSourceDetailResponse,
+  type EventSourceResponse,
+  type UpdateEventSourceFormValues,
+} from "../schemas/event-source-schema";
+
+const FAMILY_METADATA = {
+  AUTHENTICATION: {
+    label: "Authentication & Identity",
+    description:
+      "Windows logon events (4624, 4625, 4740), Linux SSH/PAM auth, and brute-force attempts.",
+    badgeClass: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+  },
+  VPN_SSO: {
+    label: "VPN & Remote SSO Access",
+    description:
+      "Remote access via OpenVPN, Cisco, Fortinet gateways, and Keycloak/Okta/Azure AD SSO logs.",
+    badgeClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  APPLICATION_ACCESS: {
+    label: "Application & Privilege Access",
+    description:
+      "Application logins, database authentications, and Windows/Linux privilege use (4672).",
+    badgeClass: "border-purple-500/30 bg-purple-500/10 text-purple-400",
+  },
+} as const;
+
+export interface EditEventSourceDialogProps {
+  sourceId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: ((updated: EventSourceResponse) => void) | undefined;
+}
+
+export function EditEventSourceDialog({
+  sourceId,
+  isOpen,
+  onClose,
+  onSuccess,
+}: EditEventSourceDialogProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const detailQuery = useEventSource(isOpen ? sourceId : null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    }
+    if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  const source = detailQuery.data;
+
+  return (
+    <Dialog
+      title="Update Event Source Configuration"
+      dialogRef={dialogRef}
+      onClose={onClose}
+      className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
+    >
+      <div className="space-y-6">
+        <p className="text-muted -mt-2 text-xs">
+          Update connection parameters and event family settings for this registered event source.
+        </p>
+
+        {detailQuery.isLoading ? (
+          <div className="space-y-4 py-2">
+            <Skeleton className="h-16 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+            <Skeleton className="h-28 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+        ) : detailQuery.isError ? (
+          <Alert className="border-danger/25 bg-danger-soft text-danger">
+            <strong className="block font-semibold">Error Loading Configuration</strong>
+            <p>{detailQuery.error?.message ?? "Failed to load event source details."}</p>
+          </Alert>
+        ) : source ? (
+          <EditEventSourceForm
+            key={source.id}
+            source={source}
+            onClose={onClose}
+            onSuccess={onSuccess}
+          />
+        ) : null}
+      </div>
+    </Dialog>
+  );
+}
+
+function EditEventSourceForm({
+  source,
+  onClose,
+  onSuccess,
+}: {
+  source: EventSourceDetailResponse;
+  onClose: () => void;
+  onSuccess?: ((updated: EventSourceResponse) => void) | undefined;
+}) {
+  const toast = useToast();
+  const updateMutation = useUpdateEventSource();
+
+  const [form, setForm] = useState<UpdateEventSourceFormValues>({
+    name: source.name,
+    endpoint: source.endpoint ?? "",
+    ingestionMethod: source.ingestionMethod,
+    authenticationType: source.authenticationType ?? "BEARER_TOKEN",
+    status: source.status,
+    description: source.description ?? "",
+    eventFamilies: source.eventFamilies,
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleFamilyToggle = (family: (typeof eventFamilies)[number]) => {
+    setForm((prev) => {
+      const exists = prev.eventFamilies.includes(family);
+      const updated = exists
+        ? prev.eventFamilies.filter((f) => f !== family)
+        : [...prev.eventFamilies, family];
+      return { ...prev, eventFamilies: updated };
+    });
+    if (fieldErrors["eventFamilies"]) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next["eventFamilies"];
+        return next;
+      });
+    }
+  };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitError(null);
+
+    const validation = updateEventSourceFormSchema.safeParse({
+      ...form,
+      ingestionMethod: "API",
+    });
+
+    if (!validation.success) {
+      const formattedErrors: Record<string, string> = {};
+      for (const issue of validation.error.issues) {
+        const path = String(issue.path[0]);
+        if (path && !formattedErrors[path]) {
+          formattedErrors[path] = issue.message;
+        }
+      }
+      setFieldErrors(formattedErrors);
+      return;
+    }
+
+    setFieldErrors({});
+
+    try {
+      const updated = await updateMutation.mutateAsync({
+        id: source.id,
+        values: validation.data,
+      });
+      toast.success(
+        "Cấu hình đã được cập nhật",
+        `Đã lưu thay đổi cấu hình kết nối cho nguồn sự kiện "${updated.name}".`,
+      );
+      onSuccess?.(updated);
+      onClose();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật cấu hình nguồn sự kiện. Vui lòng thử lại.";
+      setSubmitError(message);
+      toast.error("Cập nhật thất bại", message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+      {submitError ? (
+        <Alert className="border-danger/25 bg-danger-soft text-danger">
+          <strong className="block font-semibold">Update Error</strong>
+          <p>{submitError}</p>
+        </Alert>
+      ) : null}
+
+      {/* IMMUTABLE SYSTEM IDENTIFIERS BAR */}
+      <div className="rounded-lg border border-border bg-neutral-soft/30 p-3.5 text-xs text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">ID:</span>
+            <code className="font-mono text-xs text-muted">{source.id}</code>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(source.id);
+                toast.info("Copied", "Event source ID copied to clipboard.");
+              }}
+              className="text-muted hover:text-foreground"
+              title="Copy ID"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">Type:</span>
+            <span className="inline-block rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+              {source.sourceType}
+            </span>
+          </div>
+          {source.creator ? (
+            <div className="flex items-center gap-1.5 text-muted">
+              <User className="h-3.5 w-3.5 text-muted" />
+              <span>Created by {source.creator.fullName ?? source.creator.email}</span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {/* SECTION 1: Source Identity */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <Database className="h-4 w-4 text-brand" />
+          <h3 className="text-sm font-semibold text-foreground">
+            1. Event Source Identity
+          </h3>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            id="edit-source-name"
+            label="Event source name *"
+            error={fieldErrors["name"]}
+          >
+            <Input
+              id="edit-source-name"
+              placeholder="Wazuh Production Manager"
+              value={form.name}
+              onChange={(e) => {
+                setForm((prev) => ({ ...prev, name: e.target.value }));
+                if (fieldErrors["name"]) {
+                  setFieldErrors((p) => {
+                    const n = { ...p };
+                    delete n["name"];
+                    return n;
+                  });
+                }
+              }}
+              disabled={updateMutation.isPending}
+            />
+          </FormField>
+
+          <FormField
+            id="edit-source-status"
+            label="Status *"
+            error={fieldErrors["status"]}
+          >
+            <Select
+              id="edit-source-status"
+              value={form.status}
+              onChange={(e) => {
+                setForm((prev) => ({
+                  ...prev,
+                  status: e.target.value as (typeof eventSourceStatuses)[number],
+                }));
+              }}
+              disabled={updateMutation.isPending}
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
+            </Select>
+          </FormField>
+        </div>
+      </div>
+
+      {/* SECTION 2: Connection & Webhook Endpoint */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <Globe className="h-4 w-4 text-brand" />
+          <h3 className="text-sm font-semibold text-foreground">
+            2. Connection & Webhook Endpoint (Push Model)
+          </h3>
+        </div>
+
+        <FormField
+          id="edit-source-endpoint"
+          label="SecuraAI Ingestion Webhook Endpoint *"
+          error={fieldErrors["endpoint"]}
+        >
+          <Input
+            id="edit-source-endpoint"
+            placeholder="/api/v1/integrations/wazuh/events"
+            value={form.endpoint ?? ""}
+            onChange={(e) => {
+              setForm((prev) => ({ ...prev, endpoint: e.target.value }));
+              if (fieldErrors["endpoint"]) {
+                setFieldErrors((p) => {
+                  const n = { ...p };
+                  delete n["endpoint"];
+                  return n;
+                });
+              }
+            }}
+            disabled={updateMutation.isPending}
+          />
+        </FormField>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            id="edit-source-method"
+            label="Ingestion method"
+          >
+            <Input
+              id="edit-source-method"
+              value="Webhook / REST API (Push)"
+              readOnly
+              disabled
+              className="cursor-not-allowed bg-neutral-soft/50 text-muted"
+            />
+          </FormField>
+
+          <FormField
+            id="edit-source-auth"
+            label="Authentication method"
+          >
+            <Input
+              id="edit-source-auth"
+              value="API Token / Secret Key (Bearer)"
+              readOnly
+              disabled
+              className="cursor-not-allowed bg-neutral-soft/50 text-muted"
+            />
+          </FormField>
+        </div>
+
+        <div className="flex items-start gap-2.5 rounded-lg border border-info/20 bg-info-soft/40 p-3 text-xs text-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+          <span>
+            Wazuh Manager (via <code>custom-securaai</code> Edge Normalizer) sends normalized events to SecuraAI using this webhook endpoint.
+          </span>
+        </div>
+      </div>
+
+      {/* SECTION 3: Supported Event Families */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <Layers className="h-4 w-4 text-brand" />
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              3. Supported Event Families
+            </h3>
+            <p className="text-xs text-muted">
+              Select security event families filtered and normalized by Wazuh Edge Normalizer.
+            </p>
+          </div>
+        </div>
+
+        {fieldErrors["eventFamilies"] ? (
+          <p className="text-xs font-medium text-danger">{fieldErrors["eventFamilies"]}</p>
+        ) : null}
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {eventFamilies.map((family) => {
+            const meta = FAMILY_METADATA[family];
+            const isSelected = form.eventFamilies.includes(family);
+
+            return (
+              <button
+                key={family}
+                type="button"
+                onClick={() => handleFamilyToggle(family)}
+                className={`flex flex-col items-start rounded-lg border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-brand ${
+                  isSelected
+                    ? "border-brand bg-brand/5 shadow-xs"
+                    : "border-border bg-surface hover:border-border/80"
+                }`}
+                disabled={updateMutation.isPending}
+              >
+                <div className="flex w-full items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">
+                    {meta.label}
+                  </span>
+                  {isSelected ? (
+                    <CheckCircle2 className="h-4 w-4 text-brand" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border border-border" />
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+                  {meta.description}
+                </p>
+                <span
+                  className={`mt-2.5 inline-block rounded-md border px-2 py-0.5 text-[10px] font-mono ${meta.badgeClass}`}
+                >
+                  {family}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* SECTION 4: Description */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <KeyRound className="h-4 w-4 text-brand" />
+          <h3 className="text-sm font-semibold text-foreground">
+            4. Description & Operational Notes
+          </h3>
+        </div>
+
+        <FormField
+          id="edit-source-description"
+          label="Description"
+          error={fieldErrors["description"]}
+        >
+          <textarea
+            id="edit-source-description"
+            rows={3}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-brand focus:outline-none focus:ring-3 focus:ring-brand/15"
+            placeholder="Describe the operational scope, monitored hosts, or special notes..."
+            value={form.description ?? ""}
+            onChange={(e) => {
+              setForm((prev) => ({ ...prev, description: e.target.value }));
+            }}
+            disabled={updateMutation.isPending}
+          />
+        </FormField>
+      </div>
+
+      {/* MODAL ACTIONS */}
+      <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onClose}
+          disabled={updateMutation.isPending}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending}
+          className="flex items-center gap-2"
+        >
+          {updateMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <ShieldCheck className="h-4 w-4" />
+              Save configuration
+            </>
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}

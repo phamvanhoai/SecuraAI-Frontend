@@ -8,6 +8,15 @@ vi.mock("../hooks/use-event-sources", () => ({
   useEventSources: (params?: unknown) => mockUseEventSources(params),
   useEventSource: () => ({ isPending: false, isError: false, data: undefined }),
   useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useUpdateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}));
+
+vi.mock("@/components/feedback/toast", () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 import { EventSourcesList } from "./event-sources-list";
