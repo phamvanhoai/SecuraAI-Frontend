@@ -26,6 +26,7 @@ const statusLabels = {
   inactive: "Inactive",
   retired: "Retired",
   disposed: "Disposed",
+  archived: "Archived",
 } as const;
 const allowedStatusTransitions: Readonly<
   Record<AssetListItem["status"], readonly AssetListItem["status"][]>
@@ -34,6 +35,7 @@ const allowedStatusTransitions: Readonly<
   inactive: ["inactive", "active", "retired", "disposed"],
   retired: ["retired", "active", "disposed"],
   disposed: ["disposed"],
+  archived: ["archived"],
 };
 
 export function EditAssetDialog({
