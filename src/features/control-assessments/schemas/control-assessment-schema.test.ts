@@ -1,15 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { createAssessmentSchema } from "./control-assessment-schema";
-
 describe("createAssessmentSchema", () => {
-  it("accepts valid compliance values", () => {
-    expect(createAssessmentSchema.parse({ complianceStatus: "compliant", score: 100 }).score).toBe(100);
+  const valid = {
+    testMethod: "Inspect configuration and sample access logs",
+    result: "effective",
+    effectiveness: 92,
+    notes: "The control operated consistently throughout the sampled period.",
+  } as const;
+  it("accepts complete effectiveness results", () => {
+    expect(createAssessmentSchema.safeParse(valid).success).toBe(true);
   });
   it("rejects scores outside 0 through 100", () => {
-    expect(() => createAssessmentSchema.parse({ complianceStatus: "non_compliant", score: -1 })).toThrow();
+    expect(
+      createAssessmentSchema.safeParse({ ...valid, effectiveness: 101 })
+        .success,
+    ).toBe(false);
   });
-  it("allows an optional score independent of status", () => {
-    expect(createAssessmentSchema.parse({ complianceStatus: "compliant", score: 60 }).score).toBe(60);
-    expect(createAssessmentSchema.parse({ complianceStatus: "not_assessed" }).score).toBeUndefined();
+  it("requires a meaningful test method and notes", () => {
+    expect(
+      createAssessmentSchema.safeParse({
+        ...valid,
+        testMethod: "x",
+        notes: "short",
+      }).success,
+    ).toBe(false);
   });
 });

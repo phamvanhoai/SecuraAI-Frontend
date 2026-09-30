@@ -6,17 +6,25 @@ const mocks = vi.hoisted(() => ({ session: vi.fn() }));
 
 vi.mock("@/features/authentication-account", () => ({ useSessionUser: mocks.session }));
 vi.mock("@/features/policy-compliance-control", () => ({
-  EmployeePolicyAcknowledgementManager: () => (
-    <p>Employee policy acknowledgement</p>
+  EmployeePolicyAcknowledgementManager: ({ onViewHistory }: { onViewHistory?: () => void }) => (
+    <div>
+      <p>Employee policy acknowledgement</p>
+      <button role="tab" type="button">Published</button>
+      {onViewHistory ? <button role="tab" type="button" onClick={onViewHistory}>Version history</button> : null}
+    </div>
   ),
   PolicyDraftsManager: ({
     onAssignDepartments,
     onCreateNewVersion,
     onMapControls,
+    onViewPublished,
+    onViewHistory,
   }: {
     onAssignDepartments?: () => void;
     onCreateNewVersion?: () => void;
     onMapControls?: () => void;
+    onViewPublished?: () => void;
+    onViewHistory?: () => void;
   }) => (
     <div>
       <button type="button" onClick={onCreateNewVersion}>
@@ -32,6 +40,10 @@ vi.mock("@/features/policy-compliance-control", () => ({
           Open control-mapping workflow
         </button>
       ) : null}
+      <button role="tab" type="button">Drafts</button>
+      <button role="tab" type="button">Rejected</button>
+      {onViewPublished ? <button role="tab" type="button" onClick={onViewPublished}>Published</button> : null}
+      {onViewHistory ? <button type="button" onClick={onViewHistory}>Version history</button> : null}
     </div>
   ),
   PolicyDepartmentAssignmentManager: ({ onBack }: { onBack?: () => void }) => (
@@ -45,6 +57,17 @@ vi.mock("@/features/policy-compliance-control", () => ({
     </div>
   ),
   PolicyPublicationManager: () => <p>Publication workflow</p>,
+  PolicyVersionHistoryManager: ({ onBack }: { onBack?: () => void }) => (
+    <div><p>Version history workflow</p>{onBack ? <button role="tab" type="button" onClick={onBack}>Drafts</button> : null}</div>
+  ),
+  PublishedPolicyManager: ({ onViewDrafts, onViewHistory }: { onViewDrafts?: () => void; onViewHistory?: () => void }) => (
+    <div>
+      <p>Published policy viewer</p>
+      {onViewDrafts ? <button role="tab" type="button" onClick={onViewDrafts}>Drafts</button> : null}
+      <button role="tab" type="button">Published</button>
+      {onViewHistory ? <button type="button" onClick={onViewHistory}>Version history</button> : null}
+    </div>
+  ),
   PolicyControlMappingManager: ({ onBack }: { onBack?: () => void }) => (
     <div>
       <p>Control-mapping workflow</p>
@@ -88,6 +111,35 @@ describe("PoliciesPage", () => {
     expect(
       screen.getByRole("button", { name: "Open new-version workflow" }),
     ).toBeInTheDocument();
+  });
+
+  it("lets a Security Officer view published policies", async () => {
+    const user = userEvent.setup();
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.create", "policies.update"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+    const publishedTab = screen.getByRole("tab", {
+      name: "Published",
+    });
+    await user.click(publishedTab);
+    expect(screen.getByText("Published policy viewer")).toBeInTheDocument();
+  });
+
+  it("shows policy views as tabs for a Security Officer", async () => {
+    const user = userEvent.setup();
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.create", "policies.update"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+
+    expect(screen.getAllByRole("tab")).toHaveLength(3);
+    expect(screen.getByRole("tab", { name: "Drafts" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Version history" }));
+    expect(screen.getByText("Version history workflow")).toBeInTheDocument();
   });
 
   it("shows the new-version workflow directly with update-only access", () => {
@@ -169,5 +221,7 @@ describe("PoliciesPage", () => {
     expect(
       screen.getByText("Employee policy acknowledgement"),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("tab", { name: "Published" })).toBeInTheDocument();
   });
 });

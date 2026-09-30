@@ -4,7 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Script from "next/script";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
@@ -14,11 +15,30 @@ import { login, verifyMfaChallenge } from "../api/login";
 import { requestMfaRecovery } from "../api/mfa-recovery";
 import { loginSchema, type LoginInput } from "../schemas/login-schema";
 import { OtpCodeInput } from "./otp-code-input";
+import { env } from "@/lib/env";
 import {
   canAccessPanel,
   defaultPanelPath,
   panelFromPath,
 } from "@/config/navigation";
+
+type GoogleCredentialResponse = { credential?: string };
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize(config: {
+            client_id: string;
+            callback: (response: GoogleCredentialResponse) => void;
+          }): void;
+          renderButton(parent: HTMLElement, options: Record<string, string | number>): void;
+        };
+      };
+    };
+  }
+}
 
 export function LoginForm({
   returnUrl = "/dashboard",
@@ -36,6 +56,9 @@ export function LoginForm({
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [recoveryPending, setRecoveryPending] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
+  const googleButton = useRef<HTMLDivElement>(null);
   const {
     register,
     handleSubmit,
@@ -64,7 +87,7 @@ export function LoginForm({
     }
   }
 
-  async function finishLogin(): Promise<void> {
+  const finishLogin = useCallback(async (): Promise<void> => {
     const response = await fetch("/api/auth/session", { cache: "no-store" });
     if (!response.ok)
       throw new Error("Unable to verify your session. Please try again.");
@@ -92,7 +115,44 @@ export function LoginForm({
         ? defaultPanel
         : returnUrl;
     window.location.assign(destination);
-  }
+  }, [returnUrl, router]);
+
+  useEffect(() => {
+    const clientId = env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const parent = googleButton.current;
+    if (!googleReady || !clientId || !parent || !window.google) return;
+    parent.replaceChildren();
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        if (!response.credential) return;
+        setMessage(undefined);
+        setGooglePending(true);
+        void fetch("/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+        })
+          .then(async (result) => {
+            if (!result.ok) throw new Error("Unable to sign in with Google.");
+            await finishLogin();
+          })
+          .catch((error: unknown) => {
+            setMessage(error instanceof Error ? error.message : "Unable to sign in with Google.");
+          })
+          .finally(() => setGooglePending(false));
+      },
+    });
+    window.google.accounts.id.renderButton(parent, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "rectangular",
+      logo_alignment: "left",
+      width: Math.min(400, Math.floor(parent.clientWidth)),
+    });
+  }, [finishLogin, googleReady]);
 
   async function submitMfa(
     event: React.FormEvent<HTMLFormElement>,
@@ -317,6 +377,20 @@ export function LoginForm({
       <Button className="w-full" disabled={isSubmitting} type="submit">
         {isSubmitting ? "Signing in..." : "Sign in"}
       </Button>
+      {env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+        <>
+          <Script
+            src="https://accounts.google.com/gsi/client"
+            strategy="afterInteractive"
+            onLoad={() => setGoogleReady(true)}
+          />
+          <div
+            ref={googleButton}
+            className="min-h-11 w-full overflow-hidden [&>div]:mx-auto"
+            aria-busy={googlePending}
+          />
+        </>
+      ) : null}
     </form>
   );
 }

@@ -23,8 +23,32 @@ vi.mock("../hooks/use-log-sources", () => ({
   useUpdateLogSource: () => ({ isPending: false, mutateAsync: updateMock }),
   useDeleteLogSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
+
+vi.mock("../hooks/use-event-sources", () => ({
+  useEventSources: () => ({
+    data: {
+      items: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
+    },
+    isError: false,
+    isPending: false,
+  }),
+  useEventSource: () => ({
+    data: undefined,
+    isError: false,
+    isPending: false,
+  }),
+  useCreateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useUpdateEventSource: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useTestEventSourceConnection: () => ({ isPending: false, mutateAsync: vi.fn() }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
-  useToast: () => ({ success: vi.fn() }),
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 import { LogSourcesManager } from "./log-sources-manager";
@@ -35,6 +59,9 @@ describe("LogSourcesManager", () => {
   it("shows required errors beside fields before calling the API", async () => {
     const user = userEvent.setup();
     render(<LogSourcesManager />);
+    await user.click(
+      screen.getByRole("button", { name: /Legacy log sources/i }),
+    );
     await user.click(
       screen.getByRole("button", { name: "Configure log source" }),
     );

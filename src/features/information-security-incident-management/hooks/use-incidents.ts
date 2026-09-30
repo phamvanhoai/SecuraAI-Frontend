@@ -12,7 +12,129 @@ import {
   listIncidentAssignmentOptions,
   listMyIncidents,
   reportIncident,
+  getIncidentAssetOptions,
+  linkIncidentToAsset,
+  getIncidentControlOptions,
+  linkIncidentToControl,
+  getIncidentRiskOptions,
+  linkIncidentToRisk,
+  getControlWeaknessOptions,
+  recordControlWeakness,
+  getRiskReassessmentRequestOptions,
+  createRiskReassessmentRequest,
 } from "../api/incidents";
+
+export const useRiskReassessmentRequestOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "risk-reassessment-request-options", id],
+    queryFn: ({ signal }) => getRiskReassessmentRequestOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useCreateRiskReassessmentRequest() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: createRiskReassessmentRequest,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-reassessment-request-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["risks"] });
+    },
+  });
+}
+
+export const useControlWeaknessOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "control-weakness-options", id],
+    queryFn: ({ signal }) => getControlWeaknessOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useRecordControlWeakness() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: recordControlWeakness,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-weakness-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["controls"] });
+    },
+  });
+}
+
+export const useIncidentRiskOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "risk-options", id],
+    queryFn: ({ signal }) => getIncidentRiskOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+export function useLinkIncidentToRisk() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToRisk,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["risks"] });
+    },
+  });
+}
+
+export const useIncidentControlOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "control-options", id],
+    queryFn: ({ signal }) => getIncidentControlOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+export function useLinkIncidentToControl() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToControl,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["controls"] });
+    },
+  });
+}
+
+export const useIncidentAssetOptions = (id: string | undefined) =>
+  useQuery({
+    queryKey: ["incidents", "asset-options", id],
+    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+export function useLinkIncidentToAsset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: linkIncidentToAsset,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "asset-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["assets"] });
+    },
+  });
+}
 const key = ["incidents", "mine"] as const;
 export const useMyIncidents = (page: number, enabled: boolean) =>
   useQuery({

@@ -46,10 +46,7 @@ export async function createUser(
   const body = {
     email: input.email,
     fullName: input.fullName,
-    ...(input.phone ? { phone: input.phone } : {}),
-    employeeCode: input.employeeCode,
-    departmentId: input.departmentId,
-    roleCodes: input.roleCodes,
+    role: input.role,
   };
   const data = await apiRequest<unknown>("/api/users", {
     method: "POST",

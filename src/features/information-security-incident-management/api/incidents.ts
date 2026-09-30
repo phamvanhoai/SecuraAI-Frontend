@@ -13,6 +13,170 @@ import {
   type ReportIncidentForm,
   type RemoveIncidentEvidenceForm,
 } from "../schemas/report-incident-schema";
+import {
+  incidentAssetOptionsSchema,
+  linkedIncidentAssetSchema,
+  type LinkIncidentAssetForm,
+} from "../schemas/incident-asset-schema";
+import {
+  incidentControlOptionsSchema,
+  linkedIncidentControlSchema,
+  type LinkIncidentControlForm,
+} from "../schemas/incident-control-schema";
+import {
+  incidentRiskOptionsSchema,
+  linkedIncidentRiskSchema,
+  type LinkIncidentRiskForm,
+} from "../schemas/incident-risk-schema";
+import {
+  controlWeaknessOptionsSchema,
+  recordedControlWeaknessSchema,
+  type RecordControlWeaknessForm,
+} from "../schemas/control-weakness-schema";
+import {
+  riskReassessmentRequestOptionsSchema,
+  riskReassessmentRequestSchema,
+  type CreateRiskReassessmentRequestForm,
+} from "../schemas/risk-reassessment-request-schema";
+
+export async function getRiskReassessmentRequestOptions(id: string, signal?: AbortSignal) {
+  return riskReassessmentRequestOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function createRiskReassessmentRequest(input: {
+  id: string;
+  values: CreateRiskReassessmentRequestForm;
+}) {
+  return riskReassessmentRequestSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/risk-reassessment-requests`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: {
+          riskId: input.values.riskId,
+          reason: input.values.reason.trim(),
+          ...(input.values.controlFindingId
+            ? { controlFindingId: input.values.controlFindingId }
+            : {}),
+        },
+      },
+    ),
+  );
+}
+
+export async function getControlWeaknessOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return controlWeaknessOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/control-weaknesses/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function recordControlWeakness(input: {
+  id: string;
+  values: RecordControlWeaknessForm;
+}) {
+  return recordedControlWeaknessSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/control-weaknesses`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: { ...input.values, description: input.values.description.trim() },
+      },
+    ),
+  );
+}
+
+export async function getIncidentRiskOptions(id: string, signal?: AbortSignal) {
+  return incidentRiskOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risks/options`,
+      { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function linkIncidentToRisk(input: {
+  id: string;
+  values: LinkIncidentRiskForm;
+}) {
+  return linkedIncidentRiskSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/risks`,
+      { target: "same-origin", method: "POST", body: input.values },
+    ),
+  );
+}
+
+export async function getIncidentControlOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return incidentControlOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/controls/options`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function linkIncidentToControl(input: {
+  id: string;
+  values: LinkIncidentControlForm;
+}) {
+  return linkedIncidentControlSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/controls`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: input.values,
+      },
+    ),
+  );
+}
+
+export async function getIncidentAssetOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
+  return incidentAssetOptionsSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/assets/options`,
+      {
+        target: "same-origin",
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function linkIncidentToAsset(input: {
+  id: string;
+  values: LinkIncidentAssetForm;
+}) {
+  return linkedIncidentAssetSchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(input.id)}/assets`,
+      {
+        target: "same-origin",
+        method: "POST",
+        body: input.values,
+      },
+    ),
+  );
+}
 export async function reportIncident(input: ReportIncidentForm) {
   return incidentSchema.parse(
     await apiRequest<unknown>("/api/incidents", {

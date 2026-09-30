@@ -1,521 +1,288 @@
 "use client";
-
-import {
-  Download,
-  Eye,
-  History,
-  MoreHorizontal,
-  Pencil,
-  Search,
-  Server,
-  Tags,
-  Trash2,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Archive, Eye, Pencil, Search, Server, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
+import {
+  ProductPageHeader,
+  ProductPanel,
+  StatusBadge,
+} from "@/components/data-display/static-product";
+import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useToast } from "@/components/feedback/toast";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import { useAssets } from "../hooks/use-assets";
-import { useExportAssets } from "../hooks/use-export-assets";
-import { CreateAssetDialog } from "./create-asset-dialog";
-import { AssetDetailDialog } from "./asset-detail-dialog";
-import { EditAssetDialog } from "./edit-asset-dialog";
-import { DeleteAssetDialog } from "./delete-asset-dialog";
-import { ClassifyAssetCriticalityDialog } from "./classify-asset-criticality-dialog";
-import { AssignAssetOwnerDialog } from "./assign-asset-owner-dialog";
-import { ImportAssetsDialog } from "./import-assets-dialog";
-import { AssetHistoryDialog } from "./asset-history-dialog";
 import {
   assetListQuerySchema,
   type AssetListItem,
   type AssetListQuery,
 } from "../schemas/asset-list-schema";
-
-const criticalityLabels = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  critical: "Critical",
-} as const;
-const statusLabels = {
-  active: "Active",
-  inactive: "Inactive",
-  retired: "Retired",
-  disposed: "Disposed",
-} as const;
-
+import { AssetDetailDialog } from "./asset-detail-dialog";
+import { CreateAssetDialog } from "./create-asset-dialog";
+import { EditAssetDialog } from "./edit-asset-dialog";
+import { DeleteAssetDialog } from "./delete-asset-dialog";
 const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "asset",
     header: "Asset",
-    cell: (asset) => (
-      <div className="flex items-center gap-3">
+    cell: (item) => (
+      <span className="flex min-w-56 items-center gap-3">
         <span className="bg-neutral-soft text-brand grid size-9 place-items-center rounded-lg">
           <Server className="size-4" aria-hidden="true" />
         </span>
         <span>
-          <span className="block font-medium">{asset.name}</span>
-          <span className="text-muted text-xs">{asset.assetCode}</span>
+          <strong className="block">{item.name}</strong>
+          <span className="text-muted text-xs">{item.assetCode}</span>
         </span>
-      </div>
+      </span>
     ),
   },
-  { key: "type", header: "Type", cell: (asset) => asset.assetType },
+  { key: "type", header: "Type", cell: (item) => item.assetType },
   {
-    key: "department",
-    header: "Department",
-    cell: (asset) => asset.department?.name ?? "Unassigned",
+    key: "criticality",
+    header: "Criticality",
+    cell: (item) => (
+      <StatusBadge
+        tone={
+          item.criticality.toLowerCase() === "critical"
+            ? "danger"
+            : item.criticality.toLowerCase() === "high"
+              ? "warning"
+              : "neutral"
+        }
+      >
+        {item.criticality}
+      </StatusBadge>
+    ),
+  },
+  {
+    key: "classification",
+    header: "Data classification",
+    cell: (item) => item.dataClassification,
+  },
+  {
+    key: "service",
+    header: "Business service",
+    cell: (item) =>
+      item.businessService?.name ?? (
+        <span className="text-muted">Unassigned</span>
+      ),
   },
   {
     key: "owner",
     header: "Owner",
-    cell: (asset) => asset.owner?.fullName ?? "Unassigned",
-  },
-  {
-    key: "criticality",
-    header: "Criticality",
-    cell: (asset) => criticalityLabels[asset.criticality],
+    cell: (item) =>
+      item.owner?.fullName ?? <span className="text-muted">Unassigned</span>,
   },
   {
     key: "status",
     header: "Status",
-    cell: (asset) => statusLabels[asset.status],
+    cell: (item) => (
+      <StatusBadge tone={item.status === "active" ? "success" : "neutral"}>
+        {item.status}
+      </StatusBadge>
+    ),
   },
   {
-    key: "updatedAt",
+    key: "updated",
     header: "Updated",
-    cell: (asset) =>
-      new Intl.DateTimeFormat("vi-VN").format(new Date(asset.updatedAt)),
+    cell: (item) =>
+      new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+        new Date(item.updatedAt),
+      ),
   },
 ];
-
-function queryFromSearchParams(parameters: URLSearchParams): AssetListQuery {
-  const parsed = assetListQuerySchema.safeParse(
+function parse(parameters: URLSearchParams): AssetListQuery {
+  const result = assetListQuerySchema.safeParse(
     Object.fromEntries(parameters.entries()),
   );
-  return parsed.success ? parsed.data : assetListQuerySchema.parse({});
+  return result.success ? result.data : assetListQuerySchema.parse({});
 }
-
 export function AssetsShell() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const query = useMemo(
-    () => queryFromSearchParams(searchParams),
-    [searchParams],
-  );
+  const parameters = useSearchParams();
+  const query = useMemo(() => parse(parameters), [parameters]);
   const session = useSessionUser();
-  const permissions = session.data?.permissions ?? [];
-  const canRead = permissions.includes("assets.read");
-  const canCreate = permissions.includes("assets.create");
-  const canUpdate = permissions.includes("assets.update");
-  const canDelete = permissions.includes("assets.delete");
-  const canClassify = permissions.includes("assets.classify");
-  const canAssignOwner = permissions.includes("assets.assign-owner");
-  const canImport = permissions.includes("assets.import");
-  const canExport = permissions.includes("assets.export");
-  const canReadHistory = permissions.includes("assets.history.read");
+  const canRead = session.data?.permissions.includes("assets.read") ?? false;
+  const canCreate =
+    session.data?.permissions.includes("assets.create") ?? false;
+  const canEdit = session.data?.permissions.includes("assets.update") ?? false;
   const assets = useAssets(query, canRead);
-  const exportMutation = useExportAssets();
-  const toast = useToast();
   const [search, setSearch] = useState(query.q ?? "");
-  const [assetType, setAssetType] = useState(query.assetType ?? "");
+  const [type, setType] = useState(query.assetType ?? "");
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
-  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
-  const [deletingAsset, setDeletingAsset] = useState<AssetListItem | null>(
-    null,
-  );
-  const [classifyingAsset, setClassifyingAsset] =
-    useState<AssetListItem | null>(null);
-  const [assigningOwnerAsset, setAssigningOwnerAsset] =
-    useState<AssetListItem | null>(null);
-  const [historyAssetId, setHistoryAssetId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [archivingAsset, setArchivingAsset] = useState<AssetListItem | null>(null);
   const tableColumns = useMemo<readonly DataTableColumn<AssetListItem>[]>(
     () => [
       ...columns,
       {
         key: "actions",
         header: "Actions",
-        cell: (asset) => (
-          <AssetActionMenu
-            asset={asset}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            canClassify={canClassify}
-            canAssignOwner={canAssignOwner}
-            canReadHistory={canReadHistory}
-            onView={() => setSelectedAssetId(asset.id)}
-            onEdit={() => setEditingAssetId(asset.id)}
-            onDelete={() => setDeletingAsset(asset)}
-            onClassify={() => setClassifyingAsset(asset)}
-            onAssignOwner={() => setAssigningOwnerAsset(asset)}
-            onHistory={() => setHistoryAssetId(asset.id)}
-          />
-        ),
+        cell: (item) => <span className="flex gap-2"><Button variant="secondary" onClick={() => setSelectedId(item.id)} aria-label={`View ${item.assetCode} details`}><Eye className="size-4" />View</Button>{canEdit ? <><Button variant="secondary" onClick={() => setEditingId(item.id)} aria-label={`Edit ${item.assetCode}`}><Pencil className="size-4" />Edit</Button>{item.status === "active" ? <Button variant="secondary" onClick={() => setArchivingAsset(item)} aria-label={`Archive ${item.assetCode}`}><Archive className="size-4" />Archive</Button> : null}</> : null}</span>,
       },
     ],
-    [canAssignOwner, canClassify, canDelete, canReadHistory, canUpdate],
+    [canEdit],
   );
-
-  const navigate = (next: Partial<AssetListQuery>): void => {
-    const parameters = new URLSearchParams();
+  const navigate = (next: Partial<AssetListQuery>) => {
+    const searchParams = new URLSearchParams();
     Object.entries({ ...query, ...next }).forEach(([key, value]) => {
       if (value !== undefined && value !== "")
-        parameters.set(key, String(value));
+        searchParams.set(key, String(value));
     });
-    router.push(`/assets?${parameters.toString()}`);
+    router.push(`/assets?${searchParams.toString()}`);
   };
-  const submitFilters = (event: FormEvent<HTMLFormElement>): void => {
+  const submit = (event: FormEvent) => {
     event.preventDefault();
-    const selectedCriticality = criticality
-      ? assetListQuerySchema.shape.criticality.parse(criticality)
-      : undefined;
-    const selectedStatus = status
-      ? assetListQuerySchema.shape.status.parse(status)
-      : undefined;
     navigate({
       page: 1,
-      ...(search.trim() ? { q: search.trim() } : { q: undefined }),
-      ...(assetType.trim()
-        ? { assetType: assetType.trim() }
-        : { assetType: undefined }),
-      criticality: selectedCriticality,
-      status: selectedStatus,
+      q: search.trim() || undefined,
+      assetType: type.trim() || undefined,
+      criticality: criticality
+        ? (criticality as AssetListQuery["criticality"])
+        : undefined,
+      status: status ? (status as AssetListQuery["status"]) : undefined,
     });
   };
-  const clearSearch = (): void => {
-    setSearch("");
-    navigate({ page: 1, q: undefined });
-  };
-  const clearFilters = (): void => {
-    setSearch("");
-    setAssetType("");
-    setCriticality("");
-    setStatus("");
-    navigate({
-      page: 1,
-      q: undefined,
-      assetType: undefined,
-      criticality: undefined,
-      status: undefined,
-    });
-  };
-  const exportList = async (): Promise<void> => {
-    try {
-      await exportMutation.mutateAsync(query);
-      toast.success("Asset list exported", "Your Excel file is downloading.");
-    } catch (error: unknown) {
-      toast.error(
-        "Unable to export asset list",
-        error instanceof Error ? error.message : "Please try again.",
-      );
-    }
-  };
-
-  if (session.isPending) {
-    return (
-      <p className="text-muted py-10 text-center">
-        Checking access permissions…
-      </p>
-    );
-  }
-  if (!canRead) {
+  if (session.isPending) return <TableSkeleton rows={8} columns={8} />;
+  if (!canRead)
     return (
       <Alert>
         <strong className="block">
-          You do not have permission to view the asset list
+          You do not have permission to view assets
         </strong>
         <span>
-          Contact an administrator if you need the assets.read permission.
+          Security Officer or assigned Asset Owner access is required.
         </span>
       </Alert>
     );
-  }
-
   return (
     <div className="space-y-5">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
-            Asset Management
-          </h1>
-          <p className="text-muted mt-2 text-sm leading-6">
-            Asset list loaded directly from SecuraAI.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canImport ? <ImportAssetsDialog /> : null}
-          {canExport ? (
-            <Button
-              type="button"
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              disabled={exportMutation.isPending}
-              onClick={exportList}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              {exportMutation.isPending ? "Exporting…" : "Export Excel"}
-            </Button>
-          ) : null}
-          {canCreate ? <CreateAssetDialog /> : null}
-        </div>
-      </header>
-      <section className="border-border bg-surface overflow-hidden rounded-xl border">
-        <div className="border-border border-b px-5 py-4">
-          <h2 className="font-semibold">Asset Directory</h2>
-          <p className="text-muted mt-1 text-sm">
-            {assets.data
-              ? `${assets.data.pagination.total} matching assets`
-              : "Loading data"}
-          </p>
-        </div>
+      <ProductPageHeader
+        title="IT Asset List"
+        description="View the organization’s managed IT assets, ownership, business context, classification, and lifecycle status."
+        additionalActions={canCreate ? <CreateAssetDialog /> : undefined}
+      />
+      <ProductPanel title="Asset directory">
         <form
           aria-label="Asset filters"
-          className="border-border grid gap-3 border-b p-4 md:grid-cols-[minmax(12rem,1.25fr)_minmax(12rem,1fr)_minmax(10rem,0.8fr)_11rem_auto]"
-          onSubmit={submitFilters}
+          className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_11rem_auto]"
+          onSubmit={submit}
         >
-          <div className="relative md:col-span-2">
-            <label className="sr-only" htmlFor="asset-search">
-              Search assets
-            </label>
-            <Search
-              className="text-muted absolute top-3 left-3 size-4"
-              aria-hidden="true"
-            />
-            <input
-              id="asset-search"
-              className="border-border bg-background min-h-10 w-full rounded-lg border pr-10 pl-9 text-sm"
-              maxLength={100}
-              placeholder="Name, code, hostname, or location"
+          <label className="text-sm font-medium">
+            Search
+            <Input
+              className="mt-1"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Code, name, owner, or service"
             />
-            {search ? (
-              <button
-                type="button"
-                aria-label="Clear search"
-                className="text-muted hover:bg-neutral-soft hover:text-foreground focus-visible:outline-brand absolute top-1 right-1 grid size-8 place-items-center rounded-md transition-colors focus-visible:outline-2"
-                onClick={clearSearch}
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
-            ) : null}
-          </div>
-          <input
-            aria-label="Asset type"
-            className="border-border bg-background min-h-10 rounded-lg border px-3 text-sm"
-            maxLength={50}
-            placeholder="Asset type"
-            value={assetType}
-            onChange={(event) => setAssetType(event.target.value)}
-          />
-          <Select
-            aria-label="Criticality"
-            value={criticality}
-            onChange={(event) => setCriticality(event.target.value)}
-          >
-            <option value="">All criticality levels</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </Select>
-          <div className="flex gap-2">
+          </label>
+          <label className="text-sm font-medium">
+            Asset type
+            <Input
+              className="mt-1"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              placeholder="Server, endpoint…"
+            />
+          </label>
+          <label className="text-sm font-medium">
+            Criticality
+            <Input
+              className="mt-1"
+              value={criticality}
+              onChange={(e) => setCriticality(e.target.value)}
+              placeholder="High"
+            />
+          </label>
+          <label className="text-sm font-medium">
+            Status
             <Select
-              aria-label="Status"
+              className="mt-1"
               value={status}
-              onChange={(event) => setStatus(event.target.value)}
+              onChange={(e) => setStatus(e.target.value)}
             >
               <option value="">All statuses</option>
               <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="retired">Retired</option>
-              <option value="disposed">Disposed</option>
+              <option value="archived">Archived</option>
             </Select>
-            <Button type="submit">Filter</Button>
-            <Button type="button" variant="secondary" onClick={clearFilters}>
-              Clear
+          </label>
+          <div className="flex items-end gap-2">
+            <Button type="submit">
+              <Search className="size-4" />
+              Filter
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label="Clear filters"
+              onClick={() => {
+                setSearch("");
+                setType("");
+                setCriticality("");
+                setStatus("");
+                router.push("/assets");
+              }}
+            >
+              <X className="size-4" />
             </Button>
           </div>
         </form>
         <div className="p-4">
           {assets.isPending ? (
-            <p className="text-muted py-10 text-center">Loading asset list…</p>
-          ) : null}
-          {assets.isError ? (
-            <Alert>
+            <TableSkeleton rows={8} columns={8} />
+          ) : assets.isError ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
               <strong className="block">Unable to load asset list</strong>
-              <span>
-                Check your login and backend connection, then try again.
-              </span>
+              <span>Check the backend connection and try again.</span>
+              <Button
+                className="mt-3"
+                variant="secondary"
+                onClick={() => void assets.refetch()}
+              >
+                Try again
+              </Button>
             </Alert>
-          ) : null}
-          {assets.data ? (
-            <DataTable
-              columns={tableColumns}
-              rows={assets.data.items}
-              getRowKey={(asset) => asset.id}
+          ) : assets.data?.items.length ? (
+            <>
+              <DataTable
+                columns={tableColumns}
+                rows={assets.data.items}
+                getRowKey={(item) => item.id}
+              />
+              <div className="mt-4">
+                <Pagination
+                  page={assets.data.pagination.page}
+                  pageCount={assets.data.pagination.totalPages}
+                  onPageChange={(page) => navigate({ page })}
+                />
+              </div>
+            </>
+          ) : (
+            <EmptyState
+              title="No assets found"
+              description="Adjust the filters or add assets through an implemented asset workflow."
             />
-          ) : null}
+          )}
         </div>
-        {assets.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              page={assets.data.pagination.page}
-              pageCount={assets.data.pagination.totalPages}
-              onPageChange={(page) => navigate({ page })}
-            />
-          </div>
-        ) : null}
-      </section>
+      </ProductPanel>
       <AssetDetailDialog
-        assetId={selectedAssetId}
-        onClose={() => setSelectedAssetId(null)}
+        assetId={selectedId}
+        onClose={() => setSelectedId(null)}
       />
-      <EditAssetDialog
-        assetId={editingAssetId}
-        onClose={() => setEditingAssetId(null)}
-      />
-      <DeleteAssetDialog
-        asset={deletingAsset}
-        onClose={() => setDeletingAsset(null)}
-      />
-      <ClassifyAssetCriticalityDialog
-        asset={classifyingAsset}
-        onClose={() => setClassifyingAsset(null)}
-      />
-      <AssignAssetOwnerDialog
-        asset={assigningOwnerAsset}
-        onClose={() => setAssigningOwnerAsset(null)}
-      />
-      <AssetHistoryDialog
-        assetId={historyAssetId}
-        onClose={() => setHistoryAssetId(null)}
-      />
+      <EditAssetDialog assetId={editingId} onClose={() => setEditingId(null)} />
+      <DeleteAssetDialog asset={archivingAsset} onClose={() => setArchivingAsset(null)} />
     </div>
-  );
-}
-
-function AssetActionMenu({
-  asset,
-  canUpdate,
-  canDelete,
-  canClassify,
-  canAssignOwner,
-  canReadHistory,
-  onView,
-  onEdit,
-  onDelete,
-  onClassify,
-  onAssignOwner,
-  onHistory,
-}: {
-  asset: AssetListItem;
-  canUpdate: boolean;
-  canDelete: boolean;
-  canClassify: boolean;
-  canAssignOwner: boolean;
-  canReadHistory: boolean;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClassify: () => void;
-  onAssignOwner: () => void;
-  onHistory: () => void;
-}) {
-  const disposed = asset.status === "disposed";
-  return (
-    <DropdownMenu
-      className="w-fit"
-      label={
-        <span className="grid size-6 place-items-center">
-          <span className="sr-only">Actions for {asset.assetCode}</span>
-          <MoreHorizontal className="size-5" aria-hidden="true" />
-        </span>
-      }
-    >
-      <MenuAction
-        icon={<Eye className="size-4" aria-hidden="true" />}
-        label="View details"
-        onClick={onView}
-      />
-      {canUpdate ? (
-        <MenuAction
-          icon={<Pencil className="size-4" aria-hidden="true" />}
-          label="Edit"
-          disabled={disposed}
-          onClick={onEdit}
-        />
-      ) : null}
-      {canClassify ? (
-        <MenuAction
-          icon={<Tags className="size-4" aria-hidden="true" />}
-          label="Classify criticality"
-          disabled={disposed}
-          onClick={onClassify}
-        />
-      ) : null}
-      {canAssignOwner ? (
-        <MenuAction
-          icon={<UserRound className="size-4" aria-hidden="true" />}
-          label="Assign owner"
-          disabled={disposed}
-          onClick={onAssignOwner}
-        />
-      ) : null}
-      {canReadHistory ? (
-        <MenuAction
-          icon={<History className="size-4" aria-hidden="true" />}
-          label="Change history"
-          onClick={onHistory}
-        />
-      ) : null}
-      {canDelete ? (
-        <MenuAction
-          icon={<Trash2 className="size-4" aria-hidden="true" />}
-          label="Delete"
-          className="text-danger hover:bg-danger-soft"
-          onClick={onDelete}
-        />
-      ) : null}
-    </DropdownMenu>
-  );
-}
-
-function MenuAction({
-  icon,
-  label,
-  onClick,
-  disabled = false,
-  className = "",
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      disabled={disabled}
-      className={`hover:bg-neutral-soft flex min-h-9 items-center gap-2 rounded-md px-3 text-left text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-      onClick={onClick}
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

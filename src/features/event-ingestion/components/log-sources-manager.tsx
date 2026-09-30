@@ -1,6 +1,14 @@
 "use client";
 
-import { Ellipsis, Eye, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  Database,
+  Ellipsis,
+  Eye,
+  Pencil,
+  Radio,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useState, type FormEvent, type MouseEvent } from "react";
 import {
   DataTable,
@@ -26,6 +34,7 @@ import {
   useLogSources,
   useUpdateLogSource,
 } from "../hooks/use-log-sources";
+import { useEventSources } from "../hooks/use-event-sources";
 import {
   logFormats,
   logSourceFormSchema,
@@ -35,7 +44,10 @@ import {
   type LogSourceForm,
 } from "../schemas/log-source-schema";
 import { DeleteLogSourceDialog } from "./delete-log-source-dialog";
+import { EventSourcesList } from "./event-sources-list";
 import { LogSourceDetailDialog } from "./log-source-detail-dialog";
+import { RegisterEventSourceForm } from "./register-event-source-form";
+import { cn } from "@/lib/utils";
 
 const defaults: LogSourceForm = {
   name: "",
@@ -50,6 +62,7 @@ type LogSourceFormErrors = Partial<Record<keyof LogSourceForm, string>>;
 
 export function LogSourcesManager() {
   const toast = useToast();
+  const [activeTab, setActiveTab] = useState<"event-sources" | "log-sources">("event-sources");
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -58,6 +71,7 @@ export function LogSourcesManager() {
   const [deleting, setDeleting] = useState<LogSource | null>(null);
   const [form, setForm] = useState<LogSourceForm>(defaults);
   const [formOpen, setFormOpen] = useState(false);
+  const [registerEventSourceOpen, setRegisterEventSourceOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LogSourceFormErrors>({});
   const sources = useLogSources({
@@ -65,9 +79,20 @@ export function LogSourcesManager() {
     limit: 20,
     ...(query ? { q: query } : {}),
   });
+  const eventSourcesOverview = useEventSources({ limit: 100 });
   const metrics = useLogSourceMetrics();
   const create = useCreateLogSource();
   const update = useUpdateLogSource();
+
+  const totalEventSources = eventSourcesOverview.data?.pagination.total ?? 0;
+  const activeEventSources =
+    eventSourcesOverview.data?.items.filter((s) => s.status === "ACTIVE").length ?? 0;
+  const uniqueSourceTypes = new Set(
+    eventSourcesOverview.data?.items.map((s) => s.sourceType) ?? [],
+  ).size;
+  const uniqueFamilies = new Set(
+    eventSourcesOverview.data?.items.flatMap((s) => s.eventFamilies) ?? [],
+  ).size;
 
   const columns: readonly DataTableColumn<LogSource>[] = [
     {
@@ -97,9 +122,9 @@ export function LogSourcesManager() {
       cell: (item) =>
         item.lastReceivedAt
           ? new Intl.DateTimeFormat("en-US", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            }).format(new Date(item.lastReceivedAt))
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(item.lastReceivedAt))
           : "Never",
     },
     {
@@ -242,121 +267,254 @@ export function LogSourcesManager() {
   return (
     <>
       <ProductPageHeader
-        description="Configure the sources used to collect security logs and events."
-        onPrimaryAction={openCreate}
-        primaryAction="Configure log source"
+        description="Configure and monitor the sources used to ingest security events and logs."
+        onPrimaryAction={() =>
+          activeTab === "event-sources"
+            ? setRegisterEventSourceOpen(true)
+            : openCreate()
+        }
+        primaryAction={
+          activeTab === "event-sources"
+            ? "Register event source"
+            : "Configure log source"
+        }
         showSampleNotice={false}
-        title="Log sources"
+        title="Event & Log sources"
       />
       <MetricStrip
-        ariaLabel="Log source metrics"
-        metrics={[
-          {
-            label: "Total sources",
-            value: metrics.data ? String(metrics.data.total) : "—",
-            detail: "Across all log sources",
-            tone: "brand",
-            loading: metrics.isPending,
-          },
-          {
-            label: "Active",
-            value: metrics.data ? String(metrics.data.active) : "—",
-            detail: "Across all log sources",
-            tone: "neutral",
-            loading: metrics.isPending,
-          },
-          {
-            label: "Receiving logs",
-            value: metrics.data ? String(metrics.data.receiving) : "—",
-            detail: "Received at least one event",
-            tone: "neutral",
-            loading: metrics.isPending,
-          },
-          {
-            label: "Errors",
-            value: metrics.data ? String(metrics.data.errors) : "—",
-            detail: "Across all log sources",
-            tone: "danger",
-            loading: metrics.isPending,
-          },
-        ]}
-      />
-      <ProductPanel
-        description={
-          sources.data
-            ? `${sources.data.pagination.total} log sources found`
-            : "Backend-managed security log sources"
+        ariaLabel={
+          activeTab === "event-sources"
+            ? "Event source metrics"
+            : "Log source metrics"
         }
-        title="Log source list"
-      >
-        <form
-          className="border-border flex gap-2 border-b p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setPage(1);
-            setQuery(draft.trim());
-          }}
-        >
-          <label className="relative block w-full max-w-md">
-            <span className="sr-only">Search log sources</span>
-            <Search
+        metrics={
+          activeTab === "event-sources"
+            ? [
+                {
+                  label: "Total sources",
+                  value: eventSourcesOverview.data
+                    ? String(totalEventSources)
+                    : "—",
+                  detail: "Normalized event sources",
+                  tone: "brand",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Active sources",
+                  value: eventSourcesOverview.data
+                    ? String(activeEventSources)
+                    : "—",
+                  detail: "Ready to ingest events",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Source types",
+                  value: eventSourcesOverview.data
+                    ? String(uniqueSourceTypes)
+                    : "—",
+                  detail: "Distinct ingestion types",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Event families",
+                  value: eventSourcesOverview.data
+                    ? String(uniqueFamilies)
+                    : "—",
+                  detail: "Coverage across domains",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+              ]
+            : [
+                {
+                  label: "Total sources",
+                  value: metrics.data ? String(metrics.data.total) : "—",
+                  detail: "Across all log sources",
+                  tone: "brand",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Active",
+                  value: metrics.data ? String(metrics.data.active) : "—",
+                  detail: "Across all log sources",
+                  tone: "neutral",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Receiving logs",
+                  value: metrics.data ? String(metrics.data.receiving) : "—",
+                  detail: "Received at least one event",
+                  tone: "neutral",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Errors",
+                  value: metrics.data ? String(metrics.data.errors) : "—",
+                  detail: "Across all log sources",
+                  tone: "danger",
+                  loading: metrics.isPending,
+                },
+              ]
+        }
+      />
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("event-sources")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "event-sources"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
+          >
+            <Radio
               aria-hidden="true"
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              strokeWidth={1.8}
+              className={cn(
+                "size-4",
+                activeTab === "event-sources"
+                  ? "text-brand-contrast"
+                  : "text-muted",
+              )}
+              strokeWidth={2}
             />
-            <Input
-              className="bg-background min-h-10 pl-9"
-              maxLength={100}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder="Search by name"
-              value={draft}
+            <span>Normalized event sources</span>
+            {eventSourcesOverview.data ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  activeTab === "event-sources"
+                    ? "bg-white/20 text-brand-contrast"
+                    : "border-border bg-neutral-soft text-muted border",
+                )}
+              >
+                {totalEventSources}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("log-sources")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "log-sources"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
+          >
+            <Database
+              aria-hidden="true"
+              className={cn(
+                "size-4",
+                activeTab === "log-sources"
+                  ? "text-brand-contrast"
+                  : "text-muted",
+              )}
+              strokeWidth={2}
             />
-          </label>
-          <Button className="min-h-10" type="submit">
-            Search
-          </Button>
-        </form>
-        <div className="p-4">
-          {sources.isPending ? (
-            <TableSkeleton
-              headers={[
-                "Log source",
-                "Format",
-                "Status",
-                "Asset",
-                "Last received",
-                "Actions",
-              ]}
-              label="Loading log sources"
-              rows={skeletonRows(metrics.data?.total)}
-            />
-          ) : sources.isError ? (
-            <Alert>
-              Unable to load log sources. Check your session and backend
-              connection.
-            </Alert>
-          ) : sources.data?.items.length === 0 ? (
-            <p className="text-muted py-10 text-center">
-              No log sources found.
-            </p>
-          ) : sources.data ? (
-            <DataTable
-              columns={columns}
-              rows={sources.data.items}
-              getRowKey={(item) => item.id}
-            />
-          ) : null}
+            <span>Legacy log sources</span>
+            {sources.data ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  activeTab === "log-sources"
+                    ? "bg-white/20 text-brand-contrast"
+                    : "border-border bg-neutral-soft text-muted border",
+                )}
+              >
+                {sources.data.pagination.total}
+              </span>
+            ) : null}
+          </button>
         </div>
-        {sources.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              page={sources.data.pagination.page}
-              pageCount={sources.data.pagination.totalPages}
-              onPageChange={setPage}
-            />
+      </div>
+
+      {activeTab === "event-sources" ? (
+        <EventSourcesList
+          onRegisterClick={() => setRegisterEventSourceOpen(true)}
+        />
+      ) : (
+        <ProductPanel
+          description={
+            sources.data
+              ? `${sources.data.pagination.total} log sources found`
+              : "Backend-managed security log sources"
+          }
+          title="Log source list"
+        >
+          <form
+            className="border-border flex gap-2 border-b p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setPage(1);
+              setQuery(draft.trim());
+            }}
+          >
+            <label className="relative block w-full max-w-md">
+              <span className="sr-only">Search log sources</span>
+              <Search
+                aria-hidden="true"
+                className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                strokeWidth={1.8}
+              />
+              <Input
+                className="bg-background min-h-10 pl-9"
+                maxLength={100}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="Search by name"
+                value={draft}
+              />
+            </label>
+            <Button className="min-h-10" type="submit">
+              Search
+            </Button>
+          </form>
+          <div className="p-4">
+            {sources.isPending ? (
+              <TableSkeleton
+                headers={[
+                  "Log source",
+                  "Format",
+                  "Status",
+                  "Asset",
+                  "Last received",
+                  "Actions",
+                ]}
+                label="Loading log sources"
+                rows={skeletonRows(metrics.data?.total)}
+              />
+            ) : sources.isError ? (
+              <Alert>
+                Unable to load log sources. Check your session and backend
+                connection.
+              </Alert>
+            ) : sources.data?.items.length === 0 ? (
+              <p className="text-muted py-10 text-center">
+                No log sources found.
+              </p>
+            ) : sources.data ? (
+              <DataTable
+                columns={columns}
+                rows={sources.data.items}
+                getRowKey={(item) => item.id}
+              />
+            ) : null}
           </div>
-        ) : null}
-      </ProductPanel>
+          {sources.data ? (
+            <div className="border-border border-t p-4">
+              <Pagination
+                page={sources.data.pagination.page}
+                pageCount={sources.data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          ) : null}
+        </ProductPanel>
+      )}
       <LogSourceDetailDialog
         onClose={() => setViewing(null)}
         source={viewing}
@@ -567,6 +725,18 @@ export function LogSourcesManager() {
               </Button>
             </div>
           </form>
+        </div>
+      ) : null}
+      {registerEventSourceOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="bg-surface border-border max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border p-6 shadow-xl">
+            <RegisterEventSourceForm
+              onCancel={() => setRegisterEventSourceOpen(false)}
+              onSuccess={() => {
+                setRegisterEventSourceOpen(false);
+              }}
+            />
+          </div>
         </div>
       ) : null}
     </>

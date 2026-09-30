@@ -5,6 +5,7 @@ export { PolicyControlMappingManager } from "./components/policy-control-mapping
 export { PolicyPublicationManager } from "./components/policy-publication-manager";
 export { UpdatePolicyVersionManager } from "./components/update-policy-version-manager";
 export { PolicyVersionHistoryManager } from "./components/policy-version-history-manager";
+export { PublishedPolicyManager } from "./components/published-policy-manager";
 export {
   newPolicyVersionSchema,
   updatePolicyVersionFormSchema,

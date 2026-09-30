@@ -12,6 +12,10 @@ import {
   ShieldAlert,
   Trash2,
   UserPlus,
+  Link2,
+  ShieldCheck,
+  GitBranch,
+  ShieldX,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -64,6 +68,11 @@ import {
   type RemoveIncidentEvidenceForm,
   type ReportIncidentForm,
 } from "../schemas/report-incident-schema";
+import { LinkIncidentAssetDialog } from "./link-incident-asset-dialog";
+import { LinkIncidentControlDialog } from "./link-incident-control-dialog";
+import { LinkIncidentRiskDialog } from "./link-incident-risk-dialog";
+import { RecordControlWeaknessDialog } from "./record-control-weakness-dialog";
+import { CreateRiskReassessmentRequestDialog } from "./create-risk-reassessment-request-dialog";
 
 const defaults: ReportIncidentForm = {
   title: "",
@@ -144,6 +153,17 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.update-progress") ?? false;
   const canManageEvidence =
     session.data?.permissions.includes("incidents.evidence.manage") ?? false;
+  const canLinkAssets =
+    session.data?.permissions.includes("incidents.link-assets") ?? false;
+  const canLinkControls =
+    session.data?.permissions.includes("incidents.link-controls") ?? false;
+  const canLinkRisks =
+    session.data?.permissions.includes("incidents.link-risks") ?? false;
+  const canRecordControlWeakness =
+    session.data?.permissions.includes("incidents.record-control-weakness") ??
+    false;
+  const canRequestRiskReassessment =
+    session.data?.permissions.includes("incidents.request-risk-reassessment") ?? false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -158,6 +178,12 @@ export function IncidentReportingManager() {
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
   const [progressTarget, setProgressTarget] = useState<Incident>();
   const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
+  const [assetLinkTarget, setAssetLinkTarget] = useState<Incident>();
+  const [controlLinkTarget, setControlLinkTarget] = useState<Incident>();
+  const [riskLinkTarget, setRiskLinkTarget] = useState<Incident>();
+  const [controlWeaknessTarget, setControlWeaknessTarget] =
+    useState<Incident>();
+  const [riskReassessmentTarget, setRiskReassessmentTarget] = useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
@@ -596,6 +622,72 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Update progress
+              </button>
+            ) : null}
+            {canLinkAssets ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setAssetLinkTarget(item)}
+                type="button"
+              >
+                <Link2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Link asset
+              </button>
+            ) : null}
+            {canLinkControls ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setControlLinkTarget(item)}
+                type="button"
+              >
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Link control
+              </button>
+            ) : null}
+            {canLinkRisks ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setRiskLinkTarget(item)}
+                type="button"
+              >
+                <GitBranch
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Link existing risk
+              </button>
+            ) : null}
+            {canRecordControlWeakness ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setControlWeaknessTarget(item)}
+                type="button"
+              >
+                <ShieldX
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Record control weakness
+              </button>
+            ) : null}
+            {canRequestRiskReassessment ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setRiskReassessmentTarget(item)}
+                type="button"
+              >
+                <RotateCcw aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                Request risk reassessment
               </button>
             ) : null}
             {canManageEvidence ? (
@@ -1634,6 +1726,26 @@ export function IncidentReportingManager() {
           </div>
         ) : null}
       </Dialog>
+      <LinkIncidentAssetDialog
+        incident={assetLinkTarget}
+        onClose={() => setAssetLinkTarget(undefined)}
+      />
+      <LinkIncidentControlDialog
+        incident={controlLinkTarget}
+        onClose={() => setControlLinkTarget(undefined)}
+      />
+      <LinkIncidentRiskDialog
+        incident={riskLinkTarget}
+        onClose={() => setRiskLinkTarget(undefined)}
+      />
+      <RecordControlWeaknessDialog
+        incident={controlWeaknessTarget}
+        onClose={() => setControlWeaknessTarget(undefined)}
+      />
+      <CreateRiskReassessmentRequestDialog
+        incident={riskReassessmentTarget}
+        onClose={() => setRiskReassessmentTarget(undefined)}
+      />
     </>
   );
 }
