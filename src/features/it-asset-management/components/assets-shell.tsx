@@ -1,5 +1,5 @@
 "use client";
-import { Archive, Eye, Pencil, Search, Server, X } from "lucide-react";
+import { Archive, Ellipsis, Eye, Link2, Pencil, Search, Server, ShieldCheck, UserRoundCheck, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -15,6 +15,7 @@ import {
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -29,6 +30,9 @@ import { AssetDetailDialog } from "./asset-detail-dialog";
 import { CreateAssetDialog } from "./create-asset-dialog";
 import { EditAssetDialog } from "./edit-asset-dialog";
 import { DeleteAssetDialog } from "./delete-asset-dialog";
+import { AssignAssetOwnerDialog } from "./assign-asset-owner-dialog";
+import { ClassifyAssetCriticalityDialog } from "./classify-asset-criticality-dialog";
+import { LinkAssetContextDialog } from "./link-asset-context-dialog";
 const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "asset",
@@ -123,13 +127,30 @@ export function AssetsShell() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [archivingAsset, setArchivingAsset] = useState<AssetListItem | null>(null);
+  const [assigningAsset, setAssigningAsset] = useState<AssetListItem | null>(null);
+  const [classifyingAsset, setClassifyingAsset] = useState<AssetListItem | null>(null);
+  const [linkingAssetId, setLinkingAssetId] = useState<string | null>(null);
   const tableColumns = useMemo<readonly DataTableColumn<AssetListItem>[]>(
     () => [
       ...columns,
       {
         key: "actions",
         header: "Actions",
-        cell: (item) => <span className="flex gap-2"><Button variant="secondary" onClick={() => setSelectedId(item.id)} aria-label={`View ${item.assetCode} details`}><Eye className="size-4" />View</Button>{canEdit ? <><Button variant="secondary" onClick={() => setEditingId(item.id)} aria-label={`Edit ${item.assetCode}`}><Pencil className="size-4" />Edit</Button>{item.status === "active" ? <Button variant="secondary" onClick={() => setArchivingAsset(item)} aria-label={`Archive ${item.assetCode}`}><Archive className="size-4" />Archive</Button> : null}</> : null}</span>,
+        cell: (item) => (
+          <DropdownMenu
+            className="w-fit"
+            label={<span className="grid size-6 place-items-center"><span className="sr-only">Actions for {item.assetCode}</span><Ellipsis aria-hidden="true" className="size-5" strokeWidth={1.8} /></span>}
+          >
+            <Action icon={Eye} label="View details" onClick={() => setSelectedId(item.id)} />
+            {canEdit && item.status === "active" ? <Action icon={Pencil} label="Edit asset" onClick={() => setEditingId(item.id)} /> : null}
+            {canEdit && item.status === "active" ? <>
+              <Action icon={Link2} label="Manage links" onClick={() => setLinkingAssetId(item.id)} />
+              <Action icon={ShieldCheck} label="Classify asset" onClick={() => setClassifyingAsset(item)} />
+              <Action icon={UserRoundCheck} label="Assign owner" onClick={() => setAssigningAsset(item)} />
+              <Action icon={Archive} label="Archive asset" danger onClick={() => setArchivingAsset(item)} />
+            </> : null}
+          </DropdownMenu>
+        ),
       },
     ],
     [canEdit],
@@ -283,6 +304,13 @@ export function AssetsShell() {
       />
       <EditAssetDialog assetId={editingId} onClose={() => setEditingId(null)} />
       <DeleteAssetDialog asset={archivingAsset} onClose={() => setArchivingAsset(null)} />
+      <AssignAssetOwnerDialog asset={assigningAsset} onClose={() => setAssigningAsset(null)} />
+      <ClassifyAssetCriticalityDialog asset={classifyingAsset} onClose={() => setClassifyingAsset(null)} />
+      <LinkAssetContextDialog assetId={linkingAssetId} onClose={() => setLinkingAssetId(null)} />
     </div>
   );
+}
+
+function Action({ icon: Icon, label, onClick, danger = false }: { icon: typeof Eye; label: string; onClick: () => void; danger?: boolean }) {
+  return <button className={`${danger ? "text-danger hover:bg-danger-soft" : "hover:bg-neutral-soft"} focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2`} onClick={onClick} type="button"><Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />{label}</button>;
 }

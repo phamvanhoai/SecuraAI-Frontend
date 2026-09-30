@@ -14,6 +14,8 @@ describe("classifyAssetCriticality", () => {
             assetId,
             previousCriticality: "medium",
             criticality: "critical",
+            previousDataClassification: "internal",
+            dataClassification: "restricted",
             score: 4.55,
             changed: true,
             classifiedAt: "2026-09-10T10:00:00.000Z",
@@ -27,7 +29,7 @@ describe("classifyAssetCriticality", () => {
       integrityImpact: 4,
       availabilityImpact: 5,
       businessImpact: 4,
-      reason: "Production database",
+      dataClassification: "restricted" as const,
     };
 
     const result = await classifyAssetCriticality(assetId, input);

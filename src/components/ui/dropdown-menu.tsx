@@ -28,6 +28,7 @@ export function DropdownMenu({
 }) {
   const menuRef = useRef<HTMLDetailsElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const measuredHeightRef = useRef(MENU_ESTIMATED_HEIGHT);
   const [position, setPosition] = useState<CSSProperties | null>(null);
 
   const positionMenu = useCallback((): void => {
@@ -35,8 +36,8 @@ export function DropdownMenu({
     if (!trigger) return;
     const bounds = trigger.getBoundingClientRect();
     const spaceBelow = window.innerHeight - bounds.bottom;
-    const openAbove =
-      spaceBelow < MENU_ESTIMATED_HEIGHT && bounds.top > spaceBelow;
+    const menuHeight = measuredHeightRef.current;
+    const openAbove = spaceBelow < menuHeight && bounds.top > spaceBelow;
     const right = Math.min(
       Math.max(VIEWPORT_GAP, window.innerWidth - bounds.right),
       window.innerWidth - MENU_WIDTH - VIEWPORT_GAP,
@@ -50,6 +51,19 @@ export function DropdownMenu({
         : { right, top: bounds.bottom + VIEWPORT_GAP },
     );
   }, []);
+
+  const captureContent = useCallback(
+    (node: HTMLDivElement | null): void => {
+      contentRef.current = node;
+      if (!node) return;
+      const measuredHeight = node.getBoundingClientRect().height;
+      if (measuredHeight <= 0) return;
+      if (measuredHeight === measuredHeightRef.current) return;
+      measuredHeightRef.current = measuredHeight;
+      positionMenu();
+    },
+    [positionMenu],
+  );
 
   useEffect(() => {
     function closeWhenClickingOutside(event: PointerEvent): void {
@@ -120,7 +134,7 @@ export function DropdownMenu({
       {position && typeof document !== "undefined"
         ? createPortal(
             <div
-              ref={contentRef}
+              ref={captureContent}
               className="border-border bg-surface fixed z-50 min-w-48 rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]"
               onClick={(event) => {
                 if (!(event.target instanceof Element)) return;

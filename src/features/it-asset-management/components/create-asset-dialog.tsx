@@ -80,7 +80,12 @@ export function CreateAssetDialog() {
         <Plus className="size-4" aria-hidden="true" />
         Add asset
       </Button>
-      <Dialog dialogRef={dialog} title="Create IT Asset" onClose={close}>
+      <Dialog
+        dialogRef={dialog}
+        title="Create IT Asset"
+        onClose={close}
+        className="max-h-[90dvh] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
+      >
         <form className="space-y-5" noValidate onSubmit={submit}>
           {options.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -180,52 +185,6 @@ export function CreateAssetDialog() {
                 <option value="confidential">Confidential</option>
                 <option value="restricted">Restricted</option>
               </Select>
-            </FormField>
-            <FormField
-              id="dependencyIds"
-              label="Dependencies"
-              error={errors.dependencyIds?.message}
-            >
-              <Select
-                id="dependencyIds"
-                multiple
-                className="min-h-28"
-                disabled={options.isPending || options.isError}
-                {...register("dependencyIds")}
-                aria-describedby="dependencyIds-help"
-              >
-                {options.data?.assets.map((asset) => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.assetCode} · {asset.name}
-                  </option>
-                ))}
-              </Select>
-              <p id="dependencyIds-help" className="text-muted text-xs">
-                Use Ctrl/Cmd to select multiple assets.
-              </p>
-            </FormField>
-            <FormField
-              id="eventSourceIds"
-              label="Related event sources"
-              error={errors.eventSourceIds?.message}
-            >
-              <Select
-                id="eventSourceIds"
-                multiple
-                className="min-h-28"
-                disabled={options.isPending || options.isError}
-                {...register("eventSourceIds")}
-                aria-describedby="eventSourceIds-help"
-              >
-                {options.data?.eventSources.map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.name} · {source.sourceType}
-                  </option>
-                ))}
-              </Select>
-              <p id="eventSourceIds-help" className="text-muted text-xs">
-                Use Ctrl/Cmd to select multiple sources.
-              </p>
             </FormField>
           </div>
           <FormField
