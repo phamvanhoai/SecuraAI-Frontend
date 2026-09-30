@@ -290,73 +290,73 @@ export function LogSourcesManager() {
         metrics={
           activeTab === "event-sources"
             ? [
-                {
-                  label: "Total sources",
-                  value: eventSourcesOverview.data
-                    ? String(totalEventSources)
-                    : "—",
-                  detail: "Normalized event sources",
-                  tone: "brand",
-                  loading: eventSourcesOverview.isPending,
-                },
-                {
-                  label: "Active sources",
-                  value: eventSourcesOverview.data
-                    ? String(activeEventSources)
-                    : "—",
-                  detail: "Ready to ingest events",
-                  tone: "neutral",
-                  loading: eventSourcesOverview.isPending,
-                },
-                {
-                  label: "Source types",
-                  value: eventSourcesOverview.data
-                    ? String(uniqueSourceTypes)
-                    : "—",
-                  detail: "Distinct ingestion types",
-                  tone: "neutral",
-                  loading: eventSourcesOverview.isPending,
-                },
-                {
-                  label: "Event families",
-                  value: eventSourcesOverview.data
-                    ? String(uniqueFamilies)
-                    : "—",
-                  detail: "Coverage across domains",
-                  tone: "neutral",
-                  loading: eventSourcesOverview.isPending,
-                },
-              ]
+              {
+                label: "Total sources",
+                value: eventSourcesOverview.data
+                  ? String(totalEventSources)
+                  : "—",
+                detail: "Normalized event sources",
+                tone: "brand",
+                loading: eventSourcesOverview.isPending,
+              },
+              {
+                label: "Active sources",
+                value: eventSourcesOverview.data
+                  ? String(activeEventSources)
+                  : "—",
+                detail: "Ready to ingest events",
+                tone: "neutral",
+                loading: eventSourcesOverview.isPending,
+              },
+              {
+                label: "Source types",
+                value: eventSourcesOverview.data
+                  ? String(uniqueSourceTypes)
+                  : "—",
+                detail: "Distinct ingestion types",
+                tone: "neutral",
+                loading: eventSourcesOverview.isPending,
+              },
+              {
+                label: "Event families",
+                value: eventSourcesOverview.data
+                  ? String(uniqueFamilies)
+                  : "—",
+                detail: "Coverage across domains",
+                tone: "neutral",
+                loading: eventSourcesOverview.isPending,
+              },
+            ]
             : [
-                {
-                  label: "Total sources",
-                  value: metrics.data ? String(metrics.data.total) : "—",
-                  detail: "Across all log sources",
-                  tone: "brand",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Active",
-                  value: metrics.data ? String(metrics.data.active) : "—",
-                  detail: "Across all log sources",
-                  tone: "neutral",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Receiving logs",
-                  value: metrics.data ? String(metrics.data.receiving) : "—",
-                  detail: "Received at least one event",
-                  tone: "neutral",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Errors",
-                  value: metrics.data ? String(metrics.data.errors) : "—",
-                  detail: "Across all log sources",
-                  tone: "danger",
-                  loading: metrics.isPending,
-                },
-              ]
+              {
+                label: "Total sources",
+                value: metrics.data ? String(metrics.data.total) : "—",
+                detail: "Across all log sources",
+                tone: "brand",
+                loading: metrics.isPending,
+              },
+              {
+                label: "Active",
+                value: metrics.data ? String(metrics.data.active) : "—",
+                detail: "Across all log sources",
+                tone: "neutral",
+                loading: metrics.isPending,
+              },
+              {
+                label: "Receiving logs",
+                value: metrics.data ? String(metrics.data.receiving) : "—",
+                detail: "Received at least one event",
+                tone: "neutral",
+                loading: metrics.isPending,
+              },
+              {
+                label: "Errors",
+                value: metrics.data ? String(metrics.data.errors) : "—",
+                detail: "Across all log sources",
+                tone: "danger",
+                loading: metrics.isPending,
+              },
+            ]
         }
       />
 
