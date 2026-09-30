@@ -59,6 +59,15 @@ export const aiAlertMetricsSchema = z.object({
   confirmed: z.number().int().nonnegative(),
 });
 
+export const startAiAlertTriageResultSchema = z.object({
+  id: z.uuid(),
+  alertCode: z.string(),
+  status: z.literal("reviewing"),
+  assignedToUserId: z.uuid(),
+  triageStartedAt: z.iso.datetime(),
+  changed: z.boolean(),
+});
+
 export const aiAlertExplanationSchema = z.object({
   id: z.uuid(),
   alertId: z.uuid(),
@@ -144,6 +153,9 @@ export type AiAlert = z.infer<typeof aiAlertSchema>;
 export type AiAlertExplanation = z.infer<typeof aiAlertExplanationSchema>;
 export type AiAlertList = z.infer<typeof aiAlertListSchema>;
 export type AiAlertStatus = (typeof aiAlertStatuses)[number];
+export type StartAiAlertTriageResult = z.infer<
+  typeof startAiAlertTriageResultSchema
+>;
 export type AiAlertFeedbackLabel = (typeof aiAlertFeedbackLabels)[number];
 export type EvaluateAiAlertReliabilityInput = z.input<
   typeof evaluateAiAlertReliabilitySchema

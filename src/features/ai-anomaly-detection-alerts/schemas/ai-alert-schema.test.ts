@@ -9,7 +9,23 @@ import {
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveSchema,
   markFalsePositiveResultSchema,
+  startAiAlertTriageResultSchema,
 } from "./ai-alert-schema";
+
+describe("startAiAlertTriageResultSchema", () => {
+  it("accepts an assigned reviewing alert", () => {
+    expect(
+      startAiAlertTriageResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "ALT-11111111",
+        status: "reviewing",
+        assignedToUserId: "22222222-2222-4222-8222-222222222222",
+        triageStartedAt: "2026-10-01T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
+  });
+});
 
 describe("aiAlertExplanationSchema", () => {
   it("accepts stored explanation text and JSON factors", () => {
