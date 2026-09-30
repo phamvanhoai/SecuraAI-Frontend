@@ -321,6 +321,7 @@ function formatRiskLevel(level: string): string {
 }
 
 export function formatStatus(status: AiAlert["status"]): string {
+  if (status === "needs_investigation") return "Needs further investigation";
   return status
     .replaceAll("_", " ")
     .replace(/^./, (value) => value.toUpperCase());
@@ -328,7 +329,8 @@ export function formatStatus(status: AiAlert["status"]): string {
 
 export function statusTone(status: AiAlert["status"]) {
   if (status === "new") return "info" as const;
-  if (status === "reviewing") return "warning" as const;
+  if (status === "reviewing" || status === "needs_investigation")
+    return "warning" as const;
   if (status === "confirmed" || status === "resolved")
     return "success" as const;
   return "neutral" as const;

@@ -9,6 +9,8 @@ import {
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveSchema,
   markFalsePositiveResultSchema,
+  markFurtherInvestigationResultSchema,
+  markFurtherInvestigationSchema,
   startAiAlertTriageResultSchema,
 } from "./ai-alert-schema";
 
@@ -163,6 +165,32 @@ describe("mark false positive", () => {
     expect(
       markFalsePositiveResultSchema.safeParse({ status: "new" }).success,
     ).toBe(false);
+  });
+});
+
+describe("mark further investigation", () => {
+  it("requires and trims a meaningful investigation reason", () => {
+    expect(
+      markFurtherInvestigationSchema.parse({
+        reason: "  Correlate with endpoint telemetry.  ",
+      }),
+    ).toEqual({ reason: "Correlate with endpoint telemetry." });
+    expect(
+      markFurtherInvestigationSchema.safeParse({ reason: "short" }).success,
+    ).toBe(false);
+  });
+
+  it("accepts the status-changing response", () => {
+    expect(
+      markFurtherInvestigationResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "AI-2026-001",
+        status: "needs_investigation",
+        reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+        reviewedAt: "2026-10-01T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
   });
 });
 
