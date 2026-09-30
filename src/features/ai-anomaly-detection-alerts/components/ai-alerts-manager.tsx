@@ -254,8 +254,7 @@ export function AiAlertsManager() {
               </button>
             </>
           ) : null}
-          {canConfirm &&
-          (item.status === "new" || item.status === "reviewing") ? (
+          {canConfirm && item.status === "reviewing" ? (
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setConfirming(item)}
@@ -266,7 +265,7 @@ export function AiAlertsManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Confirm incident
+              Confirm true positive
             </button>
           ) : null}
           {canMarkFalsePositive &&

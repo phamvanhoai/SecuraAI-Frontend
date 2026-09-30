@@ -327,9 +327,10 @@ export function formatStatus(status: AiAlert["status"]): string {
 }
 
 export function statusTone(status: AiAlert["status"]) {
-  if (status === "new" || status === "confirmed") return "danger" as const;
+  if (status === "new") return "info" as const;
   if (status === "reviewing") return "warning" as const;
-  if (status === "resolved") return "success" as const;
+  if (status === "confirmed" || status === "resolved")
+    return "success" as const;
   return "neutral" as const;
 }
 

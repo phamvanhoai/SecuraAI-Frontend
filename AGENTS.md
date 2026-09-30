@@ -64,7 +64,7 @@ Treat SecuraAI as a trust-first enterprise security dashboard for administrators
 Use semantic HTML, programmatic labels, keyboard-operable controls, visible focus, correct ARIA and sufficient contrast. Verify responsive desktop/tablet/mobile behavior and loading, error, empty and not-found states.
 
 ## Toast notifications
-
+ên
 - Use the shared `useToast` hook from `@/components/feedback/toast` for transient feedback after user actions. Do not create page-specific toast implementations or add another toast library.
 - Use `toast.success`, `toast.error`, `toast.warning` or `toast.info` according to the outcome. Keep titles concise and put recovery guidance in `description`.
 - Use inline validation or `Alert` for persistent/form errors; do not use a toast when the message must remain next to the affected field.

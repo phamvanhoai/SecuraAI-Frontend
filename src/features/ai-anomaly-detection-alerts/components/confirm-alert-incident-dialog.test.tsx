@@ -30,7 +30,7 @@ const alert = {
   riskLevel: null,
   title: "Unusual authentication activity",
   description: "Multiple failed sign-ins were detected.",
-  status: "new" as const,
+  status: "reviewing" as const,
   detectedAt: "2026-09-11T03:00:00.000Z",
   asset: null,
   logSource: {
@@ -88,14 +88,16 @@ describe("ConfirmAlertIncidentDialog", () => {
     render(<ConfirmAlertIncidentDialog alert={alert} onClose={onClose} />);
     const user = userEvent.setup();
     expect(
-      screen.getByText(/automatically creates a linked incident draft/i),
+      screen.getByText(/records the alert as a true positive/i),
     ).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
       screen.getByLabelText("Review comment (optional)"),
       "  Verified by analyst  ",
     );
-    await user.click(screen.getByRole("button", { name: "Confirm incident" }));
+    await user.click(
+      screen.getByRole("button", { name: "Confirm true positive" }),
+    );
     await waitFor(() =>
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
         comment: "Verified by analyst",
@@ -116,7 +118,7 @@ describe("ConfirmAlertIncidentDialog", () => {
     render(<ConfirmAlertIncidentDialog alert={alert} onClose={onClose} />);
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Confirm incident" }));
+      .click(screen.getByRole("button", { name: "Confirm true positive" }));
     expect(
       await screen.findByText(
         "Alert cannot be confirmed in its current status",
