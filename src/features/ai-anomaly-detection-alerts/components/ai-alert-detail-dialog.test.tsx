@@ -21,7 +21,7 @@ const explanationState = vi.hoisted(() => ({
 vi.mock("../hooks/use-ai-alerts", () => ({
   useAiAlertExplanation: () => explanationState.current,
 }));
-import { AiAlertDetailDialog } from "./ai-alert-detail-dialog";
+import { AiAlertDetailDialog, statusTone } from "./ai-alert-detail-dialog";
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -52,6 +52,17 @@ const alert = {
   },
   createdAt: "2026-09-11T03:00:01.000Z",
 };
+
+describe("statusTone", () => {
+  it("uses workflow colors instead of risk severity colors", () => {
+    expect(statusTone("new")).toBe("info");
+    expect(statusTone("reviewing")).toBe("warning");
+    expect(statusTone("confirmed")).toBe("success");
+    expect(statusTone("resolved")).toBe("success");
+    expect(statusTone("false_positive")).toBe("neutral");
+    expect(statusTone("dismissed")).toBe("neutral");
+  });
+});
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {

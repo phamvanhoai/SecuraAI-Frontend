@@ -80,7 +80,7 @@ export function ConfirmAlertIncidentDialog({
       className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
-      title="Confirm alert as incident"
+      title="Confirm alert as true positive"
     >
       {alert ? (
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
@@ -89,8 +89,8 @@ export function ConfirmAlertIncidentDialog({
             <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
           </div>
           <p className="text-muted text-sm leading-6">
-            This confirms the alert, records your review, and automatically
-            creates a linked incident draft for investigation.
+            This records the alert as a true positive, completes your triage,
+            and automatically creates a linked incident draft for investigation.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -129,7 +129,7 @@ export function ConfirmAlertIncidentDialog({
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Confirming…" : "Confirm incident"}
+              {mutation.isPending ? "Confirming…" : "Confirm true positive"}
             </Button>
           </div>
         </form>
