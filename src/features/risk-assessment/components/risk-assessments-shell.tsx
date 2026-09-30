@@ -2,14 +2,17 @@
 
 import {
   Bug,
+  Ellipsis,
   Eye,
   Gauge,
   GaugeCircle,
   ClipboardList,
+  Pencil,
   Search,
   ShieldAlert,
   Target,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -26,6 +29,7 @@ import {
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -46,6 +50,7 @@ import { AssessResidualRiskDialog } from "./assess-residual-risk-dialog";
 import { DefineTargetRiskDialog } from "./define-target-risk-dialog";
 import { CreateRiskTreatmentPlanDialog } from "./create-risk-treatment-plan-dialog";
 import { RiskReassessmentReviewPanel } from "./risk-reassessment-review-panel";
+import { UpdateActiveTreatmentPlanDialog } from "./update-active-treatment-plan-dialog";
 
 const labels = {
   open: "Open",
@@ -103,6 +108,7 @@ export function RiskAssessmentsShell() {
   );
   const [targetRisk, setTargetRisk] = useState<RiskRegisterItem | null>(null);
   const [planRisk, setPlanRisk] = useState<RiskRegisterItem | null>(null);
+  const [planUpdateRisk, setPlanUpdateRisk] = useState<RiskRegisterItem | null>(null);
   const navigate = (next: Partial<RiskRegisterQuery>) => {
     const search = new URLSearchParams();
     Object.entries({ ...query, ...next }).forEach(([key, value]) => {
@@ -186,75 +192,40 @@ export function RiskAssessmentsShell() {
       key: "actions",
       header: "Actions",
       cell: (item) => (
-        <span className="flex gap-2">
-          {canCreate || item.owner?.id === session.data?.id ? <Button variant="secondary" onClick={() => setPlanRisk(item)} aria-label={`Create treatment plan for ${item.riskCode}`}><ClipboardList className="size-4" aria-hidden="true" />Plan</Button> : null}
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-6 place-items-center">
+              <span className="sr-only">Actions for {item.riskCode}</span>
+              <Ellipsis className="size-5" strokeWidth={1.8} aria-hidden="true" />
+            </span>
+          }
+        >
+          <RiskAction icon={Eye} label="View details" onClick={() => setSelectedId(item.id)} />
+          <div className="border-border my-1 border-t" aria-hidden="true" />
           {canCreate ? (
-            <Button
-              variant="secondary"
-              onClick={() => setThreatRisk(item)}
-              aria-label={`Identify threat for ${item.riskCode}`}
-            >
-              <ShieldAlert
-                className="size-4"
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-              Threat
-            </Button>
+            <RiskAction icon={Bug} label="Identify vulnerability" onClick={() => setVulnerabilityRisk(item)} />
+          ) : null}
+          {canCreate ? (
+            <RiskAction icon={ShieldAlert} label="Identify threat" onClick={() => setThreatRisk(item)} />
+          ) : null}
+          {canCreate ? (
+            <RiskAction icon={Gauge} label="Assess inherent risk" onClick={() => setInherentRisk(item)} />
           ) : null}
           {item.owner?.id === session.data?.id ? (
-            <Button
-              variant="secondary"
-              onClick={() => setResidualRisk(item)}
-              aria-label={`Assess residual risk for ${item.riskCode}`}
-            >
-              <GaugeCircle
-                className="size-4"
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-              Residual
-            </Button>
+            <RiskAction icon={GaugeCircle} label="Assess residual risk" onClick={() => setResidualRisk(item)} />
+          ) : null}
+          {canCreate || item.owner?.id === session.data?.id ? (
+            item.activeTreatmentPlan ? (
+              <RiskAction icon={Pencil} label="Update treatment plan" onClick={() => setPlanUpdateRisk(item)} />
+            ) : (
+              <RiskAction icon={ClipboardList} label="Create treatment plan" onClick={() => setPlanRisk(item)} />
+            )
           ) : null}
           {item.owner?.id === session.data?.id ? (
-            <Button
-              variant="secondary"
-              onClick={() => setTargetRisk(item)}
-              aria-label={`Define target risk for ${item.riskCode}`}
-            >
-              <Target className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Target
-            </Button>
+            <RiskAction icon={Target} label="Define target risk" onClick={() => setTargetRisk(item)} />
           ) : null}
-          {canCreate ? (
-            <Button
-              variant="secondary"
-              onClick={() => setInherentRisk(item)}
-              aria-label={`Assess inherent risk for ${item.riskCode}`}
-            >
-              <Gauge className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Assess
-            </Button>
-          ) : null}
-          {canCreate ? (
-            <Button
-              variant="secondary"
-              onClick={() => setVulnerabilityRisk(item)}
-              aria-label={`Identify vulnerability for ${item.riskCode}`}
-            >
-              <Bug className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Weakness
-            </Button>
-          ) : null}
-          <Button
-            variant="secondary"
-            onClick={() => setSelectedId(item.id)}
-            aria-label={`View ${item.riskCode} details`}
-          >
-            <Eye className="size-4" strokeWidth={1.8} aria-hidden="true" />
-            View
-          </Button>
-        </span>
+        </DropdownMenu>
       ),
     },
   ];
@@ -508,6 +479,32 @@ export function RiskAssessmentsShell() {
         onClose={() => setTargetRisk(null)}
       />
       <CreateRiskTreatmentPlanDialog riskId={planRisk?.id ?? null} riskLabel={planRisk ? `${planRisk.riskCode} — ${planRisk.title}` : ""} onClose={() => setPlanRisk(null)} />
+      <UpdateActiveTreatmentPlanDialog
+        riskId={planUpdateRisk?.id ?? null}
+        planId={planUpdateRisk?.activeTreatmentPlan?.id ?? null}
+        onClose={() => setPlanUpdateRisk(null)}
+      />
     </>
+  );
+}
+
+function RiskAction({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+      onClick={onClick}
+      type="button"
+    >
+      <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
+      {label}
+    </button>
   );
 }
