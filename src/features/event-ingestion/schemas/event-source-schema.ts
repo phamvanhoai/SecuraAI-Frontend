@@ -237,3 +237,137 @@ export const testEventSourceDiagnosticSchema = z.object({
 export type TestEventSourceDiagnosticResponse = z.infer<
   typeof testEventSourceDiagnosticSchema
 >;
+
+export const importEventsPayloadSchema = z.object({
+  fileName: z.string().trim().max(255).optional().nullable(),
+  fileFormat: z.enum(["JSON", "CSV"]).default("JSON"),
+  eventFamily: z.enum(eventFamilies).optional().nullable(),
+  events: z
+    .array(z.record(z.string(), z.unknown()))
+    .min(1, "At least one event record must be provided")
+    .max(5000, "Maximum 5000 events per import"),
+});
+
+export type ImportEventsPayload = z.infer<typeof importEventsPayloadSchema>;
+
+export const importEventsResponseSchema = z.object({
+  batchId: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  eventSourceName: z.string(),
+  fileName: z.string().nullable(),
+  fileFormat: z.string(),
+  totalRecords: z.number(),
+  acceptedRecords: z.number(),
+  rejectedRecords: z.number(),
+  status: z.enum(["COMPLETED", "PARTIALLY_COMPLETED", "FAILED"]),
+  startedAt: z.string(),
+  completedAt: z.string(),
+    errors: z.array(
+      z.object({
+        recordIndex: z.number(),
+        errorCode: z.string(),
+        errorMessage: z.string(),
+      }),
+    ),
+});
+
+export type ImportEventsResponse = z.infer<typeof importEventsResponseSchema>;
+
+export const batchStatuses = [
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "PARTIALLY_COMPLETED",
+  "FAILED",
+] as const;
+
+export type BatchStatus = (typeof batchStatuses)[number];
+
+export const batchDetailResponseSchema = z.object({
+  id: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  eventSourceName: z.string(),
+  ingestionMethod: z.string().optional().default("FILE_IMPORT"),
+  batchType: z.string().optional(),
+  fileName: z.string().nullable().optional(),
+  fileFormat: z.string().nullable().optional(),
+  eventFamily: z.string().nullable().optional(),
+  status: z.enum(batchStatuses),
+  totalRecords: z.number(),
+  acceptedRecords: z.number(),
+  rejectedRecords: z.number(),
+  errorMessage: z.string().nullable().optional(),
+  startedAt: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  createdBy: z.string().uuid().nullable().optional(),
+  creatorName: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+});
+
+export type BatchDetailResponse = z.infer<typeof batchDetailResponseSchema>;
+
+export const invalidEventItemSchema = z.object({
+  id: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  batchId: z.string().uuid().nullable().optional(),
+  ingestionBatchId: z.string().uuid().nullable().optional(),
+  eventFamily: z.string().nullable().optional(),
+  recordIndex: z.number().nullable().optional(),
+  errorCode: z.string(),
+  errorMessage: z.string(),
+  rawPayload: z.record(z.string(), z.unknown()).nullable().optional(),
+  receivedPayload: z.record(z.string(), z.unknown()).nullable().optional(),
+  receivedAt: z.string().optional(),
+  createdAt: z.string(),
+});
+
+export type InvalidEventItem = z.infer<typeof invalidEventItemSchema>;
+
+export const getBatchInvalidEventsQuerySchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  errorCode: z.string().trim().optional(),
+  q: z.string().trim().optional(),
+});
+
+export type GetBatchInvalidEventsQuery = z.infer<
+  typeof getBatchInvalidEventsQuerySchema
+>;
+
+export const paginatedInvalidEventsSchema = z.object({
+  items: z.array(invalidEventItemSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+});
+
+export type PaginatedInvalidEvents = z.infer<
+  typeof paginatedInvalidEventsSchema
+>;
+
+export const getSourceBatchesQuerySchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  status: z.enum(batchStatuses).optional(),
+});
+
+export type GetSourceBatchesQuery = z.infer<
+  typeof getSourceBatchesQuerySchema
+>;
+
+export const paginatedBatchesSchema = z.object({
+  items: z.array(batchDetailResponseSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+});
+
+export type PaginatedBatches = z.infer<typeof paginatedBatchesSchema>;
+

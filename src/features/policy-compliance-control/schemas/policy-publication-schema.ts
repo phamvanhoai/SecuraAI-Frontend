@@ -77,6 +77,24 @@ export const approvedPolicySchema = policyReviewDetailSchema.extend({
   }),
 });
 
+export const reviewedPolicySchema = policyReviewDetailSchema.extend({
+  decision: z.object({
+    id: z.string().uuid(),
+    action: z.literal("REVIEWED"),
+    comment: z.string().nullable(),
+    actorUserId: z.string().uuid(),
+    decidedAt: z.string().datetime(),
+  }),
+});
+
+export const publishedPolicyVersionSchema = policyReviewDetailSchema.extend({
+  policyStatus: z.literal("active"),
+  version: policyReviewDetailSchema.shape.version.extend({
+    status: z.literal("published"),
+    effectiveDate: z.string().datetime(),
+  }),
+});
+
 export const rejectPolicyInputSchema = z.object({
   reason: z
     .string()
@@ -143,6 +161,10 @@ export type RequestPolicyRevisionInput = z.infer<
 >;
 export type PolicyRevisionRequest = z.infer<typeof policyRevisionRequestSchema>;
 export type ApprovedPolicy = z.infer<typeof approvedPolicySchema>;
+export type ReviewedPolicy = z.infer<typeof reviewedPolicySchema>;
+export type PublishedPolicyVersion = z.infer<
+  typeof publishedPolicyVersionSchema
+>;
 export type RejectPolicyInput = z.infer<typeof rejectPolicyInputSchema>;
 export type RejectedPolicy = z.infer<typeof rejectedPolicySchema>;
 export type RejectedPolicyListItem = z.infer<typeof rejectedPolicyListItemSchema>;

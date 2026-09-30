@@ -71,6 +71,13 @@ export const riskRegisterItemSchema = z.object({
     treatmentPlans: z.number().int().min(0),
     incidents: z.number().int().min(0),
   }),
+  activeTreatmentPlan: z
+    .object({
+      id: z.uuid(),
+      title: z.string(),
+      status: z.enum(["draft", "active"]),
+    })
+    .nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
 });
@@ -126,6 +133,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       owner: person,
       targetCompletionDate: z.iso.datetime({ offset: true }).nullable(),
       actionCount: z.number().int(),
+      progress: z.number().int().min(0).max(100),
       updatedAt: z.iso.datetime({ offset: true }),
       actions: z.array(z.object({ id: z.uuid(), title: z.string(), assignedToUserId: z.uuid().nullable(), status: z.enum(["pending", "in_progress", "completed", "cancelled"]), dueDate: z.iso.datetime({ offset: true }).nullable() })),
     }),

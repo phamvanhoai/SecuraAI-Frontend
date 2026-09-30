@@ -174,7 +174,7 @@ export function DashboardLoadingSkeleton({
   announce?: boolean;
 }) {
   const content = (
-      <div className="space-y-5">
+    <div className="space-y-5">
         <div className="space-y-3">
           <Skeleton className="h-4 w-36" />
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -205,7 +205,7 @@ export function DashboardLoadingSkeleton({
         </div>
 
         <DashboardSkeletonContent variant={variant} />
-      </div>
+    </div>
   );
   return announce ? <LoadingRegion>{content}</LoadingRegion> : content;
 }

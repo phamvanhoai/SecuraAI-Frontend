@@ -36,6 +36,7 @@ export function DefineTargetRiskDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
     control,
     formState: { errors },
   } = useForm<DefineTargetRiskInput>({
@@ -74,6 +75,10 @@ export function DefineTargetRiskDialog({
     risk.data?.treatmentPlans.filter(
       (item) => item.status === "draft" || item.status === "active",
     ) ?? [];
+  const solePlanId = plans.length === 1 ? plans[0]?.id : undefined;
+  useEffect(() => {
+    if (solePlanId) setValue("treatmentPlanId", solePlanId);
+  }, [setValue, solePlanId]);
   const target = useWatch({ control, name: "targetRisk" });
   const ready = Boolean(current?.residualRating && plans.length);
   const validTarget = current?.residualRating

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Search } from "lucide-react";
+import { Ellipsis, Eye, History, Search } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -35,6 +35,8 @@ import {
   useRequestPolicyRevision,
   useRejectPolicy,
   useRejectedPolicies,
+  useReviewPolicy,
+  usePublishPolicyVersion,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
@@ -115,7 +117,11 @@ const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
   },
 ];
 
-export function PolicyPublicationManager() {
+export function PolicyPublicationManager({
+  onViewHistory,
+}: {
+  onViewHistory?: () => void;
+}) {
   const toast = useToast();
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
@@ -140,6 +146,8 @@ export function PolicyPublicationManager() {
     selected?.versionId ?? null,
   );
   const approve = useApprovePolicyForPublication();
+  const completeReview = useReviewPolicy();
+  const publishVersion = usePublishPolicyVersion();
   const requestRevision = useRequestPolicyRevision();
   const reject = useRejectPolicy();
   const rejectedPolicies = useRejectedPolicies(rejectedQuery);
@@ -181,7 +189,14 @@ export function PolicyPublicationManager() {
       {
         key: "status",
         header: "Status",
-        cell: () => <StatusBadge tone="warning">Awaiting approval</StatusBadge>,
+        cell: (item) =>
+          item.draftVersion.status === "approved" ? (
+            <StatusBadge tone="success">Approved</StatusBadge>
+          ) : item.draftVersion.status === "waiting_approval" ? (
+            <StatusBadge tone="success">Reviewed</StatusBadge>
+          ) : (
+            <StatusBadge tone="warning">In review</StatusBadge>
+          ),
       },
       {
         key: "updatedAt",
@@ -280,6 +295,33 @@ export function PolicyPublicationManager() {
     }
   }
 
+  async function confirmReview(): Promise<void> {
+    if (!selected) return;
+    try {
+      await completeReview.mutateAsync(selected);
+      toast.success(
+        "Policy review completed",
+        "The review was recorded and the version is ready for an approval decision.",
+      );
+    } catch (error: unknown) {
+      toast.error("Unable to complete review", errorMessage(error));
+    }
+  }
+
+  async function confirmPublication(): Promise<void> {
+    if (!selected) return;
+    try {
+      await publishVersion.mutateAsync(selected);
+      toast.success(
+        "Policy published",
+        "The approved version is now the current official policy.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to publish policy", errorMessage(error));
+    }
+  }
+
   function submitRejectedSearch(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const q = rejectedSearch.trim();
@@ -322,6 +364,14 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
+        additionalActions={
+          onViewHistory ? (
+            <Button variant="secondary" onClick={onViewHistory}>
+              <History aria-hidden="true" className="size-4" />
+              View version history
+            </Button>
+          ) : undefined
+        }
         description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
         title="Approve policy versions"
@@ -330,9 +380,9 @@ export function PolicyPublicationManager() {
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Awaiting approval",
+            label: "Open workflow",
             value: String(total),
-            detail: "Draft versions ready for review",
+            detail: "Review, approval, or publication pending",
             tone: "warning",
             loading: metricPolicies.isPending,
           },
@@ -378,7 +428,7 @@ export function PolicyPublicationManager() {
         >
           {(
             [
-              { id: "pending", label: "Awaiting approval", count: total },
+              { id: "pending", label: "Review & publish", count: total },
               {
                 id: "rejected",
                 label: "Rejected",
@@ -428,7 +478,7 @@ export function PolicyPublicationManager() {
               ) : policies.isError ? (
                 <Alert><strong className="block">Unable to load policy drafts awaiting publication</strong><span>{errorMessage(policies.error)}</span></Alert>
               ) : policies.data?.items.length === 0 ? (
-                <p className="text-muted py-10 text-center">No policy drafts awaiting approval were found.</p>
+                <p className="text-muted py-10 text-center">No policy versions require an Admin action.</p>
               ) : policies.data ? (
                 <DataTable columns={columns} getRowKey={(item) => item.id} rows={policies.data.items} />
               ) : null}
@@ -578,7 +628,11 @@ export function PolicyPublicationManager() {
               </div>
             ) : (
               <Alert>
-                Approval records an auditable decision. It does not publish the policy immediately.
+                {review.data.version.status === "approved"
+                  ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
+                  : review.data.version.status === "waiting_approval"
+                  ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
+                  : "Confirm that you have reviewed the complete policy content before making an approval decision."}
               </Alert>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -628,23 +682,47 @@ export function PolicyPublicationManager() {
                   <Button onClick={closeReview} variant="secondary">
                     Cancel
                   </Button>
-                  <Button
-                    onClick={() => setRequestingRevision(true)}
-                    variant="secondary"
-                  >
-                    Request revision
-                  </Button>
-                  <Button onClick={() => setRejecting(true)} variant="danger">
-                    Reject policy
-                  </Button>
-                  <Button
-                    disabled={approve.isPending}
-                    onClick={confirmApproval}
-                  >
-                    {approve.isPending
-                      ? "Approving..."
-                      : "Approve for publication"}
-                  </Button>
+                  {review.data.version.status !== "approved" ? (
+                    <>
+                      <Button
+                        onClick={() => setRequestingRevision(true)}
+                        variant="secondary"
+                      >
+                        Request revision
+                      </Button>
+                      <Button onClick={() => setRejecting(true)} variant="danger">
+                        Reject policy
+                      </Button>
+                    </>
+                  ) : null}
+                  {review.data.version.status === "approved" ? (
+                    <Button
+                      disabled={publishVersion.isPending}
+                      onClick={confirmPublication}
+                    >
+                      {publishVersion.isPending
+                        ? "Publishing..."
+                        : "Publish official version"}
+                    </Button>
+                  ) : review.data.version.status === "waiting_approval" ? (
+                    <Button
+                      disabled={approve.isPending}
+                      onClick={confirmApproval}
+                    >
+                      {approve.isPending
+                        ? "Approving..."
+                        : "Approve for publication"}
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={completeReview.isPending}
+                      onClick={confirmReview}
+                    >
+                      {completeReview.isPending
+                        ? "Recording review..."
+                        : "Complete review"}
+                    </Button>
+                  )}
                 </>
               )}
             </div>

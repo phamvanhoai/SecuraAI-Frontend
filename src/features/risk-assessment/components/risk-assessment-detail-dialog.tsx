@@ -108,11 +108,11 @@ export function RiskAssessmentDetailDialog({
                 />
                 <Fact
                   label="Inherent likelihood / impact"
-                  value={`${risk.latestAssessment.inherentLikelihood ?? "â€”"} / ${risk.latestAssessment.inherentImpact ?? "â€”"}`}
+                  value={`${risk.latestAssessment.inherentLikelihood ?? "—"} / ${risk.latestAssessment.inherentImpact ?? "—"}`}
                 />
                 <Fact
                   label="Residual likelihood / impact"
-                  value={`${risk.latestAssessment.residualLikelihood ?? "â€”"} / ${risk.latestAssessment.residualImpact ?? "â€”"}`}
+                  value={`${risk.latestAssessment.residualLikelihood ?? "—"} / ${risk.latestAssessment.residualImpact ?? "—"}`}
                 />
                 <Fact
                   label="Assessed at"
@@ -131,8 +131,8 @@ export function RiskAssessmentDetailDialog({
               empty="No previous assessments."
               items={risk.assessments.slice(1).map((item) => ({
                 key: item.id,
-                heading: `${title(item.type)} â€” ${format(item.assessedAt)}`,
-                detail: `Inherent: ${item.inherentRating ? title(item.inherentRating) : "not rated"} Â· Residual: ${item.residualRating ? title(item.residualRating) : "not rated"} Â· Target: ${item.targetRisk ? title(item.targetRisk) : "not defined"}`,
+                heading: `${title(item.type)} — ${format(item.assessedAt)}`,
+                detail: `Inherent: ${item.inherentRating ? title(item.inherentRating) : "not rated"} · Residual: ${item.residualRating ? title(item.residualRating) : "not rated"} · Target: ${item.targetRisk ? title(item.targetRisk) : "not defined"}`,
               }))}
             />
           ) : null}
@@ -161,7 +161,7 @@ export function RiskAssessmentDetailDialog({
               items={risk.treatmentPlans.map((item) => ({
                 key: item.id,
                 heading: item.title,
-                detail: `${title(item.strategy)} · ${title(item.status)} · ${item.actionCount} actions · due ${format(item.targetCompletionDate)}`,
+                detail: `${title(item.strategy)} · ${title(item.status)} · ${item.progress}% complete · ${item.actionCount} actions · due ${format(item.targetCompletionDate)}`,
               }))}
             />
           </div>

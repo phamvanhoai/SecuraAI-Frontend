@@ -14,13 +14,16 @@ import {
   listAiAlertFeedback,
   listAiAlerts,
   markAiAlertFalsePositive,
+  markAiAlertFurtherInvestigation,
   runAnomalyDetection,
+  startAiAlertTriage,
   type AiAlertQuery,
 } from "../api/ai-alerts";
 import type {
   ConfirmAiAlertRequest,
   EvaluateAiAlertReliabilityRequest,
   MarkFalsePositiveRequest,
+  MarkFurtherInvestigationRequest,
 } from "../schemas/ai-alert-schema";
 import type { AnomalyDetectionRunInput } from "../schemas/anomaly-detection-run-schema";
 
@@ -28,6 +31,20 @@ export function useRunAnomalyDetection() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: AnomalyDetectionRunInput) => runAnomalyDetection(input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+      ]);
+    },
+    retry: false,
+  });
+}
+
+export function useStartAiAlertTriage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId: string) => startAiAlertTriage(alertId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
@@ -128,6 +145,26 @@ export function useMarkAiAlertFalsePositive(alertId: string | null) {
     mutationFn: (input: MarkFalsePositiveRequest) => {
       if (!alertId) throw new Error("The selected AI alert is unavailable.");
       return markAiAlertFalsePositive(alertId, input);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["ai-alerts", "feedback", alertId],
+        }),
+      ]);
+    },
+    retry: false,
+  });
+}
+
+export function useMarkAiAlertFurtherInvestigation(alertId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: MarkFurtherInvestigationRequest) => {
+      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      return markAiAlertFurtherInvestigation(alertId, input);
     },
     onSuccess: async () => {
       await Promise.all([

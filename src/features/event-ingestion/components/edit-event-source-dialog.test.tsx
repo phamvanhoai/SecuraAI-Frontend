@@ -1,8 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseEventSource = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockTestMutateAsync = vi.fn();
 const mockUseUpdateEventSource = vi.fn(() => ({
   mutateAsync: mockMutateAsync,
   isPending: false,
@@ -11,6 +13,10 @@ const mockUseUpdateEventSource = vi.fn(() => ({
 vi.mock("../hooks/use-event-sources", () => ({
   useEventSource: (id: string | null) => mockUseEventSource(id),
   useUpdateEventSource: () => mockUseUpdateEventSource(),
+  useTestEventSourceConnection: () => ({
+    isPending: false,
+    mutateAsync: mockTestMutateAsync,
+  }),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -77,7 +83,7 @@ describe("EditEventSourceDialog", () => {
     cleanup();
   });
 
-  it("pre-fills form with existing event source data and displays immutable identifiers", () => {
+  it("pre-fills form with existing event source data and displays immutable identifiers and read-only status badge", () => {
     mockUseEventSource.mockReturnValue({
       data: mockDetailData,
       isLoading: false,
@@ -100,14 +106,20 @@ describe("EditEventSourceDialog", () => {
     const nameInput = screen.getByLabelText(/Event source name/i);
     expect(nameInput).toHaveValue("Wazuh Production SIEM");
 
-    const endpointInput = screen.getByLabelText(/SecuraAI Ingestion Webhook Endpoint/i);
+    const endpointInput = screen.getByLabelText(/Endpoint URL/i);
     expect(endpointInput).toHaveValue("https://wazuh.internal:55000");
 
-    const statusSelect = screen.getByLabelText(/Status/i);
-    expect(statusSelect).toHaveValue("ACTIVE");
+    // Status is displayed as read-only badge
+    expect(screen.getByText("Active")).toBeInTheDocument();
+
+    // Save button is initially disabled because Test connection hasn't been verified
+    const saveBtn = screen.getByRole("button", { name: /Save configuration/i });
+    expect(saveBtn).toBeDisabled();
+    expect(screen.getByText(/Please run a successful/i)).toBeInTheDocument();
   });
 
-  it("submits updated configuration and invokes callback upon success", async () => {
+  it("opens test modal, enables save button after successful test, and saves changes", async () => {
+    const user = userEvent.setup();
     mockUseEventSource.mockReturnValue({
       data: mockDetailData,
       isLoading: false,
@@ -115,10 +127,17 @@ describe("EditEventSourceDialog", () => {
       error: null,
     });
 
+    mockTestMutateAsync.mockResolvedValue({
+      connected: true,
+      statusCode: 200,
+      latencyMs: 120,
+      message: "Connection successfully verified.",
+      testedAt: "2026-09-30T10:00:00Z",
+    });
+
     const updatedResult = {
       ...mockDetailData,
       name: "Wazuh Updated Cluster",
-      status: "INACTIVE" as const,
     };
     mockMutateAsync.mockResolvedValue(updatedResult);
 
@@ -134,21 +153,39 @@ describe("EditEventSourceDialog", () => {
       />,
     );
 
+    // Save button is disabled initially
+    const saveBtn = screen.getByRole("button", { name: /Save configuration/i });
+    expect(saveBtn).toBeDisabled();
+
+    // Click Test connection button
+    const testBtn = screen.getByRole("button", { name: /Test connection/i });
+    await user.click(testBtn);
+
+    // In modal, click "Run Connection Test"
+    const runTestBtn = screen.getByRole("button", { name: /Run Connection Test/i });
+    await user.click(runTestBtn);
+
+    // Close test modal
+    const closeTestModalBtn = screen.getByRole("button", { name: /Close/i });
+    await user.click(closeTestModalBtn);
+
+    // Now verified banner is shown and save button is enabled
+    expect(screen.getByText(/Connection Verified/i)).toBeInTheDocument();
+    expect(saveBtn).not.toBeDisabled();
+
+    // Edit fields
     const nameInput = screen.getByLabelText(/Event source name/i);
-    fireEvent.change(nameInput, { target: { value: "Wazuh Updated Cluster" } });
+    await user.clear(nameInput);
+    await user.type(nameInput, "Wazuh Updated Cluster");
 
-    const statusSelect = screen.getByLabelText(/Status/i);
-    fireEvent.change(statusSelect, { target: { value: "INACTIVE" } });
-
-    const submitBtn = screen.getByRole("button", { name: /Save configuration/i });
-    fireEvent.click(submitBtn);
+    await user.click(saveBtn);
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         id: "3a9bf33a-02db-48e4-a8ad-90517278d7f2",
         values: expect.objectContaining({
           name: "Wazuh Updated Cluster",
-          status: "INACTIVE",
+          status: "ACTIVE",
           endpoint: "https://wazuh.internal:55000",
         }),
       });
@@ -158,12 +195,21 @@ describe("EditEventSourceDialog", () => {
     });
   });
 
-  it("shows error when required fields are cleared and submitted", async () => {
+  it("resets validation status when endpoint is changed after successful test", async () => {
+    const user = userEvent.setup();
     mockUseEventSource.mockReturnValue({
       data: mockDetailData,
       isLoading: false,
       isError: false,
       error: null,
+    });
+
+    mockTestMutateAsync.mockResolvedValue({
+      connected: true,
+      statusCode: 200,
+      latencyMs: 100,
+      message: "Connected",
+      testedAt: "2026-09-30T10:00:00Z",
     });
 
     render(
@@ -174,15 +220,20 @@ describe("EditEventSourceDialog", () => {
       />,
     );
 
-    const nameInput = screen.getByLabelText(/Event source name/i);
-    fireEvent.change(nameInput, { target: { value: "   " } });
+    // Test connection
+    await user.click(screen.getByRole("button", { name: /Test connection/i }));
+    await user.click(screen.getByRole("button", { name: /Run Connection Test/i }));
+    await user.click(screen.getByRole("button", { name: /Close/i }));
 
-    const submitBtn = screen.getByRole("button", { name: /Save configuration/i });
-    fireEvent.click(submitBtn);
+    const saveBtn = screen.getByRole("button", { name: /Save configuration/i });
+    expect(saveBtn).not.toBeDisabled();
 
-    await waitFor(() => {
-      expect(screen.getByText("Source name cannot be empty")).toBeInTheDocument();
-      expect(mockMutateAsync).not.toHaveBeenCalled();
-    });
+    // Change endpoint
+    const endpointInput = screen.getByLabelText(/Endpoint URL/i);
+    await user.type(endpointInput, "/new-path");
+
+    // Save button must be disabled again
+    expect(saveBtn).toBeDisabled();
+    expect(screen.getByText(/Please run a successful/i)).toBeInTheDocument();
   });
 });

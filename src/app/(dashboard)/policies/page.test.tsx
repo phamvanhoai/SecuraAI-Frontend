@@ -9,7 +9,7 @@ vi.mock("@/features/policy-compliance-control", () => ({
   EmployeePolicyAcknowledgementManager: ({ onViewHistory }: { onViewHistory?: () => void }) => (
     <div>
       <p>Employee policy acknowledgement</p>
-      <button role="tab" type="button">Published</button>
+      <button role="tab" type="button">Published policies</button>
       {onViewHistory ? <button role="tab" type="button" onClick={onViewHistory}>Version history</button> : null}
     </div>
   ),
@@ -40,9 +40,8 @@ vi.mock("@/features/policy-compliance-control", () => ({
           Open control-mapping workflow
         </button>
       ) : null}
-      <button role="tab" type="button">Drafts</button>
-      <button role="tab" type="button">Rejected</button>
-      {onViewPublished ? <button role="tab" type="button" onClick={onViewPublished}>Published</button> : null}
+      <button role="tab" type="button">Draft workspace</button>
+      {onViewPublished ? <button role="tab" type="button" onClick={onViewPublished}>Published policies</button> : null}
       {onViewHistory ? <button type="button" onClick={onViewHistory}>Version history</button> : null}
     </div>
   ),
@@ -56,15 +55,20 @@ vi.mock("@/features/policy-compliance-control", () => ({
       ) : null}
     </div>
   ),
-  PolicyPublicationManager: () => <p>Publication workflow</p>,
+  PolicyPublicationManager: ({ onViewHistory }: { onViewHistory?: () => void }) => (
+    <div>
+      <p>Publication workflow</p>
+      {onViewHistory ? <button type="button" onClick={onViewHistory}>View version history</button> : null}
+    </div>
+  ),
   PolicyVersionHistoryManager: ({ onBack }: { onBack?: () => void }) => (
     <div><p>Version history workflow</p>{onBack ? <button role="tab" type="button" onClick={onBack}>Drafts</button> : null}</div>
   ),
   PublishedPolicyManager: ({ onViewDrafts, onViewHistory }: { onViewDrafts?: () => void; onViewHistory?: () => void }) => (
     <div>
       <p>Published policy viewer</p>
-      {onViewDrafts ? <button role="tab" type="button" onClick={onViewDrafts}>Drafts</button> : null}
-      <button role="tab" type="button">Published</button>
+      {onViewDrafts ? <button role="tab" type="button" onClick={onViewDrafts}>Draft workspace</button> : null}
+      <button role="tab" type="button">Published policies</button>
       {onViewHistory ? <button type="button" onClick={onViewHistory}>Version history</button> : null}
     </div>
   ),
@@ -121,7 +125,7 @@ describe("PoliciesPage", () => {
     });
     render(<PoliciesPage />);
     const publishedTab = screen.getByRole("tab", {
-      name: "Published",
+      name: "Published policies",
     });
     await user.click(publishedTab);
     expect(screen.getByText("Published policy viewer")).toBeInTheDocument();
@@ -135,8 +139,8 @@ describe("PoliciesPage", () => {
     });
     render(<PoliciesPage />);
 
-    expect(screen.getAllByRole("tab")).toHaveLength(3);
-    expect(screen.getByRole("tab", { name: "Drafts" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getByRole("tab", { name: "Draft workspace" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Version history" }));
     expect(screen.getByText("Version history workflow")).toBeInTheDocument();
@@ -221,7 +225,20 @@ describe("PoliciesPage", () => {
     expect(
       screen.getByText("Employee policy acknowledgement"),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(2);
-    expect(screen.getByRole("tab", { name: "Published" })).toBeInTheDocument();
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+    expect(screen.getByRole("tab", { name: "Published policies" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Version history" })).not.toBeInTheDocument();
+  });
+
+  it("lets an Admin open published version history", async () => {
+    const user = userEvent.setup();
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.publish"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+
+    await user.click(screen.getByRole("button", { name: "View version history" }));
+    expect(screen.getByText("Version history workflow")).toBeInTheDocument();
   });
 });

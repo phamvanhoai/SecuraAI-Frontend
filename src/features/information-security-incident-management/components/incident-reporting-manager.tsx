@@ -129,6 +129,12 @@ const statusPresentation: Record<
   escalated: { label: "Escalated", tone: "danger" },
   resolved: { label: "Resolved", tone: "success" },
   closed: { label: "Closed", tone: "neutral" },
+  open: { label: "Open", tone: "danger" },
+  triage: { label: "Triage", tone: "warning" },
+  containment: { label: "Containment", tone: "warning" },
+  eradication: { label: "Eradication", tone: "info" },
+  recovery: { label: "Recovery", tone: "info" },
+  lessons_learned: { label: "Lessons learned", tone: "success" },
 };
 const incidentStatus = (status: string) =>
   statusPresentation[status] ?? {
@@ -145,6 +151,7 @@ export function IncidentReportingManager() {
   const session = useSessionUser();
   const allowed =
     session.data?.permissions.includes("incidents.report") ?? false;
+  const canRead = session.data?.permissions.includes("incidents.read") ?? false;
   const canClassify =
     session.data?.permissions.includes("incidents.classify") ?? false;
   const canAssign =
@@ -163,14 +170,14 @@ export function IncidentReportingManager() {
     session.data?.permissions.includes("incidents.record-control-weakness") ??
     false;
   const canRequestRiskReassessment =
-    session.data?.permissions.includes("incidents.request-risk-reassessment") ?? false;
+    session.data?.permissions.includes("incidents.request-risk-reassessment") ??
+    false;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
     search: "",
     severity: "",
     status: "",
-    classification: "",
   });
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();
@@ -183,7 +190,8 @@ export function IncidentReportingManager() {
   const [riskLinkTarget, setRiskLinkTarget] = useState<Incident>();
   const [controlWeaknessTarget, setControlWeaknessTarget] =
     useState<Incident>();
-  const [riskReassessmentTarget, setRiskReassessmentTarget] = useState<Incident>();
+  const [riskReassessmentTarget, setRiskReassessmentTarget] =
+    useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
@@ -202,9 +210,9 @@ export function IncidentReportingManager() {
   const classificationQueue = useIncidentClassificationQueue(
     page,
     classificationFilters,
-    canClassify,
+    canRead,
   );
-  const displayedList = canClassify ? classificationQueue : list;
+  const displayedList = canRead ? classificationQueue : list;
   const detail = useMyIncident(selectedId);
   const mutation = useReportIncident();
   const classificationMutation = useClassifyIncidentSeverity();
@@ -498,7 +506,6 @@ export function IncidentReportingManager() {
       search: "",
       severity: "",
       status: "",
-      classification: "",
     });
   };
   const columns: readonly DataTableColumn<Incident>[] = [
@@ -511,15 +518,6 @@ export function IncidentReportingManager() {
           <span className="text-muted text-xs">{item.incidentCode}</span>
         </span>
       ),
-    },
-    {
-      key: "category",
-      header: "Category",
-      cell: (item) =>
-        item.category
-          ? (categoryLabels[item.category as ReportIncidentForm["category"]] ??
-            item.category)
-          : "—",
     },
     {
       key: "severity",
@@ -580,6 +578,14 @@ export function IncidentReportingManager() {
               </span>
             }
           >
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => setSelectedId(item.id)}
+              type="button"
+            >
+              <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              View details
+            </button>
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={item.status === "closed"}
@@ -686,7 +692,11 @@ export function IncidentReportingManager() {
                 onClick={() => setRiskReassessmentTarget(item)}
                 type="button"
               >
-                <RotateCcw aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                <RotateCcw
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
                 Request risk reassessment
               </button>
             ) : null}
@@ -720,44 +730,40 @@ export function IncidentReportingManager() {
         className="bg-neutral-soft h-56 animate-pulse rounded-xl"
       />
     );
-  if (!allowed && !canClassify)
+  if (!allowed && !canRead)
     return (
       <Alert>You do not have permission to access incident management.</Alert>
     );
   return (
     <>
       <ProductPageHeader
-        title={
-          canClassify
-            ? "Classify incident severity"
-            : "Report security incidents"
-        }
+        title={canRead ? "Security incidents" : "Report security incidents"}
         description={
-          canClassify
-            ? "Review reported incidents and assign a documented severity for response prioritization."
+          canRead
+            ? "Review security incidents and open a selected record for operational details."
             : "Report suspicious activity promptly so the security team can investigate and respond."
         }
         showSampleNotice={false}
         additionalActions={
-          <Button onClick={() => setOpen(true)} disabled={!allowed}>
-            <Plus aria-hidden="true" className="size-4" />
-            Report new incident
-          </Button>
+          allowed ? (
+            <Button onClick={() => setOpen(true)}>
+              <Plus aria-hidden="true" className="size-4" />
+              Report new incident
+            </Button>
+          ) : undefined
         }
       />
       <ProductPanel
-        title={
-          canClassify ? "Incident classification queue" : "My incident reports"
-        }
+        title={canRead ? "Incident register" : "My incident reports"}
         description={
           displayedList.data
             ? `${displayedList.data.pagination.total} incidents found`
-            : canClassify
-              ? "Reported incidents awaiting review or reclassification"
+            : canRead
+              ? "Search and review security incidents"
               : "Incidents you have reported"
         }
       >
-        {canClassify ? (
+        {canRead ? (
           <form
             className="border-border flex flex-col gap-3 border-b p-4 md:flex-row md:flex-wrap md:items-end xl:flex-nowrap"
             onSubmit={submitFilters}
@@ -801,25 +807,6 @@ export function IncidentReportingManager() {
               </Select>
             </label>
             <label className="min-w-40 flex-1 md:max-w-52">
-              <span className="mb-1.5 block text-sm font-medium">
-                Classification
-              </span>
-              <Select
-                value={classificationFilters.classification}
-                onChange={(event) => {
-                  setPage(1);
-                  setClassificationFilters((current) => ({
-                    ...current,
-                    classification: event.target.value,
-                  }));
-                }}
-              >
-                <option value="">All classifications</option>
-                <option value="unclassified">Unclassified</option>
-                <option value="classified">Classified</option>
-              </Select>
-            </label>
-            <label className="min-w-40 flex-1 md:max-w-52">
               <span className="mb-1.5 block text-sm font-medium">Status</span>
               <Select
                 value={classificationFilters.status}
@@ -832,11 +819,12 @@ export function IncidentReportingManager() {
                 }}
               >
                 <option value="">All statuses</option>
-                <option value="reported">Reported</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In progress</option>
-                <option value="escalated">Escalated</option>
-                <option value="resolved">Resolved</option>
+                <option value="open">Open</option>
+                <option value="triage">Triage</option>
+                <option value="containment">Containment</option>
+                <option value="eradication">Eradication</option>
+                <option value="recovery">Recovery</option>
+                <option value="lessons_learned">Lessons learned</option>
                 <option value="closed">Closed</option>
               </Select>
             </label>
@@ -857,8 +845,7 @@ export function IncidentReportingManager() {
                   !searchInput &&
                   !classificationFilters.search &&
                   !classificationFilters.severity &&
-                  !classificationFilters.status &&
-                  !classificationFilters.classification
+                  !classificationFilters.status
                 }
               >
                 <RotateCcw
@@ -887,14 +874,10 @@ export function IncidentReportingManager() {
             />
           ) : (
             <EmptyState
-              title={
-                canClassify
-                  ? "No incidents to classify"
-                  : "No incidents reported"
-              }
+              title={canRead ? "No incidents found" : "No incidents reported"}
               description={
-                canClassify
-                  ? "New incident reports will appear here for severity classification."
+                canRead
+                  ? "No incidents match the current search and filters."
                   : "Use Report new incident when you notice suspicious activity or a possible security event."
               }
             />
@@ -1020,8 +1003,10 @@ export function IncidentReportingManager() {
               {assignmentTarget.currentAssignment ? (
                 <p className="text-muted mt-2 text-sm">
                   Currently assigned to{" "}
-                  {assignmentTarget.currentAssignment.assignee.name} ·{" "}
-                  {formatDate(assignmentTarget.currentAssignment.assignedAt)}
+                  {assignmentTarget.currentAssignment.assignee.name}
+                  {assignmentTarget.currentAssignment.assignedAt
+                    ? ` · ${formatDate(assignmentTarget.currentAssignment.assignedAt)}`
+                    : ""}
                 </p>
               ) : (
                 <p className="text-muted mt-2 text-sm">
@@ -1673,16 +1658,6 @@ export function IncidentReportingManager() {
             </div>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
-                <dt className="text-muted text-sm">Category</dt>
-                <dd className="mt-1 font-medium">
-                  {detail.data.category
-                    ? (categoryLabels[
-                        detail.data.category as ReportIncidentForm["category"]
-                      ] ?? detail.data.category)
-                    : "—"}
-                </dd>
-              </div>
-              <div>
                 <dt className="text-muted text-sm">Severity</dt>
                 <dd className="mt-1 font-medium capitalize">
                   {detail.data.severity}
@@ -1705,7 +1680,21 @@ export function IncidentReportingManager() {
               <div>
                 <dt className="text-muted text-sm">Detected</dt>
                 <dd className="mt-1 font-medium">
-                  {formatDate(detail.data.detectedAt)}
+                  {detail.data.detectedAt
+                    ? formatDate(detail.data.detectedAt)
+                    : "Not recorded"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted text-sm">Handler</dt>
+                <dd className="mt-1 font-medium">
+                  {detail.data.currentAssignment?.assignee.name ?? "Unassigned"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted text-sm">Created by</dt>
+                <dd className="mt-1 font-medium">
+                  {detail.data.createdBy?.name ?? "Unknown"}
                 </dd>
               </div>
             </dl>
@@ -1715,6 +1704,21 @@ export function IncidentReportingManager() {
                 {detail.data.description ?? "No description available."}
               </p>
             </div>
+            <section>
+              <h3 className="text-sm font-semibold">Related records</h3>
+              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {Object.entries(detail.data.relatedCounts).map(
+                  ([label, count]) => (
+                    <div className="bg-neutral-soft rounded-lg p-3" key={label}>
+                      <dt className="text-muted text-xs capitalize">{label}</dt>
+                      <dd className="mt-1 text-lg font-semibold tabular-nums">
+                        {count}
+                      </dd>
+                    </div>
+                  ),
+                )}
+              </dl>
+            </section>
             <div className="border-border flex justify-end border-t pt-4">
               <Button
                 variant="secondary"
