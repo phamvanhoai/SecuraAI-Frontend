@@ -22,6 +22,7 @@ const asset = {
   name: "Database Server",
   assetType: "server",
   criticality: "medium" as const,
+  dataClassification: "internal",
   status: "active" as const,
   location: "Server Room",
   department: null,
@@ -54,13 +55,15 @@ describe("ClassifyAssetCriticalityDialog", () => {
       assetId: asset.id,
       previousCriticality: "medium",
       criticality: "critical",
+      previousDataClassification: "internal",
+      dataClassification: "restricted",
       score: 4.55,
       changed: true,
       classifiedAt: "2026-09-10T10:00:00.000Z",
     });
   });
 
-  it("submits four scores and a mandatory reason", async () => {
+  it("submits four scores and the data classification", async () => {
     const user = userEvent.setup();
     render(<ClassifyAssetCriticalityDialog asset={asset} onClose={vi.fn()} />);
 
@@ -72,7 +75,7 @@ describe("ClassifyAssetCriticalityDialog", () => {
     await user.type(screen.getByLabelText("Availability impact"), "5");
     await user.clear(screen.getByLabelText("Business impact"));
     await user.type(screen.getByLabelText("Business impact"), "4");
-    await user.type(screen.getByLabelText("Classification reason"), "Production database");
+    await user.selectOptions(screen.getByLabelText("Data classification"), "restricted");
     await user.click(screen.getByRole("button", { name: "Classify" }));
 
     await waitFor(() =>
@@ -81,24 +84,24 @@ describe("ClassifyAssetCriticalityDialog", () => {
         integrityImpact: 4,
         availabilityImpact: 5,
         businessImpact: 4,
-        reason: "Production database",
+        dataClassification: "restricted",
       }),
     );
     expect(successMock).toHaveBeenCalledWith(
-      "Criticality classified",
-      "AST-001: Critical – score 4.55",
+      "Asset classified",
+      "AST-001: Critical, restricted data – score 4.55",
     );
   });
 
-  it("does not allow classification for a disposed asset", () => {
+  it("does not allow classification for an archived asset", () => {
     render(
       <ClassifyAssetCriticalityDialog
-        asset={{ ...asset, status: "disposed" }}
+        asset={{ ...asset, status: "archived" }}
         onClose={vi.fn()}
       />,
     );
 
     expect(screen.getByRole("button", { name: "Classify" })).toBeDisabled();
-    expect(screen.getByRole("alert")).toHaveTextContent("Disposed assets cannot be classified.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Archived assets cannot be classified.");
   });
 });

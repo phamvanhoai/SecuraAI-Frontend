@@ -128,4 +128,15 @@ describe("CreateAssetDialog", () => {
     );
     expect(screen.getByRole("button", { name: "Create asset" })).toBeDisabled();
   });
+  it("uses the same wide, scrollable form size as Event & Log Sources", async () => {
+    render(<CreateAssetDialog />);
+    await userEvent.click(screen.getByRole("button", { name: "Add asset" }));
+    expect(screen.getByRole("dialog")).toHaveClass("w-[min(42rem,calc(100%-2rem))]", "max-h-[90dvh]", "overflow-y-auto");
+  });
+  it("defers dependencies and event sources to the Links workflow", async () => {
+    render(<CreateAssetDialog />);
+    await userEvent.click(screen.getByRole("button", { name: "Add asset" }));
+    expect(screen.queryByLabelText("Dependencies")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Related event sources")).not.toBeInTheDocument();
+  });
 });
