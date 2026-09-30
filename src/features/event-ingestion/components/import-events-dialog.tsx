@@ -200,6 +200,11 @@ export function ImportEventsDialog({
           `All ${result.totalRecords} records were rejected due to validation errors.`,
         );
       }
+
+      if (onViewBatchReport) {
+        handleClose();
+        onViewBatchReport(result.batchId);
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);

@@ -23,6 +23,7 @@ const mockBatchSuccess: BatchDetailResponse = {
   id: "660e8400-e29b-41d4-a716-446655440001",
   eventSourceId: "src-001",
   eventSourceName: "Corporate Wazuh Ingestion",
+  ingestionMethod: "FILE_IMPORT",
   batchType: "FILE_IMPORT",
   status: "COMPLETED",
   totalRecords: 100,
@@ -32,11 +33,7 @@ const mockBatchSuccess: BatchDetailResponse = {
   startedAt: "2026-03-30T10:00:00.000Z",
   completedAt: "2026-03-30T10:00:02.500Z",
   createdBy: "user-001",
-  creator: {
-    id: "user-001",
-    email: "admin@securaai.internal",
-    fullName: "Security Administrator",
-  },
+  creatorName: "Security Administrator",
   createdAt: "2026-03-30T10:00:00.000Z",
   updatedAt: "2026-03-30T10:00:02.500Z",
 };
@@ -45,6 +42,7 @@ const mockBatchPartial: BatchDetailResponse = {
   id: "660e8400-e29b-41d4-a716-446655440002",
   eventSourceId: "src-001",
   eventSourceName: "Corporate Wazuh Ingestion",
+  ingestionMethod: "FILE_IMPORT",
   batchType: "FILE_IMPORT",
   status: "PARTIALLY_COMPLETED",
   totalRecords: 10,
@@ -54,11 +52,7 @@ const mockBatchPartial: BatchDetailResponse = {
   startedAt: "2026-03-30T10:00:00.000Z",
   completedAt: "2026-03-30T10:00:01.000Z",
   createdBy: "user-001",
-  creator: {
-    id: "user-001",
-    email: "admin@securaai.internal",
-    fullName: "Security Administrator",
-  },
+  creatorName: "Security Administrator",
   createdAt: "2026-03-30T10:00:00.000Z",
   updatedAt: "2026-03-30T10:00:01.000Z",
 };
@@ -287,5 +281,25 @@ describe("ImportBatchResultDialog", () => {
     await user.click(closeBtn);
 
     expect(onCloseMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onImportAnotherFile when Import another file button is clicked", async () => {
+    const user = userEvent.setup();
+    const onCloseMock = vi.fn();
+    const onImportAnotherFileMock = vi.fn();
+
+    render(
+      <ImportBatchResultDialog
+        batchId="660e8400-e29b-41d4-a716-446655440002"
+        isOpen={true}
+        onClose={onCloseMock}
+        onImportAnotherFile={onImportAnotherFileMock}
+      />,
+    );
+
+    const importAnotherBtn = screen.getByRole("button", { name: /Import another file/i });
+    await user.click(importAnotherBtn);
+
+    expect(onImportAnotherFileMock).toHaveBeenCalledTimes(1);
   });
 });

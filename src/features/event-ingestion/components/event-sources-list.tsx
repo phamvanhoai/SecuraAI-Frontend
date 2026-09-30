@@ -369,6 +369,10 @@ export function EventSourcesList({
           batchId={viewingBatchId}
           isOpen={Boolean(viewingBatchId)}
           onClose={() => setViewingBatchId(null)}
+          onImportAnotherFile={() => {
+            setViewingBatchId(null);
+            setIsImportOpen(true);
+          }}
         />
       ) : null}
     </>

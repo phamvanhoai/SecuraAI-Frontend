@@ -287,24 +287,22 @@ export const batchDetailResponseSchema = z.object({
   id: z.string().uuid(),
   eventSourceId: z.string().uuid(),
   eventSourceName: z.string(),
-  batchType: z.string(),
+  ingestionMethod: z.string().optional().default("FILE_IMPORT"),
+  batchType: z.string().optional(),
+  fileName: z.string().nullable().optional(),
+  fileFormat: z.string().nullable().optional(),
+  eventFamily: z.string().nullable().optional(),
   status: z.enum(batchStatuses),
   totalRecords: z.number(),
   acceptedRecords: z.number(),
   rejectedRecords: z.number(),
-  errorMessage: z.string().nullable(),
-  startedAt: z.string(),
-  completedAt: z.string().nullable(),
-  createdBy: z.string().uuid().nullable(),
-  creator: z
-    .object({
-      id: z.string().uuid(),
-      email: z.string().email(),
-      fullName: z.string().nullable(),
-    })
-    .nullable(),
+  errorMessage: z.string().nullable().optional(),
+  startedAt: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  createdBy: z.string().uuid().nullable().optional(),
+  creatorName: z.string().nullable().optional(),
   createdAt: z.string(),
-  updatedAt: z.string(),
+  updatedAt: z.string().optional(),
 });
 
 export type BatchDetailResponse = z.infer<typeof batchDetailResponseSchema>;
@@ -312,13 +310,15 @@ export type BatchDetailResponse = z.infer<typeof batchDetailResponseSchema>;
 export const invalidEventItemSchema = z.object({
   id: z.string().uuid(),
   eventSourceId: z.string().uuid(),
-  ingestionBatchId: z.string().uuid().nullable(),
-  eventFamily: z.enum(eventFamilies).nullable(),
-  recordIndex: z.number().nullable(),
+  batchId: z.string().uuid().nullable().optional(),
+  ingestionBatchId: z.string().uuid().nullable().optional(),
+  eventFamily: z.string().nullable().optional(),
+  recordIndex: z.number().nullable().optional(),
   errorCode: z.string(),
   errorMessage: z.string(),
-  receivedPayload: z.record(z.string(), z.unknown()).nullable(),
-  receivedAt: z.string(),
+  rawPayload: z.record(z.string(), z.unknown()).nullable().optional(),
+  receivedPayload: z.record(z.string(), z.unknown()).nullable().optional(),
+  receivedAt: z.string().optional(),
   createdAt: z.string(),
 });
 
