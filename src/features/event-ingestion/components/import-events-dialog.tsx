@@ -42,11 +42,13 @@ export function ImportEventsDialog({
   onClose,
   presetSource,
   onImportComplete,
+  onViewBatchReport,
 }: {
   isOpen: boolean;
   onClose: () => void;
   presetSource?: EventSourceResponse | null | undefined;
   onImportComplete?: ((result: ImportEventsResponse) => void) | undefined;
+  onViewBatchReport?: ((batchId: string) => void) | undefined;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -322,9 +324,26 @@ export function ImportEventsDialog({
                 <span>Import another file</span>
               </Button>
 
-              <Button type="button" onClick={handleClose}>
-                Done
-              </Button>
+              <div className="flex items-center gap-2">
+                {onViewBatchReport && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const bId = importResult.batchId;
+                      handleClose();
+                      onViewBatchReport(bId);
+                    }}
+                    className="gap-1.5"
+                  >
+                    <FileSpreadsheet className="size-3.5" />
+                    <span>View Full Batch Report</span>
+                  </Button>
+                )}
+                <Button type="button" onClick={handleClose}>
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         ) : (
