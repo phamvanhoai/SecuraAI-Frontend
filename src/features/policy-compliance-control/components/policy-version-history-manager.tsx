@@ -35,12 +35,8 @@ const formatDate = (value: string | null) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "—";
-const tone = (status: string): "success" | "warning" | "neutral" =>
-  status === "published"
-    ? "success"
-    : status === "draft"
-      ? "warning"
-      : "neutral";
+const tone = (status: string): "success" | "neutral" =>
+  status === "published" ? "success" : "neutral";
 
 export function PolicyVersionHistoryManager({
   onBack,
@@ -181,9 +177,6 @@ export function PolicyVersionHistoryManager({
           >
             <option value="all">All statuses</option>
             <option value="published">Published</option>
-            {list.data?.canViewDrafts ? (
-              <option value="draft">Draft</option>
-            ) : null}
             <option value="archived">Archived</option>
           </Select>
           <Button type="submit">Search</Button>
