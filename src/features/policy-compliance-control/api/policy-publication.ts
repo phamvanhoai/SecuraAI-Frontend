@@ -6,6 +6,7 @@ import {
   rejectedPolicySchema,
   rejectedPolicyListSchema,
   reviewedPolicySchema,
+  publishedPolicyVersionSchema,
   publishablePolicyListSchema,
   type ApprovedPolicy,
   type PolicyReviewDetail,
@@ -16,6 +17,7 @@ import {
   type RejectedPolicyList,
   type RejectedPolicyQuery,
   type ReviewedPolicy,
+  type PublishedPolicyVersion,
 } from "../schemas/policy-publication-schema";
 import type {
   RejectPolicyInput,
@@ -80,6 +82,17 @@ export async function reviewPolicy(input: {
     { target: "same-origin", method: "POST" },
   );
   return reviewedPolicySchema.parse(data);
+}
+
+export async function publishPolicyVersion(input: {
+  policyId: string;
+  versionId: string;
+}): Promise<PublishedPolicyVersion> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/publish`,
+    { target: "same-origin", method: "POST" },
+  );
+  return publishedPolicyVersionSchema.parse(data);
 }
 
 export async function rejectPolicy(input: {

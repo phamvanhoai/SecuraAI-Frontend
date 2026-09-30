@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   approve: vi.fn(),
   reject: vi.fn(),
   review: vi.fn(),
+  publish: vi.fn(),
   reviewStatus: "in_review" as string,
 }));
 
@@ -26,6 +27,7 @@ beforeEach(() => {
   mocks.approve.mockReset();
   mocks.reject.mockReset();
   mocks.review.mockReset();
+  mocks.publish.mockReset();
   mocks.reviewStatus = "in_review";
 });
 
@@ -126,6 +128,10 @@ vi.mock("../hooks/use-policy-publication", () => ({
     isPending: false,
     mutateAsync: mocks.review,
   }),
+  usePublishPolicyVersion: () => ({
+    isPending: false,
+    mutateAsync: mocks.publish,
+  }),
 }));
 
 describe("PolicyPublicationManager", () => {
@@ -165,7 +171,7 @@ describe("PolicyPublicationManager", () => {
     );
 
     expect(
-      await screen.findByText("No policy drafts awaiting approval were found."),
+      await screen.findByText("No policy versions require an Admin action."),
     ).toBeInTheDocument();
     expect(
       within(
@@ -215,12 +221,30 @@ describe("PolicyPublicationManager", () => {
     });
   });
 
+  it("publishes an approved version as the official policy", async () => {
+    const user = userEvent.setup();
+    mocks.reviewStatus = "approved";
+    mocks.publish.mockResolvedValue({});
+    render(<PolicyPublicationManager />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Information Security Policy" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Review details" }));
+    expect(screen.queryByRole("button", { name: "Reject policy" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Publish official version" }));
+    expect(mocks.publish).toHaveBeenCalledWith({
+      policyId: "00000000-0000-4000-8000-000000000010",
+      versionId: "00000000-0000-4000-8000-000000000011",
+    });
+  });
+
   it("switches between the approval and rejected policy tabs", async () => {
     const user = userEvent.setup();
     render(<PolicyPublicationManager />);
 
     expect(
-      screen.getByRole("tab", { name: /Awaiting approval/ }),
+      screen.getByRole("tab", { name: /Review & publish/ }),
     ).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByText("Rejected access policy")).not.toBeInTheDocument();
 

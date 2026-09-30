@@ -36,6 +36,7 @@ import {
   useRejectPolicy,
   useRejectedPolicies,
   useReviewPolicy,
+  usePublishPolicyVersion,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
@@ -142,6 +143,7 @@ export function PolicyPublicationManager() {
   );
   const approve = useApprovePolicyForPublication();
   const completeReview = useReviewPolicy();
+  const publishVersion = usePublishPolicyVersion();
   const requestRevision = useRequestPolicyRevision();
   const reject = useRejectPolicy();
   const rejectedPolicies = useRejectedPolicies(rejectedQuery);
@@ -184,7 +186,9 @@ export function PolicyPublicationManager() {
         key: "status",
         header: "Status",
         cell: (item) =>
-          item.draftVersion.status === "waiting_approval" ? (
+          item.draftVersion.status === "approved" ? (
+            <StatusBadge tone="success">Approved</StatusBadge>
+          ) : item.draftVersion.status === "waiting_approval" ? (
             <StatusBadge tone="success">Reviewed</StatusBadge>
           ) : (
             <StatusBadge tone="warning">In review</StatusBadge>
@@ -300,6 +304,20 @@ export function PolicyPublicationManager() {
     }
   }
 
+  async function confirmPublication(): Promise<void> {
+    if (!selected) return;
+    try {
+      await publishVersion.mutateAsync(selected);
+      toast.success(
+        "Policy published",
+        "The approved version is now the current official policy.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to publish policy", errorMessage(error));
+    }
+  }
+
   function submitRejectedSearch(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     const q = rejectedSearch.trim();
@@ -350,9 +368,9 @@ export function PolicyPublicationManager() {
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Awaiting approval",
+            label: "Open workflow",
             value: String(total),
-            detail: "Draft versions ready for review",
+            detail: "Review, approval, or publication pending",
             tone: "warning",
             loading: metricPolicies.isPending,
           },
@@ -398,7 +416,7 @@ export function PolicyPublicationManager() {
         >
           {(
             [
-              { id: "pending", label: "Awaiting approval", count: total },
+              { id: "pending", label: "Review & publish", count: total },
               {
                 id: "rejected",
                 label: "Rejected",
@@ -448,7 +466,7 @@ export function PolicyPublicationManager() {
               ) : policies.isError ? (
                 <Alert><strong className="block">Unable to load policy drafts awaiting publication</strong><span>{errorMessage(policies.error)}</span></Alert>
               ) : policies.data?.items.length === 0 ? (
-                <p className="text-muted py-10 text-center">No policy drafts awaiting approval were found.</p>
+                <p className="text-muted py-10 text-center">No policy versions require an Admin action.</p>
               ) : policies.data ? (
                 <DataTable columns={columns} getRowKey={(item) => item.id} rows={policies.data.items} />
               ) : null}
@@ -598,7 +616,9 @@ export function PolicyPublicationManager() {
               </div>
             ) : (
               <Alert>
-                {review.data.version.status === "waiting_approval"
+                {review.data.version.status === "approved"
+                  ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
+                  : review.data.version.status === "waiting_approval"
                   ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
                   : "Confirm that you have reviewed the complete policy content before making an approval decision."}
               </Alert>
@@ -650,16 +670,29 @@ export function PolicyPublicationManager() {
                   <Button onClick={closeReview} variant="secondary">
                     Cancel
                   </Button>
-                  <Button
-                    onClick={() => setRequestingRevision(true)}
-                    variant="secondary"
-                  >
-                    Request revision
-                  </Button>
-                  <Button onClick={() => setRejecting(true)} variant="danger">
-                    Reject policy
-                  </Button>
-                  {review.data.version.status === "waiting_approval" ? (
+                  {review.data.version.status !== "approved" ? (
+                    <>
+                      <Button
+                        onClick={() => setRequestingRevision(true)}
+                        variant="secondary"
+                      >
+                        Request revision
+                      </Button>
+                      <Button onClick={() => setRejecting(true)} variant="danger">
+                        Reject policy
+                      </Button>
+                    </>
+                  ) : null}
+                  {review.data.version.status === "approved" ? (
+                    <Button
+                      disabled={publishVersion.isPending}
+                      onClick={confirmPublication}
+                    >
+                      {publishVersion.isPending
+                        ? "Publishing..."
+                        : "Publish official version"}
+                    </Button>
+                  ) : review.data.version.status === "waiting_approval" ? (
                     <Button
                       disabled={approve.isPending}
                       onClick={confirmApproval}
