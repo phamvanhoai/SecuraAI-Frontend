@@ -10,6 +10,7 @@ import {
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveResultSchema,
   markFalsePositiveSchema,
+  startAiAlertTriageResultSchema,
   type AiAlertFeedback,
   type AiAlertFeedbackList,
   type AiAlertList,
@@ -20,6 +21,7 @@ import {
   type EvaluateAiAlertReliabilityRequest,
   type MarkFalsePositiveRequest,
   type MarkFalsePositiveResult,
+  type StartAiAlertTriageResult,
 } from "../schemas/ai-alert-schema";
 import {
   anomalyDetectionRunInputSchema,
@@ -46,6 +48,17 @@ export async function runAnomalyDetection(
       target: "same-origin",
       body: anomalyDetectionRunInputSchema.parse(input),
     }),
+  );
+}
+
+export async function startAiAlertTriage(
+  alertId: string,
+): Promise<StartAiAlertTriageResult> {
+  return startAiAlertTriageResultSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/triage/start`,
+      { method: "POST", target: "same-origin" },
+    ),
   );
 }
 

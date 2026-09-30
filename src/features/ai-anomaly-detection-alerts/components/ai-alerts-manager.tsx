@@ -5,6 +5,8 @@ import {
   Eye,
   History,
   MessageSquareText,
+  LoaderCircle,
+  PlayCircle,
   Radar,
   RefreshCw,
   Search,
@@ -37,6 +39,7 @@ import {
   useAiAlertMetrics,
   useAiAlerts,
   useRunAnomalyDetection,
+  useStartAiAlertTriage,
 } from "../hooks/use-ai-alerts";
 import {
   aiAlertStatuses,
@@ -73,10 +76,12 @@ export function AiAlertsManager() {
   const session = useSessionUser();
   const toast = useToast();
   const runDetection = useRunAnomalyDetection();
+  const startTriage = useStartAiAlertTriage();
   const canRunDetection =
     session.data?.permissions.includes("anomaly-detection.run") ?? false;
   const canEvaluate =
     session.data?.permissions.includes("ai-alerts.feedback") ?? false;
+  const canStartTriage = canEvaluate;
   const canConfirm =
     session.data?.permissions.includes("ai-alerts.confirm") ?? false;
   const canMarkFalsePositive =
@@ -176,6 +181,51 @@ export function AiAlertsManager() {
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
             View XAI explanation
           </button>
+          {canStartTriage && item.status === "new" ? (
+            <button
+              aria-busy={
+                startTriage.isPending && startTriage.variables === item.id
+              }
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={startTriage.isPending}
+              onClick={() => {
+                void startTriage
+                  .mutateAsync(item.id)
+                  .then((result) => {
+                    toast.success(
+                      result.changed ? "Triage started" : "Triage already started",
+                      `${item.alertCode} is assigned to you and is now under review.`,
+                    );
+                  })
+                  .catch((error: unknown) => {
+                    toast.error(
+                      "Unable to start triage",
+                      error instanceof Error
+                        ? error.message
+                        : "Refresh the alert list and try again.",
+                    );
+                  });
+              }}
+              type="button"
+            >
+              {startTriage.isPending && startTriage.variables === item.id ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <PlayCircle
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              )}
+              {startTriage.isPending && startTriage.variables === item.id
+                ? "Starting triage…"
+                : "Start triage"}
+            </button>
+          ) : null}
           {canEvaluate ? (
             <>
               <button

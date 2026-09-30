@@ -15,6 +15,7 @@ import {
   listAiAlerts,
   markAiAlertFalsePositive,
   runAnomalyDetection,
+  startAiAlertTriage,
   type AiAlertQuery,
 } from "../api/ai-alerts";
 import type {
@@ -28,6 +29,20 @@ export function useRunAnomalyDetection() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: AnomalyDetectionRunInput) => runAnomalyDetection(input),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["ai-alerts", "metrics"] }),
+      ]);
+    },
+    retry: false,
+  });
+}
+
+export function useStartAiAlertTriage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (alertId: string) => startAiAlertTriage(alertId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["ai-alerts", "list"] }),
