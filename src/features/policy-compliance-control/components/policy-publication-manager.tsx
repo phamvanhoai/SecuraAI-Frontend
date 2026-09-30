@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Search } from "lucide-react";
+import { Ellipsis, Eye, History, Search } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -117,7 +117,11 @@ const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
   },
 ];
 
-export function PolicyPublicationManager() {
+export function PolicyPublicationManager({
+  onViewHistory,
+}: {
+  onViewHistory?: () => void;
+}) {
   const toast = useToast();
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
@@ -360,6 +364,14 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
+        additionalActions={
+          onViewHistory ? (
+            <Button variant="secondary" onClick={onViewHistory}>
+              <History aria-hidden="true" className="size-4" />
+              View version history
+            </Button>
+          ) : undefined
+        }
         description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
         title="Approve policy versions"

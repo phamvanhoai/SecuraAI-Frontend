@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Alert } from "@/components/ui/alert";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   EmployeePolicyAcknowledgementManager,
@@ -31,6 +32,7 @@ export default function Page() {
   const canAssignDepartments = permissions.includes("policies.assign-department");
   const canMapControls = permissions.includes("compliance.map-controls");
   const canAcknowledge = permissions.includes("policies.acknowledge");
+  const canViewHistory = canCreateDrafts || canPublish;
 
   if (session.isPending)
     return <div aria-label="Loading policy management" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />;
@@ -40,10 +42,10 @@ export default function Page() {
   const goHistory = () => setView("history");
   let workspace: ReactNode;
 
-  if (view === "history")
+  if (view === "history" && canViewHistory)
     workspace = (
       <PolicyVersionHistoryManager
-        backLabel={canAcknowledge && !canCreateDrafts ? "Published" : "Drafts"}
+        backLabel={canPublish && !canCreateDrafts ? "Approvals" : "Drafts"}
         onBack={goHome}
       />
     );
@@ -67,12 +69,12 @@ export default function Page() {
       />
     );
   else if (canAcknowledge)
-    workspace = <EmployeePolicyAcknowledgementManager onViewHistory={goHistory} />;
+    workspace = <EmployeePolicyAcknowledgementManager />;
   else if (canAssignDepartments) workspace = <PolicyDepartmentAssignmentManager />;
   else if (canMapControls) workspace = <PolicyControlMappingManager />;
   else if (canUpdate) workspace = <UpdatePolicyVersionManager />;
-  else if (canPublish) workspace = <PolicyPublicationManager />;
-  else workspace = <PolicyVersionHistoryManager />;
+  else if (canPublish) workspace = <PolicyPublicationManager onViewHistory={goHistory} />;
+  else workspace = <Alert>Insufficient permissions</Alert>;
 
   return workspace;
 }

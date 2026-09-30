@@ -55,7 +55,12 @@ vi.mock("@/features/policy-compliance-control", () => ({
       ) : null}
     </div>
   ),
-  PolicyPublicationManager: () => <p>Publication workflow</p>,
+  PolicyPublicationManager: ({ onViewHistory }: { onViewHistory?: () => void }) => (
+    <div>
+      <p>Publication workflow</p>
+      {onViewHistory ? <button type="button" onClick={onViewHistory}>View version history</button> : null}
+    </div>
+  ),
   PolicyVersionHistoryManager: ({ onBack }: { onBack?: () => void }) => (
     <div><p>Version history workflow</p>{onBack ? <button role="tab" type="button" onClick={onBack}>Drafts</button> : null}</div>
   ),
@@ -220,7 +225,20 @@ describe("PoliciesPage", () => {
     expect(
       screen.getByText("Employee policy acknowledgement"),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
     expect(screen.getByRole("tab", { name: "Published policies" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Version history" })).not.toBeInTheDocument();
+  });
+
+  it("lets an Admin open published version history", async () => {
+    const user = userEvent.setup();
+    mocks.session.mockReturnValue({
+      data: { permissions: ["policies.publish"] },
+      isPending: false,
+    });
+    render(<PoliciesPage />);
+
+    await user.click(screen.getByRole("button", { name: "View version history" }));
+    expect(screen.getByText("Version history workflow")).toBeInTheDocument();
   });
 });
