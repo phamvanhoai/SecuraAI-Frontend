@@ -100,8 +100,20 @@ export const aiAlertFeedbackSchema = z.object({
   id: z.uuid(),
   alertId: z.uuid(),
   reviewedByUserId: z.uuid().nullable(),
+  analyst: z.object({
+    id: z.uuid(),
+    name: z.string(),
+    email: z.email(),
+  }),
   feedbackLabel: z.enum(aiAlertFeedbackLabels),
   comment: z.string().nullable(),
+  reason: z.string(),
+  recordedAt: z.iso.datetime(),
+  modelVersion: z.object({
+    id: z.uuid(),
+    modelName: z.string(),
+    version: z.string(),
+  }),
   createdAt: z.iso.datetime(),
 });
 
