@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Gauge } from "lucide-react";
+import { useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-display/data-table";
 import { ProductPanel, StatusBadge } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -13,6 +14,7 @@ import {
   useStartRiskReassessmentReview,
 } from "../hooks/use-risk-reassessment-review";
 import type { RiskReassessmentReviewItem } from "../schemas/risk-reassessment-review-schema";
+import { CompleteRiskReassessmentDialog } from "./complete-risk-reassessment-dialog";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(
@@ -23,6 +25,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
   const requests = useOwnedRiskReassessmentRequests(enabled);
   const review = useStartRiskReassessmentReview();
   const toast = useToast();
+  const [completionTarget, setCompletionTarget] = useState<RiskReassessmentReviewItem | null>(null);
   const startReview = async (item: RiskReassessmentReviewItem) => {
     try {
       await review.mutateAsync(item.id);
@@ -92,13 +95,11 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
             <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={1.8} />
             {review.isPending ? "Starting…" : "Start review"}
           </Button>
-        ) : (
-          <span className="text-muted text-sm">Review in progress</span>
-        ),
+        ) : <Button variant="secondary" onClick={() => setCompletionTarget(item)}><Gauge aria-hidden="true" className="size-4" strokeWidth={1.8} />Reassess</Button>,
     },
   ];
   return (
-    <ProductPanel title="My reassessment requests">
+    <><ProductPanel title="My reassessment requests">
       <div className="p-4">
         {review.isError ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger mb-4">
@@ -120,6 +121,6 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
           />
         )}
       </div>
-    </ProductPanel>
+    </ProductPanel><CompleteRiskReassessmentDialog request={completionTarget} onClose={() => setCompletionTarget(null)} /></>
   );
 }

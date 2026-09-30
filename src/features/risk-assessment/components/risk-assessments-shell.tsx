@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import { useRiskRegister } from "../hooks/use-risk-register";
 import {
   riskRegisterQuerySchema,
@@ -87,7 +88,8 @@ export function RiskAssessmentsShell() {
   const session = useSessionUser();
   const canRead = Boolean(session.data);
   const canCreate = session.data?.permissions.includes("risks.create") ?? false;
-  const risks = useRiskRegister(query, canRead);
+  const [view, setView] = useState<"register" | "requests">("register");
+  const risks = useRiskRegister(query, canRead && view === "register");
   const [draft, setDraft] = useState(query.q ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [threatRisk, setThreatRisk] = useState<RiskRegisterItem | null>(null);
@@ -270,11 +272,79 @@ export function RiskAssessmentsShell() {
     <>
       <div className="space-y-5">
         <ProductPageHeader
-          title="Risk Register"
-          description="Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
-          additionalActions={canCreate ? <CreateRiskAssessmentDialog /> : null}
+          title={view === "register" ? "Risk Register" : "Reassessment Requests"}
+          description={view === "register"
+            ? "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
+            : "Review incident-driven reassessment requests for risks assigned to you."}
+          additionalActions={view === "register" && canCreate ? <CreateRiskAssessmentDialog /> : null}
         />
-        <RiskReassessmentReviewPanel enabled={canRead} />
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div
+            className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+            role="tablist"
+            aria-label="Risk management views"
+          >
+            <button
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "register"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              type="button"
+              role="tab"
+              aria-selected={view === "register"}
+              onClick={() => setView("register")}
+            >
+              <ShieldAlert
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "register" ? "text-brand-contrast" : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span className="truncate">Risk Register</span>
+              {risks.data ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                    view === "register"
+                      ? "bg-white/20 text-brand-contrast"
+                      : "border-border bg-neutral-soft text-muted border",
+                  )}
+                >
+                  {risks.data.pagination.total}
+                </span>
+              ) : null}
+            </button>
+            <button
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "requests"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              type="button"
+              role="tab"
+              aria-selected={view === "requests"}
+              onClick={() => setView("requests")}
+            >
+              <ClipboardList
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "requests" ? "text-brand-contrast" : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span className="truncate">Reassessment Requests</span>
+            </button>
+          </div>
+        </div>
+        {view === "requests" ? (
+          <RiskReassessmentReviewPanel enabled={canRead} />
+        ) : (
         <ProductPanel title="Risk records">
           <form
             className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]"
@@ -394,6 +464,7 @@ export function RiskAssessmentsShell() {
             )}
           </div>
         </ProductPanel>
+        )}
       </div>
       <RiskAssessmentDetailDialog
         id={selectedId}

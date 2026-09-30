@@ -11,7 +11,7 @@ describe("risk reassessment review contract", () => {
         status: "pending",
         requestedAt: "2026-09-30T00:00:00.000Z",
         reviewedAt: null,
-        risk: { id, riskCode: "RISK-1", title: "Account compromise", status: "open" },
+        risk: { id, riskCode: "RISK-1", title: "Account compromise", status: "open", latestInherentAssessment: null, treatmentPlans: [] },
         incident: { id, incidentCode: "INC-1", title: "Login", severity: "high" },
         controlWeakness: null,
         requestedBy: { id, fullName: "Security Officer" },
