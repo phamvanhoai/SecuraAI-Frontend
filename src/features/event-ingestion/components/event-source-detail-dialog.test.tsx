@@ -5,12 +5,20 @@ const mockUseEventSource = vi.fn();
 const mockMutateAsync = vi.fn();
 
 vi.mock("../hooks/use-event-sources", () => ({
+  useEventSources: () => ({
+    data: { items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 1 } },
+    isLoading: false,
+  }),
   useEventSource: (id: string | null) => mockUseEventSource(id),
   useUpdateEventSource: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
   useTestEventSourceConnection: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useImportEvents: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
@@ -174,5 +182,25 @@ describe("EventSourceDetailDialog", () => {
     expect(screen.getByText("Update Event Source Configuration")).toBeInTheDocument();
     expect(screen.getByLabelText(/Event source name/i)).toHaveValue("Wazuh Production SIEM");
     expect(screen.getByRole("button", { name: /Save configuration/i })).toBeInTheDocument();
+  });
+
+  it("opens ToggleEventSourceStatusDialog when clicking Pause button in header", async () => {
+    mockUseEventSource.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: mockDetailData,
+    });
+
+    render(
+      <EventSourceDetailDialog
+        onClose={vi.fn()}
+        sourceId="3a9bf33a-02db-48e4-a8ad-90517278d7f2"
+      />,
+    );
+
+    const pauseButton = screen.getByRole("button", { name: /Pause/i });
+    fireEvent.click(pauseButton);
+
+    expect(screen.getByText("Pause Event Ingestion")).toBeInTheDocument();
   });
 });

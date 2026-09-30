@@ -2,11 +2,14 @@ import { apiRequest } from "@/lib/api/api-client";
 import {
   eventSourceDetailResponseSchema,
   eventSourceResponseSchema,
+  importEventsResponseSchema,
   paginatedEventSourcesSchema,
   testEventSourceDiagnosticSchema,
   type EventSourceDetailResponse,
   type EventSourceListQuery,
   type EventSourceResponse,
+  type ImportEventsPayload,
+  type ImportEventsResponse,
   type PaginatedEventSources,
   type RegisterEventSourceFormValues,
   type TestEventSourceConnectionValues,
@@ -123,3 +126,20 @@ export async function testEventSourceConnection(
 
   return testEventSourceDiagnosticSchema.parse(data);
 }
+
+export async function importEvents(
+  sourceId: string,
+  payload: ImportEventsPayload,
+): Promise<ImportEventsResponse> {
+  const data = await apiRequest<unknown>(
+    `/api/event-sources/${encodeURIComponent(sourceId)}/import`,
+    {
+      target: "same-origin",
+      method: "POST",
+      body: payload,
+    },
+  );
+
+  return importEventsResponseSchema.parse(data);
+}
+

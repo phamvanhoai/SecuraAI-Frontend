@@ -237,3 +237,39 @@ export const testEventSourceDiagnosticSchema = z.object({
 export type TestEventSourceDiagnosticResponse = z.infer<
   typeof testEventSourceDiagnosticSchema
 >;
+
+export const importEventsPayloadSchema = z.object({
+  fileName: z.string().trim().max(255).optional().nullable(),
+  fileFormat: z.enum(["JSON", "CSV"]).default("JSON"),
+  eventFamily: z.enum(eventFamilies).optional().nullable(),
+  events: z
+    .array(z.record(z.string(), z.unknown()))
+    .min(1, "At least one event record must be provided")
+    .max(5000, "Maximum 5000 events per import"),
+});
+
+export type ImportEventsPayload = z.infer<typeof importEventsPayloadSchema>;
+
+export const importEventsResponseSchema = z.object({
+  batchId: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  eventSourceName: z.string(),
+  fileName: z.string().nullable(),
+  fileFormat: z.string(),
+  totalRecords: z.number(),
+  acceptedRecords: z.number(),
+  rejectedRecords: z.number(),
+  status: z.enum(["COMPLETED", "PARTIALLY_COMPLETED", "FAILED"]),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  errors: z.array(
+    z.object({
+      recordIndex: z.number(),
+      errorCode: z.string(),
+      errorMessage: z.string(),
+    }),
+  ),
+});
+
+export type ImportEventsResponse = z.infer<typeof importEventsResponseSchema>;
+

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createEventSource,
   getEventSource,
+  importEvents,
   listEventSources,
   testEventSourceConnection,
   updateEventSource,
@@ -10,6 +11,8 @@ import type {
   EventSourceDetailResponse,
   EventSourceListQuery,
   EventSourceResponse,
+  ImportEventsPayload,
+  ImportEventsResponse,
   PaginatedEventSources,
   RegisterEventSourceFormValues,
   TestEventSourceConnectionValues,
@@ -71,3 +74,20 @@ export function useTestEventSourceConnection() {
     mutationFn: (values) => testEventSourceConnection(values),
   });
 }
+
+export function useImportEvents() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    ImportEventsResponse,
+    Error,
+    { sourceId: string; payload: ImportEventsPayload }
+  >({
+    mutationFn: ({ sourceId, payload }) => importEvents(sourceId, payload),
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["event-sources"] });
+      await queryClient.invalidateQueries({ queryKey: ["event-sources", variables.sourceId] });
+    },
+  });
+}
+
