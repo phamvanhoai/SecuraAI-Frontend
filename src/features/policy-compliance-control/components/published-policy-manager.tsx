@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, History } from "lucide-react";
+import { BookOpenCheck, Eye, Files, History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-display/data-table";
 import { ProductPageHeader, ProductPanel, StatusBadge } from "@/components/data-display/static-product";
@@ -82,19 +82,31 @@ export function PublishedPolicyManager({
           ) : undefined
         }
       />
+      {onViewDrafts ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="published"
+            tabs={[
+              {
+                id: "draft-workspace",
+                label: "Draft workspace",
+                icon: <Files aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: onViewDrafts,
+              },
+              {
+                id: "published",
+                label: "Published policies",
+                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: () => undefined,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         title="Official policy versions"
         description={policies.data ? `${policies.data.length} policies found` : "Loading backend data"}
       >
-        <PolicyViewTabs
-          activeId="published"
-          tabs={[
-            ...(onViewDrafts
-              ? [{ id: "drafts", label: "Drafts", onSelect: onViewDrafts }]
-              : []),
-            { id: "published", label: "Published", onSelect: () => undefined },
-          ]}
-        />
         <div className="p-4">
           {policies.isPending ? (
             <div aria-label="Loading published policies" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />

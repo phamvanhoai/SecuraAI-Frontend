@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Search } from "lucide-react";
+import { BookOpenCheck, Eye, History, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Pagination } from "@/components/data-display/pagination";
 import {
@@ -120,6 +120,27 @@ export function PolicyVersionHistoryManager({
           ) : undefined
         }
       />
+      {onBack && backLabel === "Published" ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="history"
+            tabs={[
+              {
+                id: "published",
+                label: "Published policies",
+                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: onBack,
+              },
+              {
+                id: "history",
+                label: "Version history",
+                icon: <History aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: () => undefined,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         title="Version history"
         description={
@@ -128,17 +149,6 @@ export function PolicyVersionHistoryManager({
             : "Search and review policy versions"
         }
       >
-        {onBack && backLabel === "Published" ? (
-          <PolicyViewTabs
-            activeId="history"
-            tabs={[
-              ...(onBack
-                ? [{ id: "default", label: backLabel, onSelect: onBack }]
-                : []),
-              { id: "history", label: "Version history", onSelect: () => undefined },
-            ]}
-          />
-        ) : null}
         <form
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submit}
