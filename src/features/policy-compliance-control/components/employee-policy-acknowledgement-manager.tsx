@@ -262,7 +262,7 @@ export function EmployeePolicyAcknowledgementManager({
                     I have read and understood this policy
                   </strong>
                   <span className="text-muted text-xs">
-                    Your confirmation time and request IP will be recorded.
+                    Your confirmation time will be recorded.
                   </span>
                 </span>
               </label>
