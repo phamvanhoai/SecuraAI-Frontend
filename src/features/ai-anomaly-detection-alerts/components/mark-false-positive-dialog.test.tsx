@@ -30,7 +30,7 @@ const alert = {
   riskLevel: null,
   title: "Unusual authentication activity",
   description: "Multiple failed sign-ins were detected.",
-  status: "new" as const,
+  status: "reviewing" as const,
   detectedAt: "2026-09-11T03:00:00.000Z",
   asset: null,
   logSource: {
@@ -88,7 +88,7 @@ describe("MarkFalsePositiveDialog", () => {
       "  Expected scanner traffic  ",
     );
     await user.click(
-      screen.getByRole("button", { name: "Mark false positive" }),
+      screen.getByRole("button", { name: "Dismiss as false positive" }),
     );
     await waitFor(() =>
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
@@ -110,7 +110,7 @@ describe("MarkFalsePositiveDialog", () => {
     render(<MarkFalsePositiveDialog alert={alert} onClose={onClose} />);
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Mark false positive" }));
+      .click(screen.getByRole("button", { name: "Dismiss as false positive" }));
     expect(
       await screen.findByText(
         "Alert cannot be marked false positive in its current status",

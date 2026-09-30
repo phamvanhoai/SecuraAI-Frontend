@@ -145,11 +145,29 @@ export function AiAlertsManager() {
     {
       key: "status",
       header: "Status",
-      cell: (item) => (
-        <StatusBadge tone={statusTone(item.status)}>
-          {formatStatus(item.status)}
-        </StatusBadge>
-      ),
+      cell: (item) => {
+        const isStartingTriage =
+          startTriage.isPending && startTriage.variables === item.id;
+
+        return isStartingTriage ? (
+          <span aria-live="polite" role="status">
+            <StatusBadge tone="info">
+              <span className="inline-flex items-center gap-1.5">
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-3.5 animate-spin motion-reduce:animate-none"
+                  strokeWidth={1.8}
+                />
+                Starting triage…
+              </span>
+            </StatusBadge>
+          </span>
+        ) : (
+          <StatusBadge tone={statusTone(item.status)}>
+            {formatStatus(item.status)}
+          </StatusBadge>
+        );
+      },
     },
     {
       key: "detected",
@@ -165,11 +183,19 @@ export function AiAlertsManager() {
           label={
             <span className="grid size-6 place-items-center">
               <span className="sr-only">Actions for {item.alertCode}</span>
-              <Ellipsis
-                aria-hidden="true"
-                className="size-5"
-                strokeWidth={1.8}
-              />
+              {startTriage.isPending && startTriage.variables === item.id ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="text-brand size-5 animate-spin motion-reduce:animate-none"
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <Ellipsis
+                  aria-hidden="true"
+                  className="size-5"
+                  strokeWidth={1.8}
+                />
+              )}
             </span>
           }
         >
@@ -268,8 +294,7 @@ export function AiAlertsManager() {
               Confirm true positive
             </button>
           ) : null}
-          {canMarkFalsePositive &&
-          (item.status === "new" || item.status === "reviewing") ? (
+          {canMarkFalsePositive && item.status === "reviewing" ? (
             <button
               className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setMarkingFalsePositive(item)}
@@ -280,7 +305,7 @@ export function AiAlertsManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Mark false positive
+              Dismiss as false positive
             </button>
           ) : null}
         </DropdownMenu>
