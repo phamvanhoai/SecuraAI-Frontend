@@ -31,7 +31,7 @@ export function RootLoadingSkeleton() {
             <Skeleton className="size-9 rounded-full" />
           </div>
           <div className="mx-auto max-w-[1600px] px-4 py-5 md:px-5 md:py-5">
-            <DashboardLoadingSkeleton variant="dashboard" />
+            <DashboardLoadingSkeleton announce={false} variant="dashboard" />
           </div>
         </main>
       </div>
@@ -167,13 +167,14 @@ function DashboardSkeletonContent({
 }
 
 export function DashboardLoadingSkeleton({
+  announce = true,
   variant = "table",
 }: {
+  announce?: boolean;
   variant?: DashboardSkeletonVariant;
 }) {
-  return (
-    <LoadingRegion>
-      <div className="space-y-5">
+  const content = (
+    <div className="space-y-5">
         <div className="space-y-3">
           <Skeleton className="h-4 w-36" />
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
@@ -204,7 +205,7 @@ export function DashboardLoadingSkeleton({
         </div>
 
         <DashboardSkeletonContent variant={variant} />
-      </div>
-    </LoadingRegion>
+    </div>
   );
+  return announce ? <LoadingRegion>{content}</LoadingRegion> : content;
 }
