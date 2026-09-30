@@ -2,11 +2,19 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
+  requestPolicyRevision,
+  rejectPolicy,
+  listRejectedPolicies,
+  reviewPolicy,
   publishPolicyVersion,
 } from "../api/policy-publication";
-import type { PublishablePolicyQuery } from "../schemas/policy-publication-schema";
+import type {
+  PublishablePolicyQuery,
+  RejectedPolicyQuery,
+} from "../schemas/policy-publication-schema";
 
 const publicationKeys = ["policies", "publication"] as const;
 
@@ -29,10 +37,53 @@ export function usePolicyReview(
   });
 }
 
+export function useRequestPolicyRevision() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: requestPolicyRevision,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function useApprovePolicyForPublication() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: approvePolicyForPublication,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function useReviewPolicy() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: reviewPolicy,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
 export function usePublishPolicyVersion() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: publishPolicyVersion,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["policies"] }),
+  });
+}
+
+export function useRejectedPolicies(
+  query: RejectedPolicyQuery,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: [...publicationKeys, "rejected", query],
+    queryFn: ({ signal }) => listRejectedPolicies(query, signal),
+    enabled,
+  });
+}
+
+export function useRejectPolicy() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: rejectPolicy,
     onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
   });
 }

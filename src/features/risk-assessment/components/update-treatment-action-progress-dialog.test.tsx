@@ -9,7 +9,7 @@ vi.mock("../hooks/use-update-treatment-action-progress", () => ({
 }));
 vi.mock("@/components/feedback/toast", () => ({ useToast: () => ({ success: mocks.success }) }));
 const timestamp = "2026-09-21T12:00:00.000Z";
-const action = { id: "22222222-2222-4222-8222-222222222222", title: "Enable MFA", description: null,
+const action = { id: "22222222-2222-4222-8222-222222222222", title: "Strengthen authentication", description: null,
   assignee: null, dueDate: null, progressPercent: 100, status: "completed", completedAt: timestamp, createdAt: timestamp, updatedAt: timestamp };
 const props = { action, treatmentPlanId: "11111111-1111-4111-8111-111111111111", onClose: vi.fn(), onReload: vi.fn() };
 beforeEach(() => {

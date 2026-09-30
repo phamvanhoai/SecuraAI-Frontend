@@ -1,9 +1,6 @@
 import { ApiError } from "@/lib/api/api-error";
 import { apiRequest } from "@/lib/api/api-client";
-import {
-  assetDetailSchema,
-  type AssetDetail,
-} from "../schemas/create-asset-schema";
+import { assetDetailSchema, type AssetDetail } from "../schemas/asset-detail-schema";
 
 export async function getAssetDetail(
   assetId: string,

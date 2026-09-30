@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   useAiAlertMetrics,
   useAiAlerts,
@@ -52,7 +53,7 @@ import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dia
 import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
-import { AlertThresholdsDialog } from "./alert-thresholds-dialog";
+import { AssetThresholdOverridesManager } from "./alert-thresholds-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -68,7 +69,7 @@ export function AiAlertsManager() {
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
     useState<AiAlert | null>(null);
-  const [thresholdsOpen, setThresholdsOpen] = useState(false);
+  const [view, setView] = useState<"alerts" | "thresholds">("alerts");
   const session = useSessionUser();
   const toast = useToast();
   const runDetection = useRunAnomalyDetection();
@@ -276,22 +277,67 @@ export function AiAlertsManager() {
             </Button>
           ) : undefined
         }
-        {...(canManageThresholds
-          ? {
-              onSecondaryAction: () => setThresholdsOpen(true),
-              secondaryAction: "Custom alert thresholds",
-              secondaryActionIcon: (
-                <SlidersHorizontal
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-              ),
-            }
-          : {})}
         showSampleNotice={false}
         title="AI alerts"
       />
+      {canManageThresholds ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div
+            aria-label="Anomaly monitoring views"
+            className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+            role="tablist"
+          >
+            <button
+              aria-selected={view === "alerts"}
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "alerts"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              onClick={() => setView("alerts")}
+              role="tab"
+              type="button"
+            >
+              <Radar
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "alerts" ? "text-brand-contrast" : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span>AI alerts</span>
+            </button>
+            <button
+              aria-selected={view === "thresholds"}
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "thresholds"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              onClick={() => setView("thresholds")}
+              role="tab"
+              type="button"
+            >
+              <SlidersHorizontal
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "thresholds"
+                    ? "text-brand-contrast"
+                    : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span className="truncate">Set Custom Alert Threshold</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {view === "alerts" ? (
+        <>
       <MetricStrip
         ariaLabel="AI alert metrics for the last 24 hours"
         metrics={[
@@ -459,6 +505,10 @@ export function AiAlertsManager() {
           </div>
         ) : null}
       </ProductPanel>
+        </>
+      ) : (
+        <AssetThresholdOverridesManager />
+      )}
       <AiAlertDetailDialog alert={viewing} onClose={() => setViewing(null)} />
       <EvaluateAlertReliabilityDialog
         alert={evaluating}
@@ -475,10 +525,6 @@ export function AiAlertsManager() {
       <MarkFalsePositiveDialog
         alert={markingFalsePositive}
         onClose={() => setMarkingFalsePositive(null)}
-      />
-      <AlertThresholdsDialog
-        open={thresholdsOpen}
-        onClose={() => setThresholdsOpen(false)}
       />
     </>
   );

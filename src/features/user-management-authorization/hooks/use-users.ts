@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { listUsers } from "../api/users";
 import type { UserListQuery } from "../schemas/user-schema";
 
@@ -14,5 +14,7 @@ export function useUsers(query: UserListQuery, enabled = true) {
     queryKey: userKeys.list(query),
     queryFn: ({ signal }) => listUsers(query, signal),
     enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 }

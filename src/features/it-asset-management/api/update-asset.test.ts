@@ -1,45 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { updateAsset } from "./update-asset";
-
-afterEach(() => vi.restoreAllMocks());
-
+afterEach(() => vi.unstubAllGlobals());
 describe("updateAsset", () => {
-  it("sends PATCH through the same-origin BFF and validates the response", async () => {
-    const data = {
-      id: "00000000-0000-4000-8000-000000000001",
-      assetCode: "AST-001",
-      name: "Updated Server",
-      assetType: "server",
-      criticality: "medium",
-      status: "active",
-      location: "New Server Room",
-      department: null,
-      owner: null,
-      updatedAt: "2026-09-10T09:00:00.000Z",
-      description: null,
-      hostname: "fe-test-server-02",
-      ipAddress: "192.168.1.51",
-      createdAt: "2026-09-10T08:00:00.000Z",
-    };
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data }), { status: 200 }),
-    );
-
-    const result = await updateAsset(data.id, {
-      name: data.name,
-      assetType: data.assetType,
-      description: null,
-      departmentId: null,
-      hostname: data.hostname,
-      ipAddress: data.ipAddress,
-      location: data.location,
-      status: "active",
-    });
-
-    expect(result.name).toBe("Updated Server");
-    expect(fetchMock).toHaveBeenCalledWith(
-      `/api/assets/${data.id}`,
-      expect.objectContaining({ method: "PATCH", credentials: "include" }),
-    );
+  it("patches the V2 asset through the same-origin BFF", async () => {
+    const asset = { id: "00000000-0000-4000-8000-000000000001", assetCode: "AST-001", name: "Server", assetType: "server", criticality: "high", dataClassification: "confidential", description: null, status: "active", owner: null, updatedAt: "2026-09-29T00:00:00.000Z", createdAt: "2026-09-20T00:00:00.000Z" };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true, data: asset }), { status: 200 })); vi.stubGlobal("fetch", fetchMock);
+    const input = { name: "Server", assetType: "server", description: null };
+    await expect(updateAsset(asset.id, input)).resolves.toMatchObject({ assetCode: "AST-001" });
+    expect(fetchMock).toHaveBeenCalledWith(`/api/assets/${asset.id}`, expect.objectContaining({ method: "PATCH", body: JSON.stringify(input) }));
   });
 });
