@@ -1,16 +1,24 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  batchDetailResponseSchema,
   eventSourceDetailResponseSchema,
   eventSourceResponseSchema,
   importEventsResponseSchema,
+  paginatedBatchesSchema,
   paginatedEventSourcesSchema,
+  paginatedInvalidEventsSchema,
   testEventSourceDiagnosticSchema,
+  type BatchDetailResponse,
   type EventSourceDetailResponse,
   type EventSourceListQuery,
   type EventSourceResponse,
+  type GetBatchInvalidEventsQuery,
+  type GetSourceBatchesQuery,
   type ImportEventsPayload,
   type ImportEventsResponse,
+  type PaginatedBatches,
   type PaginatedEventSources,
+  type PaginatedInvalidEvents,
   type RegisterEventSourceFormValues,
   type TestEventSourceConnectionValues,
   type TestEventSourceDiagnosticResponse,
@@ -142,4 +150,62 @@ export async function importEvents(
 
   return importEventsResponseSchema.parse(data);
 }
+
+export async function getBatchDetail(batchId: string): Promise<BatchDetailResponse> {
+  const data = await apiRequest<unknown>(
+    `/api/event-sources/batches/${encodeURIComponent(batchId)}`,
+    {
+      target: "same-origin",
+      method: "GET",
+    },
+  );
+
+  return batchDetailResponseSchema.parse(data);
+}
+
+export async function listBatchInvalidEvents(
+  batchId: string,
+  params?: Partial<GetBatchInvalidEventsQuery>,
+): Promise<PaginatedInvalidEvents> {
+  const searchParams = new URLSearchParams();
+  if (params?.page !== undefined) searchParams.set("page", String(params.page));
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params?.errorCode) searchParams.set("errorCode", params.errorCode);
+  if (params?.q) searchParams.set("q", params.q);
+
+  const queryStr = searchParams.toString();
+  const url = `/api/event-sources/batches/${encodeURIComponent(batchId)}/invalid-events${
+    queryStr ? `?${queryStr}` : ""
+  }`;
+
+  const data = await apiRequest<unknown>(url, {
+    target: "same-origin",
+    method: "GET",
+  });
+
+  return paginatedInvalidEventsSchema.parse(data);
+}
+
+export async function listSourceBatches(
+  sourceId: string,
+  params?: Partial<GetSourceBatchesQuery>,
+): Promise<PaginatedBatches> {
+  const searchParams = new URLSearchParams();
+  if (params?.page !== undefined) searchParams.set("page", String(params.page));
+  if (params?.limit !== undefined) searchParams.set("limit", String(params.limit));
+  if (params?.status) searchParams.set("status", params.status);
+
+  const queryStr = searchParams.toString();
+  const url = `/api/event-sources/${encodeURIComponent(sourceId)}/batches${
+    queryStr ? `?${queryStr}` : ""
+  }`;
+
+  const data = await apiRequest<unknown>(url, {
+    target: "same-origin",
+    method: "GET",
+  });
+
+  return paginatedBatchesSchema.parse(data);
+}
+
 

@@ -22,6 +22,9 @@ vi.mock("../hooks/use-event-sources", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useBatchDetail: () => ({ isPending: false, isError: false, data: undefined }),
+  useBatchInvalidEvents: () => ({ isPending: false, isError: false, data: undefined }),
+  useSourceBatches: () => ({ isPending: false, isError: false, data: undefined }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({

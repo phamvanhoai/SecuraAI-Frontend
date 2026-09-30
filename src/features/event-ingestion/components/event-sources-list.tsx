@@ -22,6 +22,7 @@ import type {
   eventSourceStatuses,
 } from "../schemas/event-source-schema";
 import { EventSourceDetailDialog } from "./event-source-detail-dialog";
+import { ImportBatchResultDialog } from "./import-batch-result-dialog";
 import { ImportEventsDialog } from "./import-events-dialog";
 import { ToggleEventSourceStatusDialog } from "./toggle-event-source-status-dialog";
 
@@ -60,6 +61,7 @@ export function EventSourcesList({
   const [togglingSource, setTogglingSource] = useState<EventSourceResponse | null>(null);
   const [importingSource, setImportingSource] = useState<EventSourceResponse | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [viewingBatchId, setViewingBatchId] = useState<string | null>(null);
 
   const eventSourcesQuery = useEventSources({
     page,
@@ -359,7 +361,16 @@ export function EventSourcesList({
           setImportingSource(null);
         }}
         presetSource={importingSource}
+        onViewBatchReport={(batchId) => setViewingBatchId(batchId)}
       />
+
+      {viewingBatchId ? (
+        <ImportBatchResultDialog
+          batchId={viewingBatchId}
+          isOpen={Boolean(viewingBatchId)}
+          onClose={() => setViewingBatchId(null)}
+        />
+      ) : null}
     </>
   );
 }
