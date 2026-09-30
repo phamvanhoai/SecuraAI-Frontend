@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Search, Server, X } from "lucide-react";
+import { Eye, Power, Search, Server, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -22,6 +22,7 @@ import type {
   eventSourceStatuses,
 } from "../schemas/event-source-schema";
 import { EventSourceDetailDialog } from "./event-source-detail-dialog";
+import { ToggleEventSourceStatusDialog } from "./toggle-event-source-status-dialog";
 
 const statusTones = {
   ACTIVE: "success",
@@ -55,6 +56,7 @@ export function EventSourcesList({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
+  const [togglingSource, setTogglingSource] = useState<EventSourceResponse | null>(null);
 
   const eventSourcesQuery = useEventSources({
     page,
@@ -155,15 +157,37 @@ export function EventSourcesList({
       key: "actions",
       header: "Actions",
       cell: (item) => (
-        <Button
-          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
-          onClick={() => setSelectedSourceId(item.id)}
-          type="button"
-          variant="secondary"
-        >
-          <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-          <span>Details</span>
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Button
+            className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
+            onClick={() => setSelectedSourceId(item.id)}
+            type="button"
+            variant="secondary"
+          >
+            <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+            <span>Details</span>
+          </Button>
+          <Button
+            className={`min-h-8 gap-1.5 px-2 text-xs font-medium ${
+              item.status === "ACTIVE"
+                ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+            }`}
+            onClick={() => setTogglingSource(item)}
+            title={
+              item.status === "ACTIVE"
+                ? "Pause event ingestion"
+                : "Resume event ingestion"
+            }
+            type="button"
+            variant="secondary"
+          >
+            <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+            <span className="hidden sm:inline">
+              {item.status === "ACTIVE" ? "Pause" : "Resume"}
+            </span>
+          </Button>
+        </div>
       ),
     },
   ];
@@ -306,6 +330,11 @@ export function EventSourcesList({
       <EventSourceDetailDialog
         onClose={() => setSelectedSourceId(null)}
         sourceId={selectedSourceId}
+      />
+
+      <ToggleEventSourceStatusDialog
+        onClose={() => setTogglingSource(null)}
+        source={togglingSource}
       />
     </>
   );

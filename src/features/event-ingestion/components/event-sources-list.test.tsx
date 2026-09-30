@@ -150,4 +150,23 @@ describe("EventSourcesList", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("opens ToggleEventSourceStatusDialog when clicking Pause button", async () => {
+    mockUseEventSources.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: mockItems,
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<EventSourcesList />);
+
+    const pauseButton = screen.getByRole("button", { name: /Pause/i });
+    await user.click(pauseButton);
+
+    expect(screen.getByText("Pause Event Ingestion")).toBeInTheDocument();
+  });
 });

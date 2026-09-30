@@ -13,6 +13,7 @@ import {
   KeyRound,
   Layers,
   Loader2,
+  Power,
   ShieldCheck,
   SlidersHorizontal,
   User,
@@ -24,18 +25,17 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEventSource, useUpdateEventSource } from "../hooks/use-event-sources";
 import {
   eventFamilies,
-  eventSourceStatuses,
   updateEventSourceFormSchema,
   type EventSourceDetailResponse,
   type EventSourceResponse,
   type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 import { TestEventSourceDialog } from "./test-event-source-dialog";
+import { ToggleEventSourceStatusDialog } from "./toggle-event-source-status-dialog";
 
 const statusTones = {
   ACTIVE: "success",
@@ -100,6 +100,7 @@ export function EventSourceDetailDialog({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [connectionHealth, setConnectionHealth] = useState<{
     connected: boolean;
     message: string;
@@ -113,11 +114,13 @@ export function EventSourceDetailDialog({
     if (!dialog) return;
     if (sourceId && !dialog.open) {
       setIsEditing(false);
+      setIsTogglingStatus(false);
       setConnectionHealth(null);
       dialog.showModal();
     }
     if (!sourceId && dialog.open) {
       setIsEditing(false);
+      setIsTogglingStatus(false);
       setConnectionHealth(null);
       dialog.close();
     }
@@ -133,6 +136,7 @@ export function EventSourceDetailDialog({
 
   const handleClose = () => {
     setIsEditing(false);
+    setIsTogglingStatus(false);
     onClose();
   };
 
@@ -213,6 +217,24 @@ export function EventSourceDetailDialog({
                     {connectionHealth.connected ? `Reachable (${connectionHealth.latencyMs}ms)` : "Connection Failed"}
                   </StatusBadge>
                 ) : null}
+                <Button
+                  className={`min-h-8 gap-1.5 px-2.5 text-xs font-medium ${
+                    source.status === "ACTIVE"
+                      ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                      : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                  }`}
+                  onClick={() => setIsTogglingStatus(true)}
+                  title={
+                    source.status === "ACTIVE"
+                      ? "Pause event ingestion"
+                      : "Resume event ingestion"
+                  }
+                  type="button"
+                  variant="secondary"
+                >
+                  <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                  <span>{source.status === "ACTIVE" ? "Pause" : "Resume"}</span>
+                </Button>
                 <Button
                   className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                   onClick={() => setIsEditing(true)}
@@ -497,6 +519,14 @@ export function EventSourceDetailDialog({
         }}
       />
     ) : null}
+
+    <ToggleEventSourceStatusDialog
+      onClose={() => setIsTogglingStatus(false)}
+      onSuccess={(updated) => {
+        onUpdated?.(updated);
+      }}
+      source={isTogglingStatus && source ? source : null}
+    />
   </>
   );
 }

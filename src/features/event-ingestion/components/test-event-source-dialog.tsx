@@ -59,12 +59,14 @@ export function TestEventSourceDialog({
   const [diagnosticResult, setDiagnosticResult] =
     useState<TestEventSourceDiagnosticResponse | null>(null);
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setEndpoint(resolveDefaultEndpoint(initialEndpoint));
       setUsername(initialUsername || "wazuh-wui");
     }
-  }, [isOpen, initialEndpoint, initialUsername]);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;

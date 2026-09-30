@@ -4,6 +4,7 @@ export { EventSourcesList } from "./components/event-sources-list";
 export { EventSourceDetailDialog } from "./components/event-source-detail-dialog";
 export { EditEventSourceDialog } from "./components/edit-event-source-dialog";
 export { TestEventSourceDialog } from "./components/test-event-source-dialog";
+export { ToggleEventSourceStatusDialog } from "./components/toggle-event-source-status-dialog";
 export {
   eventFamilies,
   eventSourceStatuses,
