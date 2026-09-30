@@ -10,6 +10,8 @@ import {
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveResultSchema,
   markFalsePositiveSchema,
+  markFurtherInvestigationResultSchema,
+  markFurtherInvestigationSchema,
   startAiAlertTriageResultSchema,
   type AiAlertFeedback,
   type AiAlertFeedbackList,
@@ -21,6 +23,8 @@ import {
   type EvaluateAiAlertReliabilityRequest,
   type MarkFalsePositiveRequest,
   type MarkFalsePositiveResult,
+  type MarkFurtherInvestigationRequest,
+  type MarkFurtherInvestigationResult,
   type StartAiAlertTriageResult,
 } from "../schemas/ai-alert-schema";
 import {
@@ -151,6 +155,22 @@ export async function markAiAlertFalsePositive(
         method: "POST",
         target: "same-origin",
         body: markFalsePositiveSchema.parse(input),
+      },
+    ),
+  );
+}
+
+export async function markAiAlertFurtherInvestigation(
+  alertId: string,
+  input: MarkFurtherInvestigationRequest,
+): Promise<MarkFurtherInvestigationResult> {
+  return markFurtherInvestigationResultSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/further-investigation`,
+      {
+        method: "POST",
+        target: "same-origin",
+        body: markFurtherInvestigationSchema.parse(input),
       },
     ),
   );

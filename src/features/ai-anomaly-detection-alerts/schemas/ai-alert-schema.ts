@@ -3,6 +3,7 @@ import { z } from "zod";
 export const aiAlertStatuses = [
   "new",
   "reviewing",
+  "needs_investigation",
   "confirmed",
   "false_positive",
   "resolved",
@@ -149,6 +150,23 @@ export const markFalsePositiveResultSchema = z.object({
   changed: z.boolean(),
 });
 
+export const markFurtherInvestigationSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Investigation reason must be at least 10 characters.")
+    .max(2000, "Investigation reason must be 2,000 characters or fewer."),
+});
+
+export const markFurtherInvestigationResultSchema = z.object({
+  id: z.uuid(),
+  alertCode: z.string(),
+  status: z.literal("needs_investigation"),
+  reviewedByUserId: z.uuid().nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
+  changed: z.boolean(),
+});
+
 export type AiAlert = z.infer<typeof aiAlertSchema>;
 export type AiAlertExplanation = z.infer<typeof aiAlertExplanationSchema>;
 export type AiAlertList = z.infer<typeof aiAlertListSchema>;
@@ -172,4 +190,13 @@ export type MarkFalsePositiveInput = z.input<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveRequest = z.output<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveResult = z.infer<
   typeof markFalsePositiveResultSchema
+>;
+export type MarkFurtherInvestigationInput = z.input<
+  typeof markFurtherInvestigationSchema
+>;
+export type MarkFurtherInvestigationRequest = z.output<
+  typeof markFurtherInvestigationSchema
+>;
+export type MarkFurtherInvestigationResult = z.infer<
+  typeof markFurtherInvestigationResultSchema
 >;

@@ -3,6 +3,7 @@
 import {
   Ellipsis,
   Eye,
+  FileSearch,
   History,
   MessageSquareText,
   LoaderCircle,
@@ -56,6 +57,7 @@ import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dia
 import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
+import { MarkFurtherInvestigationDialog } from "./mark-further-investigation-dialog";
 import { AssetThresholdOverridesManager } from "./alert-thresholds-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
@@ -71,6 +73,8 @@ export function AiAlertsManager() {
   const [viewingFeedback, setViewingFeedback] = useState<AiAlert | null>(null);
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
+    useState<AiAlert | null>(null);
+  const [markingFurtherInvestigation, setMarkingFurtherInvestigation] =
     useState<AiAlert | null>(null);
   const [view, setView] = useState<"alerts" | "thresholds">("alerts");
   const session = useSessionUser();
@@ -280,7 +284,9 @@ export function AiAlertsManager() {
               </button>
             </>
           ) : null}
-          {canConfirm && item.status === "reviewing" ? (
+          {canConfirm &&
+          (item.status === "reviewing" ||
+            item.status === "needs_investigation") ? (
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setConfirming(item)}
@@ -294,7 +300,23 @@ export function AiAlertsManager() {
               Confirm true positive
             </button>
           ) : null}
-          {canMarkFalsePositive && item.status === "reviewing" ? (
+          {canEvaluate && item.status === "reviewing" ? (
+            <button
+              className="hover:bg-warning-soft focus-visible:outline-warning flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => setMarkingFurtherInvestigation(item)}
+              type="button"
+            >
+              <FileSearch
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              Need further investigation
+            </button>
+          ) : null}
+          {canMarkFalsePositive &&
+          (item.status === "reviewing" ||
+            item.status === "needs_investigation") ? (
             <button
               className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setMarkingFalsePositive(item)}
@@ -599,6 +621,10 @@ export function AiAlertsManager() {
       <MarkFalsePositiveDialog
         alert={markingFalsePositive}
         onClose={() => setMarkingFalsePositive(null)}
+      />
+      <MarkFurtherInvestigationDialog
+        alert={markingFurtherInvestigation}
+        onClose={() => setMarkingFurtherInvestigation(null)}
       />
     </>
   );
