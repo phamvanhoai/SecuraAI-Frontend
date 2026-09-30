@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Power, Search, Server, X } from "lucide-react";
+import { Eye, Power, Search, Server, Upload, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -22,6 +22,7 @@ import type {
   eventSourceStatuses,
 } from "../schemas/event-source-schema";
 import { EventSourceDetailDialog } from "./event-source-detail-dialog";
+import { ImportEventsDialog } from "./import-events-dialog";
 import { ToggleEventSourceStatusDialog } from "./toggle-event-source-status-dialog";
 
 const statusTones = {
@@ -57,6 +58,8 @@ export function EventSourcesList({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [togglingSource, setTogglingSource] = useState<EventSourceResponse | null>(null);
+  const [importingSource, setImportingSource] = useState<EventSourceResponse | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const eventSourcesQuery = useEventSources({
     page,
@@ -265,6 +268,18 @@ export function EventSourcesList({
               Clear
             </Button>
           ) : null}
+          <Button
+            className="min-h-10 gap-1.5 sm:ml-auto"
+            onClick={() => {
+              setImportingSource(null);
+              setIsImportOpen(true);
+            }}
+            type="button"
+            variant="secondary"
+          >
+            <Upload aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            <span>Import events</span>
+          </Button>
         </form>
 
         <div className="p-4">
@@ -335,6 +350,15 @@ export function EventSourcesList({
       <ToggleEventSourceStatusDialog
         onClose={() => setTogglingSource(null)}
         source={togglingSource}
+      />
+
+      <ImportEventsDialog
+        isOpen={isImportOpen}
+        onClose={() => {
+          setIsImportOpen(false);
+          setImportingSource(null);
+        }}
+        presetSource={importingSource}
       />
     </>
   );

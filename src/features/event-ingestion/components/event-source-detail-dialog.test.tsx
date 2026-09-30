@@ -5,12 +5,20 @@ const mockUseEventSource = vi.fn();
 const mockMutateAsync = vi.fn();
 
 vi.mock("../hooks/use-event-sources", () => ({
+  useEventSources: () => ({
+    data: { items: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 1 } },
+    isLoading: false,
+  }),
   useEventSource: (id: string | null) => mockUseEventSource(id),
   useUpdateEventSource: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
   useTestEventSourceConnection: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useImportEvents: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),

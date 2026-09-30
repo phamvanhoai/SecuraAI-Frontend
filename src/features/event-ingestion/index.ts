@@ -5,6 +5,8 @@ export { EventSourceDetailDialog } from "./components/event-source-detail-dialog
 export { EditEventSourceDialog } from "./components/edit-event-source-dialog";
 export { TestEventSourceDialog } from "./components/test-event-source-dialog";
 export { ToggleEventSourceStatusDialog } from "./components/toggle-event-source-status-dialog";
+export { ImportEventsDialog } from "./components/import-events-dialog";
+export { parseEventFileContent } from "./utils/event-file-parser";
 export {
   eventFamilies,
   eventSourceStatuses,
@@ -19,6 +21,8 @@ export {
   updateEventSourceFormSchema,
   testEventSourceConnectionSchema,
   testEventSourceDiagnosticSchema,
+  importEventsPayloadSchema,
+  importEventsResponseSchema,
   type EventSourceResponse,
   type EventSourceListQuery,
   type PaginatedEventSources,
@@ -28,6 +32,8 @@ export {
   type UpdateEventSourceFormValues,
   type TestEventSourceConnectionValues,
   type TestEventSourceDiagnosticResponse,
+  type ImportEventsPayload,
+  type ImportEventsResponse,
 } from "./schemas/event-source-schema";
 export {
   logSourceFormSchema,
@@ -43,6 +49,7 @@ export {
   getEventSource,
   updateEventSource,
   testEventSourceConnection,
+  importEvents,
 } from "./api/event-sources";
 export {
   useCreateEventSource,
@@ -50,4 +57,5 @@ export {
   useEventSource,
   useUpdateEventSource,
   useTestEventSourceConnection,
+  useImportEvents,
 } from "./hooks/use-event-sources";
