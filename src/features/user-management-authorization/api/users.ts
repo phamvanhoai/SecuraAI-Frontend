@@ -47,6 +47,9 @@ export async function createUser(
     email: input.email,
     fullName: input.fullName,
     role: input.role,
+    ...(input.phone ? { phone: input.phone } : {}),
+    ...(input.employeeCode ? { employeeCode: input.employeeCode } : {}),
+    ...(input.departmentId ? { departmentId: input.departmentId } : {}),
   };
   const data = await apiRequest<unknown>("/api/users", {
     method: "POST",
@@ -65,6 +68,7 @@ export async function updateUser(
     phone: input.phone || null,
     employeeCode: input.employeeCode || null,
     departmentId: input.departmentId || null,
+    status: input.status.toUpperCase(),
   };
   const data = await apiRequest<unknown>(
     `/api/users/${encodeURIComponent(userId)}`,
@@ -114,8 +118,5 @@ export async function getUserCreateOptions(
       parsed.error.flatten(),
     );
   }
-  return {
-    ...parsed.data,
-    roles: parsed.data.roles.filter((role) => role.code !== "ALL"),
-  };
+  return parsed.data;
 }

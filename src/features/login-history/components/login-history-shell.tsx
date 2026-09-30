@@ -42,7 +42,6 @@ const initialFilters = {
 const failureLabels: Readonly<Record<string, string>> = {
   INVALID_CREDENTIALS: "Incorrect email or password",
   ACCOUNT_INACTIVE: "Account is inactive",
-  INVALID_MFA_CODE: "Invalid or expired MFA code",
 };
 const columns: readonly DataTableColumn<LoginHistoryItem>[] = [
   {

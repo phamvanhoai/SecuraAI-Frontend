@@ -15,6 +15,9 @@ vi.mock("../hooks/use-create-user", () => ({
     error: null,
   }),
 }));
+vi.mock("../hooks/use-user-create-options", () => ({
+  useUserCreateOptions: () => ({ data: { departments: [] } }),
+}));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.toastSuccess }),
 }));
@@ -62,6 +65,9 @@ describe("CreateUserDialog", () => {
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
         email: "new@example.com",
         fullName: "New User",
+        phone: "",
+        employeeCode: "",
+        departmentId: "",
         role: "EXECUTIVE",
       }),
     );

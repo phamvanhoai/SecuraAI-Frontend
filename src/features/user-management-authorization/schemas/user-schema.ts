@@ -9,7 +9,23 @@ export const createUserSchema = z.object({
     .string()
     .trim()
     .min(2, "Full name must contain at least 2 characters.")
-    .max(150),
+    .max(150)
+    .regex(
+      /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u,
+      "Full name may contain letters and spaces only.",
+    ),
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value.length === 0 || /^\d{10}$/.test(value),
+      "Phone number must contain exactly 10 digits.",
+    ),
+  employeeCode: z.string().trim().max(50).refine(
+    (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
+    "Employee code may contain letters, numbers, hyphens, and underscores only.",
+  ),
+  departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
   role: z.enum(["SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"], {
     error: "Select a role.",
   }),
@@ -19,17 +35,28 @@ export type CreateUserInput = z.input<typeof createUserSchema>;
 export type CreateUserPayload = z.output<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
-  fullName: z.string().trim().min(2).max(150),
+  fullName: z
+    .string()
+    .trim()
+    .min(2)
+    .max(255)
+    .regex(
+      /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u,
+      "Full name may contain letters and spaces only.",
+    ),
   phone: z
     .string()
     .trim()
-    .max(30)
     .refine(
-      (value) => value.length === 0 || value.length >= 3,
-      "Phone number must contain at least 3 characters.",
+      (value) => value.length === 0 || /^\d{10}$/.test(value),
+      "Phone number must contain exactly 10 digits.",
     ),
-  employeeCode: z.string().trim().max(50),
+  employeeCode: z.string().trim().max(50).refine(
+    (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
+    "Employee code may contain letters, numbers, hyphens, and underscores only.",
+  ),
   departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
+  status: z.enum(["active", "inactive", "locked"]),
 });
 
 export type UpdateUserInput = z.input<typeof updateUserSchema>;
@@ -50,15 +77,6 @@ export type CreatedUser = z.infer<typeof createdUserSchema>;
 export const userCreateOptionsSchema = z.object({
   departments: z.array(
     z.object({ id: z.uuid(), code: z.string(), name: z.string() }),
-  ),
-  roles: z.array(
-    z.object({
-      id: z.uuid(),
-      code: z.string(),
-      name: z.string(),
-      description: z.string().nullable(),
-      isSystem: z.boolean(),
-    }),
   ),
 });
 
@@ -120,29 +138,19 @@ export type UserListResponse = z.infer<typeof userListResponseSchema>;
 export const userDetailSchema = z.object({
   id: z.uuid(),
   email: z.email(),
+  username: z.string(),
   fullName: z.string(),
-  phone: z.string().nullable(),
-  employeeCode: z.string().nullable(),
-  avatarUrl: z.string().nullable(),
-  status: userStatusSchema,
-  mustChangePassword: z.boolean(),
-  emailVerifiedAt: z.iso.datetime().nullable(),
-  lastLoginAt: z.iso.datetime().nullable(),
-  lastLockedAt: z.iso.datetime().nullable(),
-  disabledAt: z.iso.datetime().nullable(),
-  mfaEnabled: z.boolean(),
+  phone: z.string().nullish().transform((value) => value ?? null),
+  employeeCode: z.string().nullish().transform((value) => value ?? null),
   department: z
     .object({ id: z.uuid(), code: z.string(), name: z.string() })
-    .nullable(),
-  roles: z.array(
-    z.object({
-      id: z.uuid(),
-      code: z.string(),
-      name: z.string(),
-      description: z.string().nullable(),
-      assignedAt: z.iso.datetime(),
-    }),
-  ),
+    .nullish()
+    .transform((value) => value ?? null),
+  role: z.object({ code: z.string(), name: z.string() }),
+  status: userStatusSchema,
+  googleConnected: z.boolean(),
+  lastLoginAt: z.iso.datetime().nullable(),
+  passwordChangedAt: z.iso.datetime().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
