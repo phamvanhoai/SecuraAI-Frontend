@@ -10,6 +10,7 @@ import {
   Copy,
   Layers,
   Loader2,
+  RefreshCw,
   Search,
   Server,
   X,
@@ -32,10 +33,12 @@ export function ImportBatchResultDialog({
   batchId,
   isOpen,
   onClose,
+  onImportAnotherFile,
 }: {
   batchId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onImportAnotherFile?: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toast = useToast();
@@ -169,7 +172,7 @@ export function ImportBatchResultDialog({
                       {batch.status.replace("_", " ")}
                     </StatusBadge>
                     <span className="text-xs bg-neutral-soft px-2 py-0.5 rounded font-mono text-muted">
-                      {batch.batchType}
+                      {batch.fileFormat || batch.ingestionMethod || batch.batchType || "FILE_IMPORT"}
                     </span>
                   </div>
                   <p className="text-muted text-xs font-mono mt-1">
@@ -314,52 +317,55 @@ export function ImportBatchResultDialog({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/60">
-                        {invalidEventsData.items.map((row: InvalidEventItem) => (
-                          <tr
-                            key={row.id}
-                            className="hover:bg-neutral-soft/20 transition-colors"
-                          >
-                            <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-foreground">
-                              {row.recordIndex !== null
-                                ? `Row #${row.recordIndex + 1}`
-                                : "—"}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              {row.eventFamily ? (
-                                <span className="bg-neutral-soft font-mono text-[10px] px-2 py-0.5 rounded text-muted">
-                                  {row.eventFamily}
+                        {invalidEventsData.items.map((row: InvalidEventItem) => {
+                          const payload = row.rawPayload ?? row.receivedPayload;
+                          return (
+                            <tr
+                              key={row.id}
+                              className="hover:bg-neutral-soft/20 transition-colors"
+                            >
+                              <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-foreground">
+                                {typeof row.recordIndex === "number"
+                                  ? `Row #${row.recordIndex + 1}`
+                                  : "—"}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                {row.eventFamily ? (
+                                  <span className="bg-neutral-soft font-mono text-[10px] px-2 py-0.5 rounded text-muted">
+                                    {row.eventFamily}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted text-xs">—</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className="font-mono text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
+                                  {row.errorCode}
                                 </span>
-                              ) : (
-                                <span className="text-muted text-xs">—</span>
-                              )}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span className="font-mono text-rose-600 dark:text-rose-400 font-semibold text-[11px]">
-                                {row.errorCode}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-foreground font-sans max-w-sm break-words">
-                              {row.errorMessage}
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              {row.receivedPayload ? (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  onClick={() => setInspectingEvent(row)}
-                                  className="h-7 px-2.5 text-xs gap-1.5 font-mono"
-                                >
-                                  <Code2 className="size-3.5" />
-                                  <span>Inspect</span>
-                                </Button>
-                              ) : (
-                                <span className="text-muted text-xs italic">
-                                  No payload
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                              <td className="py-2.5 px-3 text-foreground font-sans max-w-sm break-words">
+                                {row.errorMessage}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                {payload ? (
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => setInspectingEvent(row)}
+                                    className="h-7 px-2.5 text-xs gap-1.5 font-mono"
+                                  >
+                                    <Code2 className="size-3.5" />
+                                    <span>Inspect</span>
+                                  </Button>
+                                ) : (
+                                  <span className="text-muted text-xs italic">
+                                    No payload
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -418,7 +424,7 @@ export function ImportBatchResultDialog({
                     <Layers className="size-4 text-primary" />
                     <span className="text-foreground font-semibold text-xs uppercase tracking-wider">
                       Raw Received Payload •{" "}
-                      {inspectingEvent.recordIndex !== null
+                      {typeof inspectingEvent.recordIndex === "number"
                         ? `Row #${inspectingEvent.recordIndex + 1}`
                         : "Event Payload"}
                     </span>
@@ -429,7 +435,9 @@ export function ImportBatchResultDialog({
                       type="button"
                       variant="secondary"
                       onClick={() =>
-                        copyPayloadToClipboard(inspectingEvent.receivedPayload)
+                        copyPayloadToClipboard(
+                          inspectingEvent.rawPayload ?? inspectingEvent.receivedPayload,
+                        )
                       }
                       className="h-7 px-2.5 text-xs gap-1.5"
                     >
@@ -449,14 +457,34 @@ export function ImportBatchResultDialog({
 
                 <div className="bg-[#0b101b] border border-border/80 rounded-lg p-3 text-[#d1d5db] font-mono text-xs max-h-64 overflow-y-auto leading-relaxed selection:bg-primary/30">
                   <pre className="whitespace-pre-wrap break-all">
-                    {JSON.stringify(inspectingEvent.receivedPayload, null, 2)}
+                    {JSON.stringify(
+                      inspectingEvent.rawPayload ?? inspectingEvent.receivedPayload,
+                      null,
+                      2,
+                    )}
                   </pre>
                 </div>
               </div>
             )}
 
             {/* Dialog Footer */}
-            <div className="border-border flex items-center justify-end border-t pt-4">
+            <div className="border-border flex items-center justify-between border-t pt-4">
+              {onImportAnotherFile ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    handleClose();
+                    onImportAnotherFile();
+                  }}
+                  className="gap-2"
+                >
+                  <RefreshCw className="size-3.5" />
+                  <span>Import another file</span>
+                </Button>
+              ) : (
+                <div />
+              )}
               <Button type="button" onClick={handleClose}>
                 Close
               </Button>
