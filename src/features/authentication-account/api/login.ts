@@ -1,7 +1,6 @@
 import type { LoginInput } from "../schemas/login-schema";
 
-export type LoginResult =
-  { authenticated: true } | { mfaRequired: true; expiresIn: number };
+export type LoginResult = { authenticated: true };
 type LoginSuccess = { success: true; data: LoginResult };
 type LoginError = { success: false; error?: { message?: string } };
 
@@ -25,12 +24,4 @@ async function post<T>(url: string, input: unknown): Promise<T> {
 
 export function login(input: LoginInput): Promise<LoginResult> {
   return post<LoginResult>("/api/auth/login", input);
-}
-
-export function verifyMfaChallenge(
-  code: string,
-): Promise<{ authenticated: true }> {
-  return post<{ authenticated: true }>("/api/auth/mfa/challenge/verify", {
-    code,
-  });
 }

@@ -7,7 +7,6 @@ const user: AuthSessionUser = {
   fullName: "Test User",
   status: "active",
   mustChangePassword: false,
-  mfaEnabled: false,
   roles: [],
   permissions: ["login-history.read"],
 };
