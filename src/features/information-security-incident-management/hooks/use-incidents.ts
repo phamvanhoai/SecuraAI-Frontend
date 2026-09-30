@@ -27,7 +27,8 @@ import {
 export const useRiskReassessmentRequestOptions = (id: string | undefined) =>
   useQuery({
     queryKey: ["incidents", "risk-reassessment-request-options", id],
-    queryFn: ({ signal }) => getRiskReassessmentRequestOptions(id ?? "", signal),
+    queryFn: ({ signal }) =>
+      getRiskReassessmentRequestOptions(id ?? "", signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -164,7 +165,6 @@ export const useIncidentClassificationQueue = (
     search: string;
     severity: string;
     status: string;
-    classification: string;
   },
   enabled: boolean,
 ) =>
