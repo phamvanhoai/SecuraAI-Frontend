@@ -39,7 +39,10 @@ import {
   type CreateRiskReassessmentRequestForm,
 } from "../schemas/risk-reassessment-request-schema";
 
-export async function getRiskReassessmentRequestOptions(id: string, signal?: AbortSignal) {
+export async function getRiskReassessmentRequestOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
   return riskReassessmentRequestOptionsSchema.parse(
     await apiRequest<unknown>(
       `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests/options`,
@@ -216,7 +219,6 @@ export async function listIncidentsForClassification(
     search: string;
     severity: string;
     status: string;
-    classification: string;
   },
   signal?: AbortSignal,
 ) {
@@ -229,9 +231,6 @@ export async function listIncidentsForClassification(
         ...(filters.search ? { search: filters.search } : {}),
         ...(filters.severity ? { severity: filters.severity } : {}),
         ...(filters.status ? { status: filters.status } : {}),
-        ...(filters.classification
-          ? { classification: filters.classification }
-          : {}),
       },
       ...(signal ? { signal } : {}),
     }),

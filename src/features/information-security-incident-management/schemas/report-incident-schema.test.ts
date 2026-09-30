@@ -3,6 +3,7 @@ import {
   assignIncidentFormSchema,
   updateIncidentProgressFormSchema,
   incidentEvidenceListSchema,
+  incidentSchema,
   removeIncidentEvidenceFormSchema,
   classifyIncidentFormSchema,
   reportIncidentFormSchema,
@@ -27,6 +28,42 @@ describe("reportIncidentFormSchema", () => {
         occurredAt: "",
       }).success,
     ).toBe(false));
+});
+describe("incidentSchema", () => {
+  it("accepts V2 incident list and detail records", () => {
+    const parsed = incidentSchema.parse({
+      id: "22222222-2222-4222-8222-222222222222",
+      incidentCode: "INC-2026-001",
+      title: "Suspicious administrative login",
+      description: "An unexpected privileged login was detected.",
+      category: null,
+      severity: "high",
+      status: "triage",
+      occurredAt: "2026-09-30T00:00:00.000Z",
+      detectedAt: "2026-09-30T00:00:00.000Z",
+      confirmedAt: null,
+      closedAt: null,
+      createdAt: "2026-09-30T00:00:00.000Z",
+      updatedAt: "2026-09-30T00:00:00.000Z",
+      classified: true,
+      classificationCount: 0,
+      lastClassification: null,
+      currentAssignment: null,
+      createdBy: {
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "Security Officer",
+        email: "officer@example.com",
+      },
+      relatedCounts: {
+        actions: 1,
+        assets: 2,
+        controls: 3,
+        evidence: 4,
+        risks: 1,
+      },
+    });
+    expect(parsed.relatedCounts.evidence).toBe(4);
+  });
 });
 describe("classifyIncidentFormSchema", () => {
   it("accepts an approved severity with rationale", () =>
