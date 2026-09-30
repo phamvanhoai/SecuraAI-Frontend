@@ -524,6 +524,13 @@ function EditEventSourceInlineForm({
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [connectionHealth, setConnectionHealth] = useState<{
+    connected: boolean;
+    message: string;
+    latencyMs: number;
+  } | null>(null);
+  const [hasTestedValid, setHasTestedValid] = useState(false);
 
   const handleFamilyToggle = (family: (typeof eventFamilies)[number]) => {
     setForm((prev) => {
@@ -586,6 +593,7 @@ function EditEventSourceInlineForm({
   };
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
       {submitError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -607,6 +615,12 @@ function EditEventSourceInlineForm({
               {source.sourceType}
             </span>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">Status:</span>
+            <StatusBadge tone={statusTones[form.status]}>
+              {form.status === "ACTIVE" ? "Active" : "Inactive"}
+            </StatusBadge>
+          </div>
           {source.creator ? (
             <div className="flex items-center gap-1.5 text-muted">
               <User className="h-3.5 w-3.5 text-muted" />
@@ -625,51 +639,28 @@ function EditEventSourceInlineForm({
           </h3>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
+        <FormField
+          id="edit-source-name"
+          label="Event source name *"
+          error={fieldErrors["name"]}
+        >
+          <Input
             id="edit-source-name"
-            label="Event source name *"
-            error={fieldErrors["name"]}
-          >
-            <Input
-              id="edit-source-name"
-              placeholder="Wazuh Production Manager"
-              value={form.name}
-              onChange={(e) => {
-                setForm((prev) => ({ ...prev, name: e.target.value }));
-                if (fieldErrors["name"]) {
-                  setFieldErrors((p) => {
-                    const n = { ...p };
-                    delete n["name"];
-                    return n;
-                  });
-                }
-              }}
-              disabled={updateMutation.isPending}
-            />
-          </FormField>
-
-          <FormField
-            id="edit-source-status"
-            label="Status *"
-            error={fieldErrors["status"]}
-          >
-            <Select
-              id="edit-source-status"
-              value={form.status}
-              onChange={(e) => {
-                setForm((prev) => ({
-                  ...prev,
-                  status: e.target.value as (typeof eventSourceStatuses)[number],
-                }));
-              }}
-              disabled={updateMutation.isPending}
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="INACTIVE">INACTIVE</option>
-            </Select>
-          </FormField>
-        </div>
+            placeholder="Wazuh Production Manager"
+            value={form.name}
+            onChange={(e) => {
+              setForm((prev) => ({ ...prev, name: e.target.value }));
+              if (fieldErrors["name"]) {
+                setFieldErrors((p) => {
+                  const n = { ...p };
+                  delete n["name"];
+                  return n;
+                });
+              }
+            }}
+            disabled={updateMutation.isPending}
+          />
+        </FormField>
       </div>
 
       {/* SECTION 2: Connection & Webhook Endpoint */}
@@ -683,15 +674,17 @@ function EditEventSourceInlineForm({
 
         <FormField
           id="edit-source-endpoint"
-          label="SecuraAI Ingestion Webhook Endpoint *"
+          label="Wazuh Manager Endpoint URL *"
           error={fieldErrors["endpoint"]}
         >
           <Input
             id="edit-source-endpoint"
-            placeholder="/api/v1/integrations/wazuh/events"
+            placeholder="https://127.0.0.1:56000 or /api/v1/integrations/wazuh/events"
             value={form.endpoint ?? ""}
             onChange={(e) => {
               setForm((prev) => ({ ...prev, endpoint: e.target.value }));
+              setHasTestedValid(false);
+              setConnectionHealth(null);
               if (fieldErrors["endpoint"]) {
                 setFieldErrors((p) => {
                   const n = { ...p };
@@ -735,9 +728,35 @@ function EditEventSourceInlineForm({
         <div className="flex items-start gap-2.5 rounded-lg border border-info/20 bg-info-soft/40 p-3 text-xs text-foreground">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
           <span>
-            Wazuh Manager (via <code>custom-securaai</code> Edge Normalizer) sends normalized events to SecuraAI using this webhook endpoint.
+            Wazuh Manager sends normalized security events to SecuraAI using this configured endpoint.
           </span>
         </div>
+
+        {connectionHealth ? (
+          connectionHealth.connected ? (
+            <div className="border-border bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center gap-2.5 rounded-lg border border-emerald-500/20 px-3.5 py-2.5 text-xs">
+              <Activity className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <span className="font-semibold">Connection Verified:</span> Wazuh Manager is reachable and responding ({connectionHealth.latencyMs}ms latency). You may now save your updated configuration.
+              </div>
+            </div>
+          ) : (
+            <div className="border-border bg-rose-500/10 text-rose-700 dark:text-rose-400 flex items-start gap-2.5 rounded-lg border border-rose-500/20 p-3 text-xs">
+              <AlertCircle className="size-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-semibold">Connection Check Failed</p>
+                <p className="text-muted-foreground">{connectionHealth.message}</p>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="border-border bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center gap-2.5 rounded-lg border border-amber-500/20 px-3 py-2 text-xs">
+            <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>
+              Please run a successful <strong>Test connection</strong> before saving configuration.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* SECTION 3: Supported Event Families */}
@@ -828,35 +847,70 @@ function EditEventSourceInlineForm({
       </div>
 
       {/* MODAL ACTIONS */}
-      <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+      <div className="flex items-center justify-between border-t border-border pt-4">
         <Button
           type="button"
           variant="secondary"
-          onClick={onCancel}
-          disabled={updateMutation.isPending}
+          onClick={() => setTestModalOpen(true)}
+          className="flex items-center gap-1.5"
         >
-          Cancel
+          <Activity aria-hidden="true" className="size-4" strokeWidth={1.8} />
+          <span>Test connection</span>
         </Button>
 
-        <Button
-          type="submit"
-          disabled={updateMutation.isPending}
-          className="flex items-center gap-2"
-        >
-          {updateMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <ShieldCheck className="h-4 w-4" />
-              Save configuration
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onCancel}
+            disabled={updateMutation.isPending}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            type="submit"
+            disabled={!hasTestedValid || updateMutation.isPending}
+            className="flex items-center gap-2"
+            title={!hasTestedValid ? "Please run a successful Test Connection before saving configuration" : undefined}
+          >
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="h-4 w-4" />
+                Save configuration
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </form>
+
+    {testModalOpen ? (
+      <TestEventSourceDialog
+        initialEndpoint={form.endpoint || source.endpoint || "https://127.0.0.1:56000"}
+        initialUsername="wazuh-wui"
+        isOpen={testModalOpen}
+        onClose={() => setTestModalOpen(false)}
+        onTestComplete={(result) => {
+          setConnectionHealth({
+            connected: result.connected,
+            message: result.message,
+            latencyMs: result.latencyMs,
+          });
+          if (result.connected) {
+            setHasTestedValid(true);
+          } else {
+            setHasTestedValid(false);
+          }
+        }}
+      />
+    ) : null}
+    </>
   );
 }
 
