@@ -39,7 +39,7 @@ export function AssetThresholdOverridesManager() {
     { key: "action", header: "Actions", cell: (item) => <Button className="min-h-10 px-3" onClick={() => setEditing(item)} variant="secondary"><Pencil aria-hidden="true" className="size-4" />Edit</Button> },
   ];
   return <>
-    <ProductPanel title="Asset threshold overrides" description={thresholds.data ? `${thresholds.data.pagination.total} asset overrides found` : "Asset-specific exceptions to the default model threshold"}>
+    <ProductPanel title="Set Custom Alert Threshold" description={thresholds.data ? `${thresholds.data.pagination.total} asset-specific threshold overrides found` : "Override the default model threshold for individual assets"}>
       <div className="border-border flex flex-wrap items-center gap-2 border-b p-4">
         <form className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(draft.trim()); }}>
           <label className="relative min-w-0 flex-1 sm:max-w-md"><span className="sr-only">Search asset threshold overrides</span><Search aria-hidden="true" className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" /><Input className="pl-9" maxLength={100} onChange={(event) => setDraft(event.target.value)} placeholder="Search by asset code or name" value={draft} /></label>

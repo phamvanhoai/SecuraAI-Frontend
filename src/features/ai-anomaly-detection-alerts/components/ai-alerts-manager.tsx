@@ -331,7 +331,7 @@ export function AiAlertsManager() {
                 )}
                 strokeWidth={2}
               />
-              <span className="truncate">Asset threshold overrides</span>
+              <span className="truncate">Set Custom Alert Threshold</span>
             </button>
           </div>
         </div>

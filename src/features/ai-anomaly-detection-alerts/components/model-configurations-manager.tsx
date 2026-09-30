@@ -126,7 +126,7 @@ export function ModelConfigurationsManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Default model threshold
+              Configure Detection Threshold
             </Button>
           ) : null
         }
