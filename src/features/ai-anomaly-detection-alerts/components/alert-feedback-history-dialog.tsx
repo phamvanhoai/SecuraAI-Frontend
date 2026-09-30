@@ -29,27 +29,42 @@ const columns: readonly DataTableColumn<AiAlertFeedback>[] = [
     ),
   },
   {
-    key: "comment",
-    header: "Comment",
+    key: "reason",
+    header: "Feedback reason",
     cell: (item) => (
       <span className="block max-w-lg min-w-56 whitespace-normal">
-        {item.comment ?? "No comment"}
+        {item.reason}
       </span>
     ),
   },
   {
-    key: "reviewer",
-    header: "Reviewer ID",
+    key: "analyst",
+    header: "Analyst",
     cell: (item) => (
-      <span className="font-mono text-xs">
-        {item.reviewedByUserId ?? "System"}
+      <span className="block min-w-44">
+        <strong className="block text-sm font-medium">{item.analyst.name}</strong>
+        <span className="text-muted block text-xs">{item.analyst.email}</span>
       </span>
     ),
   },
   {
-    key: "submitted",
-    header: "Submitted",
-    cell: (item) => formatDate(item.createdAt),
+    key: "modelVersion",
+    header: "Model version",
+    cell: (item) => (
+      <span className="block min-w-36">
+        <strong className="block text-sm font-medium">
+          {item.modelVersion.modelName}
+        </strong>
+        <span className="text-muted block text-xs tabular-nums">
+          v{item.modelVersion.version}
+        </span>
+      </span>
+    ),
+  },
+  {
+    key: "recordedAt",
+    header: "Recorded time",
+    cell: (item) => formatDate(item.recordedAt),
   },
 ];
 
@@ -91,7 +106,13 @@ export function AlertFeedbackHistoryDialog({
           </div>
           {feedback.isPending ? (
             <TableSkeleton
-              headers={["Assessment", "Comment", "Reviewer ID", "Submitted"]}
+              headers={[
+                "Assessment",
+                "Feedback reason",
+                "Analyst",
+                "Model version",
+                "Recorded time",
+              ]}
               label="Loading alert feedback"
               rows={4}
             />

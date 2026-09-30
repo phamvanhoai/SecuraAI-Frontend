@@ -219,23 +219,47 @@ describe("evaluateAiAlertReliabilitySchema", () => {
         id: "55555555-5555-4555-8555-555555555555",
         alertId: "11111111-1111-4111-8111-111111111111",
         reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+        analyst: {
+          id: "66666666-6666-4666-8666-666666666666",
+          name: "Security Officer",
+          email: "security@example.com",
+        },
         feedbackLabel: "needs_review",
         comment: null,
+        reason: "Needs further review",
+        recordedAt: "2026-09-13T03:00:00.000Z",
+        modelVersion: {
+          id: "77777777-7777-4777-8777-777777777777",
+          modelName: "secura-behavior",
+          version: "1.0.0",
+        },
         createdAt: "2026-09-13T03:00:00.000Z",
       }).success,
     ).toBe(true);
   });
 
-  it("accepts paginated feedback including a system reviewer", () => {
+  it("accepts paginated feedback with analyst and model context", () => {
     expect(
       aiAlertFeedbackListSchema.safeParse({
         items: [
           {
             id: "55555555-5555-4555-8555-555555555555",
             alertId: "11111111-1111-4111-8111-111111111111",
-            reviewedByUserId: null,
+            reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+            analyst: {
+              id: "66666666-6666-4666-8666-666666666666",
+              name: "Security Officer",
+              email: "security@example.com",
+            },
             feedbackLabel: "false_positive",
             comment: "Automated review",
+            reason: "Automated review",
+            recordedAt: "2026-09-13T03:00:00.000Z",
+            modelVersion: {
+              id: "77777777-7777-4777-8777-777777777777",
+              modelName: "secura-behavior",
+              version: "1.0.0",
+            },
             createdAt: "2026-09-13T03:00:00.000Z",
           },
         ],
