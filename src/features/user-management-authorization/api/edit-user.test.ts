@@ -4,23 +4,20 @@ import { updateUser } from "./users";
 afterEach(() => vi.restoreAllMocks());
 
 describe("edit user API", () => {
-  it("sends editable fields and maps empty optional values to null", async () => {
+  it("sends the editable V2 full name", async () => {
     const response = {
       id: "00000000-0000-4000-8000-000000000010",
       email: "analyst@example.com",
+      username: "analyst",
       fullName: "Updated Analyst",
       phone: null,
       employeeCode: null,
-      avatarUrl: null,
-      status: "active",
-      mustChangePassword: false,
-      emailVerifiedAt: null,
-      lastLoginAt: null,
-      lastLockedAt: null,
-      disabledAt: null,
-      mfaEnabled: false,
       department: null,
-      roles: [],
+      role: { code: "EMPLOYEE", name: "EMPLOYEE" },
+      status: "active",
+      googleConnected: false,
+      lastLoginAt: null,
+      passwordChangedAt: null,
       createdAt: "2026-08-01T00:00:00.000Z",
       updatedAt: "2026-09-21T00:00:00.000Z",
     };
@@ -37,6 +34,7 @@ describe("edit user API", () => {
         phone: "",
         employeeCode: "",
         departmentId: "",
+        status: "active",
       }),
     ).resolves.toEqual(response);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -48,6 +46,7 @@ describe("edit user API", () => {
           phone: null,
           employeeCode: null,
           departmentId: null,
+          status: "ACTIVE",
         }),
       }),
     );

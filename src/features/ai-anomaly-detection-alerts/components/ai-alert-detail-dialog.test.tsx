@@ -80,7 +80,14 @@ describe("AiAlertDetailDialog", () => {
   it("shows the stored explanation and influencing factors", () => {
     explanationState.current.data = {
       explanationText: "Five failed sign-ins exceeded the baseline.",
-      featureContributions: { failedSignIns: 5 },
+      featureContributions: [
+        {
+          featureName: "failedSignIns",
+          featureValue: "5",
+          contributionScore: 0.4,
+          rank: 1,
+        },
+      ],
       baselineData: { normalFailedSignIns: 1 },
     };
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
@@ -88,8 +95,11 @@ describe("AiAlertDetailDialog", () => {
     expect(
       screen.getByText("Five failed sign-ins exceeded the baseline."),
     ).toBeInTheDocument();
-    expect(screen.getByText(/"failedSignIns": 5/)).toBeInTheDocument();
-    expect(screen.getByText(/"normalFailedSignIns": 1/)).toBeInTheDocument();
+    expect(screen.getByText("Failed Sign Ins")).toBeInTheDocument();
+    expect(screen.getByText("Influence rank 1")).toBeInTheDocument();
+    expect(screen.getByText("+0.4")).toBeInTheDocument();
+    expect(screen.getByText("Raises score")).toBeInTheDocument();
+    expect(screen.getByText("Normal Failed Sign Ins")).toBeInTheDocument();
   });
 
   it("explains when no stored explanation exists", () => {

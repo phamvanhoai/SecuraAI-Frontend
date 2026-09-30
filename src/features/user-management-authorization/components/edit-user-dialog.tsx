@@ -3,8 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
+import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -24,6 +24,7 @@ const emptyValues: UpdateUserInput = {
   phone: "",
   employeeCode: "",
   departmentId: "",
+  status: "active",
 };
 
 export function EditUserDialog({
@@ -54,15 +55,15 @@ export function EditUserDialog({
     if (userId && !dialog.open) dialog.showModal();
     if (!userId && dialog.open) dialog.close();
   }, [userId]);
-
   useEffect(() => {
-    if (!detail.data) return;
-    reset({
-      fullName: detail.data.fullName,
-      phone: detail.data.phone ?? "",
-      employeeCode: detail.data.employeeCode ?? "",
-      departmentId: detail.data.department?.id ?? "",
-    });
+    if (detail.data)
+      reset({
+        fullName: detail.data.fullName,
+        phone: detail.data.phone ?? "",
+        employeeCode: detail.data.employeeCode ?? "",
+        departmentId: detail.data.department?.id ?? "",
+        status: detail.data.status === "disabled" ? "inactive" : detail.data.status,
+      });
   }, [detail.data, reset]);
 
   function close(): void {
@@ -71,7 +72,6 @@ export function EditUserDialog({
     reset(emptyValues);
     onClose();
   }
-
   async function submit(values: UpdateUserPayload): Promise<void> {
     try {
       const user = await mutation.mutateAsync(values);
@@ -82,26 +82,21 @@ export function EditUserDialog({
     }
   }
 
-  const loading = detail.isPending || options.isPending;
-  const loadError = detail.isError || options.isError;
-
   return (
     <Dialog
+      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
-      title="Edit user"
-      onClose={onClose}
       onCancel={(event) => {
         event.preventDefault();
         close();
       }}
-      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto"
+      onClose={onClose}
+      title="Edit user"
     >
-      {loadError ? (
+      {detail.isError || options.isError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           <strong className="block">Unable to load user information</strong>
-          <span>
-            Reload the profile and departments before editing.
-          </span>
+          <span>Reload the profile before editing.</span>
           <Button
             className="mt-3"
             onClick={() => {
@@ -115,10 +110,13 @@ export function EditUserDialog({
           </Button>
         </Alert>
       ) : null}
-      {loading ? (
-        <p className="text-muted py-8 text-sm">Loading user information…</p>
+      {detail.isPending || options.isPending ? (
+        <p className="text-muted py-8 text-sm">Loading user information...</p>
       ) : null}
-      {!loading && !loadError ? (
+      {detail.data &&
+      !detail.isError &&
+      !options.isError &&
+      !options.isPending ? (
         <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
           {mutation.error ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -129,10 +127,13 @@ export function EditUserDialog({
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="edit-user-email" label="Email">
+              <Input disabled id="edit-user-email" value={detail.data.email} />
+            </FormField>
+            <FormField id="edit-user-username" label="Username">
               <Input
-                id="edit-user-email"
                 disabled
-                value={detail.data?.email ?? ""}
+                id="edit-user-username"
+                value={detail.data.username}
               />
             </FormField>
             <FormField
@@ -142,9 +143,23 @@ export function EditUserDialog({
             >
               <Input
                 id="edit-user-full-name"
-                maxLength={150}
+                maxLength={255}
                 {...register("fullName")}
               />
+            </FormField>
+            <FormField id="edit-user-role" label="Role">
+              <Input
+                disabled
+                id="edit-user-role"
+                value={detail.data.role.name}
+              />
+            </FormField>
+            <FormField id="edit-user-status" label="Status">
+              <Select id="edit-user-status" {...register("status")}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="locked">Locked</option>
+              </Select>
             </FormField>
             <FormField
               id="edit-user-phone"
@@ -153,8 +168,10 @@ export function EditUserDialog({
             >
               <Input
                 id="edit-user-phone"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
                 type="tel"
-                maxLength={30}
                 {...register("phone")}
               />
             </FormField>
@@ -196,7 +213,7 @@ export function EditUserDialog({
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Saving…" : "Save changes"}
+              {mutation.isPending ? "Saving..." : "Save changes"}
             </Button>
           </div>
         </form>

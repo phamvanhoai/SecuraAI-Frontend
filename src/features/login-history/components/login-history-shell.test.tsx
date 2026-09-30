@@ -48,7 +48,6 @@ beforeEach(() => {
     fullName: "Admin",
     status: "active",
     mustChangePassword: false,
-    mfaEnabled: false,
     roles: [{ code: "ADMIN", name: "Admin" }],
     permissions: ["login-history.read"],
   };

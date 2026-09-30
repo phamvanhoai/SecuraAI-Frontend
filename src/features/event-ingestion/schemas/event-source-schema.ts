@@ -237,3 +237,137 @@ export const testEventSourceDiagnosticSchema = z.object({
 export type TestEventSourceDiagnosticResponse = z.infer<
   typeof testEventSourceDiagnosticSchema
 >;
+
+export const importEventsPayloadSchema = z.object({
+  fileName: z.string().trim().max(255).optional().nullable(),
+  fileFormat: z.enum(["JSON", "CSV"]).default("JSON"),
+  eventFamily: z.enum(eventFamilies).optional().nullable(),
+  events: z
+    .array(z.record(z.string(), z.unknown()))
+    .min(1, "At least one event record must be provided")
+    .max(5000, "Maximum 5000 events per import"),
+});
+
+export type ImportEventsPayload = z.infer<typeof importEventsPayloadSchema>;
+
+export const importEventsResponseSchema = z.object({
+  batchId: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  eventSourceName: z.string(),
+  fileName: z.string().nullable(),
+  fileFormat: z.string(),
+  totalRecords: z.number(),
+  acceptedRecords: z.number(),
+  rejectedRecords: z.number(),
+  status: z.enum(["COMPLETED", "PARTIALLY_COMPLETED", "FAILED"]),
+  startedAt: z.string(),
+  completedAt: z.string(),
+    errors: z.array(
+      z.object({
+        recordIndex: z.number(),
+        errorCode: z.string(),
+        errorMessage: z.string(),
+      }),
+    ),
+});
+
+export type ImportEventsResponse = z.infer<typeof importEventsResponseSchema>;
+
+export const batchStatuses = [
+  "PENDING",
+  "PROCESSING",
+  "COMPLETED",
+  "PARTIALLY_COMPLETED",
+  "FAILED",
+] as const;
+
+export type BatchStatus = (typeof batchStatuses)[number];
+
+export const batchDetailResponseSchema = z.object({
+  id: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  eventSourceName: z.string(),
+  batchType: z.string(),
+  status: z.enum(batchStatuses),
+  totalRecords: z.number(),
+  acceptedRecords: z.number(),
+  rejectedRecords: z.number(),
+  errorMessage: z.string().nullable(),
+  startedAt: z.string(),
+  completedAt: z.string().nullable(),
+  createdBy: z.string().uuid().nullable(),
+  creator: z
+    .object({
+      id: z.string().uuid(),
+      email: z.string().email(),
+      fullName: z.string().nullable(),
+    })
+    .nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type BatchDetailResponse = z.infer<typeof batchDetailResponseSchema>;
+
+export const invalidEventItemSchema = z.object({
+  id: z.string().uuid(),
+  eventSourceId: z.string().uuid(),
+  ingestionBatchId: z.string().uuid().nullable(),
+  eventFamily: z.enum(eventFamilies).nullable(),
+  recordIndex: z.number().nullable(),
+  errorCode: z.string(),
+  errorMessage: z.string(),
+  receivedPayload: z.record(z.string(), z.unknown()).nullable(),
+  receivedAt: z.string(),
+  createdAt: z.string(),
+});
+
+export type InvalidEventItem = z.infer<typeof invalidEventItemSchema>;
+
+export const getBatchInvalidEventsQuerySchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  errorCode: z.string().trim().optional(),
+  q: z.string().trim().optional(),
+});
+
+export type GetBatchInvalidEventsQuery = z.infer<
+  typeof getBatchInvalidEventsQuerySchema
+>;
+
+export const paginatedInvalidEventsSchema = z.object({
+  items: z.array(invalidEventItemSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+});
+
+export type PaginatedInvalidEvents = z.infer<
+  typeof paginatedInvalidEventsSchema
+>;
+
+export const getSourceBatchesQuerySchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  status: z.enum(batchStatuses).optional(),
+});
+
+export type GetSourceBatchesQuery = z.infer<
+  typeof getSourceBatchesQuerySchema
+>;
+
+export const paginatedBatchesSchema = z.object({
+  items: z.array(batchDetailResponseSchema),
+  pagination: z.object({
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+  }),
+});
+
+export type PaginatedBatches = z.infer<typeof paginatedBatchesSchema>;
+

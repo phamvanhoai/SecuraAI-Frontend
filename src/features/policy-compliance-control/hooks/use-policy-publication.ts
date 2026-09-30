@@ -8,6 +8,7 @@ import {
   requestPolicyRevision,
   rejectPolicy,
   listRejectedPolicies,
+  reviewPolicy,
 } from "../api/policy-publication";
 import type {
   PublishablePolicyQuery,
@@ -47,6 +48,14 @@ export function useApprovePolicyForPublication() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: approvePolicyForPublication,
+    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function useReviewPolicy() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: reviewPolicy,
     onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
   });
 }

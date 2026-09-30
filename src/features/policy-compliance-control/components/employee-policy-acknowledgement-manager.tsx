@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Search } from "lucide-react";
+import { BookOpenCheck, Eye, History, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -140,6 +140,27 @@ export function EmployeePolicyAcknowledgementManager({
         description="Read policies applicable to your department and confirm your understanding."
         showSampleNotice={false}
       />
+      {onViewHistory ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="published"
+            tabs={[
+              {
+                id: "published",
+                label: "Published policies",
+                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: () => undefined,
+              },
+              {
+                id: "history",
+                label: "Version history",
+                icon: <History aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: onViewHistory,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         title="Applicable policies"
         description={
@@ -148,15 +169,6 @@ export function EmployeePolicyAcknowledgementManager({
             : "Published policies assigned to your department"
         }
       >
-        {onViewHistory ? (
-          <PolicyViewTabs
-            activeId="published"
-            tabs={[
-              { id: "published", label: "Published", onSelect: () => undefined },
-              { id: "history", label: "Version history", onSelect: onViewHistory },
-            ]}
-          />
-        ) : null}
         <form
           className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
           onSubmit={submit}
@@ -262,7 +274,7 @@ export function EmployeePolicyAcknowledgementManager({
                     I have read and understood this policy
                   </strong>
                   <span className="text-muted text-xs">
-                    Your confirmation time and request IP will be recorded.
+                    Your confirmation time will be recorded.
                   </span>
                 </span>
               </label>
