@@ -24,6 +24,7 @@ import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeleton
 import { useSessionUser } from "@/features/authentication-account";
 import { CreateUserDialog } from "./create-user-dialog";
 import { useUsers } from "../hooks/use-users";
+import { useUserCreateOptions } from "../hooks/use-user-create-options";
 import { accountLockAction } from "../lib/account-lock";
 import {
   AccountLockDialog,
@@ -244,6 +245,7 @@ export function UsersShell() {
     (session.data?.permissions.includes("users.deactivate") ?? false);
   const canRemove =
     isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
+  const departmentOptions = useUserCreateOptions(canRead && isAdmin);
   const users = useUsers(
     {
       page,
@@ -258,6 +260,9 @@ export function UsersShell() {
 
   const departments = useMemo(() => {
     const options = new Map<string, string>();
+    for (const department of departmentOptions.data?.departments ?? []) {
+      options.set(department.id, department.name);
+    }
     for (const user of users.data?.items ?? []) {
       if (user.department)
         options.set(user.department.id, user.department.name);
@@ -266,7 +271,7 @@ export function UsersShell() {
       options.set(departmentId, "Selected department");
     }
     return [...options].sort((left, right) => left[1].localeCompare(right[1]));
-  }, [departmentId, users.data?.items]);
+  }, [departmentId, departmentOptions.data?.departments, users.data?.items]);
 
   const roles = useMemo(() => {
     const options = new Map<string, string>();
@@ -373,16 +378,16 @@ export function UsersShell() {
             tone: "brand",
           },
           {
+            label: "Inactive users",
+            value: String(data.summary.inactive),
+            detail: "Currently inactive",
+            tone: "neutral",
+          },
+          {
             label: "Locked users",
             value: String(data.summary.locked),
             detail: "Needs attention",
             tone: "warning",
-          },
-          {
-            label: "Disabled users",
-            value: String(data.summary.disabled),
-            detail: "Disabled accounts",
-            tone: "neutral",
           },
         ]}
       />
@@ -468,7 +473,6 @@ export function UsersShell() {
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="locked">Locked</option>
-                <option value="disabled">Disabled</option>
               </Select>
             </label>
           </div>
