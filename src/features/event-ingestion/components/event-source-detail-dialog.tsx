@@ -16,7 +16,6 @@ import {
   Power,
   ShieldCheck,
   SlidersHorizontal,
-  Upload,
   User,
 } from "lucide-react";
 import { StatusBadge } from "@/components/data-display/static-product";
@@ -35,8 +34,6 @@ import {
   type EventSourceResponse,
   type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
-import { ImportBatchResultDialog } from "./import-batch-result-dialog";
-import { ImportEventsDialog } from "./import-events-dialog";
 import { TestEventSourceDialog } from "./test-event-source-dialog";
 import { ToggleEventSourceStatusDialog } from "./toggle-event-source-status-dialog";
 
@@ -104,8 +101,6 @@ export function EventSourceDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [connectionHealth, setConnectionHealth] = useState<{
     connected: boolean;
     message: string;
@@ -120,14 +115,12 @@ export function EventSourceDetailDialog({
     if (sourceId && !dialog.open) {
       setIsEditing(false);
       setIsTogglingStatus(false);
-      setIsImportOpen(false);
       setConnectionHealth(null);
       dialog.showModal();
     }
     if (!sourceId && dialog.open) {
       setIsEditing(false);
       setIsTogglingStatus(false);
-      setIsImportOpen(false);
       setConnectionHealth(null);
       dialog.close();
     }
@@ -144,7 +137,6 @@ export function EventSourceDetailDialog({
   const handleClose = () => {
     setIsEditing(false);
     setIsTogglingStatus(false);
-    setIsImportOpen(false);
     onClose();
   };
 
@@ -225,16 +217,6 @@ export function EventSourceDetailDialog({
                     {connectionHealth.connected ? `Reachable (${connectionHealth.latencyMs}ms)` : "Connection Failed"}
                   </StatusBadge>
                 ) : null}
-                <Button
-                  className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
-                  onClick={() => setIsImportOpen(true)}
-                  title="Import events from file"
-                  type="button"
-                  variant="secondary"
-                >
-                  <Upload aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-                  <span>Import Events</span>
-                </Button>
                 <Button
                   className={`min-h-8 gap-1.5 px-2.5 text-xs font-medium ${
                     source.status === "ACTIVE"
@@ -545,23 +527,6 @@ export function EventSourceDetailDialog({
       }}
       source={isTogglingStatus && source ? source : null}
     />
-
-    {isImportOpen ? (
-      <ImportEventsDialog
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
-        presetSource={source ?? null}
-        onViewBatchReport={(batchId) => setSelectedBatchId(batchId)}
-      />
-    ) : null}
-
-    {selectedBatchId ? (
-      <ImportBatchResultDialog
-        batchId={selectedBatchId}
-        isOpen={Boolean(selectedBatchId)}
-        onClose={() => setSelectedBatchId(null)}
-      />
-    ) : null}
   </>
   );
 }

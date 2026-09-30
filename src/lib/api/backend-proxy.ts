@@ -62,7 +62,7 @@ export async function proxyAuthenticatedRequest(
     const contentDisposition = backendResponse.headers.get("content-disposition");
     if (contentDisposition)
       responseHeaders.set("Content-Disposition", contentDisposition);
-    const response = new NextResponse(await backendResponse.arrayBuffer(), {
+    const response = new NextResponse(backendResponse.body, {
       status: backendResponse.status,
       headers: responseHeaders,
     });
