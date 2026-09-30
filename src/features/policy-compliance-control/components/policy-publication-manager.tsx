@@ -35,6 +35,7 @@ import {
   useRequestPolicyRevision,
   useRejectPolicy,
   useRejectedPolicies,
+  useReviewPolicy,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
@@ -140,6 +141,7 @@ export function PolicyPublicationManager() {
     selected?.versionId ?? null,
   );
   const approve = useApprovePolicyForPublication();
+  const completeReview = useReviewPolicy();
   const requestRevision = useRequestPolicyRevision();
   const reject = useRejectPolicy();
   const rejectedPolicies = useRejectedPolicies(rejectedQuery);
@@ -181,7 +183,12 @@ export function PolicyPublicationManager() {
       {
         key: "status",
         header: "Status",
-        cell: () => <StatusBadge tone="warning">Awaiting approval</StatusBadge>,
+        cell: (item) =>
+          item.draftVersion.status === "waiting_approval" ? (
+            <StatusBadge tone="success">Reviewed</StatusBadge>
+          ) : (
+            <StatusBadge tone="warning">In review</StatusBadge>
+          ),
       },
       {
         key: "updatedAt",
@@ -277,6 +284,19 @@ export function PolicyPublicationManager() {
       closeReview();
     } catch (error: unknown) {
       toast.error("Unable to request revision", errorMessage(error));
+    }
+  }
+
+  async function confirmReview(): Promise<void> {
+    if (!selected) return;
+    try {
+      await completeReview.mutateAsync(selected);
+      toast.success(
+        "Policy review completed",
+        "The review was recorded and the version is ready for an approval decision.",
+      );
+    } catch (error: unknown) {
+      toast.error("Unable to complete review", errorMessage(error));
     }
   }
 
@@ -578,7 +598,9 @@ export function PolicyPublicationManager() {
               </div>
             ) : (
               <Alert>
-                Approval records an auditable decision. It does not publish the policy immediately.
+                {review.data.version.status === "waiting_approval"
+                  ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
+                  : "Confirm that you have reviewed the complete policy content before making an approval decision."}
               </Alert>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -637,14 +659,25 @@ export function PolicyPublicationManager() {
                   <Button onClick={() => setRejecting(true)} variant="danger">
                     Reject policy
                   </Button>
-                  <Button
-                    disabled={approve.isPending}
-                    onClick={confirmApproval}
-                  >
-                    {approve.isPending
-                      ? "Approving..."
-                      : "Approve for publication"}
-                  </Button>
+                  {review.data.version.status === "waiting_approval" ? (
+                    <Button
+                      disabled={approve.isPending}
+                      onClick={confirmApproval}
+                    >
+                      {approve.isPending
+                        ? "Approving..."
+                        : "Approve for publication"}
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={completeReview.isPending}
+                      onClick={confirmReview}
+                    >
+                      {completeReview.isPending
+                        ? "Recording review..."
+                        : "Complete review"}
+                    </Button>
+                  )}
                 </>
               )}
             </div>

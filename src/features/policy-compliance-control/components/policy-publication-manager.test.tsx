@@ -5,7 +5,12 @@ import { PolicyPublicationManager } from "./policy-publication-manager";
 
 afterEach(cleanup);
 
-const mocks = vi.hoisted(() => ({ approve: vi.fn(), reject: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  approve: vi.fn(),
+  reject: vi.fn(),
+  review: vi.fn(),
+  reviewStatus: "in_review" as string,
+}));
 
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn(function showModal(
@@ -20,6 +25,8 @@ beforeEach(() => {
   });
   mocks.approve.mockReset();
   mocks.reject.mockReset();
+  mocks.review.mockReset();
+  mocks.reviewStatus = "in_review";
 });
 
 vi.mock("@/components/feedback/toast", () => ({
@@ -70,7 +77,7 @@ vi.mock("../hooks/use-policy-publication", () => ({
           version: {
             id: "00000000-0000-4000-8000-000000000011",
             versionNumber: "1.0",
-            status: "in_review",
+            status: mocks.reviewStatus,
             content: "Policy content",
             changeSummary: null,
             effectiveDate: null,
@@ -115,6 +122,10 @@ vi.mock("../hooks/use-policy-publication", () => ({
     isPending: false,
     isError: false,
   }),
+  useReviewPolicy: () => ({
+    isPending: false,
+    mutateAsync: mocks.review,
+  }),
 }));
 
 describe("PolicyPublicationManager", () => {
@@ -127,7 +138,7 @@ describe("PolicyPublicationManager", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Information Security Policy")).toBeInTheDocument();
-    expect(screen.getAllByText("Awaiting approval")).toHaveLength(3);
+    expect(screen.getByText("In review")).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText("Search by policy code or title"),
     ).toBeInTheDocument();
@@ -163,9 +174,9 @@ describe("PolicyPublicationManager", () => {
     ).toHaveLength(4);
   });
 
-  it("approves a reviewed policy without publishing it", async () => {
+  it("records completion of the policy review", async () => {
     const user = userEvent.setup();
-    mocks.approve.mockResolvedValue({});
+    mocks.review.mockResolvedValue({});
     render(<PolicyPublicationManager />);
 
     await user.click(
@@ -176,12 +187,28 @@ describe("PolicyPublicationManager", () => {
     await user.click(screen.getByRole("button", { name: "Review details" }));
     expect(screen.getByText("Policy content")).toBeInTheDocument();
     expect(
-      screen.getByText(/It does not publish the policy immediately/),
+      screen.getByText(/Confirm that you have reviewed/),
     ).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Complete review" }));
+    expect(mocks.review).toHaveBeenCalledWith({
+      policyId: "00000000-0000-4000-8000-000000000010",
+      versionId: "00000000-0000-4000-8000-000000000011",
+    });
+  });
+
+  it("allows approval only after review is complete", async () => {
+    const user = userEvent.setup();
+    mocks.reviewStatus = "waiting_approval";
+    mocks.approve.mockResolvedValue({});
+    render(<PolicyPublicationManager />);
+
     await user.click(
-      screen.getByRole("button", { name: "Approve for publication" }),
+      screen.getByRole("button", { name: "Actions for Information Security Policy" }),
     );
+    await user.click(screen.getByRole("button", { name: "Review details" }));
+    expect(screen.queryByRole("button", { name: "Complete review" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve for publication" }));
     expect(mocks.approve).toHaveBeenCalledWith({
       policyId: "00000000-0000-4000-8000-000000000010",
       versionId: "00000000-0000-4000-8000-000000000011",
