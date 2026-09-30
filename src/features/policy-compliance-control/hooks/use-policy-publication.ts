@@ -9,6 +9,7 @@ import {
   rejectPolicy,
   listRejectedPolicies,
   reviewPolicy,
+  publishPolicyVersion,
 } from "../api/policy-publication";
 import type {
   PublishablePolicyQuery,
@@ -57,6 +58,14 @@ export function useReviewPolicy() {
   return useMutation({
     mutationFn: reviewPolicy,
     onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+  });
+}
+
+export function usePublishPolicyVersion() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: publishPolicyVersion,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["policies"] }),
   });
 }
 
