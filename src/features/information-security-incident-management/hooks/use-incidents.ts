@@ -14,6 +14,7 @@ import {
   reportIncident,
   getIncidentAssetOptions,
   linkIncidentToAsset,
+  unlinkIncidentFromAsset,
   getIncidentControlOptions,
   linkIncidentToControl,
   getIncidentRiskOptions,
@@ -114,10 +115,18 @@ export function useLinkIncidentToControl() {
   });
 }
 
-export const useIncidentAssetOptions = (id: string | undefined) =>
+export const useIncidentAssetOptions = (
+  id: string | undefined,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+) =>
   useQuery({
-    queryKey: ["incidents", "asset-options", id],
-    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", signal),
+    queryKey: ["incidents", "asset-options", id, query],
+    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", query, signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -131,6 +140,21 @@ export function useLinkIncidentToAsset() {
       void client.invalidateQueries({ queryKey: ["incidents"] });
       void client.invalidateQueries({
         queryKey: ["incidents", "asset-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["assets"] });
+    },
+  });
+}
+
+export function useUnlinkIncidentFromAsset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: unlinkIncidentFromAsset,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "asset-options", input.incidentId],
       });
       void client.invalidateQueries({ queryKey: ["assets"] });
     },

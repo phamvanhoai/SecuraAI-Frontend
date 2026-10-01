@@ -17,6 +17,12 @@ export const incidentAssetOptionsSchema = z.object({
       linked: z.boolean(),
     }),
   ),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(1),
+  }),
 });
 
 export const linkIncidentAssetFormSchema = z.object({
