@@ -30,6 +30,7 @@ import {
 } from "../schemas/incident-risk-schema";
 import {
   controlWeaknessOptionsSchema,
+  controlWeaknessHistorySchema,
   recordedControlWeaknessSchema,
   type RecordControlWeaknessForm,
 } from "../schemas/control-weakness-schema";
@@ -80,6 +81,22 @@ export async function getControlWeaknessOptions(
     await apiRequest<unknown>(
       `/api/incidents/${encodeURIComponent(id)}/control-weaknesses/options`,
       { target: "same-origin", ...(signal ? { signal } : {}) },
+    ),
+  );
+}
+export async function listControlWeaknessHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return controlWeaknessHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/control-weaknesses`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
     ),
   );
 }
