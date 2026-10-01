@@ -121,6 +121,12 @@ export async function linkIncidentToRisk(input: {
 
 export async function getIncidentControlOptions(
   id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
   signal?: AbortSignal,
 ) {
   return incidentControlOptionsSchema.parse(
@@ -128,9 +134,25 @@ export async function getIncidentControlOptions(
       `/api/incidents/${encodeURIComponent(id)}/controls/options`,
       {
         target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
         ...(signal ? { signal } : {}),
       },
     ),
+  );
+}
+
+export async function unlinkIncidentFromControl(input: {
+  incidentId: string;
+  controlId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/controls/${encodeURIComponent(input.controlId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 
