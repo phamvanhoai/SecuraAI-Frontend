@@ -26,7 +26,20 @@ import {
   recordControlWeakness,
   getRiskReassessmentRequestOptions,
   createRiskReassessmentRequest,
+  listRiskReassessmentRequestHistory,
 } from "../api/incidents";
+
+export const useRiskReassessmentRequestHistory = (
+  id: string | undefined,
+  page: number,
+) =>
+  useQuery({
+    queryKey: ["incidents", "risk-reassessment-request-history", id, page],
+    queryFn: ({ signal }) =>
+      listRiskReassessmentRequestHistory(id ?? "", page, signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
 
 export const useControlWeaknessHistory = (
   id: string | undefined,
@@ -56,6 +69,9 @@ export function useCreateRiskReassessmentRequest() {
       void client.invalidateQueries({ queryKey: ["incidents"] });
       void client.invalidateQueries({
         queryKey: ["incidents", "risk-reassessment-request-options", input.id],
+      });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-reassessment-request-history", input.id],
       });
       void client.invalidateQueries({ queryKey: ["risks"] });
     },
