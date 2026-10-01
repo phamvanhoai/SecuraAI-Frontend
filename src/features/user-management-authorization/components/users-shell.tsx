@@ -163,7 +163,7 @@ function userRows(
               Edit
             </button>
             <button
-              aria-label={`Assign roles to ${user.fullName}`}
+              aria-label={`Assign access to ${user.fullName}`}
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!canAssignRoles || user.status === "disabled"}
               onClick={() => assignRoles(user.id)}
@@ -174,7 +174,7 @@ function userRows(
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Assign roles
+              Assign role, scope & ownership
             </button>
             {action ? (
               <button
