@@ -12,7 +12,10 @@ import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useEvaluateAiAlertReliability } from "../hooks/use-ai-alerts";
+import {
+  useEvaluateAiAlertReliability,
+  usePrefetchAiAlertFeedback,
+} from "../hooks/use-ai-alerts";
 import {
   evaluateAiAlertReliabilitySchema,
   type AiAlert,
@@ -39,6 +42,7 @@ export function EvaluateAlertReliabilityDialog({
   const [message, setMessage] = useState<string>();
   const [tab, setTab] = useState<FeedbackTab>(initialTab);
   const mutation = useEvaluateAiAlertReliability(alert?.id ?? null);
+  usePrefetchAiAlertFeedback(alert?.id ?? null);
   const toast = useToast();
   const {
     register,

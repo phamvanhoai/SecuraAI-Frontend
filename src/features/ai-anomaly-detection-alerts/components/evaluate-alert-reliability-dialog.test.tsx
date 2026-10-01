@@ -13,10 +13,12 @@ import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dia
 
 const mocks = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
+  prefetchFeedback: vi.fn(),
   success: vi.fn(),
 }));
 
 vi.mock("../hooks/use-ai-alerts", () => ({
+  usePrefetchAiAlertFeedback: mocks.prefetchFeedback,
   useEvaluateAiAlertReliability: () => ({
     isPending: false,
     mutateAsync: mocks.mutateAsync,
@@ -84,6 +86,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   mocks.mutateAsync.mockReset();
+  mocks.prefetchFeedback.mockReset();
   mocks.success.mockReset();
   mocks.mutateAsync.mockResolvedValue({});
 });
@@ -93,6 +96,8 @@ afterEach(cleanup);
 describe("EvaluateAlertReliabilityDialog", () => {
   it("requires an assessment", async () => {
     render(<EvaluateAlertReliabilityDialog alert={alert} onClose={vi.fn()} />);
+
+    expect(mocks.prefetchFeedback).toHaveBeenCalledWith(alert.id);
 
     await userEvent
       .setup()
