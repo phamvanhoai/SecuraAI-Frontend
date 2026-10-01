@@ -29,10 +29,11 @@ describe("incident risk schemas", () => {
             riskCode: "RSK-001",
             title: "Credential compromise",
             status: "open",
-            reviewDate: null,
+            reviewDate: "2027-01-15T00:00:00.000Z",
             linked: false,
           },
         ],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       }).success,
     ).toBe(true);
   });

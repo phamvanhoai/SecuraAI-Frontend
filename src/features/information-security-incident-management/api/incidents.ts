@@ -99,12 +99,39 @@ export async function recordControlWeakness(input: {
   );
 }
 
-export async function getIncidentRiskOptions(id: string, signal?: AbortSignal) {
+export async function getIncidentRiskOptions(
+  id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+  signal?: AbortSignal,
+) {
   return incidentRiskOptionsSchema.parse(
     await apiRequest<unknown>(
       `/api/incidents/${encodeURIComponent(id)}/risks/options`,
-      { target: "same-origin", ...(signal ? { signal } : {}) },
+      {
+        target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
+        ...(signal ? { signal } : {}),
+      },
     ),
+  );
+}
+export async function unlinkIncidentFromRisk(input: {
+  incidentId: string;
+  riskId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/risks/${encodeURIComponent(input.riskId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 export async function linkIncidentToRisk(input: {
