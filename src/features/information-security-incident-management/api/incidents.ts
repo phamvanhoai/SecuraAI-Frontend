@@ -36,9 +36,27 @@ import {
 } from "../schemas/control-weakness-schema";
 import {
   riskReassessmentRequestOptionsSchema,
+  riskReassessmentRequestHistorySchema,
   riskReassessmentRequestSchema,
   type CreateRiskReassessmentRequestForm,
 } from "../schemas/risk-reassessment-request-schema";
+
+export async function listRiskReassessmentRequestHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return riskReassessmentRequestHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 
 export async function getRiskReassessmentRequestOptions(
   id: string,
