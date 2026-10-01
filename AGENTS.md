@@ -41,6 +41,29 @@ Use the typed shared API client, `unknown` at external boundaries, `{ success, d
 
 Never store access or refresh tokens in local/session storage, persisted client state or JavaScript-readable cookies. Require an approved BFF/HttpOnly-cookie flow; cookies must be `Secure` in production with appropriate `SameSite`, lifetime and path. Validate return URLs, use generic authentication errors, filter navigation by backend-defined permissions, and treat UI authorization as defense-in-depth rather than backend enforcement. Preserve security headers and never put secrets in `NEXT_PUBLIC_*`.
 
+### Fixed roles and contextual business actors
+
+The fixed backend roles are `ADMIN`, `SECURITY_OFFICER`, `EXECUTIVE` and `EMPLOYEE`. Project Tracking labels **Risk Owner**, **Control Owner**, **Asset Owner** and **Authorized Approver** are contextual business actors, not additional role codes.
+
+- Risk Owner is normally an Employee referenced by `risks.owner_user_id`.
+- Control Owner is normally an Employee referenced by `security_controls.owner_user_id`.
+- Asset Owner is normally an Employee referenced by `assets.owner_user_id`.
+- Authorized Approver is determined by the contract of the particular approval workflow; do not assume one global approver role or permission.
+
+Never add these actor labels to frontend fixed-role enums or hard-code them as session roles. Do not infer ownership from names, email addresses, table rows already loaded by another feature, or Prisma. Consume the backend response and published API contract.
+
+For a use case assigned to a contextual actor, implement the frontend in this order:
+
+1. Confirm the backend endpoint and the exact capability used for module/navigation discovery.
+2. Keep the module visible only when `/users/me` returns the capability. An Employee without owned/assigned work should not see an empty privileged module merely because their fixed role is Employee.
+3. Load records through an ownership-scoped backend endpoint. Do not request all records and filter them in the browser.
+4. Render actions from response state such as `canReview`, `canApprove` or allowed transitions when the API provides it. Do not recreate authorization from `role === "EMPLOYEE"` or an `ownerUserId` comparison alone.
+5. Treat `403`, reassignment and stale `409` responses as normal workflow outcomes: remove or disable the stale action, refresh the relevant query and show actionable feedback.
+6. After a mutation, invalidate the contextual list, the affected detail and any navigation/session query whose capability may change.
+7. Test an eligible owner/approver, an ineligible Employee, loading/error/empty states, terminal states, reassignment/stale data, keyboard operation and responsive layout.
+
+Example: a Risk Owner still has the session role `EMPLOYEE`. The Risk Register appears only when `/users/me` includes `risks.read`; the list API returns only accessible risks; and each review action remains subject to backend ownership checks. Frontend visibility is never proof of authorization.
+
 ## TypeScript and Tailwind
 
 Keep strict mode, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. No `any`, `@ts-ignore`, non-null assertions or error-skipping build configuration. Prefer `import type` where applicable and explicit exported types. Tailwind v4 uses `@import "tailwindcss"` and CSS theme variables; do not add v3 directives or needless config. Use `cn` for conditional class merging.
