@@ -4,7 +4,6 @@ import {
   Ellipsis,
   Eye,
   FileSearch,
-  History,
   MessageSquareText,
   LoaderCircle,
   PlayCircle,
@@ -54,7 +53,6 @@ import {
   statusTone,
 } from "./ai-alert-detail-dialog";
 import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dialog";
-import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
 import { MarkFurtherInvestigationDialog } from "./mark-further-investigation-dialog";
@@ -70,7 +68,6 @@ export function AiAlertsManager() {
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [viewing, setViewing] = useState<AiAlert | null>(null);
   const [evaluating, setEvaluating] = useState<AiAlert | null>(null);
-  const [viewingFeedback, setViewingFeedback] = useState<AiAlert | null>(null);
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
     useState<AiAlert | null>(null);
@@ -268,19 +265,7 @@ export function AiAlertsManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Evaluate reliability
-              </button>
-              <button
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                onClick={() => setViewingFeedback(item)}
-                type="button"
-              >
-                <History
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                View feedback history
+                Record alert feedback
               </button>
             </>
           ) : null}
@@ -608,11 +593,8 @@ export function AiAlertsManager() {
       <AiAlertDetailDialog alert={viewing} onClose={() => setViewing(null)} />
       <EvaluateAlertReliabilityDialog
         alert={evaluating}
+        key={evaluating?.id ?? "closed"}
         onClose={() => setEvaluating(null)}
-      />
-      <AlertFeedbackHistoryDialog
-        alert={viewingFeedback}
-        onClose={() => setViewingFeedback(null)}
       />
       <ConfirmAlertIncidentDialog
         alert={confirming}

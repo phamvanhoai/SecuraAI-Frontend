@@ -21,6 +21,15 @@ vi.mock("../hooks/use-ai-alerts", () => ({
     isPending: false,
     mutateAsync: mocks.mutateAsync,
   }),
+  useAiAlertFeedback: () => ({
+    isPending: false,
+    isError: false,
+    data: {
+      items: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    },
+    refetch: vi.fn(),
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({
@@ -105,7 +114,7 @@ describe("EvaluateAlertReliabilityDialog", () => {
       "false_positive",
     );
     await user.type(
-      screen.getByLabelText("Comment (optional)"),
+      screen.getByLabelText("Feedback reason (optional)"),
       "Expected scanner traffic",
     );
     await user.click(screen.getByRole("button", { name: "Submit feedback" }));
@@ -116,10 +125,29 @@ describe("EvaluateAlertReliabilityDialog", () => {
         comment: "Expected scanner traffic",
       }),
     );
-    expect(onClose).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("tab", { name: "Feedback history" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("No feedback submitted")).toBeInTheDocument();
     expect(mocks.success).toHaveBeenCalledWith(
-      "Reliability feedback submitted",
+      "Alert feedback recorded",
       "Your assessment for AI-2026-001 was recorded.",
     );
+  });
+
+  it("opens directly on feedback history when requested", () => {
+    render(
+      <EvaluateAlertReliabilityDialog
+        alert={alert}
+        initialTab="history"
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("tab", { name: "Feedback history" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 });

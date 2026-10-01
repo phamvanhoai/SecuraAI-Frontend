@@ -17,6 +17,11 @@ vi.mock("../hooks/use-ai-alerts", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => ({
+    data: { fullName: "Security Analyst", email: "analyst@secura.test" },
+  }),
+}));
 
 const alert = {
   id: "c82662ff-8cb7-4e97-b5f6-b0b1d9cb54c8",
@@ -54,10 +59,14 @@ describe("MarkFurtherInvestigationDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.mutateAsync.mockResolvedValue({ changed: true });
-    HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) {
+    HTMLDialogElement.prototype.showModal = vi.fn(function (
+      this: HTMLDialogElement,
+    ) {
       this.setAttribute("open", "");
     });
-    HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+    HTMLDialogElement.prototype.close = vi.fn(function (
+      this: HTMLDialogElement,
+    ) {
       this.removeAttribute("open");
     });
   });
@@ -66,7 +75,7 @@ describe("MarkFurtherInvestigationDialog", () => {
     const user = userEvent.setup();
     render(<MarkFurtherInvestigationDialog alert={alert} onClose={vi.fn()} />);
     await user.type(
-      screen.getByLabelText("Investigation reason"),
+      screen.getByLabelText("Feedback reason"),
       "  Correlate this activity with endpoint telemetry.  ",
     );
     await user.click(
@@ -82,7 +91,7 @@ describe("MarkFurtherInvestigationDialog", () => {
   it("requires a meaningful reason", async () => {
     const user = userEvent.setup();
     render(<MarkFurtherInvestigationDialog alert={alert} onClose={vi.fn()} />);
-    await user.type(screen.getByLabelText("Investigation reason"), "short");
+    await user.type(screen.getByLabelText("Feedback reason"), "short");
     await user.click(
       screen.getByRole("button", { name: "Need further investigation" }),
     );

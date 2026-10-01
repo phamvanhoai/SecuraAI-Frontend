@@ -21,6 +21,11 @@ vi.mock("../hooks/use-ai-alerts", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => ({
+    data: { fullName: "Security Analyst", email: "analyst@secura.test" },
+  }),
+}));
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -90,9 +95,12 @@ describe("ConfirmAlertIncidentDialog", () => {
     expect(
       screen.getByText(/records the alert as a true positive/i),
     ).toBeInTheDocument();
+    expect(screen.getByText("Security Analyst")).toBeInTheDocument();
+    expect(screen.getByText("anomaly-detector")).toBeInTheDocument();
+    expect(screen.getByText("v1.0.0")).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
-      screen.getByLabelText("Review comment (optional)"),
+      screen.getByLabelText("Feedback reason (optional)"),
       "  Verified by analyst  ",
     );
     await user.click(

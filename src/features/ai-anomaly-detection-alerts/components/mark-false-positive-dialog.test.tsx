@@ -21,6 +21,11 @@ vi.mock("../hooks/use-ai-alerts", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => ({
+    data: { fullName: "Security Analyst", email: "analyst@secura.test" },
+  }),
+}));
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -82,9 +87,10 @@ describe("MarkFalsePositiveDialog", () => {
     expect(
       screen.getByText(/does not retrain the AI model/i),
     ).toBeInTheDocument();
+    expect(screen.getByText("Automatically on submit")).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
-      screen.getByLabelText("Reason (optional)"),
+      screen.getByLabelText("Feedback reason (optional)"),
       "  Expected scanner traffic  ",
     );
     await user.click(

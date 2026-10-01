@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useSessionUser } from "@/features/authentication-account";
 import { useMarkAiAlertFurtherInvestigation } from "../hooks/use-ai-alerts";
 import {
   markFurtherInvestigationSchema,
@@ -16,6 +17,7 @@ import {
   type MarkFurtherInvestigationInput,
   type MarkFurtherInvestigationRequest,
 } from "../schemas/ai-alert-schema";
+import { FeedbackRecordContext } from "./feedback-record-context";
 
 export function MarkFurtherInvestigationDialog({
   alert,
@@ -27,6 +29,7 @@ export function MarkFurtherInvestigationDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const mutation = useMarkAiAlertFurtherInvestigation(alert?.id ?? null);
+  const session = useSessionUser();
   const toast = useToast();
   const {
     register,
@@ -103,10 +106,11 @@ export function MarkFurtherInvestigationDialog({
               {message}
             </Alert>
           ) : null}
+          <FeedbackRecordContext alert={alert} analyst={session.data} />
           <FormField
             error={errors.reason?.message}
             id="further-investigation-reason"
-            label="Investigation reason"
+            label="Feedback reason"
           >
             <Textarea
               aria-describedby={
@@ -136,9 +140,7 @@ export function MarkFurtherInvestigationDialog({
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending
-                ? "Updating…"
-                : "Need further investigation"}
+              {mutation.isPending ? "Updating…" : "Need further investigation"}
             </Button>
           </div>
         </form>
