@@ -641,7 +641,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Link asset
+                {item.relatedCounts.assets > 0
+                  ? "Link another asset"
+                  : "Link asset"}
               </button>
             ) : null}
             {canLinkControls ? (

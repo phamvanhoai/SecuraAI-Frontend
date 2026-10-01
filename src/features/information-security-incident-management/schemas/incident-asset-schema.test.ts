@@ -34,6 +34,7 @@ describe("incident asset schemas", () => {
           linked: false,
         },
       ],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
     });
     expect(parsed.assets[0]?.linked).toBe(false);
   });

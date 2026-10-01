@@ -152,6 +152,12 @@ export async function linkIncidentToControl(input: {
 
 export async function getIncidentAssetOptions(
   id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
   signal?: AbortSignal,
 ) {
   return incidentAssetOptionsSchema.parse(
@@ -159,6 +165,12 @@ export async function getIncidentAssetOptions(
       `/api/incidents/${encodeURIComponent(id)}/assets/options`,
       {
         target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
         ...(signal ? { signal } : {}),
       },
     ),
@@ -178,6 +190,16 @@ export async function linkIncidentToAsset(input: {
         body: input.values,
       },
     ),
+  );
+}
+
+export async function unlinkIncidentFromAsset(input: {
+  incidentId: string;
+  assetId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/assets/${encodeURIComponent(input.assetId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 export async function reportIncident(input: ReportIncidentForm) {
