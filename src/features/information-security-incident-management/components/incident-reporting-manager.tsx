@@ -673,7 +673,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Link existing risk
+                {item.relatedCounts.risks > 0
+                  ? "Link another risk"
+                  : "Link existing risk"}
               </button>
             ) : null}
             {canRecordControlWeakness ? (
