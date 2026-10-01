@@ -657,7 +657,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Link control
+                {item.relatedCounts.controls > 0
+                  ? "Link another control"
+                  : "Link control"}
               </button>
             ) : null}
             {canLinkRisks ? (

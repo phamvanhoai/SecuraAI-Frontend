@@ -16,6 +16,12 @@ export const incidentControlOptionsSchema = z.object({
     status: z.string(),
   }),
   controls: z.array(controlSchema.extend({ linked: z.boolean() })),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(1),
+  }),
 });
 export const linkIncidentControlFormSchema = z.object({
   controlId: z.uuid("Select a security control"),
