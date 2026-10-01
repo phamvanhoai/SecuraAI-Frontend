@@ -63,6 +63,7 @@ export const riskReassessmentRequestHistorySchema = z.object({
       status: z.string(),
       requestedAt: z.iso.datetime({ offset: true }),
       reviewedAt: z.iso.datetime({ offset: true }).nullable(),
+      reviewComment: z.string().nullable(),
       risk: risk.extend({ owner: person.nullable() }),
       controlWeakness: controlWeakness.nullable(),
       requestedBy: person,

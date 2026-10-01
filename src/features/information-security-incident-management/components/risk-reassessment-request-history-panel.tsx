@@ -63,11 +63,18 @@ const columns: readonly DataTableColumn<RiskReassessmentRequestHistoryItem>[] =
     },
     {
       key: "status",
-      header: "Status",
+      header: "Decision",
       cell: (item) => (
-        <StatusBadge tone={statusTone(item.status)}>
-          {label(item.status)}
-        </StatusBadge>
+        <span className="block max-w-72">
+          <StatusBadge tone={statusTone(item.status)}>
+            {label(item.status)}
+          </StatusBadge>
+          {item.reviewComment ? (
+            <span className="text-muted mt-1.5 block text-xs break-words">
+              {item.reviewComment}
+            </span>
+          ) : null}
+        </span>
       ),
     },
     {

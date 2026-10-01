@@ -7,7 +7,10 @@ import {
   getPanelNavigation,
 } from "./navigation";
 
-function visiblePaths(panel: "admin" | "dashboard", capabilities: string[]) {
+function visiblePaths(
+  panel: "admin" | "dashboard" | "employee",
+  capabilities: string[],
+) {
   return getPanelNavigation(panel)
     .filter((item) => canAccessNavigationItem(capabilities, item))
     .map((item) => item.href);
@@ -78,11 +81,24 @@ describe("V2 role navigation", () => {
     expect(paths).not.toContain("/policies");
   });
 
-  it("limits employee navigation to policy acknowledgement", () => {
-    const paths = visiblePaths("dashboard", ["policies.acknowledge"]);
+  it("shows owned risk work in employee navigation", () => {
+    const paths = visiblePaths("employee", [
+      "policies.acknowledge",
+      "risks.read",
+    ]);
     expect(paths).toContain("/policies");
-    expect(paths).not.toContain("/risks");
+    expect(paths).toContain("/risks");
     expect(paths).not.toContain("/incidents");
     expect(paths).not.toContain("/reports");
+  });
+
+  it("hides risk work from an employee without owned risks", () => {
+    const paths = visiblePaths("employee", [
+      "assets.read",
+      "policies.acknowledge",
+    ]);
+    expect(paths).toContain("/assets");
+    expect(paths).toContain("/policies");
+    expect(paths).not.toContain("/risks");
   });
 });

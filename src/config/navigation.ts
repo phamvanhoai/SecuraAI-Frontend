@@ -249,6 +249,7 @@ export const panelModules = {
   ],
   employee: [
     modules.assets,
+    modules.risks,
     modules.policies,
     modules.incidents,
     modules.notifications,
