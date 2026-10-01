@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useSessionUser } from "@/features/authentication-account";
 import { useMarkAiAlertFalsePositive } from "../hooks/use-ai-alerts";
 import {
   markFalsePositiveSchema,
@@ -16,6 +17,7 @@ import {
   type MarkFalsePositiveInput,
   type MarkFalsePositiveRequest,
 } from "../schemas/ai-alert-schema";
+import { FeedbackRecordContext } from "./feedback-record-context";
 
 export function MarkFalsePositiveDialog({
   alert,
@@ -27,6 +29,7 @@ export function MarkFalsePositiveDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const mutation = useMarkAiAlertFalsePositive(alert?.id ?? null);
+  const session = useSessionUser();
   const toast = useToast();
   const {
     register,
@@ -87,17 +90,18 @@ export function MarkFalsePositiveDialog({
           <p className="font-medium">{alert.title}</p>
           <p className="text-muted text-sm">{alert.alertCode}</p>
           <p className="text-muted text-sm leading-6">
-            This completes your triage, dismisses the alert as a false
-            positive, and records your reason. It does not retrain the AI model.
+            This completes your triage, dismisses the alert as a false positive,
+            and records your reason. It does not retrain the AI model.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {message}
             </Alert>
           ) : null}
+          <FeedbackRecordContext alert={alert} analyst={session.data} />
           <FormField
             id="false-positive-comment"
-            label="Reason (optional)"
+            label="Feedback reason (optional)"
             error={errors.comment?.message}
           >
             <Textarea
