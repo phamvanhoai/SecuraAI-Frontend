@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   confirmAiAlertAsIncident,
   evaluateAiAlertReliability,
@@ -106,7 +107,21 @@ export function useAiAlertFeedback(
     },
     enabled: enabled && alertId !== null,
     placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
+}
+
+export function usePrefetchAiAlertFeedback(alertId: string | null) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!alertId) return;
+    void queryClient.prefetchQuery({
+      queryKey: ["ai-alerts", "feedback", alertId, 1],
+      queryFn: ({ signal }) => listAiAlertFeedback(alertId, 1, signal),
+      staleTime: 30_000,
+    });
+  }, [alertId, queryClient]);
 }
 
 export function useAiAlertMetrics(enabled = true) {
