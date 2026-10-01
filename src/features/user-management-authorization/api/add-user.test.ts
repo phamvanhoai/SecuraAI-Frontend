@@ -25,6 +25,9 @@ describe("add user API", () => {
     await createUser({
       email: "new@example.com",
       fullName: "New User",
+      phone: "",
+      employeeCode: "",
+      departmentId: "",
       role: "EXECUTIVE",
     });
 
@@ -58,6 +61,9 @@ describe("add user API", () => {
       createUser({
         email: "existing@example.com",
         fullName: "Existing User",
+        phone: "",
+        employeeCode: "",
+        departmentId: "",
         role: "EMPLOYEE",
       }),
     ).rejects.toMatchObject({

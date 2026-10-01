@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
@@ -13,6 +13,10 @@ vi.mock("../hooks/use-event-sources", () => ({
     isPending: false,
     mutateAsync: createMock,
   }),
+  useTestEventSourceConnection: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({
@@ -23,6 +27,22 @@ vi.mock("@/components/feedback/toast", () => ({
 }));
 
 import { RegisterEventSourceForm } from "./register-event-source-form";
+
+beforeAll(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    },
+  });
+});
 
 describe("RegisterEventSourceForm", () => {
   beforeEach(() => {
@@ -114,5 +134,19 @@ describe("RegisterEventSourceForm", () => {
     );
     expect(toastSuccessMock).toHaveBeenCalledWith("Event source registered", expect.any(String));
     expect(onSuccessMock).toHaveBeenCalledWith(createdRecord);
+  });
+
+  it("renders the Test connection button and opens the test modal when clicked", async () => {
+    const user = userEvent.setup();
+    render(<RegisterEventSourceForm />);
+
+    const testBtn = screen.getByRole("button", { name: /Test connection/i });
+    expect(testBtn).toBeInTheDocument();
+
+    await user.click(testBtn);
+
+    expect(
+      screen.getByText("Verify connection and authentication diagnostics against a Wazuh Manager before applying changes."),
+    ).toBeInTheDocument();
   });
 });

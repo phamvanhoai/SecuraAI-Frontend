@@ -3,8 +3,11 @@
 import {
   Ellipsis,
   Eye,
+  FileSearch,
   History,
   MessageSquareText,
+  LoaderCircle,
+  PlayCircle,
   Radar,
   RefreshCw,
   Search,
@@ -32,10 +35,12 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   useAiAlertMetrics,
   useAiAlerts,
   useRunAnomalyDetection,
+  useStartAiAlertTriage,
 } from "../hooks/use-ai-alerts";
 import {
   aiAlertStatuses,
@@ -52,7 +57,8 @@ import { EvaluateAlertReliabilityDialog } from "./evaluate-alert-reliability-dia
 import { AlertFeedbackHistoryDialog } from "./alert-feedback-history-dialog";
 import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
-import { AlertThresholdsDialog } from "./alert-thresholds-dialog";
+import { MarkFurtherInvestigationDialog } from "./mark-further-investigation-dialog";
+import { AssetThresholdOverridesManager } from "./alert-thresholds-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -68,14 +74,18 @@ export function AiAlertsManager() {
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
     useState<AiAlert | null>(null);
-  const [thresholdsOpen, setThresholdsOpen] = useState(false);
+  const [markingFurtherInvestigation, setMarkingFurtherInvestigation] =
+    useState<AiAlert | null>(null);
+  const [view, setView] = useState<"alerts" | "thresholds">("alerts");
   const session = useSessionUser();
   const toast = useToast();
   const runDetection = useRunAnomalyDetection();
+  const startTriage = useStartAiAlertTriage();
   const canRunDetection =
     session.data?.permissions.includes("anomaly-detection.run") ?? false;
   const canEvaluate =
     session.data?.permissions.includes("ai-alerts.feedback") ?? false;
+  const canStartTriage = canEvaluate;
   const canConfirm =
     session.data?.permissions.includes("ai-alerts.confirm") ?? false;
   const canMarkFalsePositive =
@@ -139,11 +149,29 @@ export function AiAlertsManager() {
     {
       key: "status",
       header: "Status",
-      cell: (item) => (
-        <StatusBadge tone={statusTone(item.status)}>
-          {formatStatus(item.status)}
-        </StatusBadge>
-      ),
+      cell: (item) => {
+        const isStartingTriage =
+          startTriage.isPending && startTriage.variables === item.id;
+
+        return isStartingTriage ? (
+          <span aria-live="polite" role="status">
+            <StatusBadge tone="info">
+              <span className="inline-flex items-center gap-1.5">
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-3.5 animate-spin motion-reduce:animate-none"
+                  strokeWidth={1.8}
+                />
+                Starting triage…
+              </span>
+            </StatusBadge>
+          </span>
+        ) : (
+          <StatusBadge tone={statusTone(item.status)}>
+            {formatStatus(item.status)}
+          </StatusBadge>
+        );
+      },
     },
     {
       key: "detected",
@@ -159,11 +187,19 @@ export function AiAlertsManager() {
           label={
             <span className="grid size-6 place-items-center">
               <span className="sr-only">Actions for {item.alertCode}</span>
-              <Ellipsis
-                aria-hidden="true"
-                className="size-5"
-                strokeWidth={1.8}
-              />
+              {startTriage.isPending && startTriage.variables === item.id ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="text-brand size-5 animate-spin motion-reduce:animate-none"
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <Ellipsis
+                  aria-hidden="true"
+                  className="size-5"
+                  strokeWidth={1.8}
+                />
+              )}
             </span>
           }
         >
@@ -175,6 +211,51 @@ export function AiAlertsManager() {
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
             View XAI explanation
           </button>
+          {canStartTriage && item.status === "new" ? (
+            <button
+              aria-busy={
+                startTriage.isPending && startTriage.variables === item.id
+              }
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={startTriage.isPending}
+              onClick={() => {
+                void startTriage
+                  .mutateAsync(item.id)
+                  .then((result) => {
+                    toast.success(
+                      result.changed ? "Triage started" : "Triage already started",
+                      `${item.alertCode} is assigned to you and is now under review.`,
+                    );
+                  })
+                  .catch((error: unknown) => {
+                    toast.error(
+                      "Unable to start triage",
+                      error instanceof Error
+                        ? error.message
+                        : "Refresh the alert list and try again.",
+                    );
+                  });
+              }}
+              type="button"
+            >
+              {startTriage.isPending && startTriage.variables === item.id ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 animate-spin"
+                  strokeWidth={1.8}
+                />
+              ) : (
+                <PlayCircle
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+              )}
+              {startTriage.isPending && startTriage.variables === item.id
+                ? "Starting triage…"
+                : "Start triage"}
+            </button>
+          ) : null}
           {canEvaluate ? (
             <>
               <button
@@ -204,7 +285,8 @@ export function AiAlertsManager() {
             </>
           ) : null}
           {canConfirm &&
-          (item.status === "new" || item.status === "reviewing") ? (
+          (item.status === "reviewing" ||
+            item.status === "needs_investigation") ? (
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setConfirming(item)}
@@ -215,11 +297,26 @@ export function AiAlertsManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Confirm incident
+              Confirm true positive
+            </button>
+          ) : null}
+          {canEvaluate && item.status === "reviewing" ? (
+            <button
+              className="hover:bg-warning-soft focus-visible:outline-warning flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={() => setMarkingFurtherInvestigation(item)}
+              type="button"
+            >
+              <FileSearch
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              Need further investigation
             </button>
           ) : null}
           {canMarkFalsePositive &&
-          (item.status === "new" || item.status === "reviewing") ? (
+          (item.status === "reviewing" ||
+            item.status === "needs_investigation") ? (
             <button
               className="text-danger hover:bg-danger-soft focus-visible:outline-danger flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setMarkingFalsePositive(item)}
@@ -230,7 +327,7 @@ export function AiAlertsManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              Mark false positive
+              Dismiss as false positive
             </button>
           ) : null}
         </DropdownMenu>
@@ -276,22 +373,67 @@ export function AiAlertsManager() {
             </Button>
           ) : undefined
         }
-        {...(canManageThresholds
-          ? {
-              onSecondaryAction: () => setThresholdsOpen(true),
-              secondaryAction: "Custom alert thresholds",
-              secondaryActionIcon: (
-                <SlidersHorizontal
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-              ),
-            }
-          : {})}
         showSampleNotice={false}
         title="AI alerts"
       />
+      {canManageThresholds ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div
+            aria-label="Anomaly monitoring views"
+            className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+            role="tablist"
+          >
+            <button
+              aria-selected={view === "alerts"}
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "alerts"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              onClick={() => setView("alerts")}
+              role="tab"
+              type="button"
+            >
+              <Radar
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "alerts" ? "text-brand-contrast" : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span>AI alerts</span>
+            </button>
+            <button
+              aria-selected={view === "thresholds"}
+              className={cn(
+                "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
+                view === "thresholds"
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
+              )}
+              onClick={() => setView("thresholds")}
+              role="tab"
+              type="button"
+            >
+              <SlidersHorizontal
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0",
+                  view === "thresholds"
+                    ? "text-brand-contrast"
+                    : "text-muted",
+                )}
+                strokeWidth={2}
+              />
+              <span className="truncate">Set Custom Alert Threshold</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {view === "alerts" ? (
+        <>
       <MetricStrip
         ariaLabel="AI alert metrics for the last 24 hours"
         metrics={[
@@ -459,6 +601,10 @@ export function AiAlertsManager() {
           </div>
         ) : null}
       </ProductPanel>
+        </>
+      ) : (
+        <AssetThresholdOverridesManager />
+      )}
       <AiAlertDetailDialog alert={viewing} onClose={() => setViewing(null)} />
       <EvaluateAlertReliabilityDialog
         alert={evaluating}
@@ -476,9 +622,9 @@ export function AiAlertsManager() {
         alert={markingFalsePositive}
         onClose={() => setMarkingFalsePositive(null)}
       />
-      <AlertThresholdsDialog
-        open={thresholdsOpen}
-        onClose={() => setThresholdsOpen(false)}
+      <MarkFurtherInvestigationDialog
+        alert={markingFurtherInvestigation}
+        onClose={() => setMarkingFurtherInvestigation(null)}
       />
     </>
   );

@@ -17,6 +17,7 @@ const item = {
   assets: [],
   latestAssessment: null,
   linkedCounts: { controls: 0, treatmentPlans: 0, incidents: 0 },
+  activeTreatmentPlan: null,
   createdAt: now,
   updatedAt: now,
 };
@@ -55,6 +56,7 @@ describe("risk register contracts", () => {
         controls: [],
         treatmentPlans: [],
         incidents: [],
+        acceptances: [],
       }).success,
     ).toBe(true);
   });

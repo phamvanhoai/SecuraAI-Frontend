@@ -30,16 +30,38 @@ import {
 } from "../schemas/incident-risk-schema";
 import {
   controlWeaknessOptionsSchema,
+  controlWeaknessHistorySchema,
   recordedControlWeaknessSchema,
   type RecordControlWeaknessForm,
 } from "../schemas/control-weakness-schema";
 import {
   riskReassessmentRequestOptionsSchema,
+  riskReassessmentRequestHistorySchema,
   riskReassessmentRequestSchema,
   type CreateRiskReassessmentRequestForm,
 } from "../schemas/risk-reassessment-request-schema";
 
-export async function getRiskReassessmentRequestOptions(id: string, signal?: AbortSignal) {
+export async function listRiskReassessmentRequestHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return riskReassessmentRequestHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function getRiskReassessmentRequestOptions(
+  id: string,
+  signal?: AbortSignal,
+) {
   return riskReassessmentRequestOptionsSchema.parse(
     await apiRequest<unknown>(
       `/api/incidents/${encodeURIComponent(id)}/risk-reassessment-requests/options`,
@@ -80,6 +102,22 @@ export async function getControlWeaknessOptions(
     ),
   );
 }
+export async function listControlWeaknessHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return controlWeaknessHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/control-weaknesses`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 export async function recordControlWeakness(input: {
   id: string;
   values: RecordControlWeaknessForm;
@@ -96,12 +134,39 @@ export async function recordControlWeakness(input: {
   );
 }
 
-export async function getIncidentRiskOptions(id: string, signal?: AbortSignal) {
+export async function getIncidentRiskOptions(
+  id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+  signal?: AbortSignal,
+) {
   return incidentRiskOptionsSchema.parse(
     await apiRequest<unknown>(
       `/api/incidents/${encodeURIComponent(id)}/risks/options`,
-      { target: "same-origin", ...(signal ? { signal } : {}) },
+      {
+        target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
+        ...(signal ? { signal } : {}),
+      },
     ),
+  );
+}
+export async function unlinkIncidentFromRisk(input: {
+  incidentId: string;
+  riskId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/risks/${encodeURIComponent(input.riskId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 export async function linkIncidentToRisk(input: {
@@ -118,6 +183,12 @@ export async function linkIncidentToRisk(input: {
 
 export async function getIncidentControlOptions(
   id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
   signal?: AbortSignal,
 ) {
   return incidentControlOptionsSchema.parse(
@@ -125,9 +196,25 @@ export async function getIncidentControlOptions(
       `/api/incidents/${encodeURIComponent(id)}/controls/options`,
       {
         target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
         ...(signal ? { signal } : {}),
       },
     ),
+  );
+}
+
+export async function unlinkIncidentFromControl(input: {
+  incidentId: string;
+  controlId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/controls/${encodeURIComponent(input.controlId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 
@@ -149,6 +236,12 @@ export async function linkIncidentToControl(input: {
 
 export async function getIncidentAssetOptions(
   id: string,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
   signal?: AbortSignal,
 ) {
   return incidentAssetOptionsSchema.parse(
@@ -156,6 +249,12 @@ export async function getIncidentAssetOptions(
       `/api/incidents/${encodeURIComponent(id)}/assets/options`,
       {
         target: "same-origin",
+        query: {
+          scope: query.scope,
+          page: query.page,
+          limit: query.limit,
+          ...(query.q ? { q: query.q } : {}),
+        },
         ...(signal ? { signal } : {}),
       },
     ),
@@ -175,6 +274,16 @@ export async function linkIncidentToAsset(input: {
         body: input.values,
       },
     ),
+  );
+}
+
+export async function unlinkIncidentFromAsset(input: {
+  incidentId: string;
+  assetId: string;
+}): Promise<void> {
+  await apiRequest<void>(
+    `/api/incidents/${encodeURIComponent(input.incidentId)}/assets/${encodeURIComponent(input.assetId)}`,
+    { target: "same-origin", method: "DELETE" },
   );
 }
 export async function reportIncident(input: ReportIncidentForm) {
@@ -216,7 +325,6 @@ export async function listIncidentsForClassification(
     search: string;
     severity: string;
     status: string;
-    classification: string;
   },
   signal?: AbortSignal,
 ) {
@@ -229,9 +337,6 @@ export async function listIncidentsForClassification(
         ...(filters.search ? { search: filters.search } : {}),
         ...(filters.severity ? { severity: filters.severity } : {}),
         ...(filters.status ? { status: filters.status } : {}),
-        ...(filters.classification
-          ? { classification: filters.classification }
-          : {}),
       },
       ...(signal ? { signal } : {}),
     }),

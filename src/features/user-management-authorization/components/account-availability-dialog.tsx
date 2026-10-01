@@ -36,7 +36,12 @@ export function AccountAvailabilityDialog({
   const toast = useToast();
   const [action, setAction] = useState<AccountAvailabilityAction | null>(null);
   const [message, setMessage] = useState<string>();
-  const { register, reset, handleSubmit, formState: { errors } } = useForm<AccountAvailabilityInput>({
+  const {
+    register,
+    reset,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<AccountAvailabilityInput>({
     resolver: zodResolver(accountAvailabilityBodySchema),
     defaultValues: { reason: "" },
   });
@@ -60,10 +65,17 @@ export function AccountAvailabilityDialog({
     if (!user || !action || mutation.isPending) return;
     setMessage(undefined);
     try {
-      const result = await mutation.mutateAsync({ userId: user.id, action, body });
+      const result = await mutation.mutateAsync({
+        userId: user.id,
+        action,
+        body,
+      });
       close();
       if (!result.changed) {
-        toast.info("Account already deactivated", "The user list has been refreshed.");
+        toast.info(
+          "Account already deactivated",
+          "The user list has been refreshed.",
+        );
       } else {
         toast.success(
           action === "deactivate" ? "Account deactivated" : "Account removed",
@@ -73,7 +85,11 @@ export function AccountAvailabilityDialog({
         );
       }
     } catch (error: unknown) {
-      setMessage(error instanceof Error ? error.message : "Unable to change the account. Reload and try again.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to change the account. Reload and try again.",
+      );
     }
   }
 
@@ -83,55 +99,132 @@ export function AccountAvailabilityDialog({
       dialogRef={dialogRef}
       className="max-h-[calc(100dvh-2rem)] w-[min(34rem,calc(100%-2rem))] overflow-y-auto"
       onClose={close}
-      onCancel={(event) => { event.preventDefault(); close(); }}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
     >
       {user ? (
-        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)} aria-busy={mutation.isPending}>
+        <form
+          className="space-y-5"
+          noValidate
+          onSubmit={handleSubmit(submit)}
+          aria-busy={mutation.isPending}
+        >
           <div className="bg-neutral-soft rounded-lg p-3">
             <p className="font-semibold break-words">{user.fullName}</p>
-            <p className="text-muted mt-1 text-sm [overflow-wrap:anywhere]">{user.email}</p>
+            <p className="text-muted mt-1 text-sm [overflow-wrap:anywhere]">
+              {user.email}
+            </p>
           </div>
           <fieldset className="space-y-2">
-            <legend className="mb-2 text-sm font-semibold">Choose an action</legend>
+            <legend className="mb-2 text-sm font-semibold">
+              Choose an action
+            </legend>
             {canDeactivate && user.status !== "disabled" ? (
               <label className="border-border flex cursor-pointer gap-3 rounded-lg border p-3">
-                <input type="radio" name="account-action" checked={action === "deactivate"}
-                  onChange={() => setAction("deactivate")} disabled={mutation.isPending} />
-                <span><span className="block text-sm font-semibold">Deactivate</span>
-                  <span className="text-muted block text-xs">Blocks sign-in and revokes sessions. Profile stays visible.</span></span>
+                <input
+                  type="radio"
+                  name="account-action"
+                  checked={action === "deactivate"}
+                  onChange={() => setAction("deactivate")}
+                  disabled={mutation.isPending}
+                />
+                <span>
+                  <span className="block text-sm font-semibold">
+                    Deactivate
+                  </span>
+                  <span className="text-muted block text-xs">
+                    Blocks sign-in and revokes sessions. Profile stays visible.
+                  </span>
+                </span>
               </label>
             ) : null}
             {canRemove ? (
               <label className="border-border flex cursor-pointer gap-3 rounded-lg border p-3">
-                <input type="radio" name="account-action" checked={action === "remove"}
-                  onChange={() => setAction("remove")} disabled={mutation.isPending} />
-                <span><span className="text-danger block text-sm font-semibold">Remove (soft delete)</span>
-                  <span className="text-muted block text-xs">Hides the account from the user list and blocks sign-in. Historical records remain.</span></span>
+                <input
+                  type="radio"
+                  name="account-action"
+                  checked={action === "remove"}
+                  onChange={() => setAction("remove")}
+                  disabled={mutation.isPending}
+                />
+                <span>
+                  <span className="text-danger block text-sm font-semibold">
+                    Remove (soft delete)
+                  </span>
+                  <span className="text-muted block text-xs">
+                    Hides the account from the user list and blocks sign-in.
+                    Historical records remain.
+                  </span>
+                </span>
               </label>
             ) : null}
           </fieldset>
           {action === "remove" ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
-              This action is not reversible from User Management. Confirm the correct person before continuing.
+              This action is not reversible from User Management. Confirm the
+              correct person before continuing.
             </Alert>
           ) : null}
-          <FormField id="account-availability-reason" label="Reason (required)" error={errors.reason?.message}>
-            <Textarea id="account-availability-reason" rows={4} autoFocus disabled={mutation.isPending}
+          <FormField
+            id="account-availability-reason"
+            label="Reason (required)"
+            error={errors.reason?.message}
+          >
+            <Textarea
+              id="account-availability-reason"
+              rows={4}
+              autoFocus
+              disabled={mutation.isPending}
               aria-invalid={Boolean(errors.reason)}
               aria-describedby={`account-availability-reason-help${errors.reason ? " account-availability-reason-error" : ""}`}
-              {...register("reason")} />
-            <p id="account-availability-reason-help" className="text-muted text-xs">
+              {...register("reason")}
+            />
+            <p
+              id="account-availability-reason-help"
+              className="text-muted text-xs"
+            >
               10–1,000 characters. The reason is stored in the audit log.
             </p>
           </FormField>
-          {message ? <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert> : null}
+          {message ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              {message}
+            </Alert>
+          ) : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="secondary" disabled={mutation.isPending} onClick={close}>Cancel</Button>
-            <Button type="submit" variant="danger" disabled={!action || mutation.isPending}
-              className="dark:text-background">
-              {action === "remove" ? <Trash2 className="size-4" strokeWidth={1.8} aria-hidden="true" />
-                : <UserMinus className="size-4" strokeWidth={1.8} aria-hidden="true" />}
-              {mutation.isPending ? "Processing…" : action === "remove" ? "Remove user" : "Deactivate user"}
+            <Button
+              variant="secondary"
+              disabled={mutation.isPending}
+              onClick={close}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="danger"
+              disabled={!action || mutation.isPending}
+              className="dark:text-background"
+            >
+              {action === "remove" ? (
+                <Trash2
+                  className="size-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              ) : (
+                <UserMinus
+                  className="size-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              )}
+              {mutation.isPending
+                ? "Processing…"
+                : action === "remove"
+                  ? "Remove user"
+                  : "Deactivate user"}
             </Button>
           </div>
         </form>

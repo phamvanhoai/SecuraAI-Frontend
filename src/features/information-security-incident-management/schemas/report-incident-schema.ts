@@ -21,13 +21,16 @@ export const incidentSchema = z.object({
   id: z.uuid(),
   incidentCode: z.string(),
   title: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullable(),
   category: z.string().nullable(),
   severity: z.string(),
   status: z.string(),
   occurredAt: z.string().datetime().nullable(),
-  detectedAt: z.string().datetime(),
+  detectedAt: z.string().datetime().nullable(),
+  confirmedAt: z.string().datetime().nullable(),
+  closedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
   classified: z.boolean(),
   classificationCount: z.number().int().min(0),
   lastClassification: z
@@ -39,10 +42,20 @@ export const incidentSchema = z.object({
     .nullable(),
   currentAssignment: z
     .object({
-      assignedAt: z.string().datetime(),
+      assignedAt: z.string().datetime().nullable(),
       assignee: z.object({ id: z.uuid(), name: z.string(), email: z.email() }),
     })
     .nullable(),
+  createdBy: z
+    .object({ id: z.uuid(), name: z.string(), email: z.email() })
+    .nullable(),
+  relatedCounts: z.object({
+    actions: z.number().int().min(0),
+    assets: z.number().int().min(0),
+    controls: z.number().int().min(0),
+    evidence: z.number().int().min(0),
+    risks: z.number().int().min(0),
+  }),
 });
 export const myIncidentsSchema = z.object({
   items: z.array(incidentSchema),

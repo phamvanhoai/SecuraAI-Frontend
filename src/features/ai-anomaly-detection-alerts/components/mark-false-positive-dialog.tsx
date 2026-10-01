@@ -80,15 +80,15 @@ export function MarkFalsePositiveDialog({
       className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
-      title="Mark false positive"
+      title="Dismiss alert as false positive"
     >
       {alert ? (
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
           <p className="font-medium">{alert.title}</p>
           <p className="text-muted text-sm">{alert.alertCode}</p>
           <p className="text-muted text-sm leading-6">
-            This changes the alert status to false positive and records your
-            review. It does not retrain the AI model.
+            This completes your triage, dismisses the alert as a false
+            positive, and records your reason. It does not retrain the AI model.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
@@ -128,7 +128,7 @@ export function MarkFalsePositiveDialog({
               type="submit"
               variant="danger"
             >
-              {mutation.isPending ? "Marking…" : "Mark false positive"}
+              {mutation.isPending ? "Dismissing…" : "Dismiss as false positive"}
             </Button>
           </div>
         </form>

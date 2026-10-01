@@ -14,20 +14,49 @@ import {
   reportIncident,
   getIncidentAssetOptions,
   linkIncidentToAsset,
+  unlinkIncidentFromAsset,
   getIncidentControlOptions,
   linkIncidentToControl,
+  unlinkIncidentFromControl,
   getIncidentRiskOptions,
   linkIncidentToRisk,
+  unlinkIncidentFromRisk,
   getControlWeaknessOptions,
+  listControlWeaknessHistory,
   recordControlWeakness,
   getRiskReassessmentRequestOptions,
   createRiskReassessmentRequest,
+  listRiskReassessmentRequestHistory,
 } from "../api/incidents";
+
+export const useRiskReassessmentRequestHistory = (
+  id: string | undefined,
+  page: number,
+) =>
+  useQuery({
+    queryKey: ["incidents", "risk-reassessment-request-history", id, page],
+    queryFn: ({ signal }) =>
+      listRiskReassessmentRequestHistory(id ?? "", page, signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+export const useControlWeaknessHistory = (
+  id: string | undefined,
+  page: number,
+) =>
+  useQuery({
+    queryKey: ["incidents", "control-weakness-history", id, page],
+    queryFn: ({ signal }) => listControlWeaknessHistory(id ?? "", page, signal),
+    enabled: Boolean(id),
+    retry: false,
+  });
 
 export const useRiskReassessmentRequestOptions = (id: string | undefined) =>
   useQuery({
     queryKey: ["incidents", "risk-reassessment-request-options", id],
-    queryFn: ({ signal }) => getRiskReassessmentRequestOptions(id ?? "", signal),
+    queryFn: ({ signal }) =>
+      getRiskReassessmentRequestOptions(id ?? "", signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -40,6 +69,9 @@ export function useCreateRiskReassessmentRequest() {
       void client.invalidateQueries({ queryKey: ["incidents"] });
       void client.invalidateQueries({
         queryKey: ["incidents", "risk-reassessment-request-options", input.id],
+      });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-reassessment-request-history", input.id],
       });
       void client.invalidateQueries({ queryKey: ["risks"] });
     },
@@ -63,15 +95,26 @@ export function useRecordControlWeakness() {
       void client.invalidateQueries({
         queryKey: ["incidents", "control-weakness-options", input.id],
       });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-weakness-history", input.id],
+      });
       void client.invalidateQueries({ queryKey: ["controls"] });
     },
   });
 }
 
-export const useIncidentRiskOptions = (id: string | undefined) =>
+export const useIncidentRiskOptions = (
+  id: string | undefined,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+) =>
   useQuery({
-    queryKey: ["incidents", "risk-options", id],
-    queryFn: ({ signal }) => getIncidentRiskOptions(id ?? "", signal),
+    queryKey: ["incidents", "risk-options", id, query],
+    queryFn: ({ signal }) => getIncidentRiskOptions(id ?? "", query, signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -89,11 +132,33 @@ export function useLinkIncidentToRisk() {
     },
   });
 }
+export function useUnlinkIncidentFromRisk() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: unlinkIncidentFromRisk,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "risk-options", input.incidentId],
+      });
+      void client.invalidateQueries({ queryKey: ["risks"] });
+    },
+  });
+}
 
-export const useIncidentControlOptions = (id: string | undefined) =>
+export const useIncidentControlOptions = (
+  id: string | undefined,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+) =>
   useQuery({
-    queryKey: ["incidents", "control-options", id],
-    queryFn: ({ signal }) => getIncidentControlOptions(id ?? "", signal),
+    queryKey: ["incidents", "control-options", id, query],
+    queryFn: ({ signal }) => getIncidentControlOptions(id ?? "", query, signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -113,10 +178,33 @@ export function useLinkIncidentToControl() {
   });
 }
 
-export const useIncidentAssetOptions = (id: string | undefined) =>
+export function useUnlinkIncidentFromControl() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: unlinkIncidentFromControl,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "control-options", input.incidentId],
+      });
+      void client.invalidateQueries({ queryKey: ["controls"] });
+    },
+  });
+}
+
+export const useIncidentAssetOptions = (
+  id: string | undefined,
+  query: {
+    q: string;
+    scope: "linked" | "unlinked";
+    page: number;
+    limit: number;
+  },
+) =>
   useQuery({
-    queryKey: ["incidents", "asset-options", id],
-    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", signal),
+    queryKey: ["incidents", "asset-options", id, query],
+    queryFn: ({ signal }) => getIncidentAssetOptions(id ?? "", query, signal),
     enabled: Boolean(id),
     retry: false,
   });
@@ -130,6 +218,21 @@ export function useLinkIncidentToAsset() {
       void client.invalidateQueries({ queryKey: ["incidents"] });
       void client.invalidateQueries({
         queryKey: ["incidents", "asset-options", input.id],
+      });
+      void client.invalidateQueries({ queryKey: ["assets"] });
+    },
+  });
+}
+
+export function useUnlinkIncidentFromAsset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: unlinkIncidentFromAsset,
+    retry: false,
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: ["incidents"] });
+      void client.invalidateQueries({
+        queryKey: ["incidents", "asset-options", input.incidentId],
       });
       void client.invalidateQueries({ queryKey: ["assets"] });
     },
@@ -164,7 +267,6 @@ export const useIncidentClassificationQueue = (
     search: string;
     severity: string;
     status: string;
-    classification: string;
   },
   enabled: boolean,
 ) =>

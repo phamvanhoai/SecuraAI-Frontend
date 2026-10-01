@@ -9,7 +9,25 @@ import {
   evaluateAiAlertReliabilitySchema,
   markFalsePositiveSchema,
   markFalsePositiveResultSchema,
+  markFurtherInvestigationResultSchema,
+  markFurtherInvestigationSchema,
+  startAiAlertTriageResultSchema,
 } from "./ai-alert-schema";
+
+describe("startAiAlertTriageResultSchema", () => {
+  it("accepts an assigned reviewing alert", () => {
+    expect(
+      startAiAlertTriageResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "ALT-11111111",
+        status: "reviewing",
+        assignedToUserId: "22222222-2222-4222-8222-222222222222",
+        triageStartedAt: "2026-10-01T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
+  });
+});
 
 describe("aiAlertExplanationSchema", () => {
   it("accepts stored explanation text and JSON factors", () => {
@@ -150,6 +168,32 @@ describe("mark false positive", () => {
   });
 });
 
+describe("mark further investigation", () => {
+  it("requires and trims a meaningful investigation reason", () => {
+    expect(
+      markFurtherInvestigationSchema.parse({
+        reason: "  Correlate with endpoint telemetry.  ",
+      }),
+    ).toEqual({ reason: "Correlate with endpoint telemetry." });
+    expect(
+      markFurtherInvestigationSchema.safeParse({ reason: "short" }).success,
+    ).toBe(false);
+  });
+
+  it("accepts the status-changing response", () => {
+    expect(
+      markFurtherInvestigationResultSchema.safeParse({
+        id: "11111111-1111-4111-8111-111111111111",
+        alertCode: "AI-2026-001",
+        status: "needs_investigation",
+        reviewedByUserId: "22222222-2222-4222-8222-222222222222",
+        reviewedAt: "2026-10-01T00:00:00.000Z",
+        changed: true,
+      }).success,
+    ).toBe(true);
+  });
+});
+
 describe("evaluateAiAlertReliabilitySchema", () => {
   it("normalizes an empty optional comment", () => {
     expect(
@@ -175,23 +219,47 @@ describe("evaluateAiAlertReliabilitySchema", () => {
         id: "55555555-5555-4555-8555-555555555555",
         alertId: "11111111-1111-4111-8111-111111111111",
         reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+        analyst: {
+          id: "66666666-6666-4666-8666-666666666666",
+          name: "Security Officer",
+          email: "security@example.com",
+        },
         feedbackLabel: "needs_review",
         comment: null,
+        reason: "Needs further review",
+        recordedAt: "2026-09-13T03:00:00.000Z",
+        modelVersion: {
+          id: "77777777-7777-4777-8777-777777777777",
+          modelName: "secura-behavior",
+          version: "1.0.0",
+        },
         createdAt: "2026-09-13T03:00:00.000Z",
       }).success,
     ).toBe(true);
   });
 
-  it("accepts paginated feedback including a system reviewer", () => {
+  it("accepts paginated feedback with analyst and model context", () => {
     expect(
       aiAlertFeedbackListSchema.safeParse({
         items: [
           {
             id: "55555555-5555-4555-8555-555555555555",
             alertId: "11111111-1111-4111-8111-111111111111",
-            reviewedByUserId: null,
+            reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+            analyst: {
+              id: "66666666-6666-4666-8666-666666666666",
+              name: "Security Officer",
+              email: "security@example.com",
+            },
             feedbackLabel: "false_positive",
             comment: "Automated review",
+            reason: "Automated review",
+            recordedAt: "2026-09-13T03:00:00.000Z",
+            modelVersion: {
+              id: "77777777-7777-4777-8777-777777777777",
+              modelName: "secura-behavior",
+              version: "1.0.0",
+            },
             createdAt: "2026-09-13T03:00:00.000Z",
           },
         ],

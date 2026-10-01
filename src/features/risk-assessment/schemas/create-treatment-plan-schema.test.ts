@@ -10,7 +10,7 @@ const valid = {
   targetDate: "2026-10-31",
   actions: [
     {
-      title: "Enable multi-factor authentication",
+      title: "Strengthen account authentication",
       assignedToUserId: "00000000-0000-4000-8000-000000000003",
       dueDate: "2026-10-15",
     },

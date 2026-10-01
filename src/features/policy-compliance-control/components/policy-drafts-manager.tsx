@@ -10,6 +10,8 @@ import {
   Search,
   Send,
   Link2,
+  Files,
+  BookOpenCheck,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -39,6 +41,7 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   usePolicyDraft,
   usePolicyDrafts,
@@ -399,6 +402,27 @@ export function PolicyDraftsManager({
           },
         ]}
       />
+      {onViewPublished ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="draft-workspace"
+            tabs={[
+              {
+                id: "draft-workspace",
+                label: "Draft workspace",
+                icon: <Files aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: () => undefined,
+              },
+              {
+                id: "published",
+                label: "Published policies",
+                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: onViewPublished,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         description={
           activeTab === "drafts"
@@ -411,26 +435,34 @@ export function PolicyDraftsManager({
         }
         title="Policy drafts"
       >
-        <PolicyViewTabs
-          activeId={activeTab}
-          tabs={[
-            {
-              id: "drafts",
-              label: "Drafts",
-              count: drafts.data?.pagination.total,
-              onSelect: () => setActiveTab("drafts"),
-            },
-            {
-              id: "rejected",
-              label: "Rejected",
-              count: rejectedPolicies.data?.pagination.total,
-              onSelect: () => setActiveTab("rejected"),
-            },
-            ...(onViewPublished
-              ? [{ id: "published", label: "Published", onSelect: onViewPublished }]
-              : []),
-          ]}
-        />
+        <div
+          aria-label="Policy draft status"
+          className="border-border flex overflow-x-auto border-b px-4"
+          role="tablist"
+        >
+          {([
+            { id: "drafts" as const, label: "Drafts" },
+            { id: "rejected" as const, label: "Rejected" },
+          ]).map((tab) => (
+            <button
+              aria-controls={`${tab.id}-policies-panel`}
+              aria-selected={activeTab === tab.id}
+              className={cn(
+                "focus-visible:outline-brand min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]",
+                activeTab === tab.id
+                  ? "border-brand text-foreground"
+                  : "text-muted hover:text-foreground border-transparent",
+              )}
+              id={`${tab.id}-policies-tab`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         {activeTab === "drafts" ? (
           <div
             aria-labelledby="drafts-policies-tab"

@@ -12,13 +12,21 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useCreateUser } from "../hooks/use-create-user";
+import { useUserCreateOptions } from "../hooks/use-user-create-options";
 import {
   createUserSchema,
   type CreateUserInput,
   type CreateUserPayload,
 } from "../schemas/user-schema";
 
-const defaults: CreateUserInput = { email: "", fullName: "", role: "EMPLOYEE" };
+const defaults: CreateUserInput = {
+  email: "",
+  fullName: "",
+  phone: "",
+  employeeCode: "",
+  departmentId: "",
+  role: "EMPLOYEE",
+};
 const roles = [
   { value: "EMPLOYEE", label: "Employee" },
   { value: "SECURITY_OFFICER", label: "Security Officer" },
@@ -34,6 +42,7 @@ export function CreateUserDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const mutation = useCreateUser();
+  const options = useUserCreateOptions(open);
   const toast = useToast();
   const {
     register,
@@ -129,6 +138,20 @@ export function CreateUserDialog({
               />
             </FormField>
             <FormField
+              id="user-phone"
+              label="Phone"
+              error={errors.phone?.message}
+            >
+              <Input
+                id="user-phone"
+                inputMode="numeric"
+                maxLength={10}
+                pattern="[0-9]{10}"
+                type="tel"
+                {...register("phone")}
+              />
+            </FormField>
+            <FormField
               id="user-full-name"
               label="Full name"
               error={errors.fullName?.message}
@@ -138,12 +161,37 @@ export function CreateUserDialog({
                 autoComplete="name"
                 maxLength={255}
                 aria-invalid={Boolean(errors.fullName)}
-                aria-describedby={
-                  errors.fullName ? "user-full-name-error" : undefined
-                }
+                aria-describedby={errors.fullName ? "user-full-name-error" : undefined}
                 {...register("fullName")}
               />
             </FormField>
+            <FormField
+              id="user-employee-code"
+              label="Employee code"
+              error={errors.employeeCode?.message}
+            >
+              <Input
+                id="user-employee-code"
+                maxLength={50}
+                {...register("employeeCode")}
+              />
+            </FormField>
+            <div className="sm:col-span-2">
+              <FormField
+                id="user-department"
+                label="Department"
+                error={errors.departmentId?.message}
+              >
+                <Select id="user-department" {...register("departmentId")}>
+                  <option value="">Not assigned</option>
+                  {(options.data?.departments ?? []).map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.code} — {department.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            </div>
           </div>
         </section>
         <section

@@ -4,7 +4,7 @@ const riskSchema = z.object({
   riskCode: z.string(),
   title: z.string(),
   status: z.string(),
-  reviewDate: z.iso.date().nullable(),
+  reviewDate: z.iso.datetime({ offset: true }).nullable(),
 });
 export const incidentRiskOptionsSchema = z.object({
   incident: z.object({
@@ -14,6 +14,12 @@ export const incidentRiskOptionsSchema = z.object({
     status: z.string(),
   }),
   risks: z.array(riskSchema.extend({ linked: z.boolean() })),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(1),
+  }),
 });
 export const linkIncidentRiskFormSchema = z.object({
   riskId: z.uuid("Select an existing risk"),

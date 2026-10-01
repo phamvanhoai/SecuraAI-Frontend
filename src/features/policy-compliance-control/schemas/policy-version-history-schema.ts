@@ -56,5 +56,5 @@ export type PolicyVersionHistoryQuery = {
   page: number;
   limit: number;
   q?: string;
-  status: "all" | "draft" | "published" | "archived";
+  status: "all" | "published" | "archived";
 };

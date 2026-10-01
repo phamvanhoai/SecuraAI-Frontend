@@ -3,6 +3,8 @@ import {
   approvePolicyForPublication,
   getPolicyReview,
   listPublishablePolicies,
+  reviewPolicy,
+  publishPolicyVersion,
 } from "./policy-publication";
 
 const policyId = "00000000-0000-4000-8000-000000000010";
@@ -121,5 +123,86 @@ describe("policy publication API", () => {
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
       method: "POST",
     });
+  });
+
+  it("records completion of the policy review", async () => {
+    const reviewed = {
+      policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      description: null,
+      ownerUserId: null,
+      policyStatus: "draft",
+      updatedAt: timestamp,
+      version: {
+        id: versionId,
+        versionNumber: "1.0",
+        content: "Policy content",
+        changeSummary: null,
+        status: "waiting_approval",
+        effectiveDate: null,
+        createdByUserId: null,
+        createdAt: timestamp,
+      },
+      decision: {
+        id: "00000000-0000-4000-8000-000000000013",
+        action: "REVIEWED",
+        comment: null,
+        actorUserId: "00000000-0000-4000-8000-000000000014",
+        decidedAt: timestamp,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: reviewed }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(reviewPolicy({ policyId, versionId })).resolves.toMatchObject({
+      version: { status: "waiting_approval" },
+      decision: { action: "REVIEWED" },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/compliance/policies/${policyId}/versions/${versionId}/review`,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+  });
+
+  it("publishes an approved version through the same-origin BFF", async () => {
+    const published = {
+      policyId,
+      policyCode: "ISP-001",
+      title: "Information Security Policy",
+      description: null,
+      ownerUserId: null,
+      policyStatus: "active",
+      updatedAt: timestamp,
+      version: {
+        id: versionId,
+        versionNumber: "1.0",
+        content: "Policy content",
+        changeSummary: null,
+        status: "published",
+        effectiveDate: timestamp,
+        createdByUserId: null,
+        createdAt: timestamp,
+      },
+    };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: published }), {
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(publishPolicyVersion({ policyId, versionId })).resolves.toMatchObject({
+      policyStatus: "active",
+      version: { status: "published" },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/compliance/policies/${policyId}/versions/${versionId}/publish`,
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
   });
 });

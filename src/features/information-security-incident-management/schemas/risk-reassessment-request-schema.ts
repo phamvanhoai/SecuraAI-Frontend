@@ -41,10 +41,45 @@ export const riskReassessmentRequestSchema = z.object({
   reason: z.string(),
   status: z.string(),
   requestedAt: z.iso.datetime({ offset: true }),
-  incident: z.object({ id: z.uuid(), incidentCode: z.string(), title: z.string() }),
+  incident: z.object({
+    id: z.uuid(),
+    incidentCode: z.string(),
+    title: z.string(),
+  }),
   risk,
   controlWeakness: controlWeakness.nullable(),
 });
+const person = z.object({ id: z.uuid(), fullName: z.string() });
+export const riskReassessmentRequestHistorySchema = z.object({
+  incident: z.object({
+    id: z.uuid(),
+    incidentCode: z.string(),
+    title: z.string(),
+  }),
+  items: z.array(
+    z.object({
+      id: z.uuid(),
+      reason: z.string(),
+      status: z.string(),
+      requestedAt: z.iso.datetime({ offset: true }),
+      reviewedAt: z.iso.datetime({ offset: true }).nullable(),
+      reviewComment: z.string().nullable(),
+      risk: risk.extend({ owner: person.nullable() }),
+      controlWeakness: controlWeakness.nullable(),
+      requestedBy: person,
+      reviewedBy: person.nullable(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+    totalPages: z.number().int().nonnegative(),
+  }),
+});
+export type RiskReassessmentRequestHistoryItem = z.infer<
+  typeof riskReassessmentRequestHistorySchema
+>["items"][number];
 export type CreateRiskReassessmentRequestForm = z.infer<
   typeof createRiskReassessmentRequestFormSchema
 >;
