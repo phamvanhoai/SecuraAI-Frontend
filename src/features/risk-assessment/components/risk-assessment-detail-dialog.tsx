@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ClipboardCheck, Pencil, Send, X } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -8,7 +9,10 @@ import { useRiskRecord } from "../hooks/use-risk-register";
 import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
 import { UpdateRiskTreatmentPlanDialog } from "./update-risk-treatment-plan-dialog";
 import { useSessionUser } from "@/features/authentication-account";
-import { DecideRiskAcceptanceDialog, SubmitRiskAcceptanceDialog } from "./risk-acceptance-dialogs";
+import {
+  DecideRiskAcceptanceDialog,
+  SubmitRiskAcceptanceDialog,
+} from "./risk-acceptance-dialogs";
 
 const format = (value: string | null) =>
   value
@@ -30,7 +34,9 @@ export function RiskAssessmentDetailDialog({
   const detail = useRiskRecord(id);
   const session = useSessionUser();
   const [accepting, setAccepting] = useState(false);
-  const [decidingAcceptance, setDecidingAcceptance] = useState<string | null>(null);
+  const [decidingAcceptance, setDecidingAcceptance] = useState<string | null>(
+    null,
+  );
   const [editingPlan, setEditingPlan] = useState<
     RiskRegisterDetail["treatmentPlans"][number] | null
   >(null);
@@ -182,15 +188,55 @@ export function RiskAssessmentDetailDialog({
                   <Button
                     key={plan.id}
                     variant="secondary"
+                    className="text-brand hover:bg-brand-soft"
                     onClick={() => setEditingPlan(plan)}
                   >
+                    <Pencil aria-hidden="true" className="size-4" />
                     Update {plan.title}
                   </Button>
                 ))}
               </div>
             </section>
           ) : null}
-          <section><h3 className="font-semibold">Risk acceptance</h3><div className="mt-3 space-y-2">{risk.acceptances.map((item) => <div key={item.id} className="border-border flex items-center justify-between rounded-lg border p-3"><div><strong className="capitalize">{item.decision}</strong><p className="text-muted text-sm">Requested {format(item.requestedAt)} · valid until {format(item.validUntil)}</p></div>{item.decision === "pending" && session.data?.roles.some((role) => ["SECURITY_OFFICER", "EXECUTIVE"].includes(role.code)) ? <Button variant="secondary" onClick={() => setDecidingAcceptance(item.id)}>Review decision</Button> : null}</div>)}</div>{risk.owner?.id === session.data?.id && !risk.acceptances.some((item) => item.decision === "pending") ? <Button className="mt-3" variant="secondary" onClick={() => setAccepting(true)} disabled={!risk.treatmentPlans.length}>Review and submit acceptance</Button> : null}</section>
+          <section>
+            <h3 className="font-semibold">Risk acceptance</h3>
+            <div className="mt-3 space-y-2">
+              {risk.acceptances.map((item) => (
+                <div
+                  key={item.id}
+                  className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <div>
+                    <strong className="capitalize">{item.decision}</strong>
+                    <p className="text-muted text-sm">
+                      Requested {format(item.requestedAt)} · valid until{" "}
+                      {format(item.validUntil)}
+                    </p>
+                  </div>
+                  {item.decision === "pending" &&
+                  session.data?.roles.some((role) =>
+                    ["SECURITY_OFFICER", "EXECUTIVE"].includes(role.code),
+                  ) ? (
+                    <Button onClick={() => setDecidingAcceptance(item.id)}>
+                      <ClipboardCheck aria-hidden="true" className="size-4" />
+                      Review decision
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            {risk.owner?.id === session.data?.id &&
+            !risk.acceptances.some((item) => item.decision === "pending") ? (
+              <Button
+                className="mt-3"
+                onClick={() => setAccepting(true)}
+                disabled={!risk.treatmentPlans.length}
+              >
+                <Send aria-hidden="true" className="size-4" />
+                Review and submit acceptance
+              </Button>
+            ) : null}
+          </section>
           <div className="grid gap-6 lg:grid-cols-2">
             <Collection
               heading="Threats"
@@ -215,6 +261,7 @@ export function RiskAssessmentDetailDialog({
       ) : null}
       <div className="mt-6 flex justify-end">
         <Button variant="secondary" onClick={() => ref.current?.close()}>
+          <X aria-hidden="true" className="size-4" />
           Close
         </Button>
       </div>
@@ -225,8 +272,18 @@ export function RiskAssessmentDetailDialog({
           onClose={() => setEditingPlan(null)}
         />
       ) : null}
-      {accepting && risk ? <SubmitRiskAcceptanceDialog risk={risk} onClose={() => setAccepting(false)} /> : null}
-      {decidingAcceptance ? <DecideRiskAcceptanceDialog acceptanceId={decidingAcceptance} onClose={() => setDecidingAcceptance(null)} /> : null}
+      {accepting && risk ? (
+        <SubmitRiskAcceptanceDialog
+          risk={risk}
+          onClose={() => setAccepting(false)}
+        />
+      ) : null}
+      {decidingAcceptance ? (
+        <DecideRiskAcceptanceDialog
+          acceptanceId={decidingAcceptance}
+          onClose={() => setDecidingAcceptance(null)}
+        />
+      ) : null}
     </Dialog>
   );
 }
