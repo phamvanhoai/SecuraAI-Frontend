@@ -30,6 +30,7 @@ describe("risk reassessment request schema", () => {
           status: "pending",
           requestedAt: "2026-10-01T02:00:00.000Z",
           reviewedAt: null,
+          reviewComment: null,
           risk: {
             id: "33333333-3333-4333-8333-333333333333",
             riskCode: "RISK-1",
