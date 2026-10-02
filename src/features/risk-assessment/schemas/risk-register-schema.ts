@@ -36,7 +36,7 @@ const asset = z.object({
   code: z.string(),
   name: z.string(),
   status: z.string(),
-  criticality: z.string(),
+  criticality: z.string().nullable(),
 });
 const assessment = z.object({
   id: z.uuid(),

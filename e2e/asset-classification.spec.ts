@@ -7,8 +7,8 @@ const asset = {
   assetCode: "TEST-ASSET",
   name: "Public service",
   assetType: "SERVER",
-  criticality: "low",
-  dataClassification: "public",
+  criticality: null,
+  dataClassification: null,
   status: "active",
   owner: null,
   businessService: null,
@@ -97,9 +97,9 @@ for (const width of [375, 768, 1440]) {
             success: true,
             data: {
               assetId: id,
-              previousCriticality: "low",
+              previousCriticality: null,
               criticality: "critical",
-              previousDataClassification: "public",
+              previousDataClassification: null,
               dataClassification: "public",
               score: 5,
               methodVersion: "SECURAAI-ASSET-IMPACT-v1",
@@ -125,6 +125,7 @@ for (const width of [375, 768, 1440]) {
     });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Confidentiality impact")).toHaveValue("");
+    await expect(dialog.getByLabel("Data classification", { exact: true })).toHaveValue("");
     await dialog
       .getByRole("button", { name: "Save classification", exact: true })
       .click();
@@ -138,6 +139,7 @@ for (const width of [375, 768, 1440]) {
     ])
       await dialog.getByLabel(label).fill("1");
     await dialog.getByLabel("Availability impact").fill("5");
+    await dialog.getByLabel("Data classification", { exact: true }).selectOption("public");
     await expect(dialog.getByText(/Calculated preview:/)).toContainText(
       "5 — Critical",
     );

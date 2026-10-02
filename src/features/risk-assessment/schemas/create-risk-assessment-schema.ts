@@ -21,7 +21,7 @@ export type CreateRiskAssessmentRequest = z.infer<typeof createRiskAssessmentReq
 export const createdRiskAssessmentSchema = z.object({ id: z.uuid(), riskCode: z.string(), title: z.string(), status: z.enum(["open", "under_treatment", "accepted", "closed", "archived"]), createdAt: z.iso.datetime({ offset: true }) });
 export type CreatedRiskAssessment = z.infer<typeof createdRiskAssessmentSchema>;
 export const riskCreateOptionsSchema = z.object({
-  assets: z.array(z.object({ id: z.uuid(), code: z.string(), name: z.string(), criticality: z.string() })),
+  assets: z.array(z.object({ id: z.uuid(), code: z.string(), name: z.string(), criticality: z.string().nullable() })),
   businessServices: z.array(z.object({ id: z.uuid(), name: z.string(), description: z.string().nullable(), assetCount: z.number().int().nonnegative() })),
   owners: z.array(z.object({ id: z.uuid(), fullName: z.string(), email: z.string().email(), role: z.string() })),
 });

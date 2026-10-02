@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
+import { StatusBadge } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAssetDetail } from "../hooks/use-asset-detail";
 const date = (value: string | null) =>
   value
@@ -31,68 +34,86 @@ export function AssetDetailDialog({
       title={asset ? `${asset.assetCode} — ${asset.name}` : "Asset details"}
       dialogRef={ref}
       onClose={onClose}
-      className="max-h-[calc(100dvh-2rem)] w-[min(68rem,calc(100%-2rem))] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(68rem,calc(100%-2rem))] overflow-y-auto [&>h2]:break-words"
     >
       {detail.isPending ? (
-        <p className="text-muted py-12 text-center">Loading asset details…</p>
+        <div
+          role="status"
+          aria-label="Loading asset details"
+          aria-busy="true"
+          className="space-y-5"
+        >
+          <span className="sr-only">Loading asset details…</span>
+          <Skeleton className="h-12 w-full" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton key={index} className="h-16" />
+            ))}
+          </div>
+          <Skeleton className="h-40 w-full" />
+        </div>
       ) : detail.isError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           <strong className="block">Unable to load asset details</strong>
           <span>The asset may not exist or you may not have access.</span>
+          <Button
+            variant="secondary"
+            className="mt-3"
+            onClick={() => void detail.refetch()}
+          >
+            Try again
+          </Button>
         </Alert>
       ) : asset ? (
         <div className="space-y-6">
-          <p className="text-muted text-sm leading-6">
+          <p className="text-muted max-w-prose text-sm leading-6 [overflow-wrap:anywhere] whitespace-pre-wrap">
             {asset.description ?? "No description provided."}
           </p>
-          <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Fact label="Asset type" value={asset.assetType} />
-            <Fact label="Criticality" value={title(asset.criticality)} />
-            <Fact
-              label="Data classification"
-              value={title(asset.dataClassification)}
-            />
-            <Fact label="Status" value={title(asset.status)} />
-            <Fact label="Owner" value={asset.owner?.fullName ?? "Unassigned"} />
-            <Fact
-              label="Business service"
-              value={asset.businessService?.name ?? "Unassigned"}
-            />
-            <Fact
-              label="Created by"
-              value={asset.createdBy?.fullName ?? "Unknown"}
-            />
-            <Fact label="Created at" value={date(asset.createdAt)} />
-            <Fact label="Last updated" value={date(asset.updatedAt)} />
-            {asset.status === "archived" ? (
-              <>
-                <Fact label="Archived at" value={asset.archivedAt ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(asset.archivedAt)) : "Not recorded"} />
-                <Fact label="Archived by" value={asset.archivedBy?.fullName ?? "Not recorded"} />
-              </>
-            ) : null}
-          </dl>
-          {asset.status === "archived" ? (
-            <section className="border-border rounded-lg border p-4">
-              <h3 className="font-semibold">Archive reason</h3>
-              <p className="mt-2 text-sm break-words whitespace-pre-wrap">{asset.archiveReason ?? "Not recorded"}</p>
-            </section>
-          ) : null}
+          <section
+            aria-label="Asset overview"
+            className="border-border bg-neutral-soft/40 rounded-lg border p-4"
+          >
+            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Fact label="Asset type" value={asset.assetType} />
+              <Fact
+                label="Criticality"
+                value={
+                  asset.criticality === null ? "—" : title(asset.criticality)
+                }
+              />
+              <Fact
+                label="Data classification"
+                value={
+                  asset.dataClassification === null
+                    ? "—"
+                    : title(asset.dataClassification)
+                }
+              />
+              <Fact
+                label="Status"
+                value={
+                  <StatusBadge
+                    tone={asset.status === "active" ? "success" : "neutral"}
+                  >
+                    {title(asset.status)}
+                  </StatusBadge>
+                }
+              />
+              <Fact
+                label="Owner"
+                value={asset.owner?.fullName ?? "Unassigned"}
+              />
+              <Fact
+                label="Business service"
+                value={asset.businessService?.name ?? "Unassigned"}
+              />
+            </dl>
+          </section>
           <section className="border-border rounded-lg border p-4">
             <h3 className="font-semibold">Latest classification assessment</h3>
             {asset.classification ? (
-              <div className="mt-2 space-y-2 text-sm">
-                <p>
-                  Method: {asset.classification.methodVersion} · Informed by
-                  FIPS PUB 199 (2004), Section 3; internal extension, not a FIPS
-                  category.
-                </p>
-                <p>
-                  C: {asset.classification.confidentialityImpact} · I:{" "}
-                  {asset.classification.integrityImpact} · A:{" "}
-                  {asset.classification.availabilityImpact} · Business:{" "}
-                  {asset.classification.businessImpact}
-                </p>
-                <p>
+              <div className="mt-3 space-y-4 text-sm">
+                <p className="text-muted">
                   Assessed by{" "}
                   {asset.classification.assessedBy?.fullName ?? "Unknown"} ·{" "}
                   {new Intl.DateTimeFormat("en-GB", {
@@ -100,29 +121,64 @@ export function AssetDetailDialog({
                     timeStyle: "short",
                   }).format(new Date(asset.classification.assessedAt))}
                 </p>
-                <p className="break-words whitespace-pre-wrap">
-                  <strong className="mb-1 block">
-                    Criticality assessment basis
-                  </strong>
-                  {asset.classification.rationale}
-                </p>
-                <h4 className="font-medium">Data classification basis</h4>
-                <p className="break-words whitespace-pre-wrap">
-                  {asset.classification.dataClassificationBasis ??
-                    "No separate data classification basis recorded. Complete it when classifying again."}
-                </p>
-                {asset.classification.dataClassificationMethodVersion ? (
-                  <p className="text-muted text-xs">
-                    {asset.classification.dataClassificationMethodVersion} ·
-                    Informed by ISO/IEC 27002:2022, Control 5.12; internal
-                    labels, not a compliance certification.
+                <dl
+                  className="bg-neutral-soft/40 grid grid-cols-2 gap-4 rounded-lg p-3 sm:grid-cols-4"
+                  aria-label="Impact scores"
+                >
+                  <Fact
+                    label="Confidentiality"
+                    value={`${asset.classification.confidentialityImpact} / 5`}
+                  />
+                  <Fact
+                    label="Integrity"
+                    value={`${asset.classification.integrityImpact} / 5`}
+                  />
+                  <Fact
+                    label="Availability"
+                    value={`${asset.classification.availabilityImpact} / 5`}
+                  />
+                  <Fact
+                    label="Business impact"
+                    value={`${asset.classification.businessImpact} / 5`}
+                  />
+                </dl>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <p className="leading-6 [overflow-wrap:anywhere] whitespace-pre-wrap">
+                    <strong className="mb-1 block">
+                      Criticality assessment basis
+                    </strong>
+                    {asset.classification.rationale}
                   </p>
-                ) : null}
+                  <p className="leading-6 [overflow-wrap:anywhere] whitespace-pre-wrap">
+                    <strong className="mb-1 block">
+                      Data classification basis
+                    </strong>
+                    {asset.classification.dataClassificationBasis ??
+                      "No separate data classification basis recorded. Complete it when classifying again."}
+                  </p>
+                </div>
+                <details className="border-border border-t pt-3">
+                  <summary className="focus-visible:outline-brand cursor-pointer rounded text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-4">
+                    Methodology and references
+                  </summary>
+                  <p className="text-muted mt-3 leading-6 [overflow-wrap:anywhere]">
+                    Method: {asset.classification.methodVersion} · Informed by
+                    FIPS PUB 199 (2004), Section 3; internal extension, not a
+                    FIPS category.
+                  </p>
+                  {asset.classification.dataClassificationMethodVersion ? (
+                    <p className="text-muted text-xs">
+                      {asset.classification.dataClassificationMethodVersion} ·
+                      Informed by ISO/IEC 27002:2022, Control 5.12; internal
+                      labels, not a compliance certification.
+                    </p>
+                  ) : null}
+                </details>
               </div>
             ) : (
               <p className="text-muted mt-2 text-sm">
-                Initial/legacy classification. No saved impact scores or
-                assessment basis. Use Classify asset to document an assessment.
+                No saved impact scores or assessment basis. Use Classify asset
+                to document an assessment.
               </p>
             )}
           </section>
@@ -173,9 +229,50 @@ export function AssetDetailDialog({
               }))}
             />
           </div>
+          <section
+            className="border-border border-t pt-4"
+            aria-label="Record information"
+          >
+            <h3 className="font-semibold">Record information</h3>
+            <dl className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Fact
+                label="Created by"
+                value={asset.createdBy?.fullName ?? "Unknown"}
+              />
+              <Fact label="Created at" value={date(asset.createdAt)} />
+              <Fact label="Last updated" value={date(asset.updatedAt)} />
+              {asset.status === "archived" ? (
+                <>
+                  <Fact
+                    label="Archived at"
+                    value={
+                      asset.archivedAt
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          }).format(new Date(asset.archivedAt))
+                        : "Not recorded"
+                    }
+                  />
+                  <Fact
+                    label="Archived by"
+                    value={asset.archivedBy?.fullName ?? "Not recorded"}
+                  />
+                </>
+              ) : null}
+            </dl>
+            {asset.status === "archived" ? (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium">Archive reason</h4>
+                <p className="mt-1 text-sm leading-6 [overflow-wrap:anywhere] whitespace-pre-wrap">
+                  {asset.archiveReason ?? "Not recorded"}
+                </p>
+              </div>
+            ) : null}
+          </section>
         </div>
       ) : null}
-      <div className="mt-6 flex justify-end">
+      <div className="border-border mt-6 flex justify-end border-t pt-4">
         <Button variant="secondary" onClick={() => ref.current?.close()}>
           Close
         </Button>
@@ -183,11 +280,13 @@ export function AssetDetailDialog({
     </Dialog>
   );
 }
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="border-border rounded-lg border p-3">
-      <dt className="text-muted text-xs font-medium uppercase">{label}</dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
+    <div className="min-w-0">
+      <dt className="text-muted text-xs font-medium">{label}</dt>
+      <dd className="mt-1 text-sm font-medium [overflow-wrap:anywhere]">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -201,18 +300,30 @@ function Collection({
   items: Array<{ key: string; heading: string; detail: string }>;
 }) {
   return (
-    <section>
-      <h3 className="font-semibold">{heading}</h3>
-      <div className="mt-2 space-y-2">
+    <section className="border-border min-w-0 rounded-lg border">
+      <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
+        <h3 className="text-sm font-semibold">{heading}</h3>
+        <span
+          className="text-muted text-xs tabular-nums"
+          aria-label={`${items.length} ${heading.toLowerCase()}`}
+        >
+          {items.length}
+        </span>
+      </div>
+      <div className="px-4">
         {items.length ? (
-          items.map((item) => (
-            <div key={item.key} className="border-border rounded-lg border p-3">
-              <strong className="text-sm">{item.heading}</strong>
-              <p className="text-muted mt-1 text-xs">{item.detail}</p>
-            </div>
-          ))
+          <ul className="divide-border divide-y">
+            {items.map((item) => (
+              <li key={item.key} className="py-3 [overflow-wrap:anywhere]">
+                <p className="text-sm leading-6 font-medium">{item.heading}</p>
+                <p className="text-muted mt-1 text-xs leading-5">
+                  {item.detail}
+                </p>
+              </li>
+            ))}
+          </ul>
         ) : (
-          <p className="text-muted text-sm">{empty}</p>
+          <p className="text-muted py-4 text-sm">{empty}</p>
         )}
       </div>
     </section>

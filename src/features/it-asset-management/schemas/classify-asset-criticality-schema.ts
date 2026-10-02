@@ -29,9 +29,9 @@ export const classifyAssetCriticalitySchema = z
 
 export const assetCriticalityClassificationSchema = z.object({
   assetId: z.uuid(),
-  previousCriticality: z.enum(assetCriticalities),
+  previousCriticality: z.enum(assetCriticalities).nullable(),
   criticality: z.enum(assetCriticalities),
-  previousDataClassification: z.string(),
+  previousDataClassification: z.string().nullable(),
   dataClassification: z.enum([
     "public",
     "internal",

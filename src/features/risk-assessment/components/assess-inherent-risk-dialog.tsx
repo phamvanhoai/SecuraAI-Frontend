@@ -113,7 +113,7 @@ export function AssessInherentRiskDialog({
               </p>
               <p className="mt-1 text-sm">
                 {risk.data.assets
-                  .map((item) => `${item.name} (${item.criticality})`)
+                  .map((item) => `${item.name} (${item.criticality ?? "—"})`)
                   .join(", ") || "None"}
               </p>
             </div>

@@ -1,7 +1,7 @@
 "use client";
 import { Archive, Ellipsis, Eye, Link2, Pencil, Search, Server, ShieldCheck, UserRoundCheck, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -54,7 +54,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "criticality",
     header: "Criticality",
-    cell: (item) => (
+    cell: (item) => item.criticality === null ? "—" : (
       <StatusBadge
         tone={
           item.criticality.toLowerCase() === "critical"
@@ -71,7 +71,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "classification",
     header: "Data classification",
-    cell: (item) => item.dataClassification,
+    cell: (item) => item.dataClassification ?? "—",
   },
   {
     key: "service",
@@ -126,6 +126,7 @@ export function AssetsShell() {
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const detailTrigger = useRef<HTMLElement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [archivingAsset, setArchivingAsset] = useState<AssetListItem | null>(null);
   const [assigningAsset, setAssigningAsset] = useState<AssetListItem | null>(null);
@@ -140,9 +141,13 @@ export function AssetsShell() {
         cell: (item) => (
           <DropdownMenu
             className="w-fit"
+            data-asset-actions={item.id}
             label={<span className="grid size-6 place-items-center"><span className="sr-only">Actions for {item.assetCode}</span><Ellipsis aria-hidden="true" className="size-5" strokeWidth={1.8} /></span>}
           >
-            <Action icon={Eye} label="View details" onClick={() => setSelectedId(item.id)} />
+            <Action icon={Eye} label="View details" onClick={() => {
+              detailTrigger.current = document.querySelector<HTMLElement>(`[data-asset-actions="${item.id}"] summary`);
+              setSelectedId(item.id);
+            }} />
             {canEdit && item.status === "active" ? <Action icon={Pencil} label="Edit asset" onClick={() => setEditingId(item.id)} /> : null}
             {canEdit && item.status === "active" ? <>
               <Action icon={Link2} label="Manage links" onClick={() => setLinkingAssetId(item.id)} />
@@ -307,7 +312,10 @@ export function AssetsShell() {
       </ProductPanel>
       <AssetDetailDialog
         assetId={selectedId}
-        onClose={() => setSelectedId(null)}
+        onClose={() => {
+          setSelectedId(null);
+          detailTrigger.current?.focus();
+        }}
       />
       <EditAssetDialog assetId={editingId} onClose={() => setEditingId(null)} />
       <DeleteAssetDialog asset={archivingAsset} onClose={() => setArchivingAsset(null)} />
