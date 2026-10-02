@@ -13,7 +13,7 @@ export const incidentAssetOptionsSchema = z.object({
       assetCode: z.string(),
       name: z.string(),
       assetType: z.string(),
-      criticality: z.string(),
+      criticality: z.string().nullable(),
       linked: z.boolean(),
     }),
   ),
@@ -39,7 +39,7 @@ export const linkedIncidentAssetSchema = z.object({
     id: z.uuid(),
     assetCode: z.string(),
     name: z.string(),
-    criticality: z.string(),
+    criticality: z.string().nullable(),
   }),
   linkedAt: z.iso.datetime({ offset: true }),
 });

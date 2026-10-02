@@ -110,7 +110,7 @@ export function ClassifyAssetCriticalityDialog({
             dataClassificationBasis: basis.dataClassificationBasis ?? "",
           }
         : {}),
-      dataClassification: detail.data.dataClassification.toLowerCase(),
+      dataClassification: detail.data.dataClassification?.toLowerCase() ?? "",
     });
     initializedAsset.current = asset.id;
   }, [asset, detail.data, reset]);
@@ -167,7 +167,7 @@ export function ClassifyAssetCriticalityDialog({
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
           <p className="text-sm">
             <strong>{asset.assetCode}</strong> – {asset.name}. Current
-            criticality: {criticalityLabels[asset.criticality]}.
+            criticality: {asset.criticality === null ? "—" : criticalityLabels[asset.criticality]}.
           </p>
           <p className="text-muted text-xs leading-5">
             Assess the potential impact if this asset is compromised or

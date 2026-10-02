@@ -24,10 +24,7 @@ const defaults: CreateAssetInput = {
   assetCode: "",
   name: "",
   assetType: "",
-  businessServiceId: "",
   ownerUserId: "",
-  criticality: "medium",
-  dataClassification: "",
   description: "",
   dependencyIds: [],
   eventSourceIds: [],
@@ -141,55 +138,8 @@ export function CreateAssetDialog() {
                 ))}
               </Select>
             </FormField>
-            <FormField
-              id="businessServiceId"
-              label="Business service"
-              error={errors.businessServiceId?.message}
-            >
-              <Select
-                id="businessServiceId"
-                disabled={options.isPending || options.isError}
-                {...register("businessServiceId")}
-              >
-                <option value="">Unassigned</option>
-                {options.data?.businessServices.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField
-              id="criticality"
-              label="Criticality"
-              error={errors.criticality?.message}
-            >
-              <p className="text-muted text-xs">Initial level only. Use Classify asset after creation to document impact scores and assessment basis.</p>
-              <Select id="criticality" {...register("criticality")}>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </Select>
-            </FormField>
-            <FormField
-              id="dataClassification"
-              label="Data classification"
-              error={errors.dataClassification?.message}
-            >
-              <Select
-                id="dataClassification"
-                {...register("dataClassification")}
-              >
-                <option value="">Select data classification</option>
-                <option value="public">Public</option>
-                <option value="internal">Internal</option>
-                <option value="confidential">Confidential</option>
-                <option value="restricted">Restricted</option>
-              </Select>
-              <p className="text-muted mt-1 text-xs">Choose the highest sensitivity of data this asset stores or processes.</p>
-            </FormField>
           </div>
+          <p className="text-muted text-sm">After creation, use Manage links to assign business context and Classify asset to determine criticality and data classification.</p>
           <FormField
             id="description"
             label="Description"

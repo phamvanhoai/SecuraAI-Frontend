@@ -56,7 +56,7 @@ Chọn mức nhạy cảm cao nhất thực tế asset xử lý. Không tự án
 
 ## Luồng nghiệp vụ
 
-1. Tạo asset với mức ban đầu; Assign owner/Manage links bổ sung bối cảnh khi có. Không bắt buộc phải có business service để phân loại.
+1. Tạo asset chỉ nhập thông tin định danh, owner tùy chọn và mô tả. Business service, Criticality và Data classification không có trong Create; hai mức phân loại được lưu null và hiển thị `—`, không tự gán Low/Medium/Public/Internal. Assign owner/Manage links bổ sung bối cảnh khi có; Classify asset xác định hai mức phân loại. Không bắt buộc phải có business service để phân loại. Migration `20261002133000_asset_create_unclassified` giữ nguyên giá trị của asset cũ.
 2. Security Officer đang hoạt động mở Classify. Form hiển thị owner, business service, dependencies và cơ sở mới nhất.
 3. Nhập bốn số nguyên 1–5, chọn Data classification, ghi Assessment basis 20–2000 ký tự. Không tự gợi ý điểm 3 cho asset chưa đánh giá.
 4. FE hiển thị preview; BE kiểm tra tài khoản và trạng thái asset, tính lại kết quả, lưu toàn bộ trong một transaction. Client không gửi Criticality hoặc người đánh giá để tự quyết định kết quả.
