@@ -22,6 +22,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import { useAssets } from "../hooks/use-assets";
 import {
+  assetCriticalities,
   assetListQuerySchema,
   type AssetListItem,
   type AssetListQuery,
@@ -220,12 +221,18 @@ export function AssetsShell() {
           </label>
           <label className="text-sm font-medium">
             Criticality
-            <Input
+            <Select
               className="mt-1"
               value={criticality}
               onChange={(e) => setCriticality(e.target.value)}
-              placeholder="High"
-            />
+            >
+              <option value="">All criticalities</option>
+              {assetCriticalities.map((value) => (
+                <option key={value} value={value}>
+                  {value.charAt(0).toUpperCase() + value.slice(1)}
+                </option>
+              ))}
+            </Select>
           </label>
           <label className="text-sm font-medium">
             Status

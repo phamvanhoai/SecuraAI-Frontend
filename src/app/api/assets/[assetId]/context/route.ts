@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { linkAssetContextSchema } from "@/features/it-asset-management/schemas/link-asset-context-schema";
+import { linkAssetContextRequestSchema } from "@/features/it-asset-management/schemas/link-asset-context-schema";
 import { authCookieNames, clearAuthCookies, setAuthCookies } from "@/lib/auth/auth-cookies";
 import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";
@@ -10,7 +10,7 @@ const invalid = (message: string) => NextResponse.json({ success: false, error: 
 export async function PUT(request: Request, context: { params: Promise<{ assetId: string }> }): Promise<Response> {
   const params = paramsSchema.safeParse(await context.params); if (!params.success) return invalid("Invalid asset ID");
   let body: unknown; try { body = await request.json(); } catch { return invalid("Invalid request body"); }
-  const parsed = linkAssetContextSchema.safeParse(body); if (!parsed.success) return invalid("Invalid asset context");
+  const parsed = linkAssetContextRequestSchema.safeParse(body); if (!parsed.success) return invalid("Invalid asset context");
   const cookieStore = await cookies(); const accessToken = cookieStore.get(authCookieNames.access)?.value;
   if (!accessToken) return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Authentication required" } }, { status: 401 });
   const base = env.NEXT_PUBLIC_API_BASE_URL.endsWith("/") ? env.NEXT_PUBLIC_API_BASE_URL : `${env.NEXT_PUBLIC_API_BASE_URL}/`;

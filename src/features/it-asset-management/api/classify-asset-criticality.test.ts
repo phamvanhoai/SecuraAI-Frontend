@@ -16,7 +16,12 @@ describe("classifyAssetCriticality", () => {
             criticality: "critical",
             previousDataClassification: "internal",
             dataClassification: "restricted",
-            score: 4.55,
+            dataClassificationBasis:
+              "Only approved public information is handled; no sensitive records are stored.",
+            rationale:
+              "Disclosure of customer records would cause severe business harm.",
+            score: 5,
+            methodVersion: "SECURAAI-ASSET-IMPACT-v1",
             changed: true,
             classifiedAt: "2026-09-10T10:00:00.000Z",
           },
@@ -30,11 +35,15 @@ describe("classifyAssetCriticality", () => {
       availabilityImpact: 5,
       businessImpact: 4,
       dataClassification: "restricted" as const,
+      dataClassificationBasis:
+        "Only approved public information is handled; no sensitive records are stored.",
+      rationale:
+        "Disclosure of customer records would cause severe business harm.",
     };
 
     const result = await classifyAssetCriticality(assetId, input);
 
-    expect(result).toMatchObject({ criticality: "critical", score: 4.55 });
+    expect(result).toMatchObject({ criticality: "critical", score: 5 });
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/assets/${assetId}/classify-criticality`,
       expect.objectContaining({

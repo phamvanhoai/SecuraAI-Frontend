@@ -27,11 +27,7 @@ export const createAssetSchema = z
     businessServiceId: optionalUuid,
     ownerUserId: optionalUuid,
     criticality: z.enum(["low", "medium", "high", "critical"]),
-    dataClassification: z
-      .string()
-      .trim()
-      .min(1, "Data classification is required")
-      .max(50),
+    dataClassification: z.string().pipe(z.enum(["public", "internal", "confidential", "restricted"], { error: "Select a valid data classification" })),
     description: optionalText(10_000),
     dependencyIds: z.array(z.uuid()).max(50).default([]),
     eventSourceIds: z.array(z.uuid()).max(50).default([]),
@@ -70,7 +66,7 @@ export const createAssetRequestSchema = z.object({
   businessServiceId: z.uuid().optional(),
   ownerUserId: z.uuid().optional(),
   criticality: z.enum(["low", "medium", "high", "critical"]),
-  dataClassification: z.string().trim().min(1).max(50),
+  dataClassification: z.enum(["public", "internal", "confidential", "restricted"]),
   description: z.string().trim().max(10_000).optional(),
   dependencies: z.array(z.object({ assetId: z.uuid() })).max(50),
   eventSourceIds: z.array(z.uuid()).max(50),

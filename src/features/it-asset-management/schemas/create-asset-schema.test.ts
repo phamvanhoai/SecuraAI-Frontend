@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createAssetSchema } from "./create-asset-schema";
 
 describe("createAssetSchema", () => {
+  it.each(["", "secret", "Internal"])("rejects unsupported classification %s", (dataClassification) => {
+    expect(createAssetSchema.safeParse({ assetCode: "AST-002", name: "Server", assetType: "server", criticality: "high", dataClassification }).success).toBe(false);
+  });
   it("normalizes core fields and supplies relationship defaults", () => {
     expect(
       createAssetSchema.parse({
