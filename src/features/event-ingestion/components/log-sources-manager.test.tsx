@@ -47,6 +47,32 @@ vi.mock("../hooks/use-event-sources", () => ({
   useSourceBatches: () => ({ isPending: false, isError: false, data: undefined }),
 }));
 
+vi.mock("../hooks/use-normalized-events", () => ({
+  useNormalizedEventMetrics: () => ({
+    data: {
+      totalEvents: 0,
+      totalMapped: 0,
+      totalUnmapped: 0,
+      eventsLast24Hours: 0,
+      byFamily: { AUTHENTICATION: 0, VPN_SSO: 0, APPLICATION_ACCESS: 0 },
+    },
+    isPending: false,
+  }),
+  useNormalizedEvents: () => ({
+    data: {
+      items: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    },
+    isPending: false,
+    error: null,
+  }),
+  useNormalizedEventDetail: () => ({
+    data: undefined,
+    isPending: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({
     success: vi.fn(),
