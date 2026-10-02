@@ -96,4 +96,28 @@ describe("AssignAssetOwnerDialog", () => {
     expect(screen.getByRole("button", { name: "Save owner" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("Disposed assets cannot be assigned an owner.");
   });
+
+  it("blocks assignment for an archived asset", () => {
+    render(<AssignAssetOwnerDialog asset={{ ...asset, status: "archived" }} onClose={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Save owner" })).toBeDisabled();
+    expect(screen.getByLabelText("New owner")).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Archived assets");
+  });
+
+  it("requires explicit confirmation before removing an owner", async () => {
+    const user = userEvent.setup();
+    render(<AssignAssetOwnerDialog asset={{ ...asset, owner: { id: ownerUserId, fullName: "Nguyễn Văn A" } }} onClose={vi.fn()} />);
+    await user.selectOptions(screen.getByLabelText("New owner"), "");
+    await user.type(screen.getByLabelText("Reason for change"), "Awaiting a replacement owner");
+    expect(screen.getByRole("button", { name: "Save owner" })).toBeDisabled();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("checkbox", { name: "I confirm removing the current owner" }));
+    await user.click(screen.getByRole("button", { name: "Save owner" }));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({ ownerUserId: null, reason: "Awaiting a replacement owner" }));
+  });
+
+  it("does not claim that history or audit logging is implemented", () => {
+    render(<AssignAssetOwnerDialog asset={asset} onClose={vi.fn()} />);
+    expect(screen.queryByText(/recorded in change history and audit logs/)).not.toBeInTheDocument();
+  });
 });
