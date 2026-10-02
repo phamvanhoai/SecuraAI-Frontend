@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, ShieldAlert, UserCheck } from "lucide-react";
+import { Eye, Layers, ShieldAlert, UserCheck } from "lucide-react";
 import { useState } from "react";
 import {
   DataTable,
@@ -12,9 +12,11 @@ import {
   StatusBadge,
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useNormalizedEvents } from "../hooks/use-normalized-events";
 import type { NormalizedEventItem } from "../schemas/normalized-event-schema";
+import { NormalizedEventDetailDialog } from "./normalized-event-detail-dialog";
 import { cn } from "@/lib/utils";
 
 const mappingStatusTones = {
@@ -39,11 +41,14 @@ const formatFamilyLabel: Record<string, string> = {
 
 export function NormalizedEventsList() {
   const [page, setPage] = useState(1);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const eventsQuery = useNormalizedEvents({
     page,
     limit: 20,
   });
+
 
   const columns: readonly DataTableColumn<NormalizedEventItem>[] = [
     {
@@ -169,6 +174,24 @@ export function NormalizedEventsList() {
         </StatusBadge>
       ),
     },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (item) => (
+        <Button
+          type="button"
+          variant="secondary"
+          className="min-h-7 py-0.5 px-2 text-xs flex items-center gap-1"
+          onClick={() => {
+            setSelectedEventId(item.id);
+            setIsDetailOpen(true);
+          }}
+        >
+          <Eye className="size-3.5" />
+          <span>View</span>
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -211,6 +234,13 @@ export function NormalizedEventsList() {
           )}
         </div>
       </ProductPanel>
+
+      <NormalizedEventDetailDialog
+        eventId={selectedEventId}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+      />
     </div>
   );
 }
+

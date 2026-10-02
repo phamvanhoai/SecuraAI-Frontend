@@ -1,8 +1,10 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  normalizedEventDetailSchema,
   normalizedEventMetricsSchema,
   paginatedNormalizedEventsSchema,
   type ListNormalizedEventsQuery,
+  type NormalizedEventDetail,
   type NormalizedEventMetrics,
   type PaginatedNormalizedEvents,
 } from "../schemas/normalized-event-schema";
@@ -33,4 +35,14 @@ export async function getNormalizedEventMetrics(): Promise<NormalizedEventMetric
   });
 
   return normalizedEventMetricsSchema.parse(data);
+}
+
+export async function getNormalizedEventDetail(
+  id: string,
+): Promise<NormalizedEventDetail> {
+  const data = await apiRequest<unknown>(`/api/events/${encodeURIComponent(id)}`, {
+    target: "same-origin",
+  });
+
+  return normalizedEventDetailSchema.parse(data);
 }

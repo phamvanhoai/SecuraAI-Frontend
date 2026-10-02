@@ -1,11 +1,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseNormalizedEvents = vi.fn();
 
 vi.mock("../hooks/use-normalized-events", () => ({
   useNormalizedEvents: (params?: unknown) => mockUseNormalizedEvents(params),
+  useNormalizedEventDetail: () => ({
+    isLoading: false,
+    isError: false,
+    data: undefined,
+  }),
   useNormalizedEventMetrics: () => ({
     isPending: false,
     data: {
@@ -22,7 +27,17 @@ vi.mock("../hooks/use-normalized-events", () => ({
   }),
 }));
 
+vi.mock("@/components/feedback/toast", () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+  }),
+}));
+
 import { NormalizedEventsList } from "./normalized-events-list";
+
 
 const mockItems = [
   {
@@ -60,7 +75,24 @@ const mockItems = [
   },
 ];
 
+beforeAll(() => {
+  Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, "close", {
+    configurable: true,
+    value(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+      this.dispatchEvent(new Event("close"));
+    },
+  });
+});
+
 describe("NormalizedEventsList", () => {
+
   beforeEach(() => {
     mockUseNormalizedEvents.mockReturnValue({
       isPending: false,
@@ -122,4 +154,17 @@ describe("NormalizedEventsList", () => {
 
     expect(mockUseNormalizedEvents).toHaveBeenCalled();
   });
+
+  it("opens event detail dialog when clicking View button", async () => {
+    const user = userEvent.setup();
+    render(<NormalizedEventsList />);
+
+    const viewButton = screen.getByRole("button", { name: /View/i });
+    expect(viewButton).toBeInTheDocument();
+
+    await user.click(viewButton);
+
+    expect(screen.getByText("Security Event Inspection")).toBeInTheDocument();
+  });
 });
+

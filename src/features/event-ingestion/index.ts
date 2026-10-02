@@ -81,10 +81,12 @@ export {
   useSourceBatches,
 } from "./hooks/use-event-sources";
 export { NormalizedEventsList } from "./components/normalized-events-list";
+export { NormalizedEventDetailDialog } from "./components/normalized-event-detail-dialog";
 export {
   mappingStatuses,
   mappedUserSchema,
   mappedAssetSchema,
+  anomalyDetectionItemSchema,
   normalizedEventItemSchema,
   normalizedEventDetailSchema,
   paginatedNormalizedEventsSchema,
@@ -92,6 +94,7 @@ export {
   listNormalizedEventsQuerySchema,
   type MappedUser,
   type MappedAsset,
+  type AnomalyDetectionItem,
   type NormalizedEventItem,
   type NormalizedEventDetail,
   type PaginatedNormalizedEvents,
@@ -101,9 +104,12 @@ export {
 export {
   listNormalizedEvents,
   getNormalizedEventMetrics,
+  getNormalizedEventDetail,
 } from "./api/normalized-events";
 export {
   useNormalizedEvents,
   useNormalizedEventMetrics,
+  useNormalizedEventDetail,
 } from "./hooks/use-normalized-events";
+
 
