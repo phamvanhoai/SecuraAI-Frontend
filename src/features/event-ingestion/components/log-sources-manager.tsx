@@ -4,6 +4,7 @@ import {
   Database,
   Ellipsis,
   Eye,
+  Layers,
   Pencil,
   Radio,
   Search,
@@ -35,6 +36,7 @@ import {
   useUpdateLogSource,
 } from "../hooks/use-log-sources";
 import { useEventSources } from "../hooks/use-event-sources";
+import { useNormalizedEventMetrics } from "../hooks/use-normalized-events";
 import {
   logFormats,
   logSourceFormSchema,
@@ -46,6 +48,7 @@ import {
 import { DeleteLogSourceDialog } from "./delete-log-source-dialog";
 import { EventSourcesList } from "./event-sources-list";
 import { LogSourceDetailDialog } from "./log-source-detail-dialog";
+import { NormalizedEventsList } from "./normalized-events-list";
 import { RegisterEventSourceForm } from "./register-event-source-form";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +65,7 @@ type LogSourceFormErrors = Partial<Record<keyof LogSourceForm, string>>;
 
 export function LogSourcesManager() {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<"event-sources" | "log-sources">("event-sources");
+  const [activeTab, setActiveTab] = useState<"events" | "event-sources" | "log-sources">("events");
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -80,6 +83,7 @@ export function LogSourcesManager() {
     ...(query ? { q: query } : {}),
   });
   const eventSourcesOverview = useEventSources({ limit: 100 });
+  const eventMetrics = useNormalizedEventMetrics();
   const metrics = useLogSourceMetrics();
   const create = useCreateLogSource();
   const update = useUpdateLogSource();
@@ -283,85 +287,163 @@ export function LogSourcesManager() {
       />
       <MetricStrip
         ariaLabel={
-          activeTab === "event-sources"
-            ? "Event source metrics"
-            : "Log source metrics"
+          activeTab === "events"
+            ? "Security event metrics"
+            : activeTab === "event-sources"
+              ? "Event source metrics"
+              : "Log source metrics"
         }
         metrics={
-          activeTab === "event-sources"
+          activeTab === "events"
             ? [
               {
-                label: "Total sources",
-                value: eventSourcesOverview.data
-                  ? String(totalEventSources)
+                label: "Total events",
+                value: eventMetrics.data
+                  ? String(eventMetrics.data.totalEvents)
                   : "—",
-                detail: "Normalized event sources",
+                detail: "Across all active sources",
                 tone: "brand",
-                loading: eventSourcesOverview.isPending,
+                loading: eventMetrics.isPending,
               },
               {
-                label: "Active sources",
-                value: eventSourcesOverview.data
-                  ? String(activeEventSources)
+                label: "Resolved & mapped",
+                value: eventMetrics.data
+                  ? String(eventMetrics.data.totalMapped)
                   : "—",
-                detail: "Ready to ingest events",
+                detail: "Entities identified",
                 tone: "neutral",
-                loading: eventSourcesOverview.isPending,
+                loading: eventMetrics.isPending,
               },
               {
-                label: "Source types",
-                value: eventSourcesOverview.data
-                  ? String(uniqueSourceTypes)
+                label: "24h Volume",
+                value: eventMetrics.data
+                  ? String(eventMetrics.data.eventsLast24Hours)
                   : "—",
-                detail: "Distinct ingestion types",
+                detail: "Ingested in last 24h",
                 tone: "neutral",
-                loading: eventSourcesOverview.isPending,
+                loading: eventMetrics.isPending,
               },
               {
-                label: "Event families",
-                value: eventSourcesOverview.data
-                  ? String(uniqueFamilies)
+                label: "Unmapped / Review",
+                value: eventMetrics.data
+                  ? String(eventMetrics.data.totalUnmapped)
                   : "—",
-                detail: "Coverage across domains",
-                tone: "neutral",
-                loading: eventSourcesOverview.isPending,
+                detail: "Awaiting entity mapping",
+                tone:
+                  (eventMetrics.data?.totalUnmapped ?? 0) > 0
+                    ? "warning"
+                    : "neutral",
+                loading: eventMetrics.isPending,
               },
             ]
-            : [
-              {
-                label: "Total sources",
-                value: metrics.data ? String(metrics.data.total) : "—",
-                detail: "Across all log sources",
-                tone: "brand",
-                loading: metrics.isPending,
-              },
-              {
-                label: "Active",
-                value: metrics.data ? String(metrics.data.active) : "—",
-                detail: "Across all log sources",
-                tone: "neutral",
-                loading: metrics.isPending,
-              },
-              {
-                label: "Receiving logs",
-                value: metrics.data ? String(metrics.data.receiving) : "—",
-                detail: "Received at least one event",
-                tone: "neutral",
-                loading: metrics.isPending,
-              },
-              {
-                label: "Errors",
-                value: metrics.data ? String(metrics.data.errors) : "—",
-                detail: "Across all log sources",
-                tone: "danger",
-                loading: metrics.isPending,
-              },
-            ]
+            : activeTab === "event-sources"
+              ? [
+                {
+                  label: "Total sources",
+                  value: eventSourcesOverview.data
+                    ? String(totalEventSources)
+                    : "—",
+                  detail: "Normalized event sources",
+                  tone: "brand",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Active sources",
+                  value: eventSourcesOverview.data
+                    ? String(activeEventSources)
+                    : "—",
+                  detail: "Ready to ingest events",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Source types",
+                  value: eventSourcesOverview.data
+                    ? String(uniqueSourceTypes)
+                    : "—",
+                  detail: "Distinct ingestion types",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+                {
+                  label: "Event families",
+                  value: eventSourcesOverview.data
+                    ? String(uniqueFamilies)
+                    : "—",
+                  detail: "Coverage across domains",
+                  tone: "neutral",
+                  loading: eventSourcesOverview.isPending,
+                },
+              ]
+              : [
+                {
+                  label: "Total sources",
+                  value: metrics.data ? String(metrics.data.total) : "—",
+                  detail: "Across all log sources",
+                  tone: "brand",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Active",
+                  value: metrics.data ? String(metrics.data.active) : "—",
+                  detail: "Across all log sources",
+                  tone: "neutral",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Receiving logs",
+                  value: metrics.data ? String(metrics.data.receiving) : "—",
+                  detail: "Received at least one event",
+                  tone: "neutral",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Errors",
+                  value: metrics.data ? String(metrics.data.errors) : "—",
+                  detail: "Across all log sources",
+                  tone: "danger",
+                  loading: metrics.isPending,
+                },
+              ]
         }
       />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("events")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "events"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
+          >
+            <Layers
+              aria-hidden="true"
+              className={cn(
+                "size-4",
+                activeTab === "events"
+                  ? "text-brand-contrast"
+                  : "text-muted",
+              )}
+              strokeWidth={2}
+            />
+            <span>Security events</span>
+            {eventMetrics.data ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  activeTab === "events"
+                    ? "bg-white/20 text-brand-contrast"
+                    : "border-border bg-neutral-soft text-muted border",
+                )}
+              >
+                {eventMetrics.data.totalEvents}
+              </span>
+            ) : null}
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab("event-sources")}
@@ -433,7 +515,9 @@ export function LogSourcesManager() {
         </div>
       </div>
 
-      {activeTab === "event-sources" ? (
+      {activeTab === "events" ? (
+        <NormalizedEventsList />
+      ) : activeTab === "event-sources" ? (
         <EventSourcesList
           onRegisterClick={() => setRegisterEventSourceOpen(true)}
         />

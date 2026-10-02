@@ -74,17 +74,19 @@ export function ImportBatchResultDialog({
     }
   }, [isOpen]);
 
-  // Reset pagination and filters on new batch
-  useEffect(() => {
-    if (isOpen) {
-      setPage(1);
-      setErrorCodeFilter("");
-      setSearchTerm("");
-      setInspectingEvent(null);
-    }
-  }, [isOpen, batchId]);
+  const [prevBatchId, setPrevBatchId] = useState(batchId);
+  if (batchId !== prevBatchId) {
+    setPrevBatchId(batchId);
+    setPage(1);
+    setErrorCodeFilter("");
+    setSearchTerm("");
+    setInspectingEvent(null);
+  }
 
   function handleClose() {
+    setPage(1);
+    setErrorCodeFilter("");
+    setSearchTerm("");
     setInspectingEvent(null);
     onClose();
   }

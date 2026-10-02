@@ -80,4 +80,30 @@ export {
   useBatchInvalidEvents,
   useSourceBatches,
 } from "./hooks/use-event-sources";
+export { NormalizedEventsList } from "./components/normalized-events-list";
+export {
+  mappingStatuses,
+  mappedUserSchema,
+  mappedAssetSchema,
+  normalizedEventItemSchema,
+  normalizedEventDetailSchema,
+  paginatedNormalizedEventsSchema,
+  normalizedEventMetricsSchema,
+  listNormalizedEventsQuerySchema,
+  type MappedUser,
+  type MappedAsset,
+  type NormalizedEventItem,
+  type NormalizedEventDetail,
+  type PaginatedNormalizedEvents,
+  type NormalizedEventMetrics,
+  type ListNormalizedEventsQuery,
+} from "./schemas/normalized-event-schema";
+export {
+  listNormalizedEvents,
+  getNormalizedEventMetrics,
+} from "./api/normalized-events";
+export {
+  useNormalizedEvents,
+  useNormalizedEventMetrics,
+} from "./hooks/use-normalized-events";
 
