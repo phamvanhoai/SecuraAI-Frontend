@@ -89,6 +89,7 @@ describe("CreateAssetDialog", () => {
       " Application Server ",
     );
     await user.type(screen.getByLabelText("Asset type"), "server");
+    await user.selectOptions(screen.getByLabelText("Data classification"), "internal");
     await user.selectOptions(screen.getByLabelText("Asset owner"), ownerUserId);
     await user.selectOptions(
       screen.getByLabelText("Business service"),

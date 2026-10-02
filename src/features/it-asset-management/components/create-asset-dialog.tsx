@@ -27,7 +27,7 @@ const defaults: CreateAssetInput = {
   businessServiceId: "",
   ownerUserId: "",
   criticality: "medium",
-  dataClassification: "internal",
+  dataClassification: "",
   description: "",
   dependencyIds: [],
   eventSourceIds: [],
@@ -164,6 +164,7 @@ export function CreateAssetDialog() {
               label="Criticality"
               error={errors.criticality?.message}
             >
+              <p className="text-muted text-xs">Initial level only. Use Classify asset after creation to document impact scores and assessment basis.</p>
               <Select id="criticality" {...register("criticality")}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -180,11 +181,13 @@ export function CreateAssetDialog() {
                 id="dataClassification"
                 {...register("dataClassification")}
               >
+                <option value="">Select data classification</option>
                 <option value="public">Public</option>
                 <option value="internal">Internal</option>
                 <option value="confidential">Confidential</option>
                 <option value="restricted">Restricted</option>
               </Select>
+              <p className="text-muted mt-1 text-xs">Choose the highest sensitivity of data this asset stores or processes.</p>
             </FormField>
           </div>
           <FormField

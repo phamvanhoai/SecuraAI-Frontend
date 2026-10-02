@@ -57,25 +57,35 @@ describe("DeleteAssetDialog", () => {
     expect(deleteButton).toBeDisabled();
 
     await user.type(screen.getByLabelText(/Enter code/), "AST-001");
+    expect(deleteButton).toBeDisabled();
+    await user.type(screen.getByLabelText(/Archive reason/), "Replaced by a new server");
     expect(deleteButton).toBeEnabled();
     await user.click(deleteButton);
 
-    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith(asset.id));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({ assetId: asset.id, reason: "Replaced by a new server" }));
     expect(successMock).toHaveBeenCalledOnce();
   });
 
   it("keeps the dialog open and explains active dependency conflicts", async () => {
     const user = userEvent.setup();
     mutateAsyncMock.mockRejectedValue(
-      new ApiError("Backend conflict", 409, "CONFLICT"),
+      new ApiError("Cannot archive: AST-A depends on this asset. Resolve dependencies first.", 409, "CONFLICT"),
     );
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/Enter code/), "AST-001");
+    await user.type(screen.getByLabelText(/Archive reason/), "Asset retirement");
     await user.click(screen.getByRole("button", { name: "Archive Asset" }));
 
     expect(
-      await screen.findByText(/The asset could not be archived in its current state./),
+      await screen.findByText(/AST-A depends on this asset/),
     ).toBeInTheDocument();
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
+  });
+  it("blocks an archived asset even with confirmation", async () => {
+    render(<DeleteAssetDialog asset={{ ...asset, status: "archived" }} onClose={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText(/Enter code/), asset.assetCode);
+    expect(screen.getByRole("button", { name: "Archive Asset" })).toBeDisabled();
+    expect(screen.getByLabelText(/Archive reason/)).toBeDisabled();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 });
