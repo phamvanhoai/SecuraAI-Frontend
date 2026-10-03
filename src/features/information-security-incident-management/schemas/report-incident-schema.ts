@@ -1,21 +1,48 @@
 import { z } from "zod";
-export const reportIncidentFormSchema = z.object({
-  title: z.string().trim().min(5, "Enter at least 5 characters").max(255),
-  description: z
-    .string()
-    .trim()
-    .min(20, "Describe what happened in at least 20 characters")
-    .max(10_000),
-  category: z.enum([
-    "phishing",
-    "malware",
-    "account_compromise",
-    "data_exposure",
-    "network",
-    "physical",
-    "other",
-  ]),
-  occurredAt: z.string(),
+export const reportIncidentFormSchema = z
+  .object({
+    creationMode: z.enum(["source", "manual"]),
+    sourceId: z.string(),
+    title: z.string().trim().min(5, "Enter at least 5 characters").max(255),
+    description: z
+      .string()
+      .trim()
+      .min(20, "Describe what happened in at least 20 characters")
+      .max(10_000),
+    severity: z.enum(["low", "medium", "high", "critical"]),
+    occurredAt: z.string(),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.creationMode === "source" &&
+      !z.uuid().safeParse(value.sourceId).success
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceId"],
+        message: "Select a confirmed alert or finding",
+      });
+    }
+  });
+export const incidentSourceOptionsSchema = z.object({
+  items: z.array(
+    z.object({
+      findingId: z.uuid(),
+      alertId: z.uuid(),
+      title: z.string(),
+      description: z.string().nullable(),
+      severity: z.enum(["low", "medium", "high", "critical"]),
+      findingStatus: z.string(),
+      detectedAt: z.string().datetime(),
+      identifiedAt: z.string().datetime(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(0),
+  }),
 });
 export const incidentSchema = z.object({
   id: z.uuid(),
@@ -49,6 +76,15 @@ export const incidentSchema = z.object({
   createdBy: z
     .object({ id: z.uuid(), name: z.string(), email: z.email() })
     .nullable(),
+  source: z
+    .object({
+      findingId: z.uuid(),
+      alertId: z.uuid(),
+      title: z.string(),
+      findingStatus: z.string(),
+    })
+    .nullable()
+    .optional(),
   relatedCounts: z.object({
     actions: z.number().int().min(0),
     assets: z.number().int().min(0),

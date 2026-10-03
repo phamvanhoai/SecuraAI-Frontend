@@ -12,6 +12,7 @@ import {
   listIncidentAssignmentOptions,
   listMyIncidents,
   reportIncident,
+  listIncidentSourceOptions,
   getIncidentAssetOptions,
   linkIncidentToAsset,
   unlinkIncidentFromAsset,
@@ -258,9 +259,16 @@ export function useReportIncident() {
   return useMutation({
     mutationFn: reportIncident,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: key }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
   });
 }
+export const useIncidentSourceOptions = (enabled: boolean) =>
+  useQuery({
+    queryKey: ["incidents", "source-options"],
+    queryFn: ({ signal }) => listIncidentSourceOptions(signal),
+    enabled,
+    retry: false,
+  });
 export const useIncidentClassificationQueue = (
   page: number,
   filters: {

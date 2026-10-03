@@ -88,3 +88,40 @@ export const configuredRoleSchema = z.object({
   changed: z.boolean(),
   affectedUserCount: z.number().int().nonnegative(),
 });
+
+export const userPermissionAssignmentSchema = z.object({
+  user: z.object({
+    id: z.uuid(),
+    fullName: z.string(),
+    email: z.email(),
+    role: z.enum(["ADMIN", "SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"]),
+  }),
+  editable: z.boolean(),
+  allowablePermissions: z.array(z.string()),
+  rolePermissions: z.array(z.string()),
+  allow: z.array(z.string()),
+  deny: z.array(z.string()),
+  effectivePermissions: z.array(z.string()),
+  updatedAt: z.iso.datetime(),
+});
+
+export const configureUserPermissionsSchema = z
+  .object({
+    allow: z.array(z.uuid()).max(200),
+    deny: z.array(z.uuid()).max(200),
+    reason: z
+      .string()
+      .trim()
+      .min(10, "Provide a reason of at least 10 characters")
+      .max(1000),
+  })
+  .refine((value) => !value.allow.some((id) => value.deny.includes(id)), {
+    message: "A permission cannot be both allowed and denied",
+  });
+
+export type UserPermissionAssignment = z.infer<
+  typeof userPermissionAssignmentSchema
+>;
+export type ConfigureUserPermissionsValues = z.infer<
+  typeof configureUserPermissionsSchema
+>;
