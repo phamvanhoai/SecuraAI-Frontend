@@ -21,10 +21,14 @@ export const createUserSchema = z.object({
       (value) => value.length === 0 || /^\d{10}$/.test(value),
       "Phone number must contain exactly 10 digits.",
     ),
-  employeeCode: z.string().trim().max(50).refine(
-    (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
-    "Employee code may contain letters, numbers, hyphens, and underscores only.",
-  ),
+  employeeCode: z
+    .string()
+    .trim()
+    .max(50)
+    .refine(
+      (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
+      "Employee code may contain letters, numbers, hyphens, and underscores only.",
+    ),
   departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
   role: z.enum(["SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"], {
     error: "Select a role.",
@@ -51,10 +55,14 @@ export const updateUserSchema = z.object({
       (value) => value.length === 0 || /^\d{10}$/.test(value),
       "Phone number must contain exactly 10 digits.",
     ),
-  employeeCode: z.string().trim().max(50).refine(
-    (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
-    "Employee code may contain letters, numbers, hyphens, and underscores only.",
-  ),
+  employeeCode: z
+    .string()
+    .trim()
+    .max(50)
+    .refine(
+      (value) => value.length === 0 || /^[A-Za-z0-9_-]+$/.test(value),
+      "Employee code may contain letters, numbers, hyphens, and underscores only.",
+    ),
   departmentId: z.union([z.literal(""), z.uuid("Select a valid department.")]),
   status: z.enum(["active", "inactive", "locked"]),
 });
@@ -135,13 +143,32 @@ export type UserListQuery = {
 };
 
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
+export const userImportResultSchema = z.object({
+  totalRows: z.number().int().nonnegative(),
+  imported: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  errors: z.array(
+    z.object({
+      row: z.number().int().positive(),
+      code: z.string(),
+      message: z.string(),
+    }),
+  ),
+});
+export type UserImportResult = z.infer<typeof userImportResultSchema>;
 export const userDetailSchema = z.object({
   id: z.uuid(),
   email: z.email(),
   username: z.string(),
   fullName: z.string(),
-  phone: z.string().nullish().transform((value) => value ?? null),
-  employeeCode: z.string().nullish().transform((value) => value ?? null),
+  phone: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
+  employeeCode: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? null),
   department: z
     .object({ id: z.uuid(), code: z.string(), name: z.string() })
     .nullish()

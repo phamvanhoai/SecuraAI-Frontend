@@ -12,6 +12,8 @@ import {
   userCreateOptionsSchema,
   userListResponseSchema,
   type UpdateUserPayload,
+  type UserImportResult,
+  userImportResultSchema,
 } from "../schemas/user-schema";
 
 export async function listUsers(
@@ -119,4 +121,30 @@ export async function getUserCreateOptions(
     );
   }
   return parsed.data;
+}
+
+export async function importUsers(file: File): Promise<UserImportResult> {
+  const form = new FormData();
+  form.set("file", file);
+  const response = await fetch("/api/users/import", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" && payload !== null && "error" in payload
+        ? String(
+            (payload as { error?: { message?: unknown } }).error?.message ??
+              "Import failed",
+          )
+        : "Import failed";
+    throw new ApiError(message, response.status, "UNKNOWN_ERROR", payload);
+  }
+  const data =
+    typeof payload === "object" && payload !== null && "data" in payload
+      ? (payload as { data: unknown }).data
+      : undefined;
+  return userImportResultSchema.parse(data);
 }
