@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   useClassifyIncidentSeverity,
   useAssignIncidentHandler,
@@ -76,6 +77,7 @@ import { RecordControlWeaknessDialog } from "./record-control-weakness-dialog";
 import { CreateRiskReassessmentRequestDialog } from "./create-risk-reassessment-request-dialog";
 
 const defaults: ReportIncidentForm = {
+  creationMode: "source",
   sourceId: "",
   title: "",
   description: "",
@@ -208,7 +210,6 @@ export function IncidentReportingManager() {
   const displayedList = canRead ? classificationQueue : list;
   const detail = useMyIncident(selectedId);
   const mutation = useReportIncident();
-  const sourceOptions = useIncidentSourceOptions(open);
   const classificationMutation = useClassifyIncidentSeverity();
   const assignmentOptions = useIncidentAssignmentOptions(canAssign);
   const assignmentMutation = useAssignIncidentHandler();
@@ -228,6 +229,10 @@ export function IncidentReportingManager() {
     resolver: zodResolver(reportIncidentFormSchema),
     defaultValues: defaults,
   });
+  const creationMode = useWatch({ control, name: "creationMode" });
+  const sourceOptions = useIncidentSourceOptions(
+    open && creationMode === "source",
+  );
   const selectedSourceId = useWatch({ control, name: "sourceId" });
   const selectedSource = sourceOptions.data?.items.find(
     (item) => item.findingId === selectedSourceId,
@@ -315,7 +320,9 @@ export function IncidentReportingManager() {
       setPage(1);
       toast.success(
         "Incident created",
-        `${created.incidentCode} is linked to the confirmed source.`,
+        values.creationMode === "source"
+          ? `${created.incidentCode} is linked to the confirmed source.`
+          : `${created.incidentCode} was created for investigation.`,
       );
     } catch (error) {
       setMessage(
@@ -901,7 +908,7 @@ export function IncidentReportingManager() {
       </ProductPanel>
       <Dialog
         dialogRef={dialogRef}
-        title="Create incident from confirmed source"
+        title="Create incident"
         className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
         onClose={close}
       >
@@ -911,56 +918,119 @@ export function IncidentReportingManager() {
               {message}
             </Alert>
           ) : null}
-          {sourceOptions.isError ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Creation method</p>
+            <input type="hidden" {...register("creationMode")} />
+            <div
+              aria-label="Incident creation methods"
+              className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+              role="tablist"
+            >
+              {(
+                [
+                  {
+                    value: "source",
+                    label: "From confirmed source",
+                    icon: Link2,
+                  },
+                  {
+                    value: "manual",
+                    label: "Manual",
+                    icon: Plus,
+                  },
+                ] as const
+              ).map((option) => {
+                const Icon = option.icon;
+                const selected = creationMode === option.value;
+                return (
+                  <button
+                    aria-selected={selected}
+                    className={cn(
+                      "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none",
+                      selected
+                        ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                        : "text-muted hover:bg-neutral-soft hover:text-foreground",
+                    )}
+                    key={option.value}
+                    onClick={() => {
+                      setValue("creationMode", option.value, {
+                        shouldValidate: true,
+                      });
+                      if (option.value === "manual") {
+                        setValue("sourceId", "", { shouldValidate: true });
+                      }
+                    }}
+                    role="tab"
+                    type="button"
+                  >
+                    <Icon
+                      aria-hidden="true"
+                      className="size-4 shrink-0"
+                      strokeWidth={1.8}
+                    />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {creationMode === "source" && sourceOptions.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               Unable to load confirmed alerts and findings. Close and reopen the
               dialog to retry.
             </Alert>
           ) : null}
-          <FormField
-            id="incident-source"
-            label="Confirmed alert or finding"
-            error={errors.sourceId?.message}
-          >
-            <Select
+          {creationMode === "source" ? (
+            <FormField
               id="incident-source"
-              autoFocus
-              disabled={sourceOptions.isPending || sourceOptions.isError}
-              {...register("sourceId", {
-                onChange: (event) => {
-                  const source = sourceOptions.data?.items.find(
-                    (item) => item.findingId === event.target.value,
-                  );
-                  if (!source) return;
-                  setValue("title", source.title, { shouldValidate: true });
-                  setValue("description", source.description ?? "", {
-                    shouldValidate: true,
-                  });
-                  setValue("severity", source.severity, {
-                    shouldValidate: true,
-                  });
-                  setValue("occurredAt", source.detectedAt.slice(0, 16));
-                },
-              })}
+              label="Confirmed alert or finding"
+              error={errors.sourceId?.message}
             >
-              <option value="">
-                {sourceOptions.isPending
-                  ? "Loading eligible sources…"
-                  : "Select a source"}
-              </option>
-              {sourceOptions.data?.items.map((source) => (
-                <option key={source.findingId} value={source.findingId}>
-                  {source.title} · Alert{" "}
-                  {source.alertId.slice(0, 8).toUpperCase()}
+              <Select
+                id="incident-source"
+                disabled={sourceOptions.isPending || sourceOptions.isError}
+                {...register("sourceId", {
+                  onChange: (event) => {
+                    const source = sourceOptions.data?.items.find(
+                      (item) => item.findingId === event.target.value,
+                    );
+                    if (!source) return;
+                    setValue("title", source.title, { shouldValidate: true });
+                    setValue("description", source.description ?? "", {
+                      shouldValidate: true,
+                    });
+                    setValue("severity", source.severity, {
+                      shouldValidate: true,
+                    });
+                    setValue("occurredAt", source.detectedAt.slice(0, 16));
+                  },
+                })}
+              >
+                <option value="">
+                  {sourceOptions.isPending
+                    ? "Loading eligible sources…"
+                    : "Select a source"}
                 </option>
-              ))}
-            </Select>
-            <p className="text-muted text-xs">
-              Only confirmed sources that are not already linked to an incident
-              are shown.
-            </p>
-          </FormField>
-          {sourceOptions.data?.items.length === 0 ? (
+                {sourceOptions.data?.items.map((source) => (
+                  <option key={source.findingId} value={source.findingId}>
+                    {source.title} · Alert{" "}
+                    {source.alertId.slice(0, 8).toUpperCase()}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-muted text-xs">
+                Only confirmed sources that are not already linked to an
+                incident are shown.
+              </p>
+            </FormField>
+          ) : (
+            <Alert>
+              Create manually only when no confirmed alert or finding exists.
+              The incident will have no originating-source link.
+            </Alert>
+          )}
+          {creationMode === "source" &&
+          sourceOptions.data?.items.length === 0 ? (
             <Alert>
               No eligible confirmed alerts or findings are available.
             </Alert>
@@ -1004,7 +1074,9 @@ export function IncidentReportingManager() {
               {...register("occurredAt")}
             />
             <p className="text-muted text-xs">
-              Defaults to the source finding time when left blank.
+              {creationMode === "source"
+                ? "Defaults to the source finding time when left blank."
+                : "Defaults to the current time when left blank."}
             </p>
           </FormField>
           <FormField
@@ -1024,10 +1096,12 @@ export function IncidentReportingManager() {
               {...register("description")}
             />
           </FormField>
-          <Alert>
-            Creating the incident permanently links it to the selected security
-            finding for audit traceability.
-          </Alert>
+          {creationMode === "source" ? (
+            <Alert>
+              Creating the incident permanently links it to the selected
+              security finding for audit traceability.
+            </Alert>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={close}>
               Cancel
@@ -1035,7 +1109,9 @@ export function IncidentReportingManager() {
             <Button
               type="submit"
               disabled={
-                mutation.isPending || !selectedSource || sourceOptions.isPending
+                mutation.isPending ||
+                (creationMode === "source" &&
+                  (!selectedSource || sourceOptions.isPending))
               }
             >
               {mutation.isPending ? "Creating…" : "Create incident"}

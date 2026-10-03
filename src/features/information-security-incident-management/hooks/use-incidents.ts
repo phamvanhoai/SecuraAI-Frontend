@@ -259,7 +259,7 @@ export function useReportIncident() {
   return useMutation({
     mutationFn: reportIncident,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: key }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
   });
 }
 export const useIncidentSourceOptions = (enabled: boolean) =>
