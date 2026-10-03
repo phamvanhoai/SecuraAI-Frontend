@@ -66,6 +66,43 @@ describe("normalized-events api client", () => {
     expect(result.items[0]?.eventType).toBe("vpn_session_start");
   });
 
+  it("calls listNormalizedEvents with search and filter parameters", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [mockItem],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    });
+
+    const result = await listNormalizedEvents({
+      q: "vpn",
+      eventFamily: "VPN_SSO",
+      mappingStatus: "MAPPED",
+      sourceIp: "10.0.0.5",
+      account: "test@secura.ai",
+      asset: "GW-01",
+      from: "2026-10-01T00:00:00.000Z",
+      to: "2026-10-02T23:59:59.999Z",
+    });
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("q=vpn"),
+      { target: "same-origin" },
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("eventFamily=VPN_SSO"),
+      { target: "same-origin" },
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("sourceIp=10.0.0.5"),
+      { target: "same-origin" },
+    );
+    expect(result.items).toHaveLength(1);
+  });
+
   it("calls getNormalizedEventMetrics and parses metrics", async () => {
     vi.mocked(apiRequest).mockResolvedValueOnce({
       totalEvents: 10,

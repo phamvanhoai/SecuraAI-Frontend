@@ -6,12 +6,16 @@ export const eventFamilies = [
   "APPLICATION_ACCESS",
 ] as const;
 
+export type EventFamily = (typeof eventFamilies)[number];
+
 export const mappingStatuses = [
   "UNMAPPED",
   "PARTIALLY_MAPPED",
   "MAPPED",
   "NEEDS_REVIEW",
 ] as const;
+
+export type MappingStatus = (typeof mappingStatuses)[number];
 
 export const mappedUserSchema = z.object({
   id: z.string().uuid(),
@@ -114,6 +118,8 @@ export const listNormalizedEventsQuerySchema = z.object({
   eventType: z.string().optional(),
   account: z.string().optional(),
   sourceIp: z.string().optional(),
+  assetId: z.string().uuid().optional(),
+  asset: z.string().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   q: z.string().optional(),
