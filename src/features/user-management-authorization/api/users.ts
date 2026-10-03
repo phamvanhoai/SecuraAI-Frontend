@@ -120,3 +120,23 @@ export async function getUserCreateOptions(
   }
   return parsed.data;
 }
+
+export async function getUserDepartments(
+  signal?: AbortSignal,
+): Promise<UserCreateOptions> {
+  const data = await apiRequest<unknown>("/api/users/departments", {
+    method: "GET",
+    target: "same-origin",
+    ...(signal ? { signal } : {}),
+  });
+  const parsed = userCreateOptionsSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new ApiError(
+      "The server returned invalid department filter options.",
+      502,
+      "UNKNOWN_ERROR",
+      parsed.error.flatten(),
+    );
+  }
+  return parsed.data;
+}
