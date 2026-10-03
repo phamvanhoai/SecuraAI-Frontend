@@ -335,7 +335,9 @@ export function PolicyPublicationManager({
 
   async function confirmRejection(): Promise<void> {
     if (!selected) return;
-    const parsed = rejectPolicyInputSchema.safeParse({ reason: rejectionReason });
+    const parsed = rejectPolicyInputSchema.safeParse({
+      reason: rejectionReason,
+    });
     if (!parsed.success) {
       setRejectionError(
         parsed.error.issues[0]?.message ?? "A rejection reason is required.",
@@ -464,28 +466,65 @@ export function PolicyPublicationManager({
             id="policy-pending-panel"
             role="tabpanel"
           >
-            <form className="border-border flex gap-2 border-b p-4" onSubmit={submitSearch}>
+            <form
+              className="border-border flex gap-2 border-b p-4"
+              onSubmit={submitSearch}
+            >
               <label className="relative block w-full max-w-md">
                 <span className="sr-only">Search policy drafts</span>
-                <Search aria-hidden="true" className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input className="pl-9" onChange={(event) => setSearch(event.target.value)} placeholder="Search by policy code or title" value={search} />
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by policy code or title"
+                  value={search}
+                />
               </label>
-              <Button aria-label="Search policy drafts" className="min-h-10" type="submit">Search</Button>
+              <Button
+                aria-label="Search policy drafts"
+                className="min-h-10"
+                type="submit"
+              >
+                Search
+              </Button>
             </form>
             <div className="p-4">
               {policies.isPending ? (
-                <TableSkeleton columns={5} label="Loading policy drafts awaiting publication" />
+                <TableSkeleton
+                  columns={5}
+                  label="Loading policy drafts awaiting publication"
+                />
               ) : policies.isError ? (
-                <Alert><strong className="block">Unable to load policy drafts awaiting publication</strong><span>{errorMessage(policies.error)}</span></Alert>
+                <Alert>
+                  <strong className="block">
+                    Unable to load policy drafts awaiting publication
+                  </strong>
+                  <span>{errorMessage(policies.error)}</span>
+                </Alert>
               ) : policies.data?.items.length === 0 ? (
-                <p className="text-muted py-10 text-center">No policy versions require an Admin action.</p>
+                <p className="text-muted py-10 text-center">
+                  No policy versions require an Admin action.
+                </p>
               ) : policies.data ? (
-                <DataTable columns={columns} getRowKey={(item) => item.id} rows={policies.data.items} />
+                <DataTable
+                  columns={columns}
+                  getRowKey={(item) => item.id}
+                  rows={policies.data.items}
+                />
               ) : null}
             </div>
             {policies.data ? (
               <div className="border-border border-t p-4">
-                <Pagination onPageChange={(page) => setQuery((current) => ({ ...current, page }))} page={query.page} pageCount={policies.data.pagination.totalPages} />
+                <Pagination
+                  onPageChange={(page) =>
+                    setQuery((current) => ({ ...current, page }))
+                  }
+                  page={query.page}
+                  pageCount={policies.data.pagination.totalPages}
+                />
               </div>
             ) : null}
           </div>
@@ -495,28 +534,63 @@ export function PolicyPublicationManager({
             id="policy-rejected-panel"
             role="tabpanel"
           >
-            <form className="border-border flex gap-2 border-b p-4" onSubmit={submitRejectedSearch}>
+            <form
+              className="border-border flex gap-2 border-b p-4"
+              onSubmit={submitRejectedSearch}
+            >
               <label className="relative block w-full max-w-md">
                 <span className="sr-only">Search rejected policies</span>
-                <Search aria-hidden="true" className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                <Input className="pl-9" onChange={(event) => setRejectedSearch(event.target.value)} placeholder="Search rejected policies by code or title" value={rejectedSearch} />
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setRejectedSearch(event.target.value)}
+                  placeholder="Search rejected policies by code or title"
+                  value={rejectedSearch}
+                />
               </label>
-              <Button aria-label="Search rejected policies" className="min-h-10" type="submit" variant="secondary">Search</Button>
+              <Button
+                aria-label="Search rejected policies"
+                className="min-h-10"
+                type="submit"
+                variant="secondary"
+              >
+                Search
+              </Button>
             </form>
             <div className="p-4">
               {rejectedPolicies.isPending ? (
                 <TableSkeleton columns={5} label="Loading rejected policies" />
               ) : rejectedPolicies.isError ? (
-                <Alert><strong className="block">Unable to load rejected policies</strong><span>{errorMessage(rejectedPolicies.error)}</span></Alert>
+                <Alert>
+                  <strong className="block">
+                    Unable to load rejected policies
+                  </strong>
+                  <span>{errorMessage(rejectedPolicies.error)}</span>
+                </Alert>
               ) : rejectedPolicies.data?.items.length === 0 ? (
-                <p className="text-muted py-10 text-center">No rejected policy versions were found.</p>
+                <p className="text-muted py-10 text-center">
+                  No rejected policy versions were found.
+                </p>
               ) : rejectedPolicies.data ? (
-                <DataTable columns={rejectedColumns} getRowKey={(item) => item.rejection.id} rows={rejectedPolicies.data.items} />
+                <DataTable
+                  columns={rejectedColumns}
+                  getRowKey={(item) => item.rejection.id}
+                  rows={rejectedPolicies.data.items}
+                />
               ) : null}
             </div>
             {rejectedPolicies.data ? (
               <div className="border-border border-t p-4">
-                <Pagination onPageChange={(page) => setRejectedQuery((current) => ({ ...current, page }))} page={rejectedQuery.page} pageCount={rejectedPolicies.data.pagination.totalPages} />
+                <Pagination
+                  onPageChange={(page) =>
+                    setRejectedQuery((current) => ({ ...current, page }))
+                  }
+                  page={rejectedQuery.page}
+                  pageCount={rejectedPolicies.data.pagination.totalPages}
+                />
               </div>
             ) : null}
           </div>
@@ -617,12 +691,16 @@ export function PolicyPublicationManager({
                   />
                 </label>
                 {rejectionError ? (
-                  <p className="text-danger text-sm" id="policy-rejection-error">
+                  <p
+                    className="text-danger text-sm"
+                    id="policy-rejection-error"
+                  >
                     {rejectionError}
                   </p>
                 ) : (
                   <p className="text-muted text-xs">
-                    Rejection is final for this version and will be recorded in the audit trail.
+                    Rejection is final for this version and will be recorded in
+                    the audit trail.
                   </p>
                 )}
               </div>
@@ -631,8 +709,8 @@ export function PolicyPublicationManager({
                 {review.data.version.status === "approved"
                   ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
                   : review.data.version.status === "waiting_approval"
-                  ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
-                  : "Confirm that you have reviewed the complete policy content before making an approval decision."}
+                    ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
+                    : "Confirm that you have reviewed the complete policy content before making an approval decision."}
               </Alert>
             )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -690,7 +768,10 @@ export function PolicyPublicationManager({
                       >
                         Request revision
                       </Button>
-                      <Button onClick={() => setRejecting(true)} variant="danger">
+                      <Button
+                        onClick={() => setRejecting(true)}
+                        variant="danger"
+                      >
                         Reject policy
                       </Button>
                     </>

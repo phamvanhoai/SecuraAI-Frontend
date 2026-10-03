@@ -59,6 +59,7 @@ import type {
 } from "../schemas/policy-publication-schema";
 import { PolicyDraftFormDialog } from "./policy-draft-form-dialog";
 import { PolicyViewTabs } from "./policy-view-tabs";
+import { PolicyApplicabilityDialog } from "./policy-applicability-dialog";
 
 function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
   const parsed = policyDraftQuerySchema.safeParse(
@@ -92,12 +93,24 @@ const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
       </span>
     ),
   },
-  { key: "version", header: "Version", cell: (item) => `v${item.version.versionNumber}` },
-  { key: "status", header: "Status", cell: () => <StatusBadge tone="danger">Rejected</StatusBadge> },
+  {
+    key: "version",
+    header: "Version",
+    cell: (item) => `v${item.version.versionNumber}`,
+  },
+  {
+    key: "status",
+    header: "Status",
+    cell: () => <StatusBadge tone="danger">Rejected</StatusBadge>,
+  },
   {
     key: "reason",
     header: "Reason",
-    cell: (item) => <span className="block max-w-md whitespace-normal">{item.rejection.reason}</span>,
+    cell: (item) => (
+      <span className="block max-w-md whitespace-normal">
+        {item.rejection.reason}
+      </span>
+    ),
   },
   {
     key: "decision",
@@ -105,7 +118,9 @@ const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
     cell: (item) => (
       <span>
         <span className="block">{item.rejection.rejectedByName}</span>
-        <span className="text-muted text-xs">{formatDate(item.rejection.rejectedAt)}</span>
+        <span className="text-muted text-xs">
+          {formatDate(item.rejection.rejectedAt)}
+        </span>
       </span>
     ),
   },
@@ -147,6 +162,8 @@ export function PolicyDraftsManager({
   } | null>(null);
   const [editing, setEditing] = useState<OwnedPolicyDraft | null>(null);
   const [submitting, setSubmitting] = useState<OwnedPolicyDraft | null>(null);
+  const [definingApplicability, setDefiningApplicability] =
+    useState<OwnedPolicyDraft | null>(null);
   const submitMutation = useSubmitPolicyForReview();
   const rejectedPolicies = useRejectedPolicies(rejectedQuery, canManageDrafts);
   const detail = usePolicyDraft(
@@ -264,6 +281,21 @@ export function PolicyDraftsManager({
               <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
               Edit
             </button>
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={(event) => {
+                closeActionMenu(event);
+                setDefiningApplicability(draft);
+              }}
+              type="button"
+            >
+              <Building2
+                className="size-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              Define applicability
+            </button>
             {canSubmitDrafts ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
@@ -344,7 +376,11 @@ export function PolicyDraftsManager({
                       onClick={onViewHistory}
                       variant="secondary"
                     >
-                      <History aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                      <History
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
                       Version history
                     </Button>
                   ) : null}
@@ -410,13 +446,25 @@ export function PolicyDraftsManager({
               {
                 id: "draft-workspace",
                 label: "Draft workspace",
-                icon: <Files aria-hidden="true" className="size-4" strokeWidth={2} />,
+                icon: (
+                  <Files
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
                 onSelect: () => undefined,
               },
               {
                 id: "published",
                 label: "Published policies",
-                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                icon: (
+                  <BookOpenCheck
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
                 onSelect: onViewPublished,
               },
             ]}
@@ -440,10 +488,10 @@ export function PolicyDraftsManager({
           className="border-border flex overflow-x-auto border-b px-4"
           role="tablist"
         >
-          {([
+          {[
             { id: "drafts" as const, label: "Drafts" },
             { id: "rejected" as const, label: "Rejected" },
-          ]).map((tab) => (
+          ].map((tab) => (
             <button
               aria-controls={`${tab.id}-policies-panel`}
               aria-selected={activeTab === tab.id}
@@ -511,7 +559,9 @@ export function PolicyDraftsManager({
               {drafts.isPending ? <DraftTableSkeleton /> : null}
               {drafts.isError ? (
                 <Alert className="border-danger/25 bg-danger-soft text-danger">
-                  <strong className="block">Unable to load policy drafts</strong>
+                  <strong className="block">
+                    Unable to load policy drafts
+                  </strong>
                   <span>
                     {drafts.error instanceof Error
                       ? drafts.error.message
@@ -639,6 +689,12 @@ export function PolicyDraftsManager({
         draft={null}
         onClose={() => setCreateOpen(false)}
       />
+      {definingApplicability ? (
+        <PolicyApplicabilityDialog
+          draft={definingApplicability}
+          onClose={() => setDefiningApplicability(null)}
+        />
+      ) : null}
       <PolicyDraftFormDialog
         open={editing !== null}
         draft={editing}
@@ -716,18 +772,15 @@ function SubmitPolicyDraftDialog({
       {draft ? (
         <div className="space-y-5">
           <p className="text-muted text-sm leading-6">
-            Submit <strong className="text-foreground">{draft.title}</strong>{" "}
-            (v{draft.version.versionNumber}) to Admin for review. The draft can
-            no longer be edited after submission.
+            Submit <strong className="text-foreground">{draft.title}</strong> (v
+            {draft.version.versionNumber}) to Admin for review. The draft can no
+            longer be edited after submission.
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" disabled={pending} onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              disabled={pending}
-              onClick={() => void onSubmit(draft)}
-            >
+            <Button disabled={pending} onClick={() => void onSubmit(draft)}>
               <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
               {pending ? "Submitting…" : "Submit for review"}
             </Button>
