@@ -9,11 +9,14 @@ import {
   listRoles,
   updateRole,
   configureRolePermissions,
+  configureUserPermissions,
+  getUserPermissions,
   type ListRolesInput,
 } from "../api/roles";
 import type {
   ConfigureRolePermissionsValues,
   RoleFormValues,
+  ConfigureUserPermissionsValues,
 } from "../schemas/role-schema";
 
 export const roleKeys = {
@@ -26,6 +29,31 @@ export function usePermissions() {
   return useQuery({
     queryKey: ["access-control", "permissions"],
     queryFn: ({ signal }) => listPermissions(signal),
+  });
+}
+
+export function useUserPermissions(userId: string | null) {
+  return useQuery({
+    queryKey: ["access-control", "users", userId, "permissions"],
+    queryFn: ({ signal }) => getUserPermissions(userId ?? "", signal),
+    enabled: userId !== null,
+  });
+}
+
+export function useConfigureUserPermissions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      input,
+    }: {
+      userId: string;
+      input: ConfigureUserPermissionsValues;
+    }) => configureUserPermissions(userId, input),
+    onSuccess: (_data, variables) =>
+      queryClient.invalidateQueries({
+        queryKey: ["access-control", "users", variables.userId, "permissions"],
+      }),
   });
 }
 
