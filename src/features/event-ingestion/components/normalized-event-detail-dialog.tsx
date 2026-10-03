@@ -1,25 +1,14 @@
 "use client";
 
 import {
-  AlertTriangle,
-  Calendar,
-  CheckCircle2,
-  Clock,
   Copy,
-  Cpu,
-  Eye,
-  Globe,
   HardDrive,
   Layers,
   Loader2,
-  Network,
-  Server,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   User,
   UserCheck,
-  X,
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";

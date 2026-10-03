@@ -27,6 +27,22 @@ vi.mock("../hooks/use-normalized-events", () => ({
   }),
 }));
 
+vi.mock("../hooks/use-event-sources", () => ({
+  useEventSources: () => ({
+    isPending: false,
+    data: {
+      items: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          name: "Wazuh Production SIEM",
+          sourceType: "WAZUH",
+        },
+      ],
+      pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+    },
+  }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({
     success: vi.fn(),
@@ -92,7 +108,6 @@ beforeAll(() => {
 });
 
 describe("NormalizedEventsList", () => {
-
   beforeEach(() => {
     mockUseNormalizedEvents.mockReturnValue({
       isPending: false,
@@ -113,14 +128,99 @@ describe("NormalizedEventsList", () => {
     render(<NormalizedEventsList />);
 
     expect(screen.getByText("Ingested Security Events")).toBeInTheDocument();
-    expect(screen.getByText("Wazuh Production SIEM")).toBeInTheDocument();
+    expect(screen.getAllByText("Wazuh Production SIEM")[0]).toBeInTheDocument();
     expect(screen.getByText("user_login_success")).toBeInTheDocument();
     expect(screen.getByText("admin@secura.ai")).toBeInTheDocument();
     expect(screen.getByText("Secura Administrator")).toBeInTheDocument();
     expect(screen.getByText("Core Gateway")).toBeInTheDocument();
-    expect(screen.getByText("Authentication")).toBeInTheDocument();
-    expect(screen.getByText("MAPPED")).toBeInTheDocument();
+    expect(screen.getAllByText("Authentication")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("MAPPED")[0]).toBeInTheDocument();
     expect(screen.getByText("Anomaly")).toBeInTheDocument();
+  });
+
+  it("handles search input submission", async () => {
+    const user = userEvent.setup();
+    render(<NormalizedEventsList />);
+
+    const searchInput = screen.getByPlaceholderText(/Search event type, account, IP, asset/i);
+    await user.type(searchInput, "login");
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
+    await user.click(searchBtn);
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ q: "login" }),
+    );
+  });
+
+  it("handles dropdown filters for family, source, and mapping status", async () => {
+    const user = userEvent.setup();
+    render(<NormalizedEventsList />);
+
+    const familySelect = screen.getByLabelText(/Filter by event family/i);
+    await user.selectOptions(familySelect, "AUTHENTICATION");
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ eventFamily: "AUTHENTICATION" }),
+    );
+
+    const sourceSelect = screen.getByLabelText(/Filter by event source/i);
+    await user.selectOptions(sourceSelect, "11111111-1111-4111-8111-111111111111");
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ eventSourceId: "11111111-1111-4111-8111-111111111111" }),
+    );
+
+    const statusSelect = screen.getByLabelText(/Filter by ingestion status/i);
+    await user.selectOptions(statusSelect, "MAPPED");
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ mappingStatus: "MAPPED" }),
+    );
+  });
+
+  it("handles advanced filter panel inputs and quick presets", async () => {
+    const user = userEvent.setup();
+    render(<NormalizedEventsList />);
+
+    const toggleFiltersBtn = screen.getByRole("button", { name: /Filters/i });
+    await user.click(toggleFiltersBtn);
+
+    const ipInput = screen.getByPlaceholderText(/192\.168\.1\.100/i);
+    await user.type(ipInput, "10.0.0.5");
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceIp: "10.0.0.5" }),
+    );
+
+    const accountInput = screen.getByPlaceholderText(/admin@company\.com/i);
+    await user.type(accountInput, "user@test.com");
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ account: "user@test.com" }),
+    );
+
+    const preset24hBtn = screen.getByRole("button", { name: /Last 24 Hours/i });
+    await user.click(preset24hBtn);
+
+    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: expect.any(String),
+        to: expect.any(String),
+      }),
+    );
+  });
+
+  it("resets all filters when clicking Reset", async () => {
+    const user = userEvent.setup();
+    render(<NormalizedEventsList />);
+
+    const familySelect = screen.getByLabelText(/Filter by event family/i);
+    await user.selectOptions(familySelect, "VPN_SSO");
+
+    const resetBtn = screen.getByRole("button", { name: /Reset/i });
+    await user.click(resetBtn);
+
+    expect(familySelect).toHaveValue("ALL");
   });
 
   it("renders empty state when no events exist", () => {
