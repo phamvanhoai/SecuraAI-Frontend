@@ -64,10 +64,12 @@ export function ConfirmAlertIncidentDialog({
       const result = await mutation.mutateAsync(values);
       resetAndClose();
       toast.success(
-        result.incident.created
-          ? "Incident draft created"
-          : "Linked incident already exists",
-        `${result.incident.code} is linked to ${alert.alertCode}.`,
+        result.finding.created
+          ? "True positive confirmed"
+          : "Alert already confirmed",
+        result.finding.created
+          ? `A security finding was created for ${alert.alertCode}. You can create an incident from Incident Management.`
+          : `The security finding for ${alert.alertCode} already exists.`,
       );
     } catch (error: unknown) {
       setMessage(
@@ -93,7 +95,8 @@ export function ConfirmAlertIncidentDialog({
           </div>
           <p className="text-muted text-sm leading-6">
             This records the alert as a true positive, completes your triage,
-            and automatically creates a linked incident draft for investigation.
+            and creates a security finding. Creating an incident is a separate
+            action in Incident Management.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
