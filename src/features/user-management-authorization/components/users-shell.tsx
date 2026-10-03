@@ -6,9 +6,9 @@ import {
   LockKeyhole,
   Pencil,
   Search,
+  SlidersHorizontal,
   ShieldPlus,
   UnlockKeyhole,
-  UserMinus,
 } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -39,8 +39,8 @@ import type { AuthSessionUser } from "@/features/authentication-account";
 import type { UserListQuery, UserListResponse } from "../schemas/user-schema";
 import { UserDetailDialog } from "./user-detail-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
-import { AccountAvailabilityDialog } from "./account-availability-dialog";
 import { AssignUserRolesDialog } from "./assign-user-roles-dialog";
+import { UserPermissionsDialog } from "@/features/access-control";
 
 function UserCell({ name, email }: { name: string; email: string }) {
   const initials = name
@@ -103,11 +103,10 @@ function userRows(
   view: (userId: string) => void,
   edit: (userId: string) => void,
   canUpdate: boolean,
-  manage: (user: UserListResponse["items"][number]) => void,
-  canDeactivate: boolean,
-  canRemove: boolean,
   assignRoles: (userId: string) => void,
   canAssignRoles: boolean,
+  configurePermissions: (userId: string) => void,
+  canConfigurePermissions: boolean,
 ) {
   return data.items.map((user) => {
     const action = accountLockAction(actor, user);
@@ -176,6 +175,20 @@ function userRows(
               />
               Assign role, scope & ownership
             </button>
+            <button
+              aria-label={`Configure detailed permissions for ${user.fullName}`}
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!canConfigurePermissions || user.status === "disabled"}
+              onClick={() => configurePermissions(user.id)}
+              type="button"
+            >
+              <SlidersHorizontal
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              Configure detailed permissions
+            </button>
             {action ? (
               <button
                 aria-label={`${action === "lock" ? "Lock" : "Unlock"} ${user.fullName}`}
@@ -190,26 +203,6 @@ function userRows(
                 {action === "lock" ? "Lock" : "Unlock"}
               </button>
             ) : null}
-            <div className="border-border border-t pt-1">
-              <button
-                aria-label={`Manage availability for ${user.fullName}`}
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  user.id === actor.id ||
-                  (!canDeactivate && !canRemove) ||
-                  (user.status === "disabled" && !canRemove)
-                }
-                onClick={() => manage(user)}
-                type="button"
-              >
-                <UserMinus
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Manage availability
-              </button>
-            </div>
           </div>
         </DropdownMenu>
       </div>,
@@ -229,9 +222,7 @@ export function UsersShell() {
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [assignRoleUserId, setAssignRoleUserId] = useState<string | null>(null);
-  const [availabilityUser, setAvailabilityUser] = useState<
-    UserListResponse["items"][number] | null
-  >(null);
+  const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
@@ -240,11 +231,8 @@ export function UsersShell() {
   const canAssignRoles =
     isAdmin &&
     (session.data?.permissions.includes("users.assign-role") ?? false);
-  const canDeactivate =
-    isAdmin &&
-    (session.data?.permissions.includes("users.deactivate") ?? false);
-  const canRemove =
-    isAdmin && (session.data?.permissions.includes("users.remove") ?? false);
+  const canConfigurePermissions =
+    isAdmin && (session.data?.permissions.includes("roles.update") ?? false);
   const departmentOptions = useUserCreateOptions(canRead && isAdmin);
   const users = useUsers(
     {
@@ -500,11 +488,10 @@ export function UsersShell() {
               setDetailUserId,
               setEditUserId,
               canUpdate,
-              setAvailabilityUser,
-              canDeactivate,
-              canRemove,
               setAssignRoleUserId,
               canAssignRoles,
+              setPermissionUserId,
+              canConfigurePermissions,
             )}
           />
         )}
@@ -529,14 +516,14 @@ export function UsersShell() {
       />
       <EditUserDialog userId={editUserId} onClose={() => setEditUserId(null)} />
       <AssignUserRolesDialog
+        key={assignRoleUserId ?? "closed-access-assignment-dialog"}
         userId={assignRoleUserId}
         onClose={() => setAssignRoleUserId(null)}
       />
-      <AccountAvailabilityDialog
-        user={availabilityUser}
-        canDeactivate={canDeactivate}
-        canRemove={canRemove}
-        onClose={() => setAvailabilityUser(null)}
+      <UserPermissionsDialog
+        key={permissionUserId ?? "closed-permission-dialog"}
+        userId={permissionUserId}
+        onClose={() => setPermissionUserId(null)}
       />
       {isAdmin &&
       canAssignRoles &&
