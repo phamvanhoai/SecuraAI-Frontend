@@ -16,9 +16,11 @@ import {
 
 const format = (value: string | null) =>
   value
-    ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
-        new Date(value),
-      )
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(new Date(value))
     : "Not set";
 const title = (value: string) =>
   value.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase());
@@ -46,6 +48,38 @@ export function RiskAssessmentDetailDialog({
     if (!id && dialog?.open) dialog.close();
   }, [id]);
   const risk = detail.data;
+  const isOwner = Boolean(
+    risk && session.data && risk.owner?.id === session.data.id,
+  );
+  const isOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ??
+    false;
+  const terminalRisk = risk?.status === "closed" || risk?.status === "archived";
+  const eligiblePlans =
+    risk?.treatmentPlans.filter((plan) =>
+      ["draft", "active", "completed"].includes(plan.status),
+    ) ?? [];
+  const acceptanceBlocked = terminalRisk
+    ? "Closed or archived risks cannot submit acceptance."
+    : risk?.status === "accepted"
+      ? "This risk is accepted. Review is required before a new acceptance request."
+      : risk?.vulnerabilityWorkflow?.assessmentReviewRequired
+        ? "New vulnerabilities require an up-to-date inherent and residual assessment before submitting acceptance."
+        : !risk?.latestAssessment?.residualRating
+          ? "Assess residual risk before submitting acceptance."
+          : !eligiblePlans.length
+            ? "Create an eligible treatment plan before submitting acceptance."
+            : null;
+  const userLabel = (userId: string | null) => {
+    if (!userId) return "Not recorded";
+    const known = [
+      risk?.owner,
+      risk?.createdBy,
+      risk?.latestAssessment?.assessedBy,
+      ...(risk?.treatmentPlans.map((plan) => plan.owner) ?? []),
+    ].find((person) => person?.id === userId);
+    return known?.fullName ?? `User ID: ${userId}`;
+  };
   return (
     <Dialog
       dialogRef={ref}
@@ -58,6 +92,13 @@ export function RiskAssessmentDetailDialog({
       ) : detail.isError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           Unable to load this risk record.
+          <Button
+            variant="secondary"
+            className="mt-3"
+            onClick={() => void detail.refetch()}
+          >
+            Try again
+          </Button>
         </Alert>
       ) : risk ? (
         <div className="space-y-6">
@@ -66,12 +107,46 @@ export function RiskAssessmentDetailDialog({
           </p>
           <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Fact label="Status" value={title(risk.status)} />
-            <Fact label="Owner" value={risk.owner?.fullName ?? "Unassigned"} />
+            <Fact
+              label="Risk scope"
+              value={
+                risk.scope?.type === "business_service"
+                  ? `Business service — ${risk.scope.businessService.name} (${title(risk.scope.businessService.status)})`
+                  : risk.scope?.type === "asset"
+                    ? "Asset"
+                    : "Not recorded for this legacy risk"
+              }
+            />
+            <Fact
+              label="Risk owner"
+              value={risk.owner?.fullName ?? "Unassigned"}
+            />
             <Fact label="Review date" value={format(risk.reviewDate)} />
             <Fact label="Last updated" value={format(risk.updatedAt)} />
+            <Fact label="Created at" value={format(risk.createdAt)} />
+            <Fact
+              label="Created by"
+              value={risk.createdBy?.fullName ?? "Not recorded"}
+            />
           </dl>
+          {risk.status === "under_treatment" &&
+          (!risk.latestAssessment ||
+            !risk.treatmentPlans.some((plan) => plan.status === "active")) ? (
+            <Alert>
+              Risk status is Under treatment, but its assessment or active
+              treatment plan is missing. Review the source record; no status has
+              been changed automatically.
+            </Alert>
+          ) : null}
           <section>
             <h3 className="font-semibold">Latest assessment</h3>
+            {risk.vulnerabilityWorkflow?.assessmentReviewRequired ? (
+              <Alert className="mt-3">
+                Risk context changed or has not been assessed. Existing ratings
+                are historical and may not reflect the latest vulnerabilities.
+                Review inherent and residual risk before submitting acceptance.
+              </Alert>
+            ) : null}
             {risk.latestAssessment ? (
               <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Fact
@@ -124,6 +199,30 @@ export function RiskAssessmentDetailDialog({
                   label="Assessed at"
                   value={format(risk.latestAssessment.assessedAt)}
                 />
+                <Fact
+                  label="Assessment type"
+                  value={title(risk.latestAssessment.type)}
+                />
+                <Fact
+                  label="Risk appetite"
+                  value={
+                    risk.latestAssessment.riskAppetite
+                      ? title(risk.latestAssessment.riskAppetite)
+                      : "Not defined"
+                  }
+                />
+                <Fact
+                  label="Risk tolerance"
+                  value={
+                    risk.latestAssessment.riskTolerance
+                      ? title(risk.latestAssessment.riskTolerance)
+                      : "Not defined"
+                  }
+                />
+                <Fact
+                  label="Assessment basis"
+                  value={risk.latestAssessment.reason ?? "Not recorded"}
+                />
               </dl>
             ) : (
               <p className="text-muted mt-2 text-sm">
@@ -142,13 +241,20 @@ export function RiskAssessmentDetailDialog({
               }))}
             />
           ) : null}
+          {risk.scope?.type === "business_service" ? (
+            <p className="text-muted text-sm">
+              Linked assets are the recorded risk scope, not the service&apos;s
+              current asset list. Service membership changes require a scope
+              review; they do not automatically change this risk.
+            </p>
+          ) : null}
           <Collection
             heading="Related assets"
             empty="No assets linked."
             items={risk.assets.map((item) => ({
               key: item.id,
               heading: `${item.code} — ${item.name}`,
-              detail: title(item.status),
+              detail: `${title(item.status)} · Criticality: ${item.criticality ? title(item.criticality) : "Not classified"}`,
             }))}
           />
           <div className="grid gap-6 lg:grid-cols-2">
@@ -158,18 +264,77 @@ export function RiskAssessmentDetailDialog({
               items={risk.controls.map((item) => ({
                 key: item.id,
                 heading: `${item.code} — ${item.name}`,
-                detail: `${title(item.applicability)} · ${title(item.implementationStatus)}`,
+                detail: `${title(item.applicability)} · ${title(item.implementationStatus)}\nEffectiveness: ${item.latestEffectiveness === null ? "Not measured" : `${item.latestEffectiveness}%`} · Result: ${item.latestResult ? title(item.latestResult) : "Not assessed"}`,
               }))}
             />
-            <Collection
-              heading="Treatment plans"
-              empty="No treatment plans linked."
-              items={risk.treatmentPlans.map((item) => ({
-                key: item.id,
-                heading: item.title,
-                detail: `${title(item.strategy)} · ${title(item.status)} · ${item.progress}% complete · ${item.actionCount} actions · due ${format(item.targetCompletionDate)}`,
-              }))}
-            />
+            <section>
+              <h3 className="font-semibold">Treatment plans</h3>
+              {!risk.treatmentPlans.length ? (
+                <p className="text-muted mt-2 text-sm">
+                  No treatment plans linked.
+                </p>
+              ) : (
+                risk.treatmentPlans.map((plan) => (
+                  <article
+                    key={plan.id}
+                    className="border-border mt-3 min-w-0 space-y-3 rounded-lg border p-3"
+                  >
+                    <h4 className="text-sm font-semibold break-words">
+                      {plan.title}
+                    </h4>
+                    <p className="text-muted text-sm">
+                      {title(plan.strategy)} · {title(plan.status)} ·{" "}
+                      {plan.progress}% complete · Due{" "}
+                      {format(plan.targetCompletionDate)}
+                    </p>
+                    <p className="text-sm">
+                      Responsible owner: {plan.owner?.fullName ?? "Unassigned"}
+                    </p>
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">
+                        Treatment actions ({plan.actionCount})
+                      </summary>
+                      {!plan.actions.length ? (
+                        <p className="text-muted mt-2 text-sm">
+                          No actions recorded.
+                        </p>
+                      ) : (
+                        <ul className="mt-2 space-y-3">
+                          {plan.actions.map((action) => (
+                            <li
+                              key={action.id}
+                              className="border-border border-t pt-2 text-sm"
+                            >
+                              <p className="font-medium break-words">
+                                {action.title}
+                              </p>
+                              <p className="text-muted break-words">
+                                {title(action.status)} · Due{" "}
+                                {format(action.dueDate)} · Assigned to:{" "}
+                                {userLabel(action.assignedToUserId)}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </details>
+                    {["draft", "active"].includes(plan.status) &&
+                    (isOfficer || isOwner) &&
+                    !terminalRisk ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setEditingPlan(plan)}
+                      >
+                        <Pencil aria-hidden="true" className="size-4" />
+                        Update {plan.title}
+                      </Button>
+                    ) : (
+                      <p className="text-muted text-xs">Read-only</p>
+                    )}
+                  </article>
+                ))
+              )}
+            </section>
           </div>
           <Collection
             heading="Linked incidents"
@@ -180,26 +345,13 @@ export function RiskAssessmentDetailDialog({
               detail: `${title(item.severity)} · ${title(item.status)} · ${format(item.createdAt)}`,
             }))}
           />
-          {risk.treatmentPlans.length ? (
-            <section>
-              <h3 className="font-semibold">Update treatment plans</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {risk.treatmentPlans.map((plan) => (
-                  <Button
-                    key={plan.id}
-                    variant="secondary"
-                    className="text-brand hover:bg-brand-soft"
-                    onClick={() => setEditingPlan(plan)}
-                  >
-                    <Pencil aria-hidden="true" className="size-4" />
-                    Update {plan.title}
-                  </Button>
-                ))}
-              </div>
-            </section>
-          ) : null}
           <section>
             <h3 className="font-semibold">Risk acceptance</h3>
+            {!risk.acceptances.length ? (
+              <p className="text-muted mt-2 text-sm">
+                No risk acceptance requests recorded.
+              </p>
+            ) : null}
             <div className="mt-3 space-y-2">
               {risk.acceptances.map((item) => (
                 <div
@@ -212,8 +364,18 @@ export function RiskAssessmentDetailDialog({
                       Requested {format(item.requestedAt)} · valid until{" "}
                       {format(item.validUntil)}
                     </p>
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                      Recorded reason: {item.reason ?? "Not recorded"}
+                    </p>
+                    <p className="text-muted text-xs break-words">
+                      Requested by: {userLabel(item.requestedBy)} · Decided by:{" "}
+                      {userLabel(item.decidedBy)} · Decided at:{" "}
+                      {format(item.decidedAt)}
+                    </p>
                   </div>
                   {item.decision === "pending" &&
+                  item.requestedBy !== session.data?.id &&
+                  !terminalRisk &&
                   session.data?.roles.some((role) =>
                     ["SECURITY_OFFICER", "EXECUTIVE"].includes(role.code),
                   ) ? (
@@ -225,16 +387,21 @@ export function RiskAssessmentDetailDialog({
                 </div>
               ))}
             </div>
-            {risk.owner?.id === session.data?.id &&
+            {isOwner &&
             !risk.acceptances.some((item) => item.decision === "pending") ? (
-              <Button
-                className="mt-3"
-                onClick={() => setAccepting(true)}
-                disabled={!risk.treatmentPlans.length}
-              >
-                <Send aria-hidden="true" className="size-4" />
-                Review and submit acceptance
-              </Button>
+              <div>
+                {acceptanceBlocked ? (
+                  <p className="text-muted mt-3 text-sm">{acceptanceBlocked}</p>
+                ) : null}
+                <Button
+                  className="mt-3"
+                  onClick={() => setAccepting(true)}
+                  disabled={Boolean(acceptanceBlocked)}
+                >
+                  <Send aria-hidden="true" className="size-4" />
+                  Review and submit acceptance
+                </Button>
+              </div>
             ) : null}
           </section>
           <div className="grid gap-6 lg:grid-cols-2">
@@ -244,7 +411,7 @@ export function RiskAssessmentDetailDialog({
               items={risk.threats.map((item) => ({
                 key: item.id,
                 heading: item.name,
-                detail: item.description,
+                detail: `${item.description ?? "No description recorded."}\nRelated vulnerabilities: ${item.vulnerabilities.map((vulnerability) => vulnerability.name).join(", ") || "None linked"}`,
               }))}
             />
             <Collection
@@ -253,7 +420,7 @@ export function RiskAssessmentDetailDialog({
               items={risk.vulnerabilities.map((item) => ({
                 key: item.id,
                 heading: item.name,
-                detail: item.description,
+                detail: `${item.description ?? "No description recorded."}\nRelated controls: ${item.controls.map((control) => `${control.code} — ${control.name}`).join(", ") || "None linked"}`,
               }))}
             />
           </div>
@@ -294,7 +461,9 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dt className="text-muted text-xs font-medium tracking-wide uppercase">
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
+      <dd className="mt-1 text-sm font-medium break-words whitespace-pre-wrap">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -316,7 +485,7 @@ function Collection({
             <li className="border-border rounded-lg border p-3" key={item.key}>
               <p className="text-sm font-medium">{item.heading}</p>
               {item.detail ? (
-                <p className="text-muted mt-1 text-xs leading-5">
+                <p className="text-muted mt-1 text-xs leading-5 break-words whitespace-pre-wrap">
                   {item.detail}
                 </p>
               ) : null}
