@@ -143,9 +143,9 @@ export const confirmAiAlertResultSchema = z.object({
   reviewedByUserId: z.uuid().nullable(),
   reviewedAt: z.iso.datetime().nullable(),
   changed: z.boolean(),
-  incident: z.object({
+  finding: z.object({
     id: z.uuid(),
-    code: z.string(),
+    title: z.string(),
     status: z.string(),
     created: z.boolean(),
   }),

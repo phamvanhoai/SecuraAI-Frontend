@@ -12,19 +12,21 @@ describe("reportIncidentFormSchema", () => {
   it("accepts a complete report", () =>
     expect(
       reportIncidentFormSchema.safeParse({
+        sourceId: "22222222-2222-4222-8222-222222222222",
         title: "Suspicious email",
         description:
           "The sender requested credentials through an unknown link.",
-        category: "phishing",
+        severity: "high",
         occurredAt: "",
       }).success,
     ).toBe(true));
   it("requires a useful description", () =>
     expect(
       reportIncidentFormSchema.safeParse({
+        sourceId: "22222222-2222-4222-8222-222222222222",
         title: "Suspicious email",
         description: "Too short",
-        category: "phishing",
+        severity: "high",
         occurredAt: "",
       }).success,
     ).toBe(false));
