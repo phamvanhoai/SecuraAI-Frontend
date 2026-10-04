@@ -231,7 +231,7 @@ export function LinkIncidentAssetDialog({
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="bg-neutral-soft text-muted rounded-md px-2 py-1 text-xs font-medium capitalize">
-                            {asset.criticality}
+                            {asset.criticality ?? "—"}
                           </span>
                           {unlinkTargetId !== asset.id ? (
                             <button
@@ -350,7 +350,7 @@ export function LinkIncidentAssetDialog({
               </option>
               {availableAssets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
-                  {asset.assetCode} — {asset.name} ({asset.criticality})
+                  {asset.assetCode} — {asset.name} ({asset.criticality ?? "—"})
                 </option>
               ))}
             </Select>

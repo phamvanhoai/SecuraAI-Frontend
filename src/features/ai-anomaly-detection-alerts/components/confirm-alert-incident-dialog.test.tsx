@@ -21,6 +21,11 @@ vi.mock("../hooks/use-ai-alerts", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => ({
+    data: { fullName: "Security Analyst", email: "analyst@secura.test" },
+  }),
+}));
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -72,10 +77,10 @@ beforeEach(() => {
   mocks.success.mockReset();
   mocks.mutateAsync.mockResolvedValue({
     changed: true,
-    incident: {
+    finding: {
       id: "55555555-5555-4555-8555-555555555555",
-      code: "INC-11111111-1111-4111-8111-111111111111",
-      status: "draft",
+      title: "Unusual authentication activity",
+      status: "open",
       created: true,
     },
   });
@@ -90,9 +95,12 @@ describe("ConfirmAlertIncidentDialog", () => {
     expect(
       screen.getByText(/records the alert as a true positive/i),
     ).toBeInTheDocument();
+    expect(screen.getByText("Security Analyst")).toBeInTheDocument();
+    expect(screen.getByText("anomaly-detector")).toBeInTheDocument();
+    expect(screen.getByText("v1.0.0")).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
-      screen.getByLabelText("Review comment (optional)"),
+      screen.getByLabelText("Feedback reason (optional)"),
       "  Verified by analyst  ",
     );
     await user.click(
@@ -105,8 +113,8 @@ describe("ConfirmAlertIncidentDialog", () => {
     );
     expect(onClose).toHaveBeenCalledOnce();
     expect(mocks.success).toHaveBeenCalledWith(
-      "Incident draft created",
-      expect.stringContaining("INC-11111111-1111-4111-8111-111111111111"),
+      "True positive confirmed",
+      expect.stringContaining("Incident Management"),
     );
   });
 

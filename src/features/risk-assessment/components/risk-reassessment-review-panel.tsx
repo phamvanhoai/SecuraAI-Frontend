@@ -1,6 +1,14 @@
 "use client";
 
-import { CheckCircle2, Gauge, Search, X, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Ellipsis,
+  Eye,
+  Gauge,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useState } from "react";
 import {
   DataTable,
@@ -15,6 +23,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
@@ -26,6 +35,7 @@ import {
 import type { RiskReassessmentReviewItem } from "../schemas/risk-reassessment-review-schema";
 import { CompleteRiskReassessmentDialog } from "./complete-risk-reassessment-dialog";
 import { RejectRiskReassessmentDialog } from "./reject-risk-reassessment-dialog";
+import { RiskReassessmentRequestDetailDialog } from "./risk-reassessment-request-detail-dialog";
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -48,6 +58,8 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
     useState<RiskReassessmentReviewItem | null>(null);
   const [rejectionTarget, setRejectionTarget] =
     useState<RiskReassessmentReviewItem | null>(null);
+  const [detailTarget, setDetailTarget] =
+    useState<RiskReassessmentReviewItem | null>(null);
   const startReview = async (item: RiskReassessmentReviewItem) => {
     try {
       await review.mutateAsync(item.id);
@@ -64,8 +76,10 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       key: "risk",
       header: "Risk",
       cell: (item) => (
-        <span className="block min-w-52">
-          <strong className="block">{item.risk.title}</strong>
+        <span className="block w-52">
+          <strong className="line-clamp-2 leading-5" title={item.risk.title}>
+            {item.risk.title}
+          </strong>
           <span className="text-muted text-xs">{item.risk.riskCode}</span>
         </span>
       ),
@@ -74,8 +88,13 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       key: "incident",
       header: "Incident",
       cell: (item) => (
-        <span className="block min-w-52">
-          <strong className="block font-medium">{item.incident.title}</strong>
+        <span className="block w-52">
+          <strong
+            className="line-clamp-2 leading-5 font-medium"
+            title={item.incident.title}
+          >
+            {item.incident.title}
+          </strong>
           <span className="text-muted text-xs">
             {item.incident.incidentCode}
           </span>
@@ -86,14 +105,19 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       key: "reason",
       header: "Reason",
       cell: (item) => (
-        <span className="block max-w-80 break-words">{item.reason}</span>
+        <span
+          className="line-clamp-2 w-64 leading-5 break-words"
+          title={item.reason}
+        >
+          {item.reason}
+        </span>
       ),
     },
     {
       key: "requested",
       header: "Requested",
       cell: (item) => (
-        <span className="block tabular-nums">
+        <span className="block whitespace-nowrap tabular-nums">
           {formatDate(item.requestedAt)}
           <span className="text-muted block text-xs">
             by {item.requestedBy.fullName}
@@ -120,7 +144,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       header: "Decision",
       cell: (item) =>
         item.status === "completed" || item.status === "rejected" ? (
-          <span className="block min-w-52 tabular-nums">
+          <span className="block w-56 tabular-nums">
             {item.reviewedAt ? formatDate(item.reviewedAt) : "Not recorded"}
             <span className="text-muted block text-xs">
               {item.reviewedBy
@@ -128,7 +152,10 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
                 : "Reviewer not recorded"}
             </span>
             {item.reviewComment ? (
-              <span className="mt-1 block max-w-80 text-sm break-words">
+              <span
+                className="mt-1 line-clamp-2 text-sm leading-5 break-words"
+                title={item.reviewComment}
+              >
                 {item.reviewComment}
               </span>
             ) : null}
@@ -141,45 +168,78 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       key: "action",
       header: "Action",
       cell: (item) => (
-        <div className="flex min-w-max flex-wrap gap-2">
-          {item.status === "pending" ? (
-            <Button
-              variant="secondary"
-              disabled={review.isPending}
-              onClick={() => void startReview(item)}
-            >
-              <CheckCircle2
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-6 place-items-center">
+              <span className="sr-only">Actions for {item.risk.riskCode}</span>
+              <Ellipsis
                 aria-hidden="true"
-                className="size-4"
+                className="size-5"
                 strokeWidth={1.8}
               />
-              {review.isPending ? "Starting…" : "Start review"}
-            </Button>
-          ) : item.status === "under_review" ? (
+            </span>
+          }
+        >
+          <div className="grid gap-1">
             <Button
+              className="w-full justify-start border-0"
               variant="secondary"
-              onClick={() => setCompletionTarget(item)}
+              onClick={() => setDetailTarget(item)}
             >
-              <Gauge aria-hidden="true" className="size-4" strokeWidth={1.8} />
-              Reassess
+              <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              View details
             </Button>
-          ) : (
-            <span className="text-muted text-sm">No actions</span>
-          )}
-          {item.canReject &&
-          (item.status === "pending" || item.status === "under_review") ? (
-            <Button variant="danger" onClick={() => setRejectionTarget(item)}>
-              <XCircle
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-              {item.status === "under_review"
-                ? "Close without reassessment"
-                : "Reject request"}
-            </Button>
-          ) : null}
-        </div>
+            <div className="border-border border-t" aria-hidden="true" />
+            {item.status === "pending" ? (
+              <Button
+                className="w-full justify-start border-0"
+                variant="secondary"
+                disabled={review.isPending}
+                onClick={() => void startReview(item)}
+              >
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {review.isPending ? "Starting…" : "Start review"}
+              </Button>
+            ) : item.status === "under_review" ? (
+              <Button
+                className="w-full justify-start border-0"
+                variant="secondary"
+                onClick={() => setCompletionTarget(item)}
+              >
+                <Gauge
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Reassess
+              </Button>
+            ) : (
+              <span className="text-muted text-sm">No actions</span>
+            )}
+            {item.canReject &&
+            (item.status === "pending" || item.status === "under_review") ? (
+              <Button
+                className="w-full justify-start"
+                variant="danger"
+                onClick={() => setRejectionTarget(item)}
+              >
+                <XCircle
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {item.status === "under_review"
+                  ? "Close without reassessment"
+                  : "Reject request"}
+              </Button>
+            ) : null}
+          </div>
+        </DropdownMenu>
       ),
     },
   ];
@@ -304,6 +364,10 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       <RejectRiskReassessmentDialog
         request={rejectionTarget}
         onClose={() => setRejectionTarget(null)}
+      />
+      <RiskReassessmentRequestDetailDialog
+        request={detailTarget}
+        onClose={() => setDetailTarget(null)}
       />
     </>
   );

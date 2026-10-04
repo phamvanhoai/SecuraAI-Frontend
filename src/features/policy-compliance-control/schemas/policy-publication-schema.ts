@@ -167,7 +167,9 @@ export type PublishedPolicyVersion = z.infer<
 >;
 export type RejectPolicyInput = z.infer<typeof rejectPolicyInputSchema>;
 export type RejectedPolicy = z.infer<typeof rejectedPolicySchema>;
-export type RejectedPolicyListItem = z.infer<typeof rejectedPolicyListItemSchema>;
+export type RejectedPolicyListItem = z.infer<
+  typeof rejectedPolicyListItemSchema
+>;
 export type RejectedPolicyList = z.infer<typeof rejectedPolicyListSchema>;
 export type RejectedPolicyQuery = {
   page: number;

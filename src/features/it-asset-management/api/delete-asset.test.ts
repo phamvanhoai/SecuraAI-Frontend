@@ -10,11 +10,11 @@ describe("deleteAsset", () => {
       .mockResolvedValue(new Response(null, { status: 204 }));
 
     await expect(
-      deleteAsset("00000000-0000-4000-8000-000000000001"),
+      deleteAsset("00000000-0000-4000-8000-000000000001", { reason: "Asset retired" }),
     ).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/assets/00000000-0000-4000-8000-000000000001",
-      expect.objectContaining({ method: "DELETE", credentials: "include" }),
+      expect.objectContaining({ method: "DELETE", credentials: "include", body: JSON.stringify({ reason: "Asset retired" }) }),
     );
   });
 
@@ -32,7 +32,7 @@ describe("deleteAsset", () => {
       ),
     );
 
-    await expect(deleteAsset("00000000-0000-4000-8000-000000000001")).rejects.toMatchObject({
+    await expect(deleteAsset("00000000-0000-4000-8000-000000000001", { reason: "Asset retired" })).rejects.toMatchObject({
       status: 409,
       code: "CONFLICT",
     });

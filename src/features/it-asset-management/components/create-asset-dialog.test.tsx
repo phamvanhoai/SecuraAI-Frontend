@@ -79,7 +79,7 @@ describe("CreateAssetDialog", () => {
     ).toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
-  it("submits normalized business context", async () => {
+  it("submits identity without classification or business service", async () => {
     const user = userEvent.setup();
     render(<CreateAssetDialog />);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
@@ -90,10 +90,6 @@ describe("CreateAssetDialog", () => {
     );
     await user.type(screen.getByLabelText("Asset type"), "server");
     await user.selectOptions(screen.getByLabelText("Asset owner"), ownerUserId);
-    await user.selectOptions(
-      screen.getByLabelText("Business service"),
-      serviceId,
-    );
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     await waitFor(() =>
       expect(mutateAsyncMock).toHaveBeenCalledWith(
@@ -101,14 +97,14 @@ describe("CreateAssetDialog", () => {
           assetCode: "AST-002",
           name: "Application Server",
           ownerUserId,
-          businessServiceId: serviceId,
-          criticality: "medium",
-          dataClassification: "internal",
           dependencies: [],
           eventSourceIds: [],
         }),
       ),
     );
+    expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("criticality");
+    expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("dataClassification");
+    expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("businessServiceId");
     expect(successMock).toHaveBeenCalledWith(
       "Asset created",
       "AST-002 – Application Server",
@@ -136,6 +132,9 @@ describe("CreateAssetDialog", () => {
   it("defers dependencies and event sources to the Links workflow", async () => {
     render(<CreateAssetDialog />);
     await userEvent.click(screen.getByRole("button", { name: "Add asset" }));
+    expect(screen.queryByLabelText("Business service")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Criticality")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Data classification")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Dependencies")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Related event sources")).not.toBeInTheDocument();
   });

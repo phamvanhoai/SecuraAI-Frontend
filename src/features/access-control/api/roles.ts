@@ -5,11 +5,14 @@ import {
   roleListSchema,
   roleSchema,
   configuredRoleSchema,
+  userPermissionAssignmentSchema,
   type Role,
   type PermissionList,
   type RoleFormValues,
   type ConfigureRolePermissionsValues,
   type RoleList,
+  type ConfigureUserPermissionsValues,
+  type UserPermissionAssignment,
 } from "../schemas/role-schema";
 
 export async function listPermissions(
@@ -195,4 +198,30 @@ export async function deleteRole(id: string): Promise<void> {
   const response = await fetchWithSessionRefresh(path, { method: "DELETE" });
   if (response.ok) return;
   throw normalizeApiError(response.status, await safeJson(response));
+}
+
+export function getUserPermissions(
+  userId: string,
+  signal?: AbortSignal,
+): Promise<UserPermissionAssignment> {
+  return roleRequest(
+    `/api/access-control/users/${encodeURIComponent(userId)}/permissions`,
+    userPermissionAssignmentSchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function configureUserPermissions(
+  userId: string,
+  input: ConfigureUserPermissionsValues,
+): Promise<UserPermissionAssignment> {
+  return roleRequest(
+    `/api/access-control/users/${encodeURIComponent(userId)}/permissions`,
+    userPermissionAssignmentSchema,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
 }

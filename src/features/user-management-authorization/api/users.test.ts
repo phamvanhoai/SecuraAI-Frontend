@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getUser, listUsers } from "./users";
+import {
+  getUser,
+  getUserDepartments,
+  importUsers,
+  listUsers,
+} from "./users";
 
 const userId = "00000000-0000-4000-8000-000000000010";
 
@@ -99,5 +104,66 @@ describe("listUsers", () => {
     expect(requestedUrl).toContain(`departmentId=${departmentId}`);
     expect(requestedUrl).toContain("roleCode=EMPLOYEE");
     expect(requestedUrl).toContain("status=active");
+  });
+});
+
+describe("importUsers", () => {
+  it("uploads an Excel workbook and validates the import summary", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        success: true,
+        data: {
+          totalRows: 2,
+          imported: 1,
+          failed: 1,
+          errors: [
+            { row: 3, code: "VALIDATION_ERROR", message: "Invalid email" },
+          ],
+        },
+      }),
+    );
+    const result = await importUsers(new File(["xlsx"], "users.xlsx"));
+    expect(result).toMatchObject({ totalRows: 2, imported: 1, failed: 1 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/users/import",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: expect.any(FormData),
+      }),
+    );
+  });
+});
+
+describe("getUserDepartments", () => {
+  it("loads every active department through the dedicated filter endpoint", async () => {
+    const departmentId = "00000000-0000-4000-8000-000000000020";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            departments: [
+              {
+                id: departmentId,
+                code: "HR",
+                name: "Human Resources",
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const result = await getUserDepartments();
+
+    expect(result.departments).toEqual([
+      { id: departmentId, code: "HR", name: "Human Resources" },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/users/departments",
+      expect.objectContaining({ method: "GET", credentials: "include" }),
+    );
   });
 });

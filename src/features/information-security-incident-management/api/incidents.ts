@@ -6,6 +6,7 @@ import {
   incidentEvidenceSchema,
   removedIncidentEvidenceSchema,
   assignmentOptionsSchema,
+  incidentSourceOptionsSchema,
   myIncidentsSchema,
   type ClassifyIncidentForm,
   type AssignIncidentForm,
@@ -292,13 +293,26 @@ export async function reportIncident(input: ReportIncidentForm) {
       target: "same-origin",
       method: "POST",
       body: {
+        sourceType: input.creationMode === "manual" ? "manual" : "finding",
+        ...(input.creationMode === "source"
+          ? { sourceId: input.sourceId }
+          : {}),
         title: input.title.trim(),
         description: input.description.trim(),
-        category: input.category,
+        severity: input.severity,
         ...(input.occurredAt
           ? { occurredAt: new Date(input.occurredAt).toISOString() }
           : {}),
       },
+    }),
+  );
+}
+export async function listIncidentSourceOptions(signal?: AbortSignal) {
+  return incidentSourceOptionsSchema.parse(
+    await apiRequest<unknown>("/api/incidents/source-options", {
+      target: "same-origin",
+      query: { page: 1, limit: 100 },
+      ...(signal ? { signal } : {}),
     }),
   );
 }
