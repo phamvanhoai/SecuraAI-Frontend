@@ -25,7 +25,7 @@ import { DashboardLoadingSkeleton } from "@/components/feedback/loading-skeleton
 import { useSessionUser } from "@/features/authentication-account";
 import { CreateUserDialog } from "./create-user-dialog";
 import { useUsers } from "../hooks/use-users";
-import { useUserCreateOptions } from "../hooks/use-user-create-options";
+import { useUserDepartments } from "../hooks/use-user-departments";
 import { accountLockAction } from "../lib/account-lock";
 import {
   AccountLockDialog,
@@ -236,7 +236,7 @@ export function UsersShell() {
     (session.data?.permissions.includes("users.assign-role") ?? false);
   const canConfigurePermissions =
     isAdmin && (session.data?.permissions.includes("roles.update") ?? false);
-  const departmentOptions = useUserCreateOptions(canRead && isAdmin);
+  const departmentOptions = useUserDepartments(canRead && isAdmin);
   const users = useUsers(
     {
       page,

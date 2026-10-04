@@ -293,8 +293,10 @@ export async function reportIncident(input: ReportIncidentForm) {
       target: "same-origin",
       method: "POST",
       body: {
-        sourceType: "finding",
-        sourceId: input.sourceId,
+        sourceType: input.creationMode === "manual" ? "manual" : "finding",
+        ...(input.creationMode === "source"
+          ? { sourceId: input.sourceId }
+          : {}),
         title: input.title.trim(),
         description: input.description.trim(),
         severity: input.severity,

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getUser, importUsers, listUsers } from "./users";
+import {
+  getUser,
+  getUserDepartments,
+  importUsers,
+  listUsers,
+} from "./users";
 
 const userId = "00000000-0000-4000-8000-000000000010";
 
@@ -126,6 +131,39 @@ describe("importUsers", () => {
         credentials: "include",
         body: expect.any(FormData),
       }),
+    );
+  });
+});
+
+describe("getUserDepartments", () => {
+  it("loads every active department through the dedicated filter endpoint", async () => {
+    const departmentId = "00000000-0000-4000-8000-000000000020";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            departments: [
+              {
+                id: departmentId,
+                code: "HR",
+                name: "Human Resources",
+              },
+            ],
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const result = await getUserDepartments();
+
+    expect(result.departments).toEqual([
+      { id: departmentId, code: "HR", name: "Human Resources" },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/users/departments",
+      expect.objectContaining({ method: "GET", credentials: "include" }),
     );
   });
 });

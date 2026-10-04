@@ -12,6 +12,7 @@ describe("reportIncidentFormSchema", () => {
   it("accepts a complete report", () =>
     expect(
       reportIncidentFormSchema.safeParse({
+        creationMode: "source",
         sourceId: "22222222-2222-4222-8222-222222222222",
         title: "Suspicious email",
         description:
@@ -23,9 +24,36 @@ describe("reportIncidentFormSchema", () => {
   it("requires a useful description", () =>
     expect(
       reportIncidentFormSchema.safeParse({
+        creationMode: "source",
         sourceId: "22222222-2222-4222-8222-222222222222",
         title: "Suspicious email",
         description: "Too short",
+        severity: "high",
+        occurredAt: "",
+      }).success,
+    ).toBe(false));
+
+  it("accepts a manual incident without a source", () =>
+    expect(
+      reportIncidentFormSchema.safeParse({
+        creationMode: "manual",
+        sourceId: "",
+        title: "Unreported physical security incident",
+        description:
+          "A security officer observed unauthorized access without an existing alert or finding.",
+        severity: "medium",
+        occurredAt: "",
+      }).success,
+    ).toBe(true));
+
+  it("requires a source for source-based creation", () =>
+    expect(
+      reportIncidentFormSchema.safeParse({
+        creationMode: "source",
+        sourceId: "",
+        title: "Confirmed suspicious activity",
+        description:
+          "The confirmed activity requires incident investigation and response.",
         severity: "high",
         occurredAt: "",
       }).success,
