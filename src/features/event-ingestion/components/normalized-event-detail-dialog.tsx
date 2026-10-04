@@ -2,7 +2,9 @@
 
 import {
   Copy,
+  Edit3,
   HardDrive,
+  History,
   Layers,
   Loader2,
   ShieldAlert,
@@ -10,13 +12,14 @@ import {
   User,
   UserCheck,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useNormalizedEventDetail } from "../hooks/use-normalized-events";
+import { EditEntityMappingDialog } from "./edit-entity-mapping-dialog";
 import { cn } from "@/lib/utils";
 
 const mappingStatusTones = {
@@ -61,6 +64,7 @@ export function NormalizedEventDetailDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const [isEditMappingOpen, setIsEditMappingOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toast = useToast();
 
@@ -89,235 +93,409 @@ export function NormalizedEventDetailDialog({
   const event = eventQuery.data;
 
   return (
-    <Dialog
-      className="max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100%-2rem))] overflow-y-auto"
-      dialogRef={dialogRef}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClose={onClose}
-      title="Security Event Inspection"
-    >
-      <div className="space-y-5">
-        {eventQuery.isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center text-muted">
-            <Loader2 className="size-8 animate-spin mb-3 text-primary" />
-            <p className="text-sm font-medium">Loading event details...</p>
-          </div>
-        ) : eventQuery.isError || !event ? (
-          <div className="space-y-4">
-            <Alert>
-              {eventQuery.error?.message || "Unable to load security event details."}
-            </Alert>
-            <div className="flex justify-end">
-              <Button type="button" variant="secondary" onClick={onClose}>
-                Close
-              </Button>
+    <>
+      <Dialog
+        className="max-h-[calc(100dvh-2rem)] w-[min(58rem,calc(100%-2rem))] overflow-y-auto"
+        dialogRef={dialogRef}
+        onCancel={(e) => {
+          e.preventDefault();
+          onClose();
+        }}
+        onClose={onClose}
+        title="Security Event Inspection"
+      >
+        <div className="space-y-5">
+          {eventQuery.isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted">
+              <Loader2 className="size-8 animate-spin mb-3 text-primary" />
+              <p className="text-sm font-medium">Loading event details...</p>
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Header & Status Banner */}
-            <div className="border-border bg-neutral-soft/30 rounded-xl border p-4 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-border pb-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-foreground text-lg font-bold font-mono">
-                      {event.eventType}
-                    </span>
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider",
-                        familyStyles[event.eventFamily] ??
-                          "border-border bg-neutral-soft text-foreground",
-                      )}
-                    >
-                      {formatFamilyLabel[event.eventFamily] ?? event.eventFamily}
-                    </span>
-                    <StatusBadge
-                      tone={mappingStatusTones[event.mappingStatus] ?? "neutral"}
-                    >
-                      {event.mappingStatus.replace(/_/g, " ")}
-                    </StatusBadge>
-                    {event.severity ? (
-                      <span className="text-xs font-semibold bg-neutral-soft px-2 py-0.5 rounded border border-border">
-                        Severity: {event.severity}
+          ) : eventQuery.isError || !event ? (
+            <div className="space-y-4">
+              <Alert>
+                {eventQuery.error?.message || "Unable to load security event details."}
+              </Alert>
+              <div className="flex justify-end">
+                <Button type="button" variant="secondary" onClick={onClose}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Header & Status Banner */}
+              <div className="border-border bg-neutral-soft/30 rounded-xl border p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-border pb-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-foreground text-lg font-bold font-mono">
+                        {event.eventType}
                       </span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider",
+                          familyStyles[event.eventFamily] ??
+                            "border-border bg-neutral-soft text-foreground",
+                        )}
+                      >
+                        {formatFamilyLabel[event.eventFamily] ?? event.eventFamily}
+                      </span>
+                      <StatusBadge
+                        tone={mappingStatusTones[event.mappingStatus] ?? "neutral"}
+                      >
+                        {event.mappingStatus.replace(/_/g, " ")}
+                      </StatusBadge>
+                      {event.severity ? (
+                        <span className="text-xs font-semibold bg-neutral-soft px-2 py-0.5 rounded border border-border">
+                          Severity: {event.severity}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-muted text-xs font-mono">
+                      Event UUID: {event.id}
+                    </p>
+                  </div>
+
+                  {event.anomalyCount > 0 ? (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                      <ShieldAlert className="size-4 shrink-0" />
+                      <span>{event.anomalyCount} Anomaly Detected</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                      <ShieldCheck className="size-4 shrink-0" />
+                      <span>Normal Telemetry</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Info Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                  <div className="bg-background rounded-lg border border-border p-2.5">
+                    <span className="text-muted block text-[11px] mb-0.5">
+                      Event Source
+                    </span>
+                    <strong className="text-foreground font-semibold block truncate">
+                      {event.eventSourceName}
+                    </strong>
+                    <span className="text-muted font-mono text-[10px]">
+                      {event.eventSourceType}
+                    </span>
+                  </div>
+
+                  <div className="bg-background rounded-lg border border-border p-2.5">
+                    <span className="text-muted block text-[11px] mb-0.5">
+                      Occurred At
+                    </span>
+                    <strong className="text-foreground font-mono text-xs block">
+                      {formatDateTime(event.occurredAt)}
+                    </strong>
+                  </div>
+
+                  <div className="bg-background rounded-lg border border-border p-2.5">
+                    <span className="text-muted block text-[11px] mb-0.5">
+                      Ingested At
+                    </span>
+                    <strong className="text-foreground font-mono text-xs block">
+                      {formatDateTime(event.ingestedAt)}
+                    </strong>
+                  </div>
+
+                  <div className="bg-background rounded-lg border border-border p-2.5">
+                    <span className="text-muted block text-[11px] mb-0.5">
+                      External Event ID
+                    </span>
+                    <span className="text-foreground font-mono text-xs block truncate">
+                      {event.externalEventId ?? "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Entity Mapping & Correlation Details */}
+              <div className="border-border bg-background rounded-xl border p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+                  <div>
+                    <h3 className="text-foreground font-semibold text-sm">
+                      Entity Mapping & Association Review
+                    </h3>
+                    <p className="text-muted text-xs">
+                      Correlated internal users, monitored accounts, and IT assets for this telemetry.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="text-xs px-3 py-1.5 flex items-center gap-1.5 self-start sm:self-auto"
+                    onClick={() => setIsEditMappingOpen(true)}
+                  >
+                    <Edit3 className="size-3.5" />
+                    <span>Review & Correct Mapping</span>
+                  </Button>
+                </div>
+
+                {/* Active Mapping Summary Card */}
+                {event.activeMapping ? (
+                  <div className="rounded-lg border border-brand/20 bg-brand/5 p-3 space-y-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground">
+                          Active Mapping Association
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                            event.activeMapping.mappingMethod === "AUTO"
+                              ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
+                              : "bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20",
+                          )}
+                        >
+                          {event.activeMapping.mappingMethod === "AUTO"
+                            ? "Auto Generated"
+                            : "Manual Override"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-muted text-[11px]">
+                        <span>
+                          Confidence:{" "}
+                          <strong className="text-foreground font-mono">
+                            {event.activeMapping.confidence !== null
+                              ? `${(event.activeMapping.confidence * 100).toFixed(0)}%`
+                              : "100%"}
+                          </strong>
+                        </span>
+                        <span>•</span>
+                        <span>{formatDateTime(event.activeMapping.mappedAt)}</span>
+                      </div>
+                    </div>
+
+                    {event.activeMapping.reason ? (
+                      <div className="text-foreground text-[11px] bg-background/60 rounded border border-border/60 p-2">
+                        <span className="text-muted font-medium block text-[10px] uppercase tracking-wider mb-0.5">
+                          Mapping Justification / Reason:
+                        </span>
+                        {event.activeMapping.reason}
+                      </div>
+                    ) : null}
+
+                    {event.activeMapping.mappedBy ? (
+                      <p className="text-muted text-[10px] font-mono">
+                        Mapped by: {event.activeMapping.mappedBy.fullName ?? event.activeMapping.mappedBy.email}
+                      </p>
                     ) : null}
                   </div>
-                  <p className="text-muted text-xs font-mono">
-                    Event UUID: {event.id}
-                  </p>
-                </div>
+                ) : null}
 
-                {event.anomalyCount > 0 ? (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
-                    <ShieldAlert className="size-4 shrink-0" />
-                    <span>{event.anomalyCount} Anomaly Detected</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    <ShieldCheck className="size-4 shrink-0" />
-                    <span>Normal Telemetry</span>
-                  </div>
-                )}
-              </div>
+                {/* Identity & Asset 2-column breakdown */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* User / Identity Section */}
+                  <div className="border-border rounded-xl border p-4 space-y-3 bg-neutral-soft/20">
+                    <div className="flex items-center gap-2 border-b border-border pb-2.5">
+                      <User className="size-4 text-primary" />
+                      <h4 className="text-foreground font-semibold text-sm">
+                        Identity & Account
+                      </h4>
+                    </div>
 
-              {/* Quick Info Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                <div className="bg-background rounded-lg border border-border p-2.5">
-                  <span className="text-muted block text-[11px] mb-0.5">
-                    Event Source
-                  </span>
-                  <strong className="text-foreground font-semibold block truncate">
-                    {event.eventSourceName}
-                  </strong>
-                  <span className="text-muted font-mono text-[10px]">
-                    {event.eventSourceType}
-                  </span>
-                </div>
-
-                <div className="bg-background rounded-lg border border-border p-2.5">
-                  <span className="text-muted block text-[11px] mb-0.5">
-                    Occurred At
-                  </span>
-                  <strong className="text-foreground font-mono text-xs block">
-                    {formatDateTime(event.occurredAt)}
-                  </strong>
-                </div>
-
-                <div className="bg-background rounded-lg border border-border p-2.5">
-                  <span className="text-muted block text-[11px] mb-0.5">
-                    Ingested At
-                  </span>
-                  <strong className="text-foreground font-mono text-xs block">
-                    {formatDateTime(event.ingestedAt)}
-                  </strong>
-                </div>
-
-                <div className="bg-background rounded-lg border border-border p-2.5">
-                  <span className="text-muted block text-[11px] mb-0.5">
-                    External Event ID
-                  </span>
-                  <span className="text-foreground font-mono text-xs block truncate">
-                    {event.externalEventId ?? "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Entity Mapping & Correlation Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* User / Identity Section */}
-              <div className="border-border rounded-xl border p-4 space-y-3 bg-background">
-                <div className="flex items-center gap-2 border-b border-border pb-2.5">
-                  <User className="size-4 text-primary" />
-                  <h4 className="text-foreground font-semibold text-sm">
-                    Identity & Account
-                  </h4>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div>
-                    <span className="text-muted block text-[11px]">
-                      Account Identifier
-                    </span>
-                    <span className="text-foreground font-mono font-medium">
-                      {event.accountIdentifier ?? "—"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-muted block text-[11px]">
-                      Mapped User Profile
-                    </span>
-                    {event.mappedUser ? (
-                      <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 space-y-1">
-                        <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold">
-                          <UserCheck className="size-3.5" />
-                          <span>{event.mappedUser.fullName ?? event.mappedUser.email}</span>
-                        </div>
-                        <p className="text-muted text-[11px] font-mono">
-                          Email: {event.mappedUser.email}
-                        </p>
-                        <p className="text-muted text-[10px] font-mono">
-                          User ID: {event.mappedUser.id}
-                        </p>
+                    <div className="space-y-2 text-xs">
+                      <div>
+                        <span className="text-muted block text-[11px]">
+                          Extracted Account Identifier
+                        </span>
+                        <span className="text-foreground font-mono font-medium">
+                          {event.accountIdentifier ?? "—"}
+                        </span>
                       </div>
-                    ) : (
-                      <span className="text-muted italic block mt-0.5">
-                        No user mapped to this account identifier
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              {/* Asset & Network Section */}
-              <div className="border-border rounded-xl border p-4 space-y-3 bg-background">
-                <div className="flex items-center gap-2 border-b border-border pb-2.5">
-                  <HardDrive className="size-4 text-primary" />
-                  <h4 className="text-foreground font-semibold text-sm">
-                    Asset & Network Context
-                  </h4>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-muted block text-[11px]">Source IP</span>
-                      <span className="text-foreground font-mono font-medium">
-                        {event.sourceIp ?? "—"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted block text-[11px]">Destination IP</span>
-                      <span className="text-foreground font-mono font-medium">
-                        {event.destinationIp ?? "—"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-muted block text-[11px]">
-                      Device Identifier
-                    </span>
-                    <span className="text-foreground font-mono font-medium truncate block">
-                      {event.deviceIdentifier ?? "—"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-muted block text-[11px]">
-                      Associated IT Asset
-                    </span>
-                    {event.mappedAsset ? (
-                      <div className="mt-1 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <strong className="text-blue-700 dark:text-blue-300 font-semibold">
-                            {event.mappedAsset.name}
-                          </strong>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
-                            {event.mappedAsset.criticality}
+                      {event.activeMapping?.monitoredAccount ? (
+                        <div>
+                          <span className="text-muted block text-[11px]">
+                            Linked Monitored Account
+                          </span>
+                          <span className="text-foreground font-mono text-xs block">
+                            {event.activeMapping.monitoredAccount.accountIdentifier} (
+                            {event.activeMapping.monitoredAccount.sourceSystem})
                           </span>
                         </div>
-                        <p className="text-muted text-[11px] font-mono">
-                          Code: {event.mappedAsset.assetCode} ({event.mappedAsset.assetType})
-                        </p>
-                        <p className="text-muted text-[10px] font-mono">
-                          Asset ID: {event.mappedAsset.id}
-                        </p>
+                      ) : null}
+
+                      <div>
+                        <span className="text-muted block text-[11px]">
+                          Mapped User Profile
+                        </span>
+                        {event.mappedUser ? (
+                          <div className="mt-1 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 space-y-1">
+                            <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold">
+                              <UserCheck className="size-3.5" />
+                              <span>{event.mappedUser.fullName ?? event.mappedUser.email}</span>
+                            </div>
+                            <p className="text-muted text-[11px] font-mono">
+                              Email: {event.mappedUser.email}
+                            </p>
+                            <p className="text-muted text-[10px] font-mono">
+                              User ID: {event.mappedUser.id}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-muted italic block mt-0.5">
+                            No user mapped to this account identifier
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <span className="text-muted italic block mt-0.5">
-                        No asset associated
-                      </span>
-                    )}
+                    </div>
+                  </div>
+
+                  {/* Asset & Network Section */}
+                  <div className="border-border rounded-xl border p-4 space-y-3 bg-neutral-soft/20">
+                    <div className="flex items-center gap-2 border-b border-border pb-2.5">
+                      <HardDrive className="size-4 text-primary" />
+                      <h4 className="text-foreground font-semibold text-sm">
+                        Asset & Network Context
+                      </h4>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <span className="text-muted block text-[11px]">Source IP</span>
+                          <span className="text-foreground font-mono font-medium">
+                            {event.sourceIp ?? "—"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted block text-[11px]">Destination IP</span>
+                          <span className="text-foreground font-mono font-medium">
+                            {event.destinationIp ?? "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-muted block text-[11px]">
+                          Device Identifier
+                        </span>
+                        <span className="text-foreground font-mono font-medium truncate block">
+                          {event.deviceIdentifier ?? "—"}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-muted block text-[11px]">
+                          Associated IT Asset
+                        </span>
+                        {event.mappedAsset ? (
+                          <div className="mt-1 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <strong className="text-blue-700 dark:text-blue-300 font-semibold">
+                                {event.mappedAsset.name}
+                              </strong>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                                {event.mappedAsset.criticality}
+                              </span>
+                            </div>
+                            <p className="text-muted text-[11px] font-mono">
+                              Code: {event.mappedAsset.assetCode} ({event.mappedAsset.assetType})
+                            </p>
+                            <p className="text-muted text-[10px] font-mono">
+                              Asset ID: {event.mappedAsset.id}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-muted italic block mt-0.5">
+                            No asset associated
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Mapping Audit Trail & History */}
+                {event.mappingHistory && event.mappingHistory.length > 0 ? (
+                  <div className="border-border rounded-xl border p-4 space-y-3 bg-neutral-soft/10">
+                    <div className="flex items-center gap-2 border-b border-border pb-2.5 text-foreground">
+                      <History className="size-4 text-primary" />
+                      <h4 className="font-semibold text-sm">
+                        Mapping History & Audit Trail ({event.mappingHistory.length})
+                      </h4>
+                    </div>
+
+                    <div className="space-y-2">
+                      {event.mappingHistory.map((historyItem) => (
+                        <div
+                          key={historyItem.id}
+                          className="border-border bg-background rounded-lg border p-3 text-xs space-y-2"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={cn(
+                                  "rounded px-2 py-0.5 text-[10px] font-bold uppercase",
+                                  historyItem.mappingMethod === "AUTO"
+                                    ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
+                                    : "bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20",
+                                )}
+                              >
+                                {historyItem.mappingMethod}
+                              </span>
+                              <span
+                                className={cn(
+                                  "rounded px-1.5 py-0.5 text-[10px] font-bold",
+                                  historyItem.isActive
+                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    : "bg-neutral-soft text-muted line-through",
+                                )}
+                              >
+                                {historyItem.isActive ? "CURRENT ACTIVE" : "SUPERSEDED"}
+                              </span>
+                              <span className="text-muted text-[11px] font-mono">
+                                Conf:{" "}
+                                {historyItem.confidence !== null
+                                  ? `${(historyItem.confidence * 100).toFixed(0)}%`
+                                  : "100%"}
+                              </span>
+                            </div>
+
+                            <span className="text-muted font-mono text-[11px]">
+                              {formatDateTime(historyItem.mappedAt)}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-muted">
+                            <div>
+                              <span>User: </span>
+                              <strong className="text-foreground">
+                                {historyItem.mappedUser?.fullName ??
+                                  historyItem.mappedUser?.email ??
+                                  "None"}
+                              </strong>
+                            </div>
+                            <div>
+                              <span>Asset: </span>
+                              <strong className="text-foreground">
+                                {historyItem.mappedAsset?.name ?? "None"}
+                              </strong>
+                            </div>
+                          </div>
+
+                          {historyItem.reason ? (
+                            <p className="text-foreground text-[11px] bg-neutral-soft/30 rounded p-1.5">
+                              <span className="text-muted font-medium">Reason: </span>
+                              {historyItem.reason}
+                            </p>
+                          ) : null}
+
+                          {historyItem.mappedBy ? (
+                            <p className="text-muted text-[10px] font-mono">
+                              Updated by: {historyItem.mappedBy.fullName ?? historyItem.mappedBy.email}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            </div>
 
             {/* AI Anomaly Detections (if present) */}
             {event.anomalyDetections && event.anomalyDetections.length > 0 && (
@@ -445,5 +623,15 @@ export function NormalizedEventDetailDialog({
         )}
       </div>
     </Dialog>
+
+    <EditEntityMappingDialog
+      event={event ?? null}
+      isOpen={isEditMappingOpen}
+      onClose={() => setIsEditMappingOpen(false)}
+      onSuccess={() => {
+        void eventQuery.refetch();
+      }}
+    />
+  </>
   );
 }

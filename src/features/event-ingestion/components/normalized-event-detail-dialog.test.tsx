@@ -8,6 +8,14 @@ const mockToastError = vi.fn();
 vi.mock("../hooks/use-normalized-events", () => ({
   useNormalizedEventDetail: (id: string | null) =>
     mockUseNormalizedEventDetail(id),
+  useMappingOptions: () => ({
+    data: { users: [], assets: [], monitoredAccounts: [] },
+    isPending: false,
+  }),
+  useUpdateEventMapping: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({
@@ -151,9 +159,9 @@ describe("NormalizedEventDetailDialog", () => {
       />,
     );
 
-    expect(screen.getByText("user_login_failure")).toBeInTheDocument();
+    expect(screen.getAllByText("user_login_failure")[0]).toBeInTheDocument();
     expect(screen.getByText("Authentication")).toBeInTheDocument();
-    expect(screen.getByText("MAPPED")).toBeInTheDocument();
+    expect(screen.getAllByText("MAPPED")[0]).toBeInTheDocument();
     expect(screen.getByText("Severity: HIGH")).toBeInTheDocument();
     expect(screen.getByText("1 Anomaly Detected")).toBeInTheDocument();
 
@@ -162,14 +170,14 @@ describe("NormalizedEventDetailDialog", () => {
     expect(screen.getByText("EXT-WAZUH-9999")).toBeInTheDocument();
 
     // Identity
-    expect(screen.getByText("admin@secura.ai")).toBeInTheDocument();
-    expect(screen.getByText("Secura Administrator")).toBeInTheDocument();
+    expect(screen.getAllByText("admin@secura.ai")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Secura Administrator")[0]).toBeInTheDocument();
 
     // Asset & Network
-    expect(screen.getByText("192.168.1.105")).toBeInTheDocument();
-    expect(screen.getByText("10.0.0.1")).toBeInTheDocument();
-    expect(screen.getByText("DEV-WS-99")).toBeInTheDocument();
-    expect(screen.getByText("Core Gateway Router")).toBeInTheDocument();
+    expect(screen.getAllByText("192.168.1.105")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("10.0.0.1")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("DEV-WS-99")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Core Gateway Router")[0]).toBeInTheDocument();
     expect(screen.getByText(/AST-GW-01 \(ROUTER\)/)).toBeInTheDocument();
     expect(screen.getByText("CRITICAL")).toBeInTheDocument();
 
@@ -204,5 +212,86 @@ describe("NormalizedEventDetailDialog", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       JSON.stringify(mockEventDetail.normalizedPayload, null, 2),
     );
+  });
+
+  it("renders active mapping info and opens correction dialog when Review & Correct Mapping is clicked", () => {
+    const eventWithMapping = {
+      ...mockEventDetail,
+      activeMapping: {
+        id: "map-1",
+        eventId: mockEventDetail.id,
+        mappingMethod: "AUTO" as const,
+        confidence: 0.95,
+        reason: "Auto-matched on Active Directory account",
+        isActive: true,
+        supersedesMappingId: null,
+        mappedAt: "2026-10-02T10:00:05.000Z",
+        userId: "44444444-4444-4444-8444-444444444444",
+        assetId: "55555555-5555-4555-8555-555555555555",
+        monitoredAccountId: "acc-1",
+        mappedUser: mockEventDetail.mappedUser,
+        mappedAsset: mockEventDetail.mappedAsset,
+        monitoredAccount: {
+          id: "acc-1",
+          accountIdentifier: "admin@secura.ai",
+          sourceSystem: "Active Directory",
+          displayName: "Secura Admin Account",
+        },
+        mappedBy: null,
+        createdAt: "2026-10-02T10:00:05.000Z",
+      },
+      mappingHistory: [
+        {
+          id: "map-hist-1",
+          eventId: mockEventDetail.id,
+          mappingMethod: "AUTO" as const,
+          confidence: 0.5,
+          reason: "Initial probabilistic IP heuristic",
+          isActive: false,
+          supersedesMappingId: null,
+          mappedAt: "2026-10-02T09:59:00.000Z",
+          userId: null,
+          assetId: null,
+          monitoredAccountId: null,
+          mappedUser: null,
+          mappedAsset: null,
+          monitoredAccount: null,
+          mappedBy: null,
+          createdAt: "2026-10-02T09:59:00.000Z",
+        },
+      ],
+    };
+
+    mockUseNormalizedEventDetail.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: eventWithMapping,
+    });
+
+    render(
+      <NormalizedEventDetailDialog
+        eventId={mockEventDetail.id}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Entity Mapping & Association Review")).toBeInTheDocument();
+    expect(screen.getByText("Auto Generated")).toBeInTheDocument();
+    expect(screen.getByText("95%")).toBeInTheDocument();
+    expect(screen.getByText(/Auto-matched on Active Directory account/)).toBeInTheDocument();
+    expect(screen.getByText(/Linked Monitored Account/)).toBeInTheDocument();
+
+    // History trail
+    expect(screen.getByText("Mapping History & Audit Trail (1)")).toBeInTheDocument();
+    expect(screen.getByText("SUPERSEDED")).toBeInTheDocument();
+    expect(screen.getByText("Initial probabilistic IP heuristic")).toBeInTheDocument();
+
+    // Review button
+    const reviewBtn = screen.getByRole("button", { name: /Review & Correct Mapping/i });
+    expect(reviewBtn).toBeInTheDocument();
+    fireEvent.click(reviewBtn);
+
+    expect(screen.getByText("Review & Correct Entity Mapping")).toBeInTheDocument();
   });
 });

@@ -1,12 +1,17 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  entityMappingSchema,
+  mappingOptionsSchema,
   normalizedEventDetailSchema,
   normalizedEventMetricsSchema,
   paginatedNormalizedEventsSchema,
+  type EntityMapping,
   type ListNormalizedEventsQuery,
+  type MappingOptions,
   type NormalizedEventDetail,
   type NormalizedEventMetrics,
   type PaginatedNormalizedEvents,
+  type UpdateEntityMappingPayload,
 } from "../schemas/normalized-event-schema";
 
 export async function listNormalizedEvents(
@@ -57,4 +62,28 @@ export async function getNormalizedEventDetail(
   });
 
   return normalizedEventDetailSchema.parse(data);
+}
+
+export async function updateEventMapping(
+  eventId: string,
+  payload: UpdateEntityMappingPayload,
+): Promise<EntityMapping> {
+  const data = await apiRequest<unknown>(
+    `/api/events/${encodeURIComponent(eventId)}/mappings`,
+    {
+      method: "PUT",
+      target: "same-origin",
+      body: JSON.stringify(payload),
+    },
+  );
+
+  return entityMappingSchema.parse(data);
+}
+
+export async function getMappingOptions(): Promise<MappingOptions> {
+  const data = await apiRequest<unknown>("/api/events/mapping-options", {
+    target: "same-origin",
+  });
+
+  return mappingOptionsSchema.parse(data);
 }
