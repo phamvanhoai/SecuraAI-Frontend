@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getUser, getUserDepartments, listUsers } from "./users";
+import {
+  getUser,
+  getUserDepartments,
+  importUsers,
+  listUsers,
+} from "./users";
 
 const userId = "00000000-0000-4000-8000-000000000010";
 
@@ -99,6 +104,34 @@ describe("listUsers", () => {
     expect(requestedUrl).toContain(`departmentId=${departmentId}`);
     expect(requestedUrl).toContain("roleCode=EMPLOYEE");
     expect(requestedUrl).toContain("status=active");
+  });
+});
+
+describe("importUsers", () => {
+  it("uploads an Excel workbook and validates the import summary", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        success: true,
+        data: {
+          totalRows: 2,
+          imported: 1,
+          failed: 1,
+          errors: [
+            { row: 3, code: "VALIDATION_ERROR", message: "Invalid email" },
+          ],
+        },
+      }),
+    );
+    const result = await importUsers(new File(["xlsx"], "users.xlsx"));
+    expect(result).toMatchObject({ totalRows: 2, imported: 1, failed: 1 });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/users/import",
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: expect.any(FormData),
+      }),
+    );
   });
 });
 

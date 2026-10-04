@@ -3,6 +3,7 @@
 import {
   Ellipsis,
   Eye,
+  FileSpreadsheet,
   LockKeyhole,
   Pencil,
   Search,
@@ -41,6 +42,7 @@ import { UserDetailDialog } from "./user-detail-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { AssignUserRolesDialog } from "./assign-user-roles-dialog";
 import { UserPermissionsDialog } from "@/features/access-control";
+import { ImportUsersDialog } from "./import-users-dialog";
 
 function UserCell({ name, email }: { name: string; email: string }) {
   const initials = name
@@ -218,6 +220,7 @@ export function UsersShell() {
   const [roleCode, setRoleCode] = useState("");
   const [status, setStatus] = useState<UserListQuery["status"] | "">("");
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [selection, setSelection] = useState<AccountLockSelection | null>(null);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
@@ -339,12 +342,20 @@ export function UsersShell() {
       <ProductPageHeader
         title="User Management"
         description="Manage user accounts, departments, roles, and access status across the organization."
-        secondaryAction="Export list"
         showSampleNotice={false}
         {...(isAdmin &&
         canAssignRoles &&
         (session.data?.permissions.includes("users.create") ?? false)
           ? {
+              secondaryAction: "Import Excel",
+              secondaryActionIcon: (
+                <FileSpreadsheet
+                  className="size-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              ),
+              onSecondaryAction: () => setImportOpen(true),
               primaryAction: "Add user",
               onPrimaryAction: () => setCreateOpen(true),
             }
@@ -533,6 +544,10 @@ export function UsersShell() {
           onClose={() => setCreateOpen(false)}
         />
       ) : null}
+      <ImportUsersDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </>
   );
 }
