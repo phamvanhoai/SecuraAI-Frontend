@@ -101,7 +101,9 @@ export async function POST(request: Request): Promise<Response> {
         success: false,
         error: {
           code: "VALIDATION_ERROR",
-          message: "Invalid risk assessment data",
+          message:
+            parsed.error.issues.find((issue) => issue.path[0] === "reviewDate")
+              ?.message ?? "Invalid risk data",
         },
       },
       { status: 422 },

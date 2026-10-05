@@ -23,6 +23,29 @@ const item = {
 };
 
 describe("risk register contracts", () => {
+  it("preserves explicit service scope and accepts unknown historical scope", () => {
+    const scope = {
+      type: "business_service",
+      businessService: {
+        id: item.id,
+        name: "Customer service",
+        status: "active",
+      },
+    };
+    const page = {
+      items: [{ ...item, scope }],
+      pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+    };
+    expect(riskRegisterResponseSchema.parse(page).items[0]?.scope).toEqual(
+      scope,
+    );
+    expect(
+      riskRegisterResponseSchema.parse({
+        ...page,
+        items: [{ ...item, scope: null }],
+      }).items[0]?.scope,
+    ).toBeNull();
+  });
   it("normalizes bounded filters", () => {
     expect(
       riskRegisterQuerySchema.parse({ q: " access ", page: "2" }),

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
@@ -12,10 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  useCreateRiskAssessment,
-  useRiskCreateOptions,
-} from "../hooks/use-create-risk-assessment";
+import { useCreateRiskAssessment } from "../hooks/use-create-risk-assessment";
 import {
   createRiskAssessmentSchema,
   type CreateRiskAssessmentForm,
@@ -23,26 +20,26 @@ import {
   type CreateRiskAssessmentRequest,
 } from "../schemas/create-risk-assessment-schema";
 
-const tomorrow = () => {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().slice(0, 10);
-};
+import { RiskOptionPicker } from "./risk-option-picker";
 
-const defaults: CreateRiskAssessmentInput = {
+import {
+  nextRiskReviewDate,
+  reviewDatePreview,
+} from "../schemas/risk-review-date";
+
+const defaults = (): CreateRiskAssessmentInput => ({
   scopeType: "asset",
   scopeId: "",
   title: "",
   description: "",
   ownerUserId: "",
-  reviewDate: tomorrow(),
-};
+  reviewDate: nextRiskReviewDate(),
+});
 
 export function CreateRiskAssessmentDialog() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const options = useRiskCreateOptions(open);
   const mutation = useCreateRiskAssessment();
   const toast = useToast();
   const {
@@ -54,9 +51,10 @@ export function CreateRiskAssessmentDialog() {
     formState: { errors },
   } = useForm<CreateRiskAssessmentInput, unknown, CreateRiskAssessmentForm>({
     resolver: zodResolver(createRiskAssessmentSchema),
-    defaultValues: defaults,
+    defaultValues: defaults(),
   });
   const scopeType = useWatch({ control, name: "scopeType" });
+  const reviewDate = useWatch({ control, name: "reviewDate" });
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -86,40 +84,33 @@ export function CreateRiskAssessmentDialog() {
     };
     try {
       const created = await mutation.mutateAsync(request);
-      reset(defaults);
+      reset(defaults());
       close();
       toast.success(
-        "Risk assessment created",
+        "Risk created",
         `${created.riskCode} is ready for threat and vulnerability identification.`,
       );
     } catch (error: unknown) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to create risk assessment.",
+        error instanceof Error ? error.message : "Unable to create risk.",
       );
     }
   };
 
-  const scopeItems =
-    scopeType === "asset"
-      ? options.data?.assets.map((item) => ({
-          id: item.id,
-          label: `${item.code} — ${item.name}`,
-        }))
-      : options.data?.businessServices.map((item) => ({
-          id: item.id,
-          label: `${item.name} (${item.assetCount} active assets)`,
-        }));
-
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)}>
+      <Button
+        type="button"
+        onClick={() => {
+          reset(defaults());
+          setOpen(true);
+        }}
+      >
         <Plus className="size-4" aria-hidden="true" />
-        Create assessment
+        Create Risk
       </Button>
       <Dialog
-        title="Create Risk Assessment"
+        title="Create Risk"
         dialogRef={dialogRef}
         onClose={close}
         className="max-h-[90vh] w-[min(56rem,calc(100%-2rem))] overflow-y-auto"
@@ -130,14 +121,11 @@ export function CreateRiskAssessmentDialog() {
               {message}
             </Alert>
           ) : null}
-          {options.isError ? (
-            <Alert>Unable to load active assets, services, and owners.</Alert>
-          ) : null}
 
           <section className="space-y-4">
             <h3 className="font-semibold">Scope and ownership</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="scopeType" label="Assessment scope">
+              <FormField id="scopeType" label="Risk scope">
                 <Select
                   id="scopeType"
                   {...register("scopeType", {
@@ -153,45 +141,102 @@ export function CreateRiskAssessmentDialog() {
                 label={scopeType === "asset" ? "Asset" : "Business service"}
                 error={errors.scopeId?.message}
               >
-                <Select id="scopeId" aria-invalid={Boolean(errors.scopeId)} {...register("scopeId")}>
-                  <option value="">Select scope</option>
-                  {scopeItems?.map((item) => (
-                    <option key={item.id} value={item.id}>{item.label}</option>
-                  ))}
-                </Select>
+                <Controller
+                  name="scopeId"
+                  control={control}
+                  render={({ field }) => (
+                    <RiskOptionPicker
+                      key={scopeType}
+                      id="scopeId"
+                      kind={scopeType}
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      inputRef={field.ref}
+                      enabled={open}
+                      invalid={Boolean(errors.scopeId)}
+                    />
+                  )}
+                />
               </FormField>
-              <FormField id="ownerUserId" label="Risk owner" error={errors.ownerUserId?.message}>
-                <Select id="ownerUserId" {...register("ownerUserId")}>
-                  <option value="">Select owner</option>
-                  {options.data?.owners.map((item) => (
-                    <option key={item.id} value={item.id}>{item.fullName} — {item.email}</option>
-                  ))}
-                </Select>
+              <FormField
+                id="ownerUserId"
+                label="Risk owner"
+                error={errors.ownerUserId?.message}
+              >
+                <Controller
+                  name="ownerUserId"
+                  control={control}
+                  render={({ field }) => (
+                    <RiskOptionPicker
+                      id="ownerUserId"
+                      kind="owner"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      inputRef={field.ref}
+                      enabled={open}
+                      invalid={Boolean(errors.ownerUserId)}
+                    />
+                  )}
+                />
               </FormField>
-              <FormField id="reviewDate" label="Review date" error={errors.reviewDate?.message}>
-                <Input id="reviewDate" type="date" min={tomorrow()} {...register("reviewDate")} />
+              <FormField
+                id="reviewDate"
+                label="Review date"
+                error={errors.reviewDate?.message}
+              >
+                <Input
+                  id="reviewDate"
+                  type="date"
+                  min={nextRiskReviewDate()}
+                  aria-invalid={Boolean(errors.reviewDate)}
+                  aria-describedby={`reviewDate-help${errors.reviewDate ? " reviewDate-error" : ""}`}
+                  {...register("reviewDate")}
+                />
+                <p id="reviewDate-help" className="text-muted text-sm">
+                  After today in Asia/Bangkok (UTC+7). Browser format may vary;
+                  selected date (DD/MM/YYYY): {reviewDatePreview(reviewDate)}.
+                </p>
               </FormField>
             </div>
           </section>
 
           <section className="space-y-4">
             <h3 className="font-semibold">Risk context</h3>
-            <FormField id="title" label="Risk title" error={errors.title?.message}>
+            <FormField
+              id="title"
+              label="Risk title"
+              error={errors.title?.message}
+            >
               <Input id="title" maxLength={255} {...register("title")} />
             </FormField>
-            <FormField id="description" label="Context and scope" error={errors.description?.message}>
-              <Textarea id="description" rows={4} maxLength={5000} {...register("description")} />
+            <FormField
+              id="description"
+              label="Context and scope"
+              error={errors.description?.message}
+            >
+              <Textarea
+                id="description"
+                rows={4}
+                maxLength={5000}
+                {...register("description")}
+              />
             </FormField>
           </section>
 
           <Alert>
-            After creation, identify threats and vulnerabilities before assessing inherent risk. Control effectiveness, residual risk, and target risk are completed in their dedicated steps.
+            After creation, identify threats and vulnerabilities before
+            assessing inherent risk. Control effectiveness, residual risk, and
+            target risk are completed in their dedicated steps.
           </Alert>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={close}>Cancel</Button>
-            <Button type="submit" disabled={mutation.isPending || options.isPending}>
-              {mutation.isPending ? "Creating…" : "Create assessment"}
+            <Button type="button" variant="secondary" onClick={close}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Creating…" : "Create Risk"}
             </Button>
           </div>
         </form>

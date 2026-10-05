@@ -57,6 +57,20 @@ const assessment = z.object({
   reviewDate: z.iso.datetime({ offset: true }).nullable(),
 });
 export const riskRegisterItemSchema = z.object({
+  scope: z
+    .discriminatedUnion("type", [
+      z.object({ type: z.literal("asset") }),
+      z.object({
+        type: z.literal("business_service"),
+        businessService: z.object({
+          id: z.uuid(),
+          name: z.string(),
+          status: z.string(),
+        }),
+      }),
+    ])
+    .nullable()
+    .optional(),
   id: z.uuid(),
   riskCode: z.string(),
   title: z.string(),
@@ -91,6 +105,13 @@ export const riskRegisterResponseSchema = z.object({
   }),
 });
 export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
+  vulnerabilityWorkflow: z
+    .object({
+      canIdentify: z.boolean(),
+      blockedReason: z.string().nullable(),
+      assessmentReviewRequired: z.boolean(),
+    })
+    .optional(),
   createdBy: person,
   assessments: z.array(assessment),
   threats: z.array(
@@ -108,6 +129,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       id: z.uuid(),
       name: z.string(),
       description: z.string().nullable(),
+      createdAt: z.iso.datetime({ offset: true }).optional(),
       controls: z
         .array(z.object({ id: z.uuid(), code: z.string(), name: z.string() }))
         .default([]),
@@ -135,7 +157,15 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       actionCount: z.number().int(),
       progress: z.number().int().min(0).max(100),
       updatedAt: z.iso.datetime({ offset: true }),
-      actions: z.array(z.object({ id: z.uuid(), title: z.string(), assignedToUserId: z.uuid().nullable(), status: z.enum(["pending", "in_progress", "completed", "cancelled"]), dueDate: z.iso.datetime({ offset: true }).nullable() })),
+      actions: z.array(
+        z.object({
+          id: z.uuid(),
+          title: z.string(),
+          assignedToUserId: z.uuid().nullable(),
+          status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+          dueDate: z.iso.datetime({ offset: true }).nullable(),
+        }),
+      ),
     }),
   ),
   incidents: z.array(
@@ -148,7 +178,18 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       createdAt: z.iso.datetime({ offset: true }),
     }),
   ),
-  acceptances: z.array(z.object({ id: z.uuid(), decision: z.enum(["pending", "approved", "rejected"]), reason: z.string().nullable(), requestedAt: z.iso.datetime({ offset: true }), validUntil: z.iso.datetime({ offset: true }).nullable(), requestedBy: z.uuid(), decidedBy: z.uuid().nullable(), decidedAt: z.iso.datetime({ offset: true }).nullable() })),
+  acceptances: z.array(
+    z.object({
+      id: z.uuid(),
+      decision: z.enum(["pending", "approved", "rejected"]),
+      reason: z.string().nullable(),
+      requestedAt: z.iso.datetime({ offset: true }),
+      validUntil: z.iso.datetime({ offset: true }).nullable(),
+      requestedBy: z.uuid(),
+      decidedBy: z.uuid().nullable(),
+      decidedAt: z.iso.datetime({ offset: true }).nullable(),
+    }),
+  ),
 });
 export type RiskRegisterQuery = z.infer<typeof riskRegisterQuerySchema>;
 export type RiskRegisterItem = z.infer<typeof riskRegisterItemSchema>;
