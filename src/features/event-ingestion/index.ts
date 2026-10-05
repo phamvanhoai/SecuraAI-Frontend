@@ -82,6 +82,7 @@ export {
 } from "./hooks/use-event-sources";
 export { NormalizedEventsList } from "./components/normalized-events-list";
 export { NormalizedEventDetailDialog } from "./components/normalized-event-detail-dialog";
+export { EditEntityMappingDialog } from "./components/edit-entity-mapping-dialog";
 export {
   mappingStatuses,
   mappedUserSchema,
@@ -92,6 +93,10 @@ export {
   paginatedNormalizedEventsSchema,
   normalizedEventMetricsSchema,
   listNormalizedEventsQuerySchema,
+  entityMappingSchema,
+  updateEntityMappingSchema,
+  mappingOptionsSchema,
+  monitoredAccountSummarySchema,
   type MappedUser,
   type MappedAsset,
   type AnomalyDetectionItem,
@@ -100,16 +105,24 @@ export {
   type PaginatedNormalizedEvents,
   type NormalizedEventMetrics,
   type ListNormalizedEventsQuery,
+  type EntityMapping,
+  type UpdateEntityMappingPayload,
+  type MappingOptions,
+  type MonitoredAccountSummary,
 } from "./schemas/normalized-event-schema";
 export {
   listNormalizedEvents,
   getNormalizedEventMetrics,
   getNormalizedEventDetail,
+  updateEventMapping,
+  getMappingOptions,
 } from "./api/normalized-events";
 export {
   useNormalizedEvents,
   useNormalizedEventMetrics,
   useNormalizedEventDetail,
+  useMappingOptions,
+  useUpdateEventMapping,
 } from "./hooks/use-normalized-events";
 
 

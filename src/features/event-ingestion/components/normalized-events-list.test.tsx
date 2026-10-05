@@ -11,6 +11,14 @@ vi.mock("../hooks/use-normalized-events", () => ({
     isError: false,
     data: undefined,
   }),
+  useMappingOptions: () => ({
+    isPending: false,
+    data: { users: [], assets: [], monitoredAccounts: [] },
+  }),
+  useUpdateEventMapping: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
   useNormalizedEventMetrics: () => ({
     isPending: false,
     data: {
