@@ -1,2 +1,1 @@
-/** Audit public API. Implementation awaits backend contracts. */
-export {};
+export { UserActivityAuditLogManager } from "./components/user-activity-audit-log-manager";
