@@ -17,6 +17,7 @@ import ReportsPage from "../reports/page";
 import RisksPage from "../risks/page";
 import RolesPage from "../roles/page";
 import SettingsPage from "../settings/page";
+import SystemLogsPage from "../system-logs/page";
 import UsersPage from "../users/page";
 import WorkflowDefinitionsPage from "../workflow-definitions/page";
 
@@ -38,6 +39,7 @@ const modulePages = {
   risks: RisksPage,
   roles: RolesPage,
   settings: SettingsPage,
+  "system-logs": SystemLogsPage,
   users: UsersPage,
   "workflow-definitions": WorkflowDefinitionsPage,
 } as const;

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Library,
   ScrollText,
+  SearchCode,
   Settings,
   ShieldAlert,
   Users,
@@ -28,6 +29,7 @@ export type NavigationItem = {
   section:
     "Overview" | "Management" | "AI & Monitoring" | "Reporting" | "Settings";
   requiredAnyPermission?: readonly string[];
+  allowedRoleCodes?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
@@ -174,6 +176,13 @@ const modules = {
     icon: Bell,
     section: "Reporting",
   },
+  systemLogs: {
+    title: "System Logs",
+    slug: "system-logs",
+    icon: SearchCode,
+    section: "Reporting",
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER"],
+  },
   settings: {
     title: "Settings",
     slug: "settings",
@@ -209,6 +218,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -230,6 +240,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -246,6 +257,7 @@ export const panelModules = {
     modules.eventLogs,
     modules.reports,
     modules.notifications,
+    modules.systemLogs,
   ],
   employee: [
     modules.assets,
@@ -329,14 +341,17 @@ export function canAccessPanel(
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
-  _roleCodes: readonly string[] = [],
+  roleCodes: readonly string[] = [],
 ): boolean {
-  return (
+  const roleAllowed =
+    !item.allowedRoleCodes?.length ||
+    item.allowedRoleCodes.some((role) => roleCodes.includes(role));
+  const permissionAllowed =
     !item.requiredAnyPermission?.length ||
     item.requiredAnyPermission.some((permission) =>
       permissions.includes(permission),
-    )
-  );
+    );
+  return roleAllowed && permissionAllowed;
 }
 
 export function getPanelKind(
