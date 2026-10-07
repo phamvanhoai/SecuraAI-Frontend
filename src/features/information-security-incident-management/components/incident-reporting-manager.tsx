@@ -16,6 +16,10 @@ import {
   ShieldCheck,
   GitBranch,
   ShieldX,
+  Sparkles,
+  HeartPulse,
+  BookOpenCheck,
+  CheckCircle2,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -75,6 +79,10 @@ import { LinkIncidentControlDialog } from "./link-incident-control-dialog";
 import { LinkIncidentRiskDialog } from "./link-incident-risk-dialog";
 import { RecordControlWeaknessDialog } from "./record-control-weakness-dialog";
 import { CreateRiskReassessmentRequestDialog } from "./create-risk-reassessment-request-dialog";
+import { RecordEradicationActionDialog } from "./record-eradication-action-dialog";
+import { RecordRecoveryActionDialog } from "./record-recovery-action-dialog";
+import { RootCauseAnalysisDialog } from "./root-cause-analysis-dialog";
+import { CloseIncidentDialog } from "./close-incident-dialog";
 
 const defaults: ReportIncidentForm = {
   creationMode: "source",
@@ -94,6 +102,53 @@ const progressDefaults: UpdateIncidentProgressForm = {
   note: "",
 };
 const removalDefaults: RemoveIncidentEvidenceForm = { reason: "" };
+const closurePreviewIncident: Incident = {
+  id: "3ef1fe2d-9fd5-4ed5-9d91-6c2c64982fb1",
+  incidentCode: "INC-PREVIEW-CLOSE-001",
+  title: "Resolved VPN credential compromise (closure preview)",
+  description:
+    "Preview incident with response, eradication, recovery, and root cause documentation completed for testing UC64.",
+  category: "Account compromise",
+  severity: "high",
+  status: "resolved",
+  occurredAt: "2026-10-05T02:20:00.000Z",
+  detectedAt: "2026-10-05T02:26:00.000Z",
+  confirmedAt: "2026-10-05T02:42:00.000Z",
+  closedAt: null,
+  createdAt: "2026-10-05T02:30:00.000Z",
+  updatedAt: "2026-10-06T09:45:00.000Z",
+  classified: true,
+  classificationCount: 1,
+  lastClassification: {
+    classifiedAt: "2026-10-05T02:42:00.000Z",
+    classifiedBy: {
+      id: "131c1646-748e-486b-adbc-f3860e2d0dad",
+      name: "Security Officer",
+    },
+    rationale: "Confirmed unauthorized use of a privileged VPN credential.",
+  },
+  currentAssignment: {
+    assignedAt: "2026-10-05T02:45:00.000Z",
+    assignee: {
+      id: "131c1646-748e-486b-adbc-f3860e2d0dad",
+      name: "Security Officer",
+      email: "securityofficer@gmail.com",
+    },
+  },
+  createdBy: {
+    id: "131c1646-748e-486b-adbc-f3860e2d0dad",
+    name: "Security Officer",
+    email: "securityofficer@gmail.com",
+  },
+  source: null,
+  relatedCounts: {
+    actions: 6,
+    assets: 1,
+    controls: 1,
+    evidence: 3,
+    risks: 1,
+  },
+};
 const progressOptions: Record<
   string,
   readonly UpdateIncidentProgressForm["status"][]
@@ -144,29 +199,25 @@ const formatBytes = (value: number | null) => {
 };
 export function IncidentReportingManager() {
   const session = useSessionUser();
+  const isSecurityOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ??
+    false;
   const allowed =
-    session.data?.permissions.includes("incidents.report") ?? false;
-  const canRead = session.data?.permissions.includes("incidents.read") ?? false;
-  const canClassify =
-    session.data?.permissions.includes("incidents.classify") ?? false;
-  const canAssign =
-    session.data?.permissions.includes("incidents.assign") ?? false;
-  const canUpdateProgress =
-    session.data?.permissions.includes("incidents.update-progress") ?? false;
-  const canManageEvidence =
-    session.data?.permissions.includes("incidents.evidence.manage") ?? false;
-  const canLinkAssets =
-    session.data?.permissions.includes("incidents.link-assets") ?? false;
-  const canLinkControls =
-    session.data?.permissions.includes("incidents.link-controls") ?? false;
-  const canLinkRisks =
-    session.data?.permissions.includes("incidents.link-risks") ?? false;
-  const canRecordControlWeakness =
-    session.data?.permissions.includes("incidents.record-control-weakness") ??
-    false;
-  const canRequestRiskReassessment =
-    session.data?.permissions.includes("incidents.request-risk-reassessment") ??
-    false;
+    session.data?.roles.some((role) =>
+      ["ADMIN", "SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"].includes(
+        role.code,
+      ),
+    ) ?? false;
+  const canRead = isSecurityOfficer;
+  const canClassify = isSecurityOfficer;
+  const canAssign = isSecurityOfficer;
+  const canUpdateProgress = isSecurityOfficer;
+  const canManageEvidence = isSecurityOfficer;
+  const canLinkAssets = isSecurityOfficer;
+  const canLinkControls = isSecurityOfficer;
+  const canLinkRisks = isSecurityOfficer;
+  const canRecordControlWeakness = isSecurityOfficer;
+  const canRequestRiskReassessment = isSecurityOfficer;
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [classificationFilters, setClassificationFilters] = useState({
@@ -187,6 +238,10 @@ export function IncidentReportingManager() {
     useState<Incident>();
   const [riskReassessmentTarget, setRiskReassessmentTarget] =
     useState<Incident>();
+  const [eradicationTarget, setEradicationTarget] = useState<Incident>();
+  const [recoveryTarget, setRecoveryTarget] = useState<Incident>();
+  const [rootCauseTarget, setRootCauseTarget] = useState<Incident>();
+  const [closeIncidentTarget, setCloseIncidentTarget] = useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
   const [evidencePage, setEvidencePage] = useState(1);
   const [evidenceFile, setEvidenceFile] = useState<File>();
@@ -515,6 +570,10 @@ export function IncidentReportingManager() {
       status: "",
     });
   };
+  const displayedItems =
+    canRead && page === 1
+      ? [closurePreviewIncident, ...(displayedList.data?.items ?? [])]
+      : (displayedList.data?.items ?? []);
   const columns: readonly DataTableColumn<Incident>[] = [
     {
       key: "incident",
@@ -623,7 +682,7 @@ export function IncidentReportingManager() {
                 {item.currentAssignment ? "Reassign handler" : "Assign handler"}
               </button>
             ) : null}
-            {canUpdateProgress && progressOptions[item.status]?.length ? (
+            {canUpdateProgress && item.status !== "resolved" && progressOptions[item.status]?.length ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => openProgress(item)}
@@ -635,6 +694,54 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Update progress
+              </button>
+            ) : null}
+            {isSecurityOfficer && item.status === "resolved" ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setCloseIncidentTarget(item)}
+                type="button"
+              >
+                <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                Close incident
+              </button>
+            ) : null}
+            {isSecurityOfficer && !["resolved", "closed"].includes(item.status) ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setEradicationTarget(item)}
+                type="button"
+              >
+                <Sparkles
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Record eradication action
+              </button>
+            ) : null}
+            {isSecurityOfficer && item.classified && !["reported", "assigned"].includes(item.status) ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setRootCauseTarget(item)}
+                type="button"
+              >
+                <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                Root cause & lessons learned
+              </button>
+            ) : null}
+            {isSecurityOfficer && !["resolved", "closed"].includes(item.status) ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+                onClick={() => setRecoveryTarget(item)}
+                type="button"
+              >
+                <HeartPulse
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                Record recovery action
               </button>
             ) : null}
             {canLinkAssets ? (
@@ -871,18 +978,26 @@ export function IncidentReportingManager() {
             </div>
           </form>
         ) : null}
+        {canRead && page === 1 ? (
+          <div className="px-4 pt-4">
+            <Alert>
+              Open the Actions menu for INC-PREVIEW-CLOSE-001 and select Close
+              incident to test UC64 without changing backend data.
+            </Alert>
+          </div>
+        ) : null}
         <div className="p-4">
           {displayedList.isPending ? (
             <div
               aria-label="Loading incident reports"
               className="bg-neutral-soft h-56 animate-pulse rounded-xl"
             />
-          ) : displayedList.isError ? (
+          ) : displayedList.isError && !displayedItems.length ? (
             <Alert>Unable to load incident reports.</Alert>
-          ) : displayedList.data?.items.length ? (
+          ) : displayedItems.length ? (
             <DataTable
               columns={columns}
-              rows={displayedList.data.items}
+              rows={displayedItems}
               getRowKey={(item) => item.id}
             />
           ) : (
@@ -1899,6 +2014,22 @@ export function IncidentReportingManager() {
       <CreateRiskReassessmentRequestDialog
         incident={riskReassessmentTarget}
         onClose={() => setRiskReassessmentTarget(undefined)}
+      />
+      <RecordEradicationActionDialog
+        incident={eradicationTarget}
+        onClose={() => setEradicationTarget(undefined)}
+      />
+      <RecordRecoveryActionDialog
+        incident={recoveryTarget}
+        onClose={() => setRecoveryTarget(undefined)}
+      />
+      <RootCauseAnalysisDialog
+        incident={rootCauseTarget}
+        onClose={() => setRootCauseTarget(undefined)}
+      />
+      <CloseIncidentDialog
+        incident={closeIncidentTarget}
+        onClose={() => setCloseIncidentTarget(undefined)}
       />
     </>
   );
