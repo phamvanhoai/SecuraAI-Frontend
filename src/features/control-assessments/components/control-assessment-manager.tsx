@@ -1,5 +1,7 @@
 "use client";
-import { ClipboardCheck, Search } from "lucide-react";
+import { ClipboardCheck, Search, Plus, Pencil, Paperclip } from "lucide-react";
+import { ControlEvidenceDialog } from "./control-evidence-dialog";
+import { ControlEditor } from "./control-editor";
 import { useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -39,7 +41,14 @@ const tones = {
 } as const;
 export function ControlAssessmentManager() {
   const session = useSessionUser();
-  const enabled = Boolean(session.data);
+  const [editor, setEditor] = useState<{ controlId?: string }>();
+  const [evidenceControl, setEvidenceControl] = useState<string>();
+  const canCreate =
+    session.data?.permissions.includes("controls.create") ?? false;
+  const canEdit =
+    session.data?.permissions.includes("controls.update") ?? false;
+  const enabled =
+    session.data?.permissions.includes("compliance.assess-controls") ?? false;
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState<string>();
@@ -131,7 +140,7 @@ export function ControlAssessmentManager() {
     {
       key: "evidence",
       header: "Evidence",
-      cell: (item) => `${item.evidence.length} active`,
+      cell: (item) => `${item.evidence.length} eligible`,
     },
     {
       key: "latest",
@@ -157,14 +166,34 @@ export function ControlAssessmentManager() {
       key: "action",
       header: "Action",
       cell: (item) => (
-        <Button
-          variant="secondary"
-          disabled={!item.evidence.length}
-          onClick={() => open(item)}
-        >
-          <ClipboardCheck className="size-4" aria-hidden="true" />
-          Assess
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {item.canManageEvidence ? (
+            <Button
+              variant="secondary"
+              onClick={() => setEvidenceControl(item.id)}
+            >
+              <Paperclip className="size-4" aria-hidden="true" />
+              Evidence
+            </Button>
+          ) : null}
+          <Button
+            variant="secondary"
+            disabled={!item.evidence.length}
+            onClick={() => open(item)}
+          >
+            <ClipboardCheck className="size-4" aria-hidden="true" />
+            Assess
+          </Button>
+          {canEdit ? (
+            <Button
+              variant="secondary"
+              onClick={() => setEditor({ controlId: item.id })}
+            >
+              <Pencil className="size-4" aria-hidden="true" />
+              Edit
+            </Button>
+          ) : null}
+        </div>
       ),
     },
   ];
@@ -175,11 +204,26 @@ export function ControlAssessmentManager() {
         aria-label="Checking access"
       />
     );
+  if (!enabled)
+    return (
+      <Alert>
+        You do not have access to Control Effectiveness. Assigned Control Owners
+        can view their controls.
+      </Alert>
+    );
   return (
     <>
       <ProductPageHeader
         title="Control Effectiveness"
         description="Assess whether implemented controls operate effectively using testing results and supporting evidence."
+        additionalActions={
+          canCreate ? (
+            <Button onClick={() => setEditor({})}>
+              <Plus className="size-4" aria-hidden="true" />
+              Create control
+            </Button>
+          ) : undefined
+        }
       />
       <ProductPanel title="Security controls">
         <div className="space-y-4 p-5">
@@ -203,7 +247,16 @@ export function ControlAssessmentManager() {
             </Button>
           </form>
           {query.isError ? (
-            <Alert>Unable to load controls.</Alert>
+            <Alert>
+              Unable to load controls.{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void query.refetch()}
+              >
+                Try again
+              </button>
+            </Alert>
           ) : query.isPending ? (
             <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
           ) : query.data.items.length ? (
@@ -215,7 +268,11 @@ export function ControlAssessmentManager() {
           ) : (
             <EmptyState
               title="No controls available"
-              description="Control Owners see assigned controls; Security Officers see all controls."
+              description={
+                canCreate
+                  ? "Create a reusable control to get started. Evidence and Risk links are added separately."
+                  : "Control Owners see only controls currently assigned to them."
+              }
             />
           )}
           {query.data ? (
@@ -227,6 +284,15 @@ export function ControlAssessmentManager() {
           ) : null}
         </div>
       </ProductPanel>
+      {evidenceControl ? (
+        <ControlEvidenceDialog
+          controlId={evidenceControl}
+          onClose={() => setEvidenceControl(undefined)}
+        />
+      ) : null}
+      {editor ? (
+        <ControlEditor {...editor} onClose={() => setEditor(undefined)} />
+      ) : null}
       <Dialog
         title={selected ? `Assess ${selected.controlCode}` : "Assess control"}
         dialogRef={ref}
