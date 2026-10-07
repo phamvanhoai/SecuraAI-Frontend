@@ -1,5 +1,13 @@
 # SecuraAI Frontend
 
+## Controls and Evidence references
+
+`/controls` uses the existing Control Effectiveness API. Security Officers can Create/Edit Control metadata; assigned Employee Control Owners see only their own Controls. Module discovery uses `compliance.assess-controls`; catalog writes additionally require `controls.create`/`controls.update`. All ownership and status rules are enforced again by BE.
+
+Each accessible Control exposes **Evidence** with **Linked evidence**, **Add evidence** and **Link existing evidence**. BFF routes proxy `GET`/`POST /compliance/controls/:controlId/evidence` and `POST /compliance/controls/:controlId/evidence-links`. Add registers a stable, credential-free HTTPS document reference plus collection metadata and links it atomically; Link reuses an accessible record and records the relevance reason. Search/pagination is backend-scoped and limited to 10 per page. Dates entered here are explicitly Asia/Bangkok (UTC+7). Evidence ownership/linker are recorded by BE, not user-selected; review, uploaded-file metadata and integrity hashes are not fabricated. Identical Add request replay and repeated Link are idempotent; mutations never automatically retry.
+
+This is reference management, **not file upload, document verification, external permission management or a per-assessment immutable file snapshot**. Linked expired/invalid records remain visible for history but are ineligible for a new assessment. Add/Link never automatically marks reviewed, saves an effectiveness result or changes Risk. Review the supporting document, then use **Assess** separately. External repositories must grant the reviewer their own access; documents need not be public. UI uses the established shared dialogs/forms/toasts, preserves failed drafts, confirms discard and refreshes contextual queries/session after authorization or conflict outcomes. No database schema change is needed.
+
 ## View Login History
 
 Admin opens `/admin/login-history`; Security Officer opens `/login-history`. Menu visibility and direct navigation require the matching system role plus `login-history.read`. Other accounts redirect to `/forbidden`, and unauthorized accounts never fetch history. The table uses Backend records with search, result/date/IP/user filters and pagination. See [feature documentation](src/features/login-history/README.md). Deploy the Backend implementation and provision its permission, then sign in again before testing.
