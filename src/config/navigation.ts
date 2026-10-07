@@ -72,12 +72,7 @@ const modules = {
   incidents: {
     title: "Incidents",
     slug: "incidents",
-    requiredAnyPermission: [
-      "incidents.read",
-      "incidents.report",
-      "incidents.assign",
-      "incidents.update-progress",
-    ],
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"],
     icon: Bell,
     section: "Management",
   },
@@ -106,7 +101,7 @@ const modules = {
     title: "Audit",
     slug: "audits",
     icon: History,
-    requiredAnyPermission: ["audit.read"],
+    allowedRoleCodes: ["ADMIN"],
     section: "Management",
   },
   policies: {
