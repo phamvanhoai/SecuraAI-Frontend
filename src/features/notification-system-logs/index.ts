@@ -10,3 +10,4 @@ export { PersonalNotificationChannelManager } from "./components/personal-notifi
 export { SendEmailNotificationManager } from "./components/send-email-notification-manager";
 export { SendInSystemNotificationManager } from "./components/send-in-system-notification-manager";
 export { SystemConfigurationHistory } from "./components/system-configuration-history";
+export { useSystemLogSearch } from "./hooks/use-system-log-search";
