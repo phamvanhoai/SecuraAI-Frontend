@@ -2,15 +2,16 @@
 
 import {
   CheckCircle2,
-  ChevronRight,
   Clock3,
   Info,
   Mail,
   Search,
+  Send,
   UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ProductPanel } from "@/components/data-display/static-product";
+import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,22 +19,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useUsers } from "@/features/user-management-authorization";
+import { ApiError } from "@/lib/api/api-error";
+import { useSendEmailNotification } from "../hooks/use-send-email-notification";
 
 export function SendEmailNotificationManager() {
+  const toast = useToast();
+  const sendEmail = useSendEmailNotification();
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
-  const [subject, setSubject] = useState("SecuraAI security action required");
-  const [message, setMessage] = useState(
-    "Please sign in to SecuraAI to review the security item assigned to you and complete the required action.",
-  );
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const users = useUsers({
     page: 1,
     limit: 20,
     status: "active",
     ...(search ? { q: search } : {}),
   });
-  const activeUsers = users.data?.items ?? [];
+  const activeUsers = useMemo(() => users.data?.items ?? [], [users.data?.items]);
   const selectedVisibleUsers = useMemo(
     () => activeUsers.filter((user) => selectedUsers.includes(user.id)),
     [activeUsers, selectedUsers],
@@ -51,6 +54,44 @@ export function SendEmailNotificationManager() {
     );
   };
 
+  const submit = () => {
+    if (!ready || sendEmail.isPending) return;
+    sendEmail.mutate(
+      { subject: subject.trim(), message: message.trim(), userIds: selectedUsers },
+      {
+        onSuccess: (result) => {
+          if (result.sentCount === 0) {
+            toast.error(
+              "Email delivery failed",
+              "No emails were sent. Verify the recipient address and SMTP configuration, then try again.",
+            );
+          } else if (result.failedCount > 0) {
+            toast.warning(
+              "Email delivery partially completed",
+              `${result.sentCount} sent and ${result.failedCount} failed. Delivery statuses were recorded.`,
+            );
+          } else {
+            toast.success(
+              "Email notification sent",
+              `Sent to ${result.sentCount} recipient${result.sentCount === 1 ? "" : "s"}.`,
+            );
+          }
+          setSelectedUsers([]);
+          setSubject("");
+          setMessage("");
+        },
+        onError: (error) => {
+          toast.error(
+            "Email notification was not sent",
+            error instanceof ApiError
+              ? error.message
+              : "Review the recipients and try again.",
+          );
+        },
+      },
+    );
+  };
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.75fr)]">
       <ProductPanel
@@ -62,8 +103,8 @@ export function SendEmailNotificationManager() {
             <div className="flex items-start gap-2">
               <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               <p>
-                UI preview for UC40. Email delivery and delivery-status history
-                will be connected when the backend API contract is implemented.
+                Email is sent through the configured SecuraAI SMTP service.
+                Delivery status is recorded separately for every recipient.
               </p>
             </div>
           </Alert>
@@ -178,8 +219,7 @@ export function SendEmailNotificationManager() {
 
           <div className="border-border flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted text-xs">
-              Sending and status tracking require the pending Email Notification
-              API.
+              Up to 20 active users can receive one email at a time.
             </p>
             <div className="flex gap-2 sm:justify-end">
               <Button
@@ -193,9 +233,13 @@ export function SendEmailNotificationManager() {
               >
                 Clear
               </Button>
-              <Button disabled={!ready} type="button">
-                Review email
-                <ChevronRight
+              <Button
+                disabled={!ready || sendEmail.isPending}
+                onClick={submit}
+                type="button"
+              >
+                {sendEmail.isPending ? "Sending email…" : "Send email"}
+                <Send
                   aria-hidden="true"
                   className="size-4"
                   strokeWidth={1.8}
