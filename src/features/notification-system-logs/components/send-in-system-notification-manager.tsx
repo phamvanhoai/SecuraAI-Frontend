@@ -3,15 +3,16 @@
 import {
   BellRing,
   Check,
-  ChevronRight,
   Info,
   Search,
+  Send,
   ShieldCheck,
   UserRound,
   UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ProductPanel } from "@/components/data-display/static-product";
+import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,29 +21,33 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useUsers } from "@/features/user-management-authorization";
+import { ApiError } from "@/lib/api/api-error";
 import { cn } from "@/lib/utils";
+import { useSendInSystemNotification } from "../hooks/use-send-in-system-notification";
 
 type AudienceMode = "roles" | "users";
 type Priority = "normal" | "important" | "urgent";
+type RoleCode = "ADMIN" | "SECURITY_OFFICER" | "EXECUTIVE" | "EMPLOYEE";
 
-const roleOptions = [
+const roleOptions: ReadonlyArray<{ code: RoleCode; label: string }> = [
+  { code: "ADMIN", label: "Administrators" },
   { code: "SECURITY_OFFICER", label: "Security Officers" },
   { code: "EXECUTIVE", label: "Executives" },
   { code: "EMPLOYEE", label: "Employees" },
-] as const;
+];
 
 export function SendInSystemNotificationManager() {
+  const toast = useToast();
+  const sendNotification = useSendInSystemNotification();
   const [audienceMode, setAudienceMode] = useState<AudienceMode>("roles");
-  const [selectedRoles, setSelectedRoles] = useState<string[]>([
+  const [selectedRoles, setSelectedRoles] = useState<RoleCode[]>([
     "SECURITY_OFFICER",
   ]);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
-  const [title, setTitle] = useState("Security review required");
-  const [message, setMessage] = useState(
-    "Please review the latest security findings and complete the assigned follow-up actions.",
-  );
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
   const [priority, setPriority] = useState<Priority>("important");
   const users = useUsers(
     {
@@ -53,7 +58,7 @@ export function SendInSystemNotificationManager() {
     },
     audienceMode === "users",
   );
-  const activeUsers = users.data?.items ?? [];
+  const activeUsers = useMemo(() => users.data?.items ?? [], [users.data?.items]);
   const audienceLabel = useMemo(() => {
     if (audienceMode === "roles") {
       if (!selectedRoles.length) return "No recipient groups selected";
@@ -77,7 +82,48 @@ export function SendInSystemNotificationManager() {
   const ready =
     title.trim().length > 0 && message.trim().length > 0 && hasAudience;
 
-  const toggleRole = (code: string) => {
+  const submit = () => {
+    if (!ready || sendNotification.isPending) return;
+    sendNotification.mutate(
+      {
+        title: title.trim(),
+        message: message.trim(),
+        priority: priority.toUpperCase() as
+          | "NORMAL"
+          | "IMPORTANT"
+          | "URGENT",
+        audience:
+          audienceMode === "roles"
+            ? {
+                type: "roles",
+                roles: selectedRoles,
+              }
+            : { type: "users", userIds: selectedUsers },
+      },
+      {
+        onSuccess: (result) => {
+          toast.success(
+            "Notification sent",
+            `Delivered in SecuraAI to ${result.recipientCount} active recipient${result.recipientCount === 1 ? "" : "s"}.`,
+          );
+          setTitle("");
+          setMessage("");
+          setSelectedRoles([]);
+          setSelectedUsers([]);
+        },
+        onError: (error) => {
+          toast.error(
+            "Notification was not sent",
+            error instanceof ApiError
+              ? error.message
+              : "Review the recipients and try again.",
+          );
+        },
+      },
+    );
+  };
+
+  const toggleRole = (code: RoleCode) => {
     setSelectedRoles((current) =>
       current.includes(code)
         ? current.filter((item) => item !== code)
@@ -103,8 +149,8 @@ export function SendInSystemNotificationManager() {
             <div className="flex items-start gap-2">
               <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               <p>
-                UI preview for UC39. Backend delivery and notification history
-                will be connected when the API contract is implemented.
+                Notifications are stored in SecuraAI and delivered to active
+                recipients in the selected audience.
               </p>
             </div>
           </Alert>
@@ -279,7 +325,8 @@ export function SendInSystemNotificationManager() {
 
           <div className="border-border flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-muted text-xs">
-              Delivery requires the pending Notification API contract.
+              Recipient membership is checked again when the notification is
+              sent.
             </p>
             <div className="flex gap-2 sm:justify-end">
               <Button
@@ -294,9 +341,15 @@ export function SendInSystemNotificationManager() {
               >
                 Clear
               </Button>
-              <Button disabled={!ready} type="button">
-                Review notification
-                <ChevronRight
+              <Button
+                disabled={!ready || sendNotification.isPending}
+                onClick={submit}
+                type="button"
+              >
+                {sendNotification.isPending
+                  ? "Sending notification…"
+                  : "Send notification"}
+                <Send
                   aria-hidden="true"
                   className="size-4"
                   strokeWidth={1.8}

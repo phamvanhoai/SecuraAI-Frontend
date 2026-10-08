@@ -1,5 +1,4 @@
-/** Notification public API. Implementation awaits backend contracts. */
-export {};
+export { useSendInSystemNotification } from "./hooks/use-send-in-system-notification";
 export { ComplianceRemindersManager } from "./components/compliance-reminders-manager";
 export { AdvancedSystemLogSearch } from "./components/advanced-system-log-search";
 export { PersonalNotificationChannelManager } from "./components/personal-notification-channel-manager";
