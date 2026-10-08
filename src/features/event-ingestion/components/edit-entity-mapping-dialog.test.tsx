@@ -244,4 +244,86 @@ describe("EditEntityMappingDialog", () => {
       expect(handleClose).toHaveBeenCalled();
     });
   });
+
+  it("validates that at least one entity is selected before submitting", async () => {
+    const unmappedEvent: NormalizedEventDetail = {
+      ...mockEvent,
+      mappedUser: null,
+      mappedAsset: null,
+      activeMapping: null,
+    };
+
+    render(
+      <EditEntityMappingDialog
+        event={unmappedEvent}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Enter reason
+    const reasonInput = screen.getByLabelText(/Reason for Correction/i);
+    fireEvent.change(reasonInput, {
+      target: { value: "Trying to submit unmapped" },
+    });
+
+    // Submit form
+    const submitBtn = screen.getByRole("button", { name: /Save Corrected Mapping/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      await screen.findByText(
+        "Please select at least one entity (User, Asset, or Monitored Account) to map.",
+      ),
+    ).toBeInTheDocument();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("updates confidence percentage score when typing custom value", async () => {
+    mockMutateAsync.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mapping: {
+          id: "map-3",
+          mappingMethod: "MANUAL",
+          confidence: 0.8,
+          reason: "Confirmed 80% based on DHCP audit",
+          isActive: true,
+        },
+      },
+    });
+
+    render(
+      <EditEntityMappingDialog
+        event={mockEvent}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Type 80 in confidence input
+    const confidenceInput = screen.getByLabelText(/Mapping Confidence Score/i);
+    fireEvent.change(confidenceInput, { target: { value: "80" } });
+
+    expect(screen.getByText(/80% — Probable/i)).toBeInTheDocument();
+
+    // Enter reason
+    const reasonInput = screen.getByLabelText(/Reason for Correction/i);
+    fireEvent.change(reasonInput, {
+      target: { value: "Confirmed 80% based on DHCP audit" },
+    });
+
+    // Submit form
+    const submitBtn = screen.getByRole("button", { name: /Save Corrected Mapping/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          confidence: 0.8,
+          reason: "Confirmed 80% based on DHCP audit",
+        }),
+      );
+    });
+  });
 });
