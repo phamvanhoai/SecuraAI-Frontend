@@ -1,7 +1,7 @@
 "use client";
 
-import { Eye, Info, Search, ShieldCheck, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Eye, Search, ShieldCheck, X } from "lucide-react";
+import { useRef, useState } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -17,159 +17,46 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-
-type AuditOutcome = "success" | "denied" | "failed";
-type AuditRecord = {
-  id: string;
-  actor: string;
-  actorEmail: string;
-  action: string;
-  module: string;
-  resource: string;
-  timestamp: string;
-  outcome: AuditOutcome;
-  sourceIp: string;
-  details: string;
-};
-
-const pageSize = 5;
-
-const exampleRecords: readonly AuditRecord[] = [
-  {
-    id: "AUD-2026-0041",
-    actor: "SecuraAI Administrator",
-    actorEmail: "admin@gmail.com",
-    action: "Updated user permissions",
-    module: "User Management",
-    resource: "User account · EMP-0024",
-    timestamp: "2026-10-06T08:42:00.000Z",
-    outcome: "success",
-    sourceIp: "192.0.2.24",
-    details: "Changed the account's assigned permission set.",
-  },
-  {
-    id: "AUD-2026-0040",
-    actor: "Security Officer",
-    actorEmail: "securityofficer@gmail.com",
-    action: "Confirmed alert as true positive",
-    module: "AI Alerts",
-    resource: "Alert · ALT-C16E63BD",
-    timestamp: "2026-10-06T08:18:00.000Z",
-    outcome: "success",
-    sourceIp: "192.0.2.31",
-    details: "Completed analyst triage and created a linked incident draft.",
-  },
-  {
-    id: "AUD-2026-0039",
-    actor: "Employee User",
-    actorEmail: "employee@gmail.com",
-    action: "Viewed restricted audit route",
-    module: "Authorization",
-    resource: "Route · /audits",
-    timestamp: "2026-10-06T07:57:00.000Z",
-    outcome: "denied",
-    sourceIp: "192.0.2.46",
-    details:
-      "Access was rejected because the account did not have administrator privileges.",
-  },
-  {
-    id: "AUD-2026-0038",
-    actor: "Unknown user",
-    actorEmail: "unknown@example.com",
-    action: "Attempted sign-in",
-    module: "Authentication",
-    resource: "Account · unknown@example.com",
-    timestamp: "2026-10-06T07:31:00.000Z",
-    outcome: "failed",
-    sourceIp: "203.0.113.42",
-    details:
-      "Authentication failed. No sensitive credential details were retained.",
-  },
-  {
-    id: "AUD-2026-0037",
-    actor: "SecuraAI Administrator",
-    actorEmail: "admin@gmail.com",
-    action: "Deactivated user account",
-    module: "User Management",
-    resource: "User account · EMP-0018",
-    timestamp: "2026-10-06T07:12:00.000Z",
-    outcome: "success",
-    sourceIp: "192.0.2.24",
-    details: "The account was deactivated with an administrative reason.",
-  },
-  {
-    id: "AUD-2026-0036",
-    actor: "Security Officer",
-    actorEmail: "securityofficer@gmail.com",
-    action: "Linked incident to asset",
-    module: "Incident Management",
-    resource: "Incident · INC-E628C39D70D94FF5",
-    timestamp: "2026-10-06T06:48:00.000Z",
-    outcome: "success",
-    sourceIp: "192.0.2.31",
-    details: "Associated an active IT asset with the incident investigation.",
-  },
-  {
-    id: "AUD-2026-0035",
-    actor: "Executive User",
-    actorEmail: "executive@gmail.com",
-    action: "Attempted policy approval",
-    module: "Policy Management",
-    resource: "Policy version · POL-2026-010 v2",
-    timestamp: "2026-10-06T06:20:00.000Z",
-    outcome: "denied",
-    sourceIp: "192.0.2.52",
-    details:
-      "The requested policy transition was not allowed for this account.",
-  },
-];
+import { useUserActivityAudit } from "../hooks/use-user-activity-audit";
+import type {
+  AuditOutcome,
+  UserActivityAuditRecord,
+} from "../schemas/user-activity-audit-schema";
 
 export function UserActivityAuditLogManager() {
   const [page, setPage] = useState(1);
-  const [searchDraft, setSearchDraft] = useState("");
+  const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
-  const [module, setModule] = useState("all");
   const [outcome, setOutcome] = useState<"all" | AuditOutcome>("all");
-  const [selected, setSelected] = useState<AuditRecord | null>(null);
-  const detailDialog = useRef<HTMLDialogElement>(null);
-  const records = useMemo(() => {
-    const term = search.toLocaleLowerCase();
-    return exampleRecords.filter((record) => {
-      const matchesSearch =
-        !term ||
-        [
-          record.id,
-          record.actor,
-          record.actorEmail,
-          record.action,
-          record.resource,
-        ]
-          .join(" ")
-          .toLocaleLowerCase()
-          .includes(term);
-      return (
-        matchesSearch &&
-        (module === "all" || record.module === module) &&
-        (outcome === "all" || record.outcome === outcome)
-      );
-    });
-  }, [module, outcome, search]);
-  const pageCount = Math.max(1, Math.ceil(records.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const pagedRecords = records.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  const [resourceType, setResourceType] = useState("");
+  const [selected, setSelected] = useState<UserActivityAuditRecord | null>(
+    null,
   );
-  const isFiltered = Boolean(search || module !== "all" || outcome !== "all");
-
-  const columns: readonly DataTableColumn<AuditRecord>[] = [
+  const dialog = useRef<HTMLDialogElement>(null);
+  const audit = useUserActivityAudit({
+    page,
+    limit: 20,
+    ...(search ? { q: search } : {}),
+    ...(outcome !== "all" ? { outcome } : {}),
+    ...(resourceType ? { resourceType } : {}),
+  });
+  const clear = () => {
+    setDraft("");
+    setSearch("");
+    setOutcome("all");
+    setResourceType("");
+    setPage(1);
+  };
+  const columns: readonly DataTableColumn<UserActivityAuditRecord>[] = [
     {
       key: "actor",
       header: "Actor",
       cell: (record) => (
         <div className="min-w-40">
-          <p className="font-medium">{record.actor}</p>
-          <p className="text-muted mt-0.5 text-xs">{record.actorEmail}</p>
+          <p className="font-medium">{record.actor.name}</p>
+          <p className="text-muted mt-0.5 text-xs">
+            {record.actor.email ?? "Email unavailable"}
+          </p>
         </div>
       ),
     },
@@ -177,25 +64,27 @@ export function UserActivityAuditLogManager() {
       key: "action",
       header: "Action",
       cell: (record) => (
-        <div className="min-w-48">
-          <p className="font-medium">{record.action}</p>
-          <p className="text-muted mt-0.5 text-xs">{record.module}</p>
-        </div>
+        <span className="font-mono text-xs font-semibold">{record.action}</span>
       ),
     },
     {
       key: "resource",
       header: "Affected resource",
       cell: (record) => (
-        <span className="min-w-44 break-words">{record.resource}</span>
+        <div className="min-w-40">
+          <p className="font-medium">{resourceLabel(record)}</p>
+          <p className="text-muted mt-0.5 text-xs">
+            {formatResourceType(record.resource.type)}
+          </p>
+        </div>
       ),
     },
     {
-      key: "timestamp",
+      key: "time",
       header: "Timestamp",
       cell: (record) => (
-        <time className="whitespace-nowrap" dateTime={record.timestamp}>
-          {formatTimestamp(record.timestamp)}
+        <time className="whitespace-nowrap" dateTime={record.occurredAt}>
+          {formatTime(record.occurredAt)}
         </time>
       ),
     },
@@ -209,13 +98,12 @@ export function UserActivityAuditLogManager() {
       header: "Actions",
       cell: (record) => (
         <Button
-          aria-label={`View details for ${record.id}`}
-          onClick={() => {
-            setSelected(record);
-            detailDialog.current?.showModal();
-          }}
           type="button"
           variant="secondary"
+          onClick={() => {
+            setSelected(record);
+            dialog.current?.showModal();
+          }}
         >
           <Eye aria-hidden="true" className="size-4" />
           View
@@ -223,137 +111,127 @@ export function UserActivityAuditLogManager() {
       ),
     },
   ];
+  const filtered = Boolean(search || outcome !== "all" || resourceType);
 
   return (
     <>
-      <Alert className="border-info/25 bg-info-soft text-info">
-        <div className="flex items-start gap-2">
-          <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <p>
-            UI preview for UC42. The records below are labeled examples; live
-            audit retrieval will be connected when the backend API is
-            implemented.
-          </p>
-        </div>
-      </Alert>
       <ProductPanel
         title="User activity records"
-        description={`${records.length} example audit records found`}
+        description={
+          audit.data
+            ? `${audit.data.pagination.total} audit records found`
+            : "Loading audit records"
+        }
       >
-        <div className="border-border flex flex-wrap items-center gap-2 border-b p-4">
+        <div className="border-border flex flex-wrap items-end gap-3 border-b p-4">
           <form
-            className="contents"
+            className="flex min-w-[220px] flex-1 gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              setSearch(searchDraft.trim());
+              setSearch(draft.trim());
               setPage(1);
             }}
           >
-            <Label
-              className="relative max-w-md min-w-[220px] flex-1"
-              htmlFor="audit-search"
-            >
-              <span className="sr-only">Search audit records</span>
+            <Label className="relative flex-1" htmlFor="audit-search">
+              <span className="sr-only">
+                Search user activity audit records
+              </span>
               <Search
                 aria-hidden="true"
                 className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
               />
               <Input
-                className="bg-background min-h-10 pl-9"
                 id="audit-search"
+                className="pl-9"
                 maxLength={100}
-                onChange={(event) => setSearchDraft(event.target.value)}
-                placeholder="Search actor, action, resource, or ID"
-                value={searchDraft}
+                placeholder="Actor, action, or resource"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
               />
             </Label>
-            <Select
-              aria-label="Filter audit records by module"
-              className="min-h-10 w-44"
-              onChange={(event) => {
-                setModule(event.target.value);
-                setPage(1);
-              }}
-              value={module}
-            >
-              <option value="all">All modules</option>
-              {[...new Set(exampleRecords.map((record) => record.module))].map(
-                (item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ),
-              )}
-            </Select>
-            <Select
-              aria-label="Filter audit records by outcome"
-              className="min-h-10 w-40"
-              onChange={(event) => {
-                setOutcome(event.target.value as "all" | AuditOutcome);
-                setPage(1);
-              }}
-              value={outcome}
-            >
-              <option value="all">All outcomes</option>
-              <option value="success">Success</option>
-              <option value="denied">Denied</option>
-              <option value="failed">Failed</option>
-            </Select>
-            <Button className="min-h-10" type="submit">
-              Search
-            </Button>
+            <Button type="submit">Search</Button>
           </form>
-          {isFiltered ? (
-            <Button
-              className="min-h-10"
-              onClick={() => {
-                setSearchDraft("");
-                setSearch("");
-                setModule("all");
-                setOutcome("all");
+          <Select
+            aria-label="Filter by outcome"
+            className="w-40"
+            value={outcome}
+            onChange={(event) => {
+              setOutcome(event.target.value as "all" | AuditOutcome);
+              setPage(1);
+            }}
+          >
+            <option value="all">All outcomes</option>
+            <option value="SUCCESS">Success</option>
+            <option value="DENIED">Denied</option>
+            <option value="FAILURE">Failure</option>
+          </Select>
+          <Label className="w-48" htmlFor="audit-resource-type">
+            <span className="sr-only">Resource type</span>
+            <Input
+              id="audit-resource-type"
+              maxLength={100}
+              placeholder="Resource type"
+              value={resourceType}
+              onChange={(event) => {
+                setResourceType(event.target.value);
                 setPage(1);
               }}
-              type="button"
-              variant="secondary"
-            >
+            />
+          </Label>
+          {filtered ? (
+            <Button type="button" variant="secondary" onClick={clear}>
               <X aria-hidden="true" className="size-4" />
               Clear
             </Button>
           ) : null}
         </div>
         <div className="p-4">
-          {records.length ? (
+          {audit.isPending ? (
+            <div
+              aria-label="Loading user activity records"
+              className="bg-neutral-soft h-72 animate-pulse rounded-xl"
+            />
+          ) : audit.isError ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              Unable to load audit records. Retry the request.
+            </Alert>
+          ) : audit.data.items.length ? (
             <DataTable
               columns={columns}
+              rows={audit.data.items}
               getRowKey={(record) => record.id}
-              rows={pagedRecords}
             />
           ) : (
             <div className="py-12 text-center">
               <ShieldCheck
                 aria-hidden="true"
-                className="text-muted mx-auto size-6"
+                className="text-muted mx-auto size-7"
               />
               <p className="mt-3 font-medium">
-                No example records match your filters
+                No audit records match your filters
               </p>
-              <p className="text-muted mt-1 text-sm">
-                Change or clear the filters to view other records.
-              </p>
+              <Button
+                className="mt-3"
+                type="button"
+                variant="secondary"
+                onClick={clear}
+              >
+                Clear filters
+              </Button>
             </div>
           )}
         </div>
         <div className="border-border border-t p-4">
           <Pagination
+            page={audit.data?.pagination.page ?? page}
+            pageCount={audit.data?.pagination.pageCount ?? 1}
             onPageChange={setPage}
-            page={currentPage}
-            pageCount={pageCount}
           />
         </div>
       </ProductPanel>
       <Dialog
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
-        dialogRef={detailDialog}
+        dialogRef={dialog}
         title="Audit record details"
       >
         {selected ? (
@@ -367,27 +245,35 @@ export function UserActivityAuditLogManager() {
             <dl className="grid gap-4 sm:grid-cols-2">
               <Detail
                 label="Actor"
-                value={`${selected.actor} · ${selected.actorEmail}`}
+                value={`${selected.actor.name}${selected.actor.email ? ` · ${selected.actor.email}` : ""}`}
               />
               <Detail
                 label="Timestamp"
-                value={formatTimestamp(selected.timestamp)}
+                value={formatTime(selected.occurredAt)}
               />
               <Detail label="Action" value={selected.action} />
-              <Detail label="Module" value={selected.module} />
-              <Detail label="Affected resource" value={selected.resource} />
-              <Detail label="Source IP" value={selected.sourceIp} />
-              <div className="sm:col-span-2">
-                <Detail label="Details" value={selected.details} />
-              </div>
+              <Detail
+                label="Affected resource"
+                value={resourceLabel(selected)}
+              />
+              <Detail
+                label="Source"
+                value={selected.source ?? "Not recorded"}
+              />
+              <Detail
+                label="Source IP"
+                value={selected.sourceIp ?? "Not recorded"}
+              />
+              {selected.errorCode ? (
+                <Detail label="Error code" value={selected.errorCode} />
+              ) : null}
             </dl>
             <div className="flex justify-end">
               <Button
-                onClick={() => detailDialog.current?.close()}
                 type="button"
                 variant="secondary"
+                onClick={() => dialog.current?.close()}
               >
-                <X aria-hidden="true" className="size-4" />
                 Close
               </Button>
             </div>
@@ -402,22 +288,21 @@ function OutcomeBadge({ outcome }: { outcome: AuditOutcome }) {
   return (
     <StatusBadge
       tone={
-        outcome === "success"
+        outcome === "SUCCESS"
           ? "success"
-          : outcome === "denied"
+          : outcome === "DENIED"
             ? "warning"
             : "danger"
       }
     >
-      {outcome === "success"
+      {outcome === "SUCCESS"
         ? "Success"
-        : outcome === "denied"
+        : outcome === "DENIED"
           ? "Denied"
-          : "Failed"}
+          : "Failure"}
     </StatusBadge>
   );
 }
-
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -428,11 +313,29 @@ function Detail({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-function formatTimestamp(timestamp: string): string {
+function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(timestamp));
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function formatResourceType(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function resourceLabel(record: UserActivityAuditRecord) {
+  if (record.resource.type === "USER_NOTIFICATION_PREFERENCES")
+    return `Notification preferences · ${record.actor.name}`;
+  if (record.resource.type === "USER")
+    return `User account · ${record.actor.name}`;
+  return formatResourceType(record.resource.type);
 }
