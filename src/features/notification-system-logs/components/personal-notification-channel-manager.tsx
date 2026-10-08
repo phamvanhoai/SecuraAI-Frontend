@@ -3,25 +3,60 @@
 import { BellRing, CheckCircle2, Info, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { ProductPanel } from "@/components/data-display/static-product";
+import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ApiError } from "@/lib/api/api-error";
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from "../hooks/use-notification-preferences";
+import type { NotificationChannels } from "../schemas/notification-preferences-schema";
 
-type Channel = "in-system" | "email";
+type Channel = keyof NotificationChannels;
 
 export function PersonalNotificationChannelManager({
   email,
 }: {
   email: string;
 }) {
-  const [channels, setChannels] = useState<Channel[]>(["in-system", "email"]);
-  const hasChannel = channels.length > 0;
+  const toast = useToast();
+  const preferences = useNotificationPreferences();
+  const updatePreferences = useUpdateNotificationPreferences();
+  const [draft, setDraft] = useState<NotificationChannels | null>(null);
+  const channels = draft ?? preferences.data?.channels ?? { inSystem: true, email: true };
+  const hasChannel = channels.inSystem || channels.email;
+  const isDirty =
+    draft !== null &&
+    (draft.inSystem !== preferences.data?.channels.inSystem ||
+      draft.email !== preferences.data?.channels.email);
 
   const toggleChannel = (channel: Channel) => {
-    setChannels((current) =>
-      current.includes(channel)
-        ? current.filter((item) => item !== channel)
-        : [...current, channel],
+    setDraft((current) => {
+      const base = current ?? channels;
+      return { ...base, [channel]: !base[channel] };
+    });
+  };
+
+  const save = () => {
+    if (!hasChannel || !isDirty || updatePreferences.isPending) return;
+    updatePreferences.mutate(
+      { channels },
+      {
+        onSuccess: () => {
+          setDraft(null);
+          toast.success(
+            "Notification preferences saved",
+            "Your choices will apply to future eligible notifications.",
+          );
+        },
+        onError: (error) =>
+          toast.error(
+            "Preferences were not saved",
+            error instanceof ApiError ? error.message : "Review your choices and try again.",
+          ),
+      },
     );
   };
 
@@ -32,15 +67,21 @@ export function PersonalNotificationChannelManager({
     >
       <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:p-6">
         <div className="space-y-5">
-          <Alert className="border-info/25 bg-info-soft text-info">
-            <div className="flex items-start gap-2">
-              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              <p>
-                UI preview for UC41. Saving and applying these preferences will
-                be connected when the backend preference API is implemented.
-              </p>
-            </div>
-          </Alert>
+          {preferences.isError ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              Unable to load your saved preferences. Retry before making changes.
+            </Alert>
+          ) : (
+            <Alert className="border-info/25 bg-info-soft text-info">
+              <div className="flex items-start gap-2">
+                <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                <p>
+                  Your choices apply to future notifications that support the
+                  selected channels.
+                </p>
+              </div>
+            </Alert>
+          )}
 
           <fieldset className="space-y-3">
             <legend className="text-sm font-semibold">
@@ -52,15 +93,17 @@ export function PersonalNotificationChannelManager({
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <ChannelOption
-                checked={channels.includes("in-system")}
+                checked={channels.inSystem}
                 description="Show notifications and reminders inside SecuraAI."
+                disabled={preferences.isPending || preferences.isError}
                 icon={BellRing}
                 label="In-system notifications"
-                onChange={() => toggleChannel("in-system")}
+                onChange={() => toggleChannel("inSystem")}
               />
               <ChannelOption
-                checked={channels.includes("email")}
+                checked={channels.email}
                 description={`Send supported notifications to ${email}.`}
+                disabled={preferences.isPending || preferences.isError}
                 icon={Mail}
                 label="Email notifications"
                 onChange={() => toggleChannel("email")}
@@ -80,8 +123,18 @@ export function PersonalNotificationChannelManager({
               Critical security notices may still use mandatory channels defined
               by the organization.
             </p>
-            <Button disabled={!hasChannel} type="button">
-              Review preferences
+            <Button
+              disabled={
+                !hasChannel ||
+                !isDirty ||
+                preferences.isPending ||
+                preferences.isError ||
+                updatePreferences.isPending
+              }
+              onClick={save}
+              type="button"
+            >
+              {updatePreferences.isPending ? "Saving…" : "Save preferences"}
             </Button>
           </div>
         </div>
@@ -97,11 +150,11 @@ export function PersonalNotificationChannelManager({
           </div>
           <div className="mt-4 space-y-3">
             <SelectionStatus
-              enabled={channels.includes("in-system")}
+              enabled={channels.inSystem}
               label="In-system"
             />
             <SelectionStatus
-              enabled={channels.includes("email")}
+              enabled={channels.email}
               label="Email"
             />
           </div>
@@ -118,21 +171,24 @@ export function PersonalNotificationChannelManager({
 function ChannelOption({
   checked,
   description,
+  disabled,
   icon: Icon,
   label,
   onChange,
 }: {
   checked: boolean;
   description: string;
+  disabled: boolean;
   icon: typeof BellRing;
   label: string;
   onChange: () => void;
 }) {
   return (
-    <label className="border-border bg-surface hover:bg-neutral-soft flex min-h-32 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors">
+    <label className="border-border bg-surface hover:bg-neutral-soft flex min-h-32 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors has-disabled:cursor-not-allowed has-disabled:opacity-60">
       <Checkbox
         checked={checked}
         className="mt-1 shrink-0"
+        disabled={disabled}
         onChange={onChange}
       />
       <span className="min-w-0">
