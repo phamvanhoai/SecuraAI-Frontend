@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   useMappingOptions,
   useUpdateEventMapping,
@@ -44,8 +45,10 @@ function EditEntityMappingForm({
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     () => event.activeMapping?.monitoredAccountId ?? "NONE",
   );
-  const [confidence, setConfidence] = useState<number>(
-    () => event.activeMapping?.confidence ?? 1.0,
+  const [confidencePercent, setConfidencePercent] = useState<number>(() =>
+    event.activeMapping?.confidence !== null && event.activeMapping?.confidence !== undefined
+      ? Math.round(event.activeMapping.confidence * 100)
+      : 0,
   );
   const [reason, setReason] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -60,6 +63,18 @@ function EditEntityMappingForm({
     e.preventDefault();
     setFormError(null);
 
+    const hasEntity =
+      selectedUserId !== "NONE" ||
+      selectedAssetId !== "NONE" ||
+      selectedAccountId !== "NONE";
+
+    if (!hasEntity) {
+      setFormError(
+        "Please select at least one entity (User, Asset, or Monitored Account) to map.",
+      );
+      return;
+    }
+
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
       setFormError("Reason for mapping correction is required.");
@@ -67,12 +82,17 @@ function EditEntityMappingForm({
     }
 
     try {
+      const numericPercent = Number(confidencePercent);
+      const normalizedConfidence = isNaN(numericPercent)
+        ? 0
+        : Math.min(1.0, Math.max(0, numericPercent / 100));
+
       await updateMutation.mutateAsync({
         userId: selectedUserId !== "NONE" ? selectedUserId : null,
         assetId: selectedAssetId !== "NONE" ? selectedAssetId : null,
         monitoredAccountId: selectedAccountId !== "NONE" ? selectedAccountId : null,
         reason: trimmedReason,
-        confidence: Number(confidence) || 1.0,
+        confidence: normalizedConfidence,
       });
 
       toast.success(
@@ -211,23 +231,43 @@ function EditEntityMappingForm({
         </div>
 
         {/* Confidence Level */}
-        <div className="space-y-1">
-          <label
-            htmlFor={confidenceInputId}
-            className="text-foreground block text-xs font-semibold"
-          >
-            Mapping Confidence Score (0.0 to 1.0)
-          </label>
-          <Input
-            id={confidenceInputId}
-            type="number"
-            step="0.05"
-            min="0"
-            max="1"
-            value={confidence}
-            onChange={(e) => setConfidence(parseFloat(e.target.value) || 0)}
-            className="h-8 text-xs font-mono max-w-32"
-          />
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor={confidenceInputId}
+              className="text-foreground block text-xs font-semibold"
+            >
+              Mapping Confidence Score (0% – 100%)
+            </label>
+            <span className="text-muted text-[11px] font-mono font-medium">
+              {confidencePercent}%{" "}
+              {confidencePercent >= 90
+                ? "— Confirmed / High"
+                : confidencePercent >= 70
+                  ? "— Probable"
+                  : confidencePercent >= 50
+                    ? "— Moderate"
+                    : "— Tentative"}
+            </span>
+          </div>
+          <div className="relative w-32">
+            <Input
+              id={confidenceInputId}
+              type="number"
+              step="5"
+              min="0"
+              max="100"
+              value={confidencePercent}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                setConfidencePercent(isNaN(val) ? 0 : Math.min(100, Math.max(0, val)));
+              }}
+              className="h-8 pr-7 text-xs font-mono"
+            />
+            <span className="text-muted pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-medium">
+              %
+            </span>
+          </div>
         </div>
 
         {/* Reason / Justification */}

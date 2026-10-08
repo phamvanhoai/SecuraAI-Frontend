@@ -73,7 +73,7 @@ export async function updateEventMapping(
     {
       method: "PUT",
       target: "same-origin",
-      body: JSON.stringify(payload),
+      body: payload,
     },
   );
 
