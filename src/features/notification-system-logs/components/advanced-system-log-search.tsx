@@ -1,17 +1,15 @@
 "use client";
 
 import {
-  ChevronDown,
-  ChevronUp,
+  CalendarDays,
   Download,
   Eye,
   Filter,
-  Info,
   RotateCcw,
   Search,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState, type ComponentProps } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -23,186 +21,112 @@ import {
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { useSystemLogSearch } from "../hooks/use-system-log-search";
+import type {
+  SystemLogRecord,
+  SystemLogStatus,
+} from "../schemas/system-log-schema";
 
-type LogStatus = "processed" | "pending" | "failed";
-type SystemLog = {
-  id: string;
-  occurredAt: string;
+const pageSize = 20;
+type AppliedFilters = {
+  query: string;
   eventType: string;
   source: string;
   actor: string;
-  status: LogStatus;
-  message: string;
-  correlationId: string;
+  status: "" | SystemLogStatus;
+  from: string;
+  to: string;
 };
-const pageSize = 5;
-const sampleLogs: readonly SystemLog[] = [
-  {
-    id: "LOG-1047",
-    occurredAt: "2026-10-06T09:42:00Z",
-    eventType: "AUTH_LOGIN_SUCCESS",
-    source: "Authentication API",
-    actor: "admin@gmail.com",
-    status: "processed",
-    message: "Administrator session established.",
-    correlationId: "COR-A81F",
-  },
-  {
-    id: "LOG-1046",
-    occurredAt: "2026-10-06T09:35:00Z",
-    eventType: "NOTIFICATION_QUEUED",
-    source: "Notification Service",
-    actor: "admin@gmail.com",
-    status: "pending",
-    message: "Notification accepted for asynchronous processing.",
-    correlationId: "COR-B24C",
-  },
-  {
-    id: "LOG-1045",
-    occurredAt: "2026-10-06T09:18:00Z",
-    eventType: "ALERT_TRIAGE_STARTED",
-    source: "AI Alert Service",
-    actor: "securityofficer@gmail.com",
-    status: "processed",
-    message: "Analyst triage workflow started.",
-    correlationId: "COR-C16E",
-  },
-  {
-    id: "LOG-1044",
-    occurredAt: "2026-10-06T08:57:00Z",
-    eventType: "EMAIL_DELIVERY_FAILED",
-    source: "Email Gateway",
-    actor: "system",
-    status: "failed",
-    message: "Email gateway rejected the delivery request.",
-    correlationId: "COR-D73A",
-  },
-  {
-    id: "LOG-1043",
-    occurredAt: "2026-10-06T08:31:00Z",
-    eventType: "EVENT_IMPORT_COMPLETED",
-    source: "Event Ingestion",
-    actor: "securityofficer@gmail.com",
-    status: "processed",
-    message: "Normalized event batch processing completed.",
-    correlationId: "COR-E91B",
-  },
-  {
-    id: "LOG-1042",
-    occurredAt: "2026-10-05T16:22:00Z",
-    eventType: "RISK_REVIEW_UPDATED",
-    source: "Risk Service",
-    actor: "employee@gmail.com",
-    status: "processed",
-    message: "Risk reassessment review state updated.",
-    correlationId: "COR-F42D",
-  },
-  {
-    id: "LOG-1041",
-    occurredAt: "2026-10-05T15:08:00Z",
-    eventType: "POLICY_PUBLISH_REQUEST",
-    source: "Policy Service",
-    actor: "admin@gmail.com",
-    status: "pending",
-    message: "Policy publication request queued.",
-    correlationId: "COR-G19A",
-  },
-];
+const emptyFilters: AppliedFilters = {
+  query: "",
+  eventType: "",
+  source: "",
+  actor: "",
+  status: "",
+  from: "",
+  to: "",
+};
 
 export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
   const [page, setPage] = useState(1);
+  const [searchRequest, setSearchRequest] = useState(0);
   const [draft, setDraft] = useState("");
-  const [query, setQuery] = useState("");
-  const [eventType, setEventType] = useState("all");
-  const [source, setSource] = useState("all");
-  const [status, setStatus] = useState<"all" | LogStatus>("all");
+  const [applied, setApplied] = useState<AppliedFilters>(emptyFilters);
+  const [eventType, setEventType] = useState("");
+  const [source, setSource] = useState("");
   const [actor, setActor] = useState("");
+  const [status, setStatus] = useState<"" | SystemLogStatus>("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [dateError, setDateError] = useState("");
   const [advanced, setAdvanced] = useState(false);
-  const [selected, setSelected] = useState<SystemLog | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [exportScope, setExportScope] = useState<"selected" | "filtered">(
-    "selected",
-  );
-  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
-  const [exportReason, setExportReason] = useState("");
+  const [selected, setSelected] = useState<SystemLogRecord | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const exportDialog = useRef<HTMLDialogElement>(null);
-  const filtered = useMemo(
-    () =>
-      sampleLogs.filter((log) => {
-        const text = query.toLowerCase();
-        return (
-          (!text ||
-            `${log.id} ${log.message} ${log.correlationId}`
-              .toLowerCase()
-              .includes(text)) &&
-          (eventType === "all" || log.eventType === eventType) &&
-          (source === "all" || log.source === source) &&
-          (status === "all" || log.status === status) &&
-          (!actor || log.actor.toLowerCase().includes(actor.toLowerCase())) &&
-          (!from || log.occurredAt.slice(0, 10) >= from) &&
-          (!to || log.occurredAt.slice(0, 10) <= to)
-        );
-      }),
-    [actor, eventType, from, query, source, status, to],
+  const logs = useSystemLogSearch(
+    {
+      page,
+      limit: pageSize,
+      ...(applied.query ? { q: applied.query } : {}),
+      ...(applied.eventType ? { eventType: applied.eventType } : {}),
+      ...(applied.source ? { source: applied.source } : {}),
+      ...(applied.actor ? { actor: applied.actor } : {}),
+      ...(applied.status ? { status: applied.status } : {}),
+      ...(applied.from ? { from: applied.from } : {}),
+      ...(applied.to ? { to: applied.to } : {}),
+    },
+    searchRequest,
   );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, pageCount);
-  const rows = filtered.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const rows = logs.data?.items ?? [];
+  const pagination = logs.data?.pagination;
   const activeCount = [
-    query,
-    eventType !== "all",
-    source !== "all",
-    status !== "all",
-    actor,
-    from || to,
+    applied.query,
+    applied.eventType,
+    applied.source,
+    applied.actor,
+    applied.status,
+    applied.from || applied.to,
   ].filter(Boolean).length;
+  const applyFilters = () => {
+    const fromDate = from ? parseNativeDate(from, false) : null;
+    const toDate = to ? parseNativeDate(to, true) : null;
+    if ((from && !fromDate) || (to && !toDate)) {
+      setDateError("Select valid dates.");
+      return;
+    }
+    if (fromDate && toDate && fromDate > toDate) {
+      setDateError("From date must not be after to date.");
+      return;
+    }
+    setDateError("");
+    setApplied({
+      query: draft.trim(),
+      eventType: eventType.trim(),
+      source: source.trim(),
+      actor: actor.trim(),
+      status,
+      from: fromDate?.toISOString() ?? "",
+      to: toDate?.toISOString() ?? "",
+    });
+    setPage(1);
+    setSearchRequest((current) => current + 1);
+  };
   const reset = () => {
     setDraft("");
-    setQuery("");
-    setEventType("all");
-    setSource("all");
-    setStatus("all");
+    setEventType("");
+    setSource("");
     setActor("");
+    setStatus("");
     setFrom("");
     setTo("");
+    setDateError("");
+    setApplied(emptyFilters);
     setPage(1);
-    setSelectedIds([]);
   };
-  const toggleSelected = (id: string) => {
-    setSelectedIds((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
-  };
-  const pageIds = rows.map((log) => log.id);
-  const allPageSelected =
-    pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id));
-  const columns: readonly DataTableColumn<SystemLog>[] = [
-    {
-      key: "select",
-      header: "Select",
-      cell: (log) => (
-        <Checkbox
-          aria-label={`Select ${log.id} for export`}
-          checked={selectedIds.includes(log.id)}
-          disabled={!canExport}
-          onChange={() => toggleSelected(log.id)}
-        />
-      ),
-    },
+  const columns: readonly DataTableColumn<SystemLogRecord>[] = [
     {
       key: "time",
       header: "Timestamp",
@@ -221,7 +145,9 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
       cell: (log) => (
         <div>
           <p className="font-mono text-xs font-semibold">{log.eventType}</p>
-          <p className="text-muted mt-1 text-xs">{log.id}</p>
+          <p className="text-muted mt-1 text-xs">
+            {humanize(log.resourceType)}
+          </p>
         </div>
       ),
     },
@@ -229,7 +155,14 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
     {
       key: "actor",
       header: "Actor",
-      cell: (log) => <span className="break-words">{log.actor}</span>,
+      cell: (log) => (
+        <div>
+          <p>{log.actor}</p>
+          {log.actorDetail && log.actorDetail !== log.actor ? (
+            <p className="text-muted mt-1 text-xs">{log.actorDetail}</p>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "status",
@@ -254,30 +187,24 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
       ),
     },
   ];
+
   return (
     <>
-      <Alert className="border-info/25 bg-info-soft text-info">
-        <div className="flex items-start gap-2">
-          <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <p>
-            UI preview for UC43. These are labeled example logs; live
-            permission-scoped search will be connected when the backend System
-            Log API is implemented.
-          </p>
-        </div>
-      </Alert>
       <ProductPanel
         title="System log search"
-        description={`${filtered.length} example logs match the current criteria`}
+        description={
+          pagination
+            ? `${pagination.total} logs match the current criteria`
+            : "Permission-scoped operational activity"
+        }
       >
         <div className="border-border space-y-3 border-b p-4">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <form
               className="flex min-w-0 flex-1 gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setQuery(draft.trim());
-                setPage(1);
+              onSubmit={(event) => {
+                event.preventDefault();
+                applyFilters();
               }}
             >
               <Label
@@ -292,63 +219,27 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 <Input
                   className="min-h-10 pl-9"
                   id="system-log-search"
+                  maxLength={100}
                   value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Message, log ID, or correlation ID"
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Event, resource, actor, or correlation ID"
                 />
               </Label>
               <Button type="submit">Search</Button>
             </form>
             <div className="flex flex-wrap gap-2">
               <Select
-                aria-label="Event type"
-                className="w-48"
-                value={eventType}
-                onChange={(e) => {
-                  setEventType(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="all">All event types</option>
-                {[...new Set(sampleLogs.map((log) => log.eventType))].map(
-                  (value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ),
-                )}
-              </Select>
-              <Select
-                aria-label="Log source"
-                className="w-44"
-                value={source}
-                onChange={(e) => {
-                  setSource(e.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="all">All sources</option>
-                {[...new Set(sampleLogs.map((log) => log.source))].map(
-                  (value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ),
-                )}
-              </Select>
-              <Select
                 aria-label="Processing status"
-                className="w-40"
+                className="w-44"
                 value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value as "all" | LogStatus);
-                  setPage(1);
-                }}
+                onChange={(event) =>
+                  setStatus(event.target.value as "" | SystemLogStatus)
+                }
               >
-                <option value="all">All statuses</option>
-                <option value="processed">Processed</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
+                <option value="">All statuses</option>
+                <option value="SUCCESS">Processed</option>
+                <option value="DENIED">Denied</option>
+                <option value="FAILURE">Failed</option>
               </Select>
               <Button
                 type="button"
@@ -362,11 +253,6 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                     {activeCount}
                   </span>
                 ) : null}
-                {advanced ? (
-                  <ChevronUp aria-hidden="true" className="size-3" />
-                ) : (
-                  <ChevronDown aria-hidden="true" className="size-3" />
-                )}
               </Button>
               {activeCount ? (
                 <Button type="button" variant="secondary" onClick={reset}>
@@ -378,7 +264,8 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => exportDialog.current?.showModal()}
+                  disabled
+                  title="Export is implemented in UC43"
                 >
                   <Download aria-hidden="true" className="size-4" />
                   Export logs
@@ -387,69 +274,74 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             </div>
           </div>
           {advanced ? (
-            <div className="border-border bg-neutral-soft/40 grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
-              <Label className="space-y-1" htmlFor="log-actor">
-                <span className="text-xs font-medium">Actor</span>
-                <Input
-                  id="log-actor"
-                  value={actor}
-                  onChange={(e) => {
-                    setActor(e.target.value);
-                    setPage(1);
-                  }}
-                  placeholder="Email or system"
-                />
-              </Label>
-              <Label className="space-y-1" htmlFor="log-from">
-                <span className="text-xs font-medium">From date</span>
-                <Input
-                  id="log-from"
-                  type="date"
-                  value={from}
-                  onChange={(e) => {
-                    setFrom(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </Label>
-              <Label className="space-y-1" htmlFor="log-to">
-                <span className="text-xs font-medium">To date</span>
-                <Input
-                  id="log-to"
-                  type="date"
-                  value={to}
-                  min={from || undefined}
-                  onChange={(e) => {
-                    setTo(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </Label>
+            <div className="border-border bg-neutral-soft/40 grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-5">
+              <FilterInput
+                id="log-event"
+                label="Event type"
+                value={eventType}
+                placeholder="e.g. USER_UPDATED"
+                onChange={setEventType}
+              />
+              <FilterInput
+                id="log-source"
+                label="Source"
+                value={source}
+                placeholder="e.g. User Management"
+                onChange={setSource}
+              />
+              <FilterInput
+                id="log-actor"
+                label="Actor"
+                value={actor}
+                placeholder="Name, email, or system"
+                onChange={setActor}
+              />
+              <DateFilter
+                id="log-from"
+                label="From date"
+                value={from}
+                onChange={(value) => {
+                  setFrom(value);
+                  setDateError("");
+                }}
+              />
+              <DateFilter
+                id="log-to"
+                label="To date"
+                {...(from ? { min: from } : {})}
+                value={to}
+                onChange={(value) => {
+                  setTo(value);
+                  setDateError("");
+                }}
+              />
             </div>
           ) : null}
+          {dateError ? <Alert>{dateError}</Alert> : null}
         </div>
         <div className="p-4">
-          {canExport && rows.length ? (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium">
-                <Checkbox
-                  checked={allPageSelected}
-                  onChange={() =>
-                    setSelectedIds((current) =>
-                      allPageSelected
-                        ? current.filter((id) => !pageIds.includes(id))
-                        : [...new Set([...current, ...pageIds])],
-                    )
-                  }
-                />
-                Select all logs on this page
-              </label>
-              <span className="text-muted text-sm tabular-nums">
-                {selectedIds.length} selected for export
-              </span>
-            </div>
-          ) : null}
-          {rows.length ? (
+          {logs.isPending ? (
+            <div
+              aria-label="Loading system logs"
+              className="bg-neutral-soft h-64 animate-pulse rounded-lg"
+            />
+          ) : logs.isError ? (
+            <Alert>
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  Unable to load system logs. Check your connection and try
+                  again.
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void logs.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            </Alert>
+          ) : rows.length ? (
             <DataTable
               columns={columns}
               rows={rows}
@@ -470,26 +362,27 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 variant="secondary"
                 onClick={reset}
               >
-                <X aria-hidden="true" className="size-4" />
                 Clear filters
               </Button>
             </div>
           )}
         </div>
-        <div className="border-border border-t p-4">
-          <Pagination
-            page={currentPage}
-            pageCount={pageCount}
-            onPageChange={setPage}
-          />
-        </div>
+        {pagination ? (
+          <div className="border-border border-t p-4">
+            <Pagination
+              page={pagination.page}
+              pageCount={pagination.pageCount}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : null}
       </ProductPanel>
       <Dialog dialogRef={dialog} title="System log details">
         {selected ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <span className="font-mono text-sm font-semibold">
-                {selected.id}
+                {selected.eventType}
               </span>
               <LogStatusBadge status={selected.status} />
             </div>
@@ -498,13 +391,24 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 label="Timestamp"
                 value={formatTime(selected.occurredAt)}
               />
-              <Detail label="Event type" value={selected.eventType} />
               <Detail label="Source" value={selected.source} />
-              <Detail label="Actor" value={selected.actor} />
-              <Detail label="Correlation ID" value={selected.correlationId} />
-              <div className="sm:col-span-2">
-                <Detail label="Message" value={selected.message} />
-              </div>
+              <Detail
+                label="Actor"
+                value={
+                  selected.actorDetail
+                    ? `${selected.actor} · ${selected.actorDetail}`
+                    : selected.actor
+                }
+              />
+              <Detail
+                label="Resource"
+                value={humanize(selected.resourceType)}
+              />
+              <Detail
+                label="Correlation ID"
+                value={selected.correlationId ?? "Not recorded"}
+              />
+              <Detail label="Error code" value={selected.errorCode ?? "None"} />
             </dl>
             <div className="flex justify-end">
               <Button
@@ -518,118 +422,111 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
           </div>
         ) : null}
       </Dialog>
-      <Dialog
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
-        dialogRef={exportDialog}
-        title="Export Investigation Logs"
-      >
-        <div className="space-y-5">
-          <Alert className="border-info/25 bg-info-soft text-info">
-            Export generation is a UC44 UI preview. No file will be generated
-            until the backend export API is available.
-          </Alert>
-          <fieldset className="space-y-3">
-            <legend className="text-sm font-semibold">Export scope</legend>
-            <label className="border-border flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-              <input
-                checked={exportScope === "selected"}
-                name="export-scope"
-                onChange={() => setExportScope("selected")}
-                type="radio"
-              />
-              <span>
-                <span className="block text-sm font-medium">Selected logs</span>
-                <span className="text-muted mt-1 block text-xs">
-                  {selectedIds.length} manually selected records
-                </span>
-              </span>
-            </label>
-            <label className="border-border flex cursor-pointer items-start gap-3 rounded-lg border p-3">
-              <input
-                checked={exportScope === "filtered"}
-                name="export-scope"
-                onChange={() => setExportScope("filtered")}
-                type="radio"
-              />
-              <span>
-                <span className="block text-sm font-medium">
-                  All matching results
-                </span>
-                <span className="text-muted mt-1 block text-xs">
-                  {filtered.length} records matching the current filters
-                </span>
-              </span>
-            </label>
-          </fieldset>
-          <Label className="space-y-1.5" htmlFor="export-format">
-            <span className="text-sm font-medium">File format</span>
-            <Select
-              id="export-format"
-              value={exportFormat}
-              onChange={(event) =>
-                setExportFormat(event.target.value as "csv" | "json")
-              }
-            >
-              <option value="csv">CSV — spreadsheet analysis</option>
-              <option value="json">JSON — technical investigation</option>
-            </Select>
-          </Label>
-          <Label className="space-y-1.5" htmlFor="export-reason">
-            <span className="text-sm font-medium">Investigation purpose</span>
-            <Textarea
-              id="export-reason"
-              className="min-h-24"
-              maxLength={500}
-              value={exportReason}
-              onChange={(event) => setExportReason(event.target.value)}
-              placeholder="Explain why these logs are being exported"
-            />
-            <span className="text-muted block text-xs">
-              Required for export traceability · {exportReason.length}/500
-            </span>
-          </Label>
-          <div className="bg-neutral-soft border-border rounded-lg border p-3 text-sm">
-            <p className="font-medium">Export summary</p>
-            <p className="text-muted mt-1">
-              {exportScope === "selected"
-                ? selectedIds.length
-                : filtered.length}{" "}
-              records · {exportFormat.toUpperCase()} · current permission scope
-            </p>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => exportDialog.current?.close()}
-            >
-              Cancel
-            </Button>
-            <Button type="button" disabled>
-              Generate export
-            </Button>
-          </div>
-        </div>
-      </Dialog>
     </>
   );
 }
 
-function LogStatusBadge({ status }: { status: LogStatus }) {
+function FilterInput({
+  id,
+  label,
+  onChange,
+  ...props
+}: { id: string; label: string; onChange: (value: string) => void } & Omit<
+  ComponentProps<typeof Input>,
+  "id" | "onChange"
+>) {
+  return (
+    <Label className="space-y-1" htmlFor={id}>
+      <span className="text-xs font-medium">{label}</span>
+      <Input
+        {...props}
+        id={id}
+        maxLength={props.maxLength ?? 150}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </Label>
+  );
+}
+function DateFilter({
+  id,
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  min?: string;
+  onChange: (value: string) => void;
+}) {
+  const picker = useRef<HTMLInputElement>(null);
+  const openPicker = () => {
+    if (typeof picker.current?.showPicker === "function")
+      picker.current.showPicker();
+    else picker.current?.click();
+  };
+  return (
+    <Label className="space-y-1" htmlFor={id}>
+      <span className="text-xs font-medium">{label}</span>
+      <div className="relative">
+        <Input
+          className="pr-20"
+          id={id}
+          placeholder="DD/MM/YYYY"
+          readOnly
+          value={value ? formatNativeDate(value) : ""}
+          onClick={openPicker}
+        />
+        <div className="absolute inset-y-0 right-1 flex items-center gap-0.5">
+          {value ? (
+            <button
+              aria-label={`Clear ${label.toLowerCase()}`}
+              className="text-muted hover:text-foreground focus-visible:outline-brand rounded p-2 focus-visible:outline-2"
+              type="button"
+              onClick={() => onChange("")}
+            >
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          ) : null}
+          <button
+            aria-label={`Choose ${label.toLowerCase()}`}
+            className="text-muted hover:text-foreground focus-visible:outline-brand rounded p-2 focus-visible:outline-2"
+            type="button"
+            onClick={openPicker}
+          >
+            <CalendarDays aria-hidden="true" className="size-4" />
+          </button>
+        </div>
+        <input
+          ref={picker}
+          aria-hidden="true"
+          className="pointer-events-none absolute size-px opacity-0"
+          min={min}
+          tabIndex={-1}
+          type="date"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    </Label>
+  );
+}
+function LogStatusBadge({ status }: { status: SystemLogStatus }) {
   return (
     <StatusBadge
       tone={
-        status === "processed"
+        status === "SUCCESS"
           ? "success"
-          : status === "pending"
+          : status === "DENIED"
             ? "warning"
             : "danger"
       }
     >
-      {status === "processed"
+      {status === "SUCCESS"
         ? "Processed"
-        : status === "pending"
-          ? "Pending"
+        : status === "DENIED"
+          ? "Denied"
           : "Failed"}
     </StatusBadge>
   );
@@ -646,8 +543,43 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(value));
+}
+function parseNativeDate(value: string, endOfDay: boolean) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  );
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  )
+    return null;
+  return date;
+}
+function formatNativeDate(value: string) {
+  const [year = "", month = "", day = ""] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+function humanize(value: string) {
+  return value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
