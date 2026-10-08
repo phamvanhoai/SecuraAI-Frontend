@@ -53,15 +53,22 @@ export async function proxyAuthenticatedRequest(
         refreshRequest,
       );
       refreshedTokens = refreshed.tokens;
-      if (refreshedTokens) backendResponse = await send(refreshedTokens.accessToken);
+      if (refreshedTokens)
+        backendResponse = await send(refreshedTokens.accessToken);
     }
 
     const responseHeaders = new Headers();
     const contentType = backendResponse.headers.get("content-type");
     if (contentType) responseHeaders.set("Content-Type", contentType);
-    const contentDisposition = backendResponse.headers.get("content-disposition");
+    const contentDisposition = backendResponse.headers.get(
+      "content-disposition",
+    );
     if (contentDisposition)
       responseHeaders.set("Content-Disposition", contentDisposition);
+    const contentDigest = backendResponse.headers.get("content-digest");
+    if (contentDigest) responseHeaders.set("Content-Digest", contentDigest);
+    const contentSha256 = backendResponse.headers.get("x-content-sha256");
+    if (contentSha256) responseHeaders.set("X-Content-SHA256", contentSha256);
     const response = new NextResponse(backendResponse.body, {
       status: backendResponse.status,
       headers: responseHeaders,

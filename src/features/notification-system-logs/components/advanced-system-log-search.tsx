@@ -21,10 +21,14 @@ import {
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/feedback/toast";
+import { exportInvestigationLogs } from "../api/export-investigation-logs";
 import { useSystemLogSearch } from "../hooks/use-system-log-search";
 import type {
   SystemLogRecord,
@@ -65,7 +69,18 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
   const [dateError, setDateError] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [selected, setSelected] = useState<SystemLogRecord | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [exportScope, setExportScope] = useState<"SELECTED" | "FILTERED">(
+    "SELECTED",
+  );
+  const [exportFormat, setExportFormat] = useState<"CSV" | "JSON" | "XLSX" | "PDF">(
+    "PDF",
+  );
+  const [exportReason, setExportReason] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const toast = useToast();
   const dialog = useRef<HTMLDialogElement>(null);
+  const exportDialog = useRef<HTMLDialogElement>(null);
   const logs = useSystemLogSearch(
     {
       page,
@@ -127,6 +142,27 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
     setPage(1);
   };
   const columns: readonly DataTableColumn<SystemLogRecord>[] = [
+    ...(canExport
+      ? [
+          {
+            key: "select",
+            header: "Select",
+            cell: (log: SystemLogRecord) => (
+              <Checkbox
+                aria-label={`Select ${log.eventType} at ${formatTime(log.occurredAt)}`}
+                checked={selectedIds.includes(log.id)}
+                onChange={() =>
+                  setSelectedIds((current) =>
+                    current.includes(log.id)
+                      ? current.filter((id) => id !== log.id)
+                      : [...current, log.id],
+                  )
+                }
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: "time",
       header: "Timestamp",
@@ -264,8 +300,8 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled
-                  title="Export is implemented in UC43"
+                  disabled={!pagination?.total}
+                  onClick={() => exportDialog.current?.showModal()}
                 >
                   <Download aria-hidden="true" className="size-4" />
                   Export logs
@@ -421,6 +457,137 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             </div>
           </div>
         ) : null}
+      </Dialog>
+      <Dialog dialogRef={exportDialog} title="Export Investigation Logs">
+        <form
+          className="space-y-5"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (exportScope === "SELECTED" && selectedIds.length === 0) {
+              toast.warning(
+                "Select logs to export",
+                "Select at least one log from the table.",
+              );
+              return;
+            }
+            if (exportReason.trim().length < 10) {
+              toast.warning(
+                "Investigation purpose required",
+                "Enter at least 10 characters.",
+              );
+              return;
+            }
+            setExporting(true);
+            try {
+              const exported = await exportInvestigationLogs({
+                format: exportFormat,
+                scope: exportScope,
+                selectedIds,
+                reason: exportReason.trim(),
+                filters: {
+                  ...(applied.query ? { q: applied.query } : {}),
+                  ...(applied.eventType
+                    ? { eventType: applied.eventType }
+                    : {}),
+                  ...(applied.source ? { source: applied.source } : {}),
+                  ...(applied.actor ? { actor: applied.actor } : {}),
+                  ...(applied.status ? { status: applied.status } : {}),
+                  ...(applied.from ? { from: applied.from } : {}),
+                  ...(applied.to ? { to: applied.to } : {}),
+                },
+              });
+              exportDialog.current?.close();
+              toast.success(
+                "Export generated",
+                exported.sha256
+                  ? `${exported.filename} downloaded · SHA-256 ${exported.sha256}`
+                  : `${exported.filename} downloaded.`,
+              );
+            } catch (error) {
+              toast.error(
+                "Export failed",
+                error instanceof Error ? error.message : "Try again.",
+              );
+            } finally {
+              setExporting(false);
+            }
+          }}
+        >
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-semibold">Export scope</legend>
+            <label className="border-border flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
+              <input
+                checked={exportScope === "SELECTED"}
+                name="export-scope"
+                type="radio"
+                onChange={() => setExportScope("SELECTED")}
+              />
+              <span>
+                <span className="block text-sm font-medium">Selected logs</span>
+                <span className="text-muted text-xs">
+                  {selectedIds.length} selected records
+                </span>
+              </span>
+            </label>
+            <label className="border-border flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
+              <input
+                checked={exportScope === "FILTERED"}
+                name="export-scope"
+                type="radio"
+                onChange={() => setExportScope("FILTERED")}
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  All matching results
+                </span>
+                <span className="text-muted text-xs">
+                  {pagination?.total ?? 0} records match the applied filters
+                </span>
+              </span>
+            </label>
+          </fieldset>
+          <Label className="space-y-1" htmlFor="export-format">
+            <span className="text-sm font-medium">File format</span>
+            <Select
+              id="export-format"
+              value={exportFormat}
+              onChange={(event) =>
+                setExportFormat(event.target.value as "CSV" | "JSON" | "XLSX" | "PDF")
+              }
+            >
+              <option value="CSV">CSV</option>
+              <option value="JSON">JSON</option>
+              <option value="XLSX">XLSX — evidence workbook</option>
+              <option value="PDF">PDF — formatted evidence report</option>
+            </Select>
+          </Label>
+          <Label className="space-y-1" htmlFor="export-reason">
+            <span className="text-sm font-medium">Investigation purpose</span>
+            <Textarea
+              id="export-reason"
+              maxLength={500}
+              value={exportReason}
+              onChange={(event) => setExportReason(event.target.value)}
+              placeholder="Explain why these logs are required"
+            />
+            <span className="text-muted block text-xs">
+              Required · 10–500 characters
+            </span>
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={exporting}
+              onClick={() => exportDialog.current?.close()}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={exporting}>
+              {exporting ? "Generating…" : "Generate export"}
+            </Button>
+          </div>
+        </form>
       </Dialog>
     </>
   );
