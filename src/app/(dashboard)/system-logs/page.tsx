@@ -16,9 +16,10 @@ type SystemLogView = "search" | "configuration-history";
 export default function SystemLogsPage() {
   const [activeView, setActiveView] = useState<SystemLogView>("search");
   const session = useSessionUser();
-  const allowed = session.data?.permissions.includes("system-logs.search") ?? false;
+  const allowed =
+    session.data?.permissions.includes("system-logs.search") ?? false;
   const canExport =
-    session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+    session.data?.permissions.includes("system-logs.export") ?? false;
   return (
     <div className="space-y-5">
       <ProductPageHeader
