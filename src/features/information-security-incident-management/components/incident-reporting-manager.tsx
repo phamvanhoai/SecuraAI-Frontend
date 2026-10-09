@@ -715,9 +715,26 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {["lessons_learned", "closed"].includes(item.status)
+                {item.status === "lessons_learned"
                   ? "Root cause & lessons learned"
                   : "View root cause & lessons learned"}
+              </button>
+            ) : null}
+            {isSecurityOfficer &&
+            ["lessons_learned", "closed"].includes(item.status) ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2"
+                onClick={() => setCloseIncidentTarget(item)}
+                type="button"
+              >
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {item.status === "closed"
+                  ? "View closure record"
+                  : "Close incident"}
               </button>
             ) : null}
             {isSecurityOfficer ? (

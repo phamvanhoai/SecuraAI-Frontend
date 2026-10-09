@@ -1,71 +1,219 @@
 "use client";
-
-import { CheckCircle2, Info } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { StatusBadge } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ApiError } from "@/lib/api/api-error";
+import {
+  useCloseIncident,
+  useIncidentClosure,
+} from "../hooks/use-incident-closure";
+import { closureFormSchema } from "../schemas/incident-closure-schema";
 import type { Incident } from "../schemas/report-incident-schema";
 
-type View = "close" | "history";
-const requirements = [
-  ["response", "Required response and containment actions are complete"],
-  ["eradication", "Eradication actions and verification are recorded"],
-  ["recovery", "Affected systems or services have been recovered"],
-  ["analysis", "Root cause and lessons learned are documented"],
-] as const;
-
-export function CloseIncidentDialog({ incident, onClose }: { incident: Incident | undefined; onClose: () => void }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<View>("close");
-  const [confirmed, setConfirmed] = useState<string[]>([]);
-  const [error, setError] = useState("");
+export function CloseIncidentDialog({
+  incident,
+  onClose,
+}: {
+  incident: Incident | undefined;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const query = useIncidentClosure(incident?.id);
+  const mutation = useCloseIncident();
   const toast = useToast();
+  const [summary, setSummary] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState("");
+  const [reviewedVersion, setReviewedVersion] = useState<string>();
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (incident && !dialog.open) { setView("close"); setConfirmed([]); setError(""); dialog.showModal(); }
-    if (!incident && dialog.open) dialog.close();
+    if (incident && !ref.current?.open) {
+      setSummary("");
+      setConfirmed(false);
+      setError("");
+      setReviewedVersion(undefined);
+      ref.current?.showModal();
+    } else if (!incident) ref.current?.close();
   }, [incident]);
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (confirmed.length !== requirements.length) { setError("Confirm every closure requirement before closing the incident."); return; }
-    setError("");
-    toast.info("Incident closure validated", "UI preview only. The incident status was not changed in the backend.");
-    setView("history");
+  const close = () => {
+    if (!mutation.isPending) onClose();
   };
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const values = closureFormSchema.safeParse({ summary, confirmed });
+    if (!values.success) {
+      setError(
+        "Enter a closure summary of 20–4000 characters and confirm readiness.",
+      );
+      return;
+    }
+    if (!incident || !query.data?.canClose || mutation.isPending) return;
+    if (reviewedVersion !== query.data.expectedUpdatedAt) {
+      setConfirmed(false);
+      setError(
+        "The incident changed. Review the latest information and confirm again.",
+      );
+      return;
+    }
+    setError("");
+    try {
+      const result = await mutation.mutateAsync({
+        id: incident.id,
+        values: values.data,
+        expectedUpdatedAt: reviewedVersion,
+      });
+      toast.success(
+        result.changed ? "Incident closed" : "Incident already closed",
+      );
+      setConfirmed(false);
+    } catch (failure) {
+      setConfirmed(false);
+      setError(
+        failure instanceof ApiError
+          ? failure.message
+          : "Unable to close incident. Please try again.",
+      );
+    }
+  };
+  const data = query.data;
   return (
-    <Dialog className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto" dialogRef={dialogRef} onClose={onClose} title="Close incident">
-      {incident ? <div className="space-y-5">
-        <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b pb-4"><div><p className="text-muted font-mono text-xs">{incident.incidentCode}</p><p className="mt-1 font-semibold">{incident.title}</p></div><StatusBadge tone="success">Resolved</StatusBadge></div>
-        <div aria-label="Incident closure views" className="border-border bg-background inline-flex w-full gap-1 rounded-lg border p-1 sm:w-auto" role="tablist"><Tab active={view === "close"} label="Closure review" onClick={() => setView("close")} /><Tab active={view === "history"} label="Closure history" onClick={() => setView("history")} /></div>
-        {view === "close" ? <form className="space-y-5" onSubmit={submit}>
-          <Alert className="border-warning/25 bg-warning-soft text-warning"><div className="flex items-start gap-2"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><p>UI preview for UC64. Closing an incident ends active handling. Verify all required records before confirming.</p></div></Alert>
-          <fieldset className="space-y-2"><legend className="text-sm font-semibold">Closure requirements</legend>{requirements.map(([value, label]) => <label className="border-border flex min-h-11 items-start gap-3 rounded-lg border p-3 text-sm" key={value}><Checkbox checked={confirmed.includes(value)} onChange={(event) => { setConfirmed((current) => event.target.checked ? [...current, value] : current.filter((item) => item !== value)); setError(""); }} /><span>{label}</span></label>)}{error ? <p className="text-danger text-sm" role="alert">{error}</p> : null}</fieldset>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label htmlFor="incident-closure-classification">Closure classification</Label><Select id="incident-closure-classification" defaultValue="resolved" required><option value="resolved">Resolved — root cause removed</option><option value="mitigated">Mitigated — residual limitation accepted</option><option value="duplicate">Duplicate incident</option><option value="false-positive">False positive</option></Select></div>
-            <div className="space-y-1.5"><Label htmlFor="incident-closed-at">Closed at</Label><Input id="incident-closed-at" type="datetime-local" required /></div>
+    <Dialog
+      dialogRef={ref}
+      title={data?.status === "closed" ? "Incident closure" : "Close incident"}
+      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto"
+      onClose={close}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+    >
+      {incident ? (
+        <div className="space-y-5">
+          <div className="border-border border-b pb-4">
+            <p className="text-muted font-mono text-xs">
+              {incident.incidentCode}
+            </p>
+            <p className="mt-1 font-semibold break-words">{incident.title}</p>
           </div>
-          <div className="space-y-1.5"><Label htmlFor="incident-closure-summary">Closure summary</Label><Textarea id="incident-closure-summary" minLength={20} maxLength={2500} placeholder="Summarize the response outcome, recovery status, root cause conclusion, and reason the incident is ready to close." required /></div>
-          <div className="space-y-1.5"><Label htmlFor="incident-follow-up">Outstanding follow-up</Label><Textarea id="incident-follow-up" maxLength={1500} placeholder="Optional monitoring, control improvement, risk treatment, or ownership follow-up that continues after closure." /></div>
-          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit"><CheckCircle2 aria-hidden="true" className="size-4" />Close incident</Button></div>
-        </form> : <div className="space-y-4">
-          <Alert>Example closure history for documentation. Production history will be retained by the incident and audit APIs.</Alert>
-          <article className="border-border rounded-lg border p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold">Incident closure recorded</p><p className="text-muted mt-1 font-mono text-xs">CLS-2026-0004</p></div><StatusBadge tone="success">Closed</StatusBadge></div><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3"><Detail label="Closed by" value="securityofficer@gmail.com" /><Detail label="Closed at" value="06 Oct 2026, 16:25 UTC" /><Detail label="Classification" value="Resolved" /></dl><p className="text-muted mt-4 text-sm leading-6">Recovery validation completed and preventive improvements were assigned for follow-up.</p></article>
-          <div className="border-border flex justify-end border-t pt-4"><Button type="button" variant="secondary" onClick={onClose}>Close</Button></div>
-        </div>}
-      </div> : null}
+          {query.isPending ? (
+            <Skeleton className="h-40" />
+          ) : query.isError ? (
+            <Alert role="alert">
+              Unable to load closure information.{" "}
+              <Button variant="secondary" onClick={() => void query.refetch()}>
+                Retry
+              </Button>
+            </Alert>
+          ) : data?.status === "closed" ? (
+            <div className="space-y-4">
+              <Alert>
+                Closed. Response and handling history are retained for audit.
+              </Alert>
+              <dl className="grid gap-4 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-muted">Closed at</dt>
+                  <dd>
+                    {data.closedAt
+                      ? new Date(data.closedAt).toLocaleString()
+                      : "Not recorded"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted">Closed by</dt>
+                  <dd>{data.closure?.closedBy?.name ?? "Not recorded"}</dd>
+                </div>
+              </dl>
+              <div>
+                <h3 className="text-sm font-semibold">Closure summary</h3>
+                <p className="mt-2 text-sm break-words whitespace-pre-wrap">
+                  {data.closure?.summary ??
+                    "No closure audit summary is available for this existing record."}
+                </p>
+              </div>
+            </div>
+          ) : data ? (
+            <form onSubmit={submit} className="space-y-4">
+              <Alert>
+                {data.restriction ??
+                  "Closing ends active handling. Verify response and recovery results and the saved root cause, lessons learned and improvement recommendations. Closure time is recorded by the server."}
+              </Alert>
+              <div className="space-y-1.5">
+                <Label htmlFor="incident-closure-summary">
+                  Closure summary
+                </Label>
+                <Textarea
+                  id="incident-closure-summary"
+                  value={summary}
+                  onChange={(event) => setSummary(event.target.value)}
+                  minLength={20}
+                  maxLength={4000}
+                  required
+                  disabled={!data.canClose || mutation.isPending}
+                  aria-describedby="incident-closure-hint"
+                />
+                <p id="incident-closure-hint" className="text-muted text-xs">
+                  Describe the response outcome, recovery validation and any
+                  documented follow-up.
+                </p>
+              </div>
+              <label className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  checked={
+                    confirmed && reviewedVersion === data.expectedUpdatedAt
+                  }
+                  disabled={!data.canClose || mutation.isPending}
+                  onChange={(event) => {
+                    setConfirmed(event.target.checked);
+                    setReviewedVersion(data.expectedUpdatedAt);
+                  }}
+                />
+                <span>
+                  I confirm required response and recovery activities are
+                  complete and necessary information is recorded.
+                </span>
+              </label>
+              {error ? <Alert role="alert">{error}</Alert> : null}
+              <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={close}
+                  disabled={mutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    !data.canClose ||
+                    !confirmed ||
+                    reviewedVersion !== data.expectedUpdatedAt ||
+                    mutation.isPending
+                  }
+                >
+                  {mutation.isPending ? "Closing…" : "Close incident"}
+                </Button>
+              </div>
+            </form>
+          ) : null}
+          {query.isPending || query.isError || data?.status === "closed" ? (
+            <div className="border-border flex justify-end border-t pt-4">
+              <Button
+                variant="secondary"
+                onClick={close}
+                disabled={mutation.isPending}
+              >
+                Close
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </Dialog>
   );
 }
-
-function Tab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) { return <button aria-selected={active} className={cn("focus-visible:outline-brand min-h-10 flex-1 rounded-md px-3 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 sm:flex-none", active ? "bg-brand text-white" : "text-muted hover:bg-neutral-soft hover:text-foreground")} onClick={onClick} role="tab" type="button">{label}</button>; }
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-muted text-xs font-medium uppercase">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>; }

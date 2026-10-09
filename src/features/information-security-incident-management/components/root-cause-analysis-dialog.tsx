@@ -67,6 +67,8 @@ export function RootCauseAnalysisDialog({
   const history = useAnalysisHistory(incident?.id, page);
   const mutation = useSaveIncidentAnalysis();
   const toast = useToast();
+  const canEdit =
+    incident?.status !== "closed" && current.data?.canEdit === true;
   const reset = form.reset;
   const isDirty = form.formState.isDirty;
   const resetMutation = mutation.reset;
@@ -88,7 +90,11 @@ export function RootCauseAnalysisDialog({
     }
   }, [incident, reset, resetMutation]);
   useEffect(() => {
-    if (!incident || !current.data || hydratedId.current === incident.id)
+    if (
+      !incident ||
+      !current.data ||
+      (hydratedId.current === incident.id && canEdit)
+    )
       return;
     const analysis = current.data.analysis;
     reset({
@@ -98,7 +104,7 @@ export function RootCauseAnalysisDialog({
     });
     setExpectedUpdatedAt(analysis?.updatedAt ?? null);
     hydratedId.current = incident.id;
-  }, [incident, current.data, reset]);
+  }, [incident, current.data, canEdit, reset]);
   const close = () => {
     if (mutation.isPending) return;
     if (isDirty && !window.confirm("Discard unsaved findings?")) return;
@@ -124,7 +130,7 @@ export function RootCauseAnalysisDialog({
     resetMutation();
   };
   const submit = async (values: AnalysisForm) => {
-    if (!incident || !current.data?.canEdit) return;
+    if (!incident || !canEdit) return;
     try {
       const analysis = await mutation.mutateAsync({
         id: incident.id,
@@ -247,8 +253,12 @@ export function RootCauseAnalysisDialog({
                     </Button>
                   </Alert>
                 ) : null}
-                {!current.data.canEdit ? (
-                  <Alert>{current.data.editRestriction}</Alert>
+                {!canEdit ? (
+                  <Alert>
+                    {incident.status === "closed"
+                      ? "This incident is closed. Findings and history are read-only."
+                      : current.data.editRestriction}
+                  </Alert>
                 ) : (
                   <Alert>
                     Document verified findings after response is complete.
@@ -267,7 +277,7 @@ export function RootCauseAnalysisDialog({
                       id={`rca-${field.key}`}
                       rows={4}
                       maxLength={4000}
-                      readOnly={!current.data?.canEdit}
+                      readOnly={!canEdit}
                       disabled={mutation.isPending}
                       aria-invalid={Boolean(form.formState.errors[field.key])}
                       aria-describedby={
@@ -303,7 +313,7 @@ export function RootCauseAnalysisDialog({
                   >
                     Close
                   </Button>
-                  {current.data.canEdit ? (
+                  {canEdit ? (
                     <Button type="submit" disabled={mutation.isPending}>
                       {mutation.isPending ? "Saving…" : "Save findings"}
                     </Button>
