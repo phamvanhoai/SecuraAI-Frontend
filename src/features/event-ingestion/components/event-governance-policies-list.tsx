@@ -5,6 +5,7 @@ import {
   Calendar,
   CheckCircle2,
   Eye,
+  Pencil,
   RotateCcw,
   Search,
   Shield,
@@ -32,6 +33,7 @@ import type {
   GovernancePolicyStatus,
 } from "../schemas/event-governance-schema";
 import { EventGovernancePolicyDetailDialog } from "./event-governance-policy-detail-dialog";
+import { EditEventGovernancePolicyDialog } from "./edit-event-governance-policy-dialog";
 
 const familyLabels: Record<string, string> = {
   AUTHENTICATION: "Authentication",
@@ -52,6 +54,7 @@ export function EventGovernancePoliciesList() {
   const [familyFilter, setFamilyFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
+  const [editingPolicy, setEditingPolicy] = useState<EventGovernancePolicy | null>(null);
 
   const policiesQuery = useEventGovernancePolicies({
     page,
@@ -119,9 +122,6 @@ export function EventGovernancePoliciesList() {
         <div className="flex items-center gap-1.5 text-xs font-medium">
           <Calendar className="text-muted h-3.5 w-3.5" />
           <span className="text-foreground">{item.retentionDays} days</span>
-          <span className="text-muted text-[11px]">
-            (~{(item.retentionDays / 30).toFixed(0)} mo)
-          </span>
         </div>
       ),
     },
@@ -187,7 +187,7 @@ export function EventGovernancePoliciesList() {
       key: "actions",
       header: "Actions",
       cell: (item: EventGovernancePolicy) => (
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-1.5">
           <Button
             type="button"
             variant="secondary"
@@ -197,6 +197,17 @@ export function EventGovernancePoliciesList() {
           >
             <Eye className="size-3.5" />
             <span>View</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-7 py-0.5 px-2 text-xs flex items-center gap-1"
+            onClick={() => setEditingPolicy(item)}
+            aria-label={`Configure policy settings for ${item.name}`}
+          >
+            <Pencil className="size-3.5" />
+            <span>Edit</span>
           </Button>
         </div>
       ),
@@ -310,6 +321,17 @@ export function EventGovernancePoliciesList() {
         policyId={selectedPolicyId}
         isOpen={Boolean(selectedPolicyId)}
         onClose={() => setSelectedPolicyId(null)}
+        onEditClick={(p) => {
+          setSelectedPolicyId(null);
+          setEditingPolicy(p);
+        }}
+      />
+
+      {/* Edit / Configure Policy Dialog */}
+      <EditEventGovernancePolicyDialog
+        policy={editingPolicy}
+        isOpen={Boolean(editingPolicy)}
+        onClose={() => setEditingPolicy(null)}
       />
     </div>
   );
