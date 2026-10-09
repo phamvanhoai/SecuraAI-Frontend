@@ -124,5 +124,34 @@ export {
   useMappingOptions,
   useUpdateEventMapping,
 } from "./hooks/use-normalized-events";
+export { EventGovernancePoliciesList } from "./components/event-governance-policies-list";
+export { EventGovernancePolicyDetailDialog } from "./components/event-governance-policy-detail-dialog";
+export {
+  governancePolicyStatuses,
+  governanceEventFamilies,
+  userSummarySchema,
+  eventGovernancePolicySchema,
+  paginatedEventGovernancePoliciesSchema,
+  eventGovernanceLifecycleSummarySchema,
+  listEventGovernancePoliciesParamsSchema,
+  type GovernancePolicyStatus,
+  type GovernanceEventFamily,
+  type UserSummary,
+  type EventGovernancePolicy,
+  type PaginatedEventGovernancePolicies,
+  type EventGovernanceLifecycleSummary,
+  type ListEventGovernancePoliciesParams,
+} from "./schemas/event-governance-schema";
+export {
+  listEventGovernancePolicies,
+  getEventGovernancePolicy,
+  getEventGovernanceLifecycleSummary,
+} from "./api/event-governance";
+export {
+  useEventGovernancePolicies,
+  useEventGovernancePolicyDetail,
+  useEventGovernanceSummary,
+} from "./hooks/use-event-governance";
+
 
 

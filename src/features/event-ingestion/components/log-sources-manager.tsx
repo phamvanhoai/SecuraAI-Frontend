@@ -8,6 +8,7 @@ import {
   Pencil,
   Radio,
   Search,
+  Shield,
   Trash2,
 } from "lucide-react";
 import { useState, type FormEvent, type MouseEvent } from "react";
@@ -37,6 +38,7 @@ import {
 } from "../hooks/use-log-sources";
 import { useEventSources } from "../hooks/use-event-sources";
 import { useNormalizedEventMetrics } from "../hooks/use-normalized-events";
+import { useEventGovernanceSummary } from "../hooks/use-event-governance";
 import {
   logFormats,
   logSourceFormSchema,
@@ -47,6 +49,7 @@ import {
 } from "../schemas/log-source-schema";
 import { DeleteLogSourceDialog } from "./delete-log-source-dialog";
 import { EventSourcesList } from "./event-sources-list";
+import { EventGovernancePoliciesList } from "./event-governance-policies-list";
 import { LogSourceDetailDialog } from "./log-source-detail-dialog";
 import { NormalizedEventsList } from "./normalized-events-list";
 import { RegisterEventSourceForm } from "./register-event-source-form";
@@ -65,7 +68,9 @@ type LogSourceFormErrors = Partial<Record<keyof LogSourceForm, string>>;
 
 export function LogSourcesManager() {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState<"events" | "event-sources" | "log-sources">("events");
+  const [activeTab, setActiveTab] = useState<
+    "events" | "event-sources" | "log-sources" | "governance"
+  >("events");
   const [page, setPage] = useState(1);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
@@ -85,6 +90,7 @@ export function LogSourcesManager() {
   const eventSourcesOverview = useEventSources({ limit: 100 });
   const eventMetrics = useNormalizedEventMetrics();
   const metrics = useLogSourceMetrics();
+  const governanceSummary = useEventGovernanceSummary();
   const create = useCreateLogSource();
   const update = useUpdateLogSource();
 
@@ -271,19 +277,20 @@ export function LogSourcesManager() {
   return (
     <>
       <ProductPageHeader
-        description="Configure and monitor the sources used to ingest security events and logs."
-        onPrimaryAction={() =>
-          activeTab === "event-sources"
-            ? setRegisterEventSourceOpen(true)
-            : openCreate()
-        }
-        primaryAction={
-          activeTab === "event-sources"
-            ? "Register event source"
-            : "Configure log source"
-        }
+        description="Configure and monitor the sources used to ingest security events, logs, and event data governance policies."
         showSampleNotice={false}
         title="Event & Log sources"
+        {...(activeTab === "event-sources"
+          ? {
+              primaryAction: "Register event source",
+              onPrimaryAction: () => setRegisterEventSourceOpen(true),
+            }
+          : activeTab === "log-sources"
+            ? {
+                primaryAction: "Configure log source",
+                onPrimaryAction: () => openCreate(),
+              }
+            : {})}
       />
       <MetricStrip
         ariaLabel={
@@ -291,7 +298,9 @@ export function LogSourcesManager() {
             ? "Security event metrics"
             : activeTab === "event-sources"
               ? "Event source metrics"
-              : "Log source metrics"
+              : activeTab === "governance"
+                ? "Data governance & retention metrics"
+                : "Log source metrics"
         }
         metrics={
           activeTab === "events"
@@ -375,36 +384,79 @@ export function LogSourcesManager() {
                   loading: eventSourcesOverview.isPending,
                 },
               ]
-              : [
-                {
-                  label: "Total sources",
-                  value: metrics.data ? String(metrics.data.total) : "—",
-                  detail: "Across all log sources",
-                  tone: "brand",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Active",
-                  value: metrics.data ? String(metrics.data.active) : "—",
-                  detail: "Across all log sources",
-                  tone: "neutral",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Receiving logs",
-                  value: metrics.data ? String(metrics.data.receiving) : "—",
-                  detail: "Received at least one event",
-                  tone: "neutral",
-                  loading: metrics.isPending,
-                },
-                {
-                  label: "Errors",
-                  value: metrics.data ? String(metrics.data.errors) : "—",
-                  detail: "Across all log sources",
-                  tone: "danger",
-                  loading: metrics.isPending,
-                },
-              ]
+              : activeTab === "governance"
+                ? [
+                  {
+                    label: "Total policies",
+                    value: governanceSummary.data
+                      ? String(governanceSummary.data.totalPolicies)
+                      : "—",
+                    detail: governanceSummary.data
+                      ? `${governanceSummary.data.activePolicies} active policies`
+                      : "Governance & retention",
+                    tone: "brand",
+                    loading: governanceSummary.isPending,
+                  },
+                  {
+                    label: "Retention (Min / Max)",
+                    value: governanceSummary.data
+                      ? `${governanceSummary.data.minRetentionDays} - ${governanceSummary.data.maxRetentionDays} days`
+                      : "—",
+                    detail: governanceSummary.data
+                      ? `Average: ${governanceSummary.data.avgRetentionDays} days`
+                      : "Configured retention range",
+                    tone: "neutral",
+                    loading: governanceSummary.isPending,
+                  },
+                  {
+                    label: "Cold archival rules",
+                    value: governanceSummary.data
+                      ? String(governanceSummary.data.policiesWithArchival)
+                      : "—",
+                    detail: "Policies with cold storage",
+                    tone: "warning",
+                    loading: governanceSummary.isPending,
+                  },
+                  {
+                    label: "Automated purge",
+                    value: governanceSummary.data
+                      ? String(governanceSummary.data.policiesWithAutomatedDeletion)
+                      : "—",
+                    detail: "Automated disposal enabled",
+                    tone: "danger",
+                    loading: governanceSummary.isPending,
+                  },
+                ]
+                : [
+                  {
+                    label: "Total sources",
+                    value: metrics.data ? String(metrics.data.total) : "—",
+                    detail: "Across all log sources",
+                    tone: "brand",
+                    loading: metrics.isPending,
+                  },
+                  {
+                    label: "Active",
+                    value: metrics.data ? String(metrics.data.active) : "—",
+                    detail: "Across all log sources",
+                    tone: "neutral",
+                    loading: metrics.isPending,
+                  },
+                  {
+                    label: "Receiving logs",
+                    value: metrics.data ? String(metrics.data.receiving) : "—",
+                    detail: "Received at least one event",
+                    tone: "neutral",
+                    loading: metrics.isPending,
+                  },
+                  {
+                    label: "Errors",
+                    value: metrics.data ? String(metrics.data.errors) : "—",
+                    detail: "Across all log sources",
+                    tone: "danger",
+                    loading: metrics.isPending,
+                  },
+                ]
         }
       />
 
@@ -512,6 +564,40 @@ export function LogSourcesManager() {
               </span>
             ) : null}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("governance")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "governance"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
+          >
+            <Shield
+              aria-hidden="true"
+              className={cn(
+                "size-4",
+                activeTab === "governance"
+                  ? "text-brand-contrast"
+                  : "text-muted",
+              )}
+              strokeWidth={2}
+            />
+            <span>Data governance & Retention</span>
+            {governanceSummary.data ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  activeTab === "governance"
+                    ? "bg-white/20 text-brand-contrast"
+                    : "border-border bg-neutral-soft text-muted border",
+                )}
+              >
+                {governanceSummary.data.totalPolicies}
+              </span>
+            ) : null}
+          </button>
         </div>
       </div>
 
@@ -521,6 +607,8 @@ export function LogSourcesManager() {
         <EventSourcesList
           onRegisterClick={() => setRegisterEventSourceOpen(true)}
         />
+      ) : activeTab === "governance" ? (
+        <EventGovernancePoliciesList />
       ) : (
         <ProductPanel
           description={
