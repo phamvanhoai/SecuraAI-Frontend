@@ -2,9 +2,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseAuditLogs = vi.fn();
+const mockUseAuditLogDetail = vi.fn();
 
 vi.mock("../hooks/use-audit-logs", () => ({
   useAuditLogs: (params?: unknown) => mockUseAuditLogs(params),
+  useAuditLogDetail: (id?: string | null) => mockUseAuditLogDetail(id),
 }));
 
 import { AuditLogsManager } from "./audit-logs-manager";
@@ -39,6 +41,18 @@ const sampleAuditLog = {
 describe("AuditLogsManager Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.setAttribute("open", "");
+      },
+    });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      },
+    });
     mockUseAuditLogs.mockReturnValue({
       isLoading: false,
       isFetching: false,
@@ -48,6 +62,11 @@ describe("AuditLogsManager Component", () => {
         pagination: { page: 1, limit: 20, totalItems: 1, totalPages: 1 },
       },
       refetch: vi.fn(),
+    });
+    mockUseAuditLogDetail.mockReturnValue({
+      data: sampleAuditLog,
+      isLoading: false,
+      isError: false,
     });
   });
 
@@ -91,4 +110,23 @@ describe("AuditLogsManager Component", () => {
     expect(screen.getByLabelText(/Affected Resource/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Correlation ID/i)).toBeInTheDocument();
   });
+
+  it("opens audit log detail dialog when clicking the Eye action button", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<AuditLogsManager />);
+
+    const viewButton = screen.getByRole("button", {
+      name: /View details for UPDATE_USER_ROLE/i,
+    });
+    fireEvent.click(viewButton);
+
+    expect(
+      screen.getByRole("heading", { name: /Audit Record Details/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Cryptographic Hash Chain \(SHA-256\)/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("corr-12345")).toBeInTheDocument();
+  });
 });
+

@@ -1,6 +1,8 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  auditLogItemSchema,
   paginatedAuditLogsSchema,
+  type AuditLogItem,
   type ListAuditLogsQuery,
   type PaginatedAuditLogs,
 } from "../schemas/audit-log-schema";
@@ -31,4 +33,12 @@ export async function listAuditLogs(
   });
 
   return paginatedAuditLogsSchema.parse(data);
+}
+
+export async function getAuditLogDetail(id: string): Promise<AuditLogItem> {
+  const data = await apiRequest<unknown>(`/api/audit-logs/${encodeURIComponent(id)}`, {
+    target: "same-origin",
+  });
+
+  return auditLogItemSchema.parse(data);
 }

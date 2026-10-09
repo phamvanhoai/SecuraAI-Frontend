@@ -94,4 +94,20 @@ describe("audit logs API client", () => {
       { target: "same-origin" },
     );
   });
+
+  it("getAuditLogDetail calls /api/audit-logs/:id", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce(sampleAuditItem);
+
+    const result = await (await import("./audit-logs")).getAuditLogDetail(
+      "550e8400-e29b-41d4-a716-446655440000",
+    );
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/audit-logs/550e8400-e29b-41d4-a716-446655440000",
+      { target: "same-origin" },
+    );
+    expect(result.id).toBe("550e8400-e29b-41d4-a716-446655440000");
+    expect(result.action).toBe("UPDATE_USER_ROLE");
+  });
 });
+

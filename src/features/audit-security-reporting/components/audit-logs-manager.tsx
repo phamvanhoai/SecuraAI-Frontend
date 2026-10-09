@@ -2,6 +2,7 @@
 
 import {
   Calendar,
+  Eye,
   Filter,
   History,
   Key,
@@ -36,6 +37,7 @@ import {
   type AuditLogItem,
   type ListAuditLogsQuery,
 } from "../schemas/audit-log-schema";
+import { AuditLogDetailDialog } from "./audit-log-detail-dialog";
 import { cn } from "@/lib/utils";
 
 function getActionTone(action: string): "success" | "warning" | "danger" | "info" | "neutral" {
@@ -114,6 +116,9 @@ export function AuditLogsManager() {
   const correlationInputId = useId();
   const startDateInputId = useId();
   const endDateInputId = useId();
+
+  const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
+  const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
 
   const [page, setPage] = useState(1);
   const limit = 20;
@@ -292,6 +297,25 @@ export function AuditLogsManager() {
             <span>{item.recordHash.slice(0, 8)}...{item.recordHash.slice(-6)}</span>
           </span>
         </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      cell: (item: AuditLogItem) => (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => {
+            setSelectedLogId(item.id);
+            setSelectedLog(item);
+          }}
+          className="size-7 p-0"
+          title="View audit record details"
+          aria-label={`View details for ${item.action}`}
+        >
+          <Eye className="size-3.5" />
+        </Button>
       ),
     },
   ];
@@ -610,6 +634,16 @@ export function AuditLogsManager() {
           </div>
         )}
       </ProductPanel>
+
+      {/* Audit Log Record Detail Modal */}
+      <AuditLogDetailDialog
+        logId={selectedLogId}
+        initialData={selectedLog}
+        onClose={() => {
+          setSelectedLogId(null);
+          setSelectedLog(null);
+        }}
+      />
     </>
   );
 }
