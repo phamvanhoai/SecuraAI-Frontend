@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api/api-error";
 import {
   classifyIncidentSeverity,
   listClassificationHistory,
+  listAssignmentHistory,
   assignIncidentHandler,
   updateIncidentHandlingProgress,
   listIncidentEvidence,
@@ -36,6 +37,13 @@ export const useClassificationHistory = (id: string, page: number) =>
   useQuery({
     queryKey: ["incidents", "severity-history", id, page],
     queryFn: ({ signal }) => listClassificationHistory(id, page, signal),
+    retry: false,
+  });
+
+export const useAssignmentHistory = (id: string, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "assignment-history", id, page],
+    queryFn: ({ signal }) => listAssignmentHistory(id, page, signal),
     retry: false,
   });
 
@@ -322,7 +330,23 @@ export function useAssignIncidentHandler() {
   return useMutation({
     mutationFn: assignIncidentHandler,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: async (_data, input) => {
+      await client.invalidateQueries({ queryKey: ["incidents"] });
+      // History is unmounted while the Assignment tab is open. Refresh its
+      // cached pages as well before reporting the save as complete.
+      await client.invalidateQueries({
+        queryKey: ["incidents", "assignment-history", input.id],
+        refetchType: "all",
+      });
+    },
+    onError: (error) => {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 409)
+      ) {
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+      }
+    },
   });
 }
 export function useUpdateIncidentHandlingProgress() {

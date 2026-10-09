@@ -1,5 +1,24 @@
 import { apiRequest } from "@/lib/api/api-client";
 import { classificationHistorySchema } from "../schemas/classification-history-schema";
+import { assignmentHistorySchema } from "../schemas/assignment-history-schema";
+
+export async function listAssignmentHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return assignmentHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/assignee`,
+      {
+        target: "same-origin",
+        cache: "no-store",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 
 export async function listClassificationHistory(
   id: string,
@@ -408,6 +427,7 @@ export async function listIncidentAssignmentOptions(signal?: AbortSignal) {
 export async function assignIncidentHandler(input: {
   id: string;
   values: AssignIncidentForm;
+  expectedUpdatedAt?: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -418,6 +438,9 @@ export async function assignIncidentHandler(input: {
         body: {
           assigneeUserId: input.values.assigneeUserId,
           note: input.values.note.trim(),
+          ...(input.expectedUpdatedAt
+            ? { expectedUpdatedAt: input.expectedUpdatedAt }
+            : {}),
         },
       },
     ),
