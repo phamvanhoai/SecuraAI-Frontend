@@ -85,6 +85,7 @@ import { RecordRecoveryActionDialog } from "./record-recovery-action-dialog";
 import { RootCauseAnalysisDialog } from "./root-cause-analysis-dialog";
 import { CloseIncidentDialog } from "./close-incident-dialog";
 import { ClassificationHistory } from "./classification-history";
+import { AssignmentHistory } from "./assignment-history";
 
 const defaults: ReportIncidentForm = {
   creationMode: "source",
@@ -192,6 +193,9 @@ export function IncidentReportingManager() {
     "classification" | "history"
   >("classification");
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
+  const [assignmentTab, setAssignmentTab] = useState<"assignment" | "history">(
+    "assignment",
+  );
   const [progressTarget, setProgressTarget] = useState<Incident>();
   const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
   const [assetLinkTarget, setAssetLinkTarget] = useState<Incident>();
@@ -382,6 +386,7 @@ export function IncidentReportingManager() {
     }
   };
   const openAssignment = (incident: Incident) => {
+    setAssignmentTab(incident.status === "closed" ? "history" : "assignment");
     setHandlerSearch("");
     assignmentForm.reset({
       assigneeUserId: incident.currentAssignment?.assignee.id ?? "",
@@ -401,6 +406,7 @@ export function IncidentReportingManager() {
     try {
       const updated = await assignmentMutation.mutateAsync({
         id: assignmentTarget.id,
+        expectedUpdatedAt: assignmentTarget.updatedAt,
         values,
       });
       closeAssignment();
@@ -632,9 +638,6 @@ export function IncidentReportingManager() {
             {canAssign ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={
-                  item.status === "closed" || item.status === "resolved"
-                }
                 onClick={() => openAssignment(item)}
                 type="button"
               >
@@ -643,7 +646,11 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.currentAssignment ? "Reassign handler" : "Assign handler"}
+                {item.status === "closed"
+                  ? "View handler assignment"
+                  : item.currentAssignment
+                    ? "Reassign handler"
+                    : "Assign handler"}
               </button>
             ) : null}
             {canUpdateProgress &&
@@ -1211,11 +1218,7 @@ export function IncidentReportingManager() {
         onClose={closeAssignment}
       >
         {assignmentTarget ? (
-          <form
-            className="space-y-5"
-            noValidate
-            onSubmit={assignmentForm.handleSubmit(submitAssignment)}
-          >
+          <div className="space-y-5">
             <div className="border-border bg-neutral-soft rounded-lg border p-4">
               <p className="text-muted text-xs font-medium tracking-wide uppercase">
                 {assignmentTarget.incidentCode}
@@ -1237,133 +1240,223 @@ export function IncidentReportingManager() {
                 </p>
               )}
             </div>
-            {assignmentMutation.isError ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
-                {assignmentMutation.error instanceof Error
-                  ? assignmentMutation.error.message
-                  : "Unable to assign this incident. Review the values and try again."}
-              </Alert>
-            ) : null}
-            {assignmentOptions.isError ? (
-              <Alert>
-                Unable to load eligible handlers. Try reopening this dialog.
-              </Alert>
-            ) : null}
-            <FormField
-              id="incident-handler"
-              label="Handler"
-              error={assignmentForm.formState.errors.assigneeUserId?.message}
+            <div
+              role="tablist"
+              aria-label="Incident assignment views"
+              className="border-border bg-surface inline-flex w-full gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
             >
-              <input
-                type="hidden"
-                {...assignmentForm.register("assigneeUserId")}
-              />
-              <div className="border-border overflow-hidden rounded-lg border">
-                <div className="border-border relative border-b">
-                  <Search
-                    aria-hidden="true"
-                    className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                    strokeWidth={1.8}
-                  />
-                  <Input
-                    id="incident-handler"
-                    autoFocus
-                    className="rounded-none border-0 pl-10 focus:ring-0"
-                    disabled={
-                      assignmentOptions.isPending || assignmentOptions.isError
-                    }
-                    onChange={(event) => setHandlerSearch(event.target.value)}
-                    placeholder="Search by name or email"
-                    value={handlerSearch}
-                  />
-                </div>
-                <div
-                  aria-label="Eligible incident handlers"
-                  className="max-h-56 overflow-y-auto p-1.5"
-                  role="listbox"
-                >
-                  {assignmentOptions.isPending ? (
-                    <p className="text-muted px-3 py-4 text-sm">
-                      Loading handlers…
-                    </p>
-                  ) : filteredHandlers.length ? (
-                    filteredHandlers.map((user) => {
-                      const selected = selectedHandlerId === user.id;
-                      return (
-                        <button
-                          aria-selected={selected}
-                          className={`focus-visible:outline-brand flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 text-left text-sm focus-visible:outline-2 ${selected ? "bg-brand-soft text-brand" : "hover:bg-neutral-soft"}`}
-                          key={user.id}
-                          onClick={() =>
-                            assignmentForm.setValue("assigneeUserId", user.id, {
-                              shouldDirty: true,
-                              shouldValidate: true,
-                            })
-                          }
-                          role="option"
-                          type="button"
-                        >
-                          <span className="min-w-0">
-                            <span className="block font-medium break-words">
-                              {user.name}
-                            </span>
-                            <span className="text-muted block text-xs break-all">
-                              {user.email}
-                            </span>
-                          </span>
-                          {selected ? (
-                            <span className="shrink-0 text-xs font-semibold">
-                              Selected
-                            </span>
-                          ) : null}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <p className="text-muted px-3 py-4 text-sm">
-                      No active security officers match this search.
-                    </p>
+              {(["assignment", "history"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  id={`assignment-${tab}-tab`}
+                  type="button"
+                  role="tab"
+                  aria-selected={assignmentTab === tab}
+                  aria-controls={`assignment-${tab}-panel`}
+                  tabIndex={assignmentTab === tab ? 0 : -1}
+                  disabled={
+                    tab === "assignment" && assignmentTarget.status === "closed"
+                  }
+                  className={cn(
+                    "focus-visible:outline-brand min-h-10 flex-1 rounded-lg px-3.5 py-2 text-sm font-medium capitalize transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50",
+                    assignmentTab === tab
+                      ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                      : "text-muted hover:bg-neutral-soft hover:text-foreground",
                   )}
-                </div>
-              </div>
-            </FormField>
-            <FormField
-              id="assignment-note"
-              label="Assignment note"
-              error={assignmentForm.formState.errors.note?.message}
-            >
-              <Textarea
-                id="assignment-note"
-                className="min-h-28"
-                maxLength={2000}
-                placeholder="Explain why this handler is appropriate and any immediate response expectations."
-                {...assignmentForm.register("note")}
-              />
-              <p className="text-muted text-xs">
-                The assignment, responsible officer and note are retained in
-                incident history and the audit log.
-              </p>
-            </FormField>
-            <Alert>
-              Assigning a reported incident changes its workflow status to
-              Assigned. Reassignment closes the previous active assignment.
-            </Alert>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={closeAssignment}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  assignmentMutation.isPending ||
-                  assignmentOptions.isPending ||
-                  assignmentOptions.isError
-                }
-              >
-                {assignmentMutation.isPending ? "Assigning…" : "Assign handler"}
-              </Button>
+                  onClick={() => setAssignmentTab(tab)}
+                  onKeyDown={(event) => {
+                    if (assignmentTarget.status === "closed") return;
+                    if (
+                      ["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                        event.key,
+                      )
+                    ) {
+                      event.preventDefault();
+                      const next =
+                        event.key === "Home"
+                          ? "assignment"
+                          : event.key === "End"
+                            ? "history"
+                            : tab === "history"
+                              ? "assignment"
+                              : "history";
+                      setAssignmentTab(next);
+                      event.currentTarget.parentElement
+                        ?.querySelector<HTMLButtonElement>(
+                          `#assignment-${next}-tab`,
+                        )
+                        ?.focus();
+                    }
+                  }}
+                >
+                  {tab === "history" ? "History" : "Assignment"}
+                </button>
+              ))}
             </div>
-          </form>
+            <div
+              id="assignment-history-panel"
+              role="tabpanel"
+              aria-labelledby="assignment-history-tab"
+              hidden={assignmentTab !== "history"}
+            >
+              {assignmentTab === "history" ? (
+                <div className="space-y-4">
+                  <AssignmentHistory
+                    key={assignmentTarget.id}
+                    incidentId={assignmentTarget.id}
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="secondary" onClick={closeAssignment}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <form
+              id="assignment-assignment-panel"
+              role="tabpanel"
+              aria-labelledby="assignment-assignment-tab"
+              hidden={assignmentTab !== "assignment"}
+              className="space-y-5"
+              noValidate
+              onSubmit={assignmentForm.handleSubmit(submitAssignment)}
+            >
+              {assignmentMutation.isError ? (
+                <Alert className="border-danger/25 bg-danger-soft text-danger">
+                  {assignmentMutation.error instanceof Error
+                    ? assignmentMutation.error.message
+                    : "Unable to assign this incident. Review the values and try again."}
+                </Alert>
+              ) : null}
+              {assignmentOptions.isError ? (
+                <Alert>
+                  Unable to load eligible handlers. Try reopening this dialog.
+                </Alert>
+              ) : null}
+              <FormField
+                id="incident-handler"
+                label="Handler"
+                error={assignmentForm.formState.errors.assigneeUserId?.message}
+              >
+                <input
+                  type="hidden"
+                  {...assignmentForm.register("assigneeUserId")}
+                />
+                <div className="border-border overflow-hidden rounded-lg border">
+                  <div className="border-border relative border-b">
+                    <Search
+                      aria-hidden="true"
+                      className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                      strokeWidth={1.8}
+                    />
+                    <Input
+                      id="incident-handler"
+                      autoFocus
+                      className="rounded-none border-0 pl-10 focus:ring-0"
+                      disabled={
+                        assignmentOptions.isPending || assignmentOptions.isError
+                      }
+                      onChange={(event) => setHandlerSearch(event.target.value)}
+                      placeholder="Search by name or email"
+                      value={handlerSearch}
+                    />
+                  </div>
+                  <div
+                    aria-label="Eligible incident handlers"
+                    className="max-h-56 overflow-y-auto p-1.5"
+                    role="listbox"
+                  >
+                    {assignmentOptions.isPending ? (
+                      <p className="text-muted px-3 py-4 text-sm">
+                        Loading handlers…
+                      </p>
+                    ) : filteredHandlers.length ? (
+                      filteredHandlers.map((user) => {
+                        const selected = selectedHandlerId === user.id;
+                        return (
+                          <button
+                            aria-selected={selected}
+                            className={`focus-visible:outline-brand flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 text-left text-sm focus-visible:outline-2 ${selected ? "bg-brand-soft text-brand" : "hover:bg-neutral-soft"}`}
+                            key={user.id}
+                            onClick={() =>
+                              assignmentForm.setValue(
+                                "assigneeUserId",
+                                user.id,
+                                {
+                                  shouldDirty: true,
+                                  shouldValidate: true,
+                                },
+                              )
+                            }
+                            role="option"
+                            type="button"
+                          >
+                            <span className="min-w-0">
+                              <span className="block font-medium break-words">
+                                {user.name}
+                              </span>
+                              <span className="text-muted block text-xs break-all">
+                                {user.email}
+                              </span>
+                            </span>
+                            {selected ? (
+                              <span className="shrink-0 text-xs font-semibold">
+                                Selected
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="text-muted px-3 py-4 text-sm">
+                        No active security officers match this search.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </FormField>
+              <FormField
+                id="assignment-note"
+                label="Assignment note"
+                error={assignmentForm.formState.errors.note?.message}
+              >
+                <Textarea
+                  id="assignment-note"
+                  className="min-h-28"
+                  maxLength={2000}
+                  placeholder="Explain why this handler is appropriate and any immediate response expectations."
+                  {...assignmentForm.register("note")}
+                />
+                <p className="text-muted text-xs">
+                  The assignment, responsible officer and note are retained in
+                  incident history and the audit log.
+                </p>
+              </FormField>
+              <Alert>
+                Assignment changes the responsible Security Officer, not the
+                incident response phase. Changes and notes are recorded for
+                accountability.
+              </Alert>
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={closeAssignment}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    assignmentMutation.isPending ||
+                    assignmentOptions.isPending ||
+                    assignmentOptions.isError
+                  }
+                >
+                  {assignmentMutation.isPending
+                    ? "Assigning…"
+                    : "Assign handler"}
+                </Button>
+              </div>
+            </form>
+          </div>
         ) : null}
       </Dialog>
       <Dialog

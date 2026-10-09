@@ -1,5 +1,9 @@
 # SecuraAI Frontend
 
+The assignment dialog includes **Assignment | History** tabs matching severity classification and UI UX Pro Max keyboard/focus guidance. History shows previous/new handler, assigning officer, time and note with pagination, loading, error and empty states. Switching tabs retains unsaved fields. Saving refreshes cached history pages even when the History tab is inactive; reopening History shows the new assignment without a page reload. History requests bypass the browser HTTP cache. Closed incidents open read-only history through the same action; no separate History button is added.
+
+UC58: Security Officers use **Incidents → Actions → Assign handler / Reassign handler** to select an active Security Officer and enter a 10–2000 character assignment note. Existing BFF routes connect the V2 assignment-options and assignee APIs. Saves invalidate incident list/detail queries immediately; stale or forbidden responses refresh incident queries and keep the form error visible. Assignment changes the responsible officer, not the response phase; the backend records an atomic audit trail in existing V2 tables. The dialog keeps the established SecuraAI UI UX Pro Max form pattern.
+
 Incident severity: Security Officers use **Classification | History** in the classification dialog, without a separate History action in the incident menu. History reads paginated audit-backed transitions through `GET /api/incidents/:incidentId/severity`. Switching tabs preserves unsaved classification inputs. Saving invalidates incident lists, detail and history queries. No client-generated history is used.
 
 ## Controls and Evidence references
