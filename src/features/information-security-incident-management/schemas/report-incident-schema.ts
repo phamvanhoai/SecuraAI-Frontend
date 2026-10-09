@@ -59,6 +59,7 @@ export const incidentSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   classified: z.boolean(),
+  hasAnalysis: z.boolean().default(false),
   classificationCount: z.number().int().min(0),
   lastClassification: z
     .object({
@@ -127,9 +128,7 @@ export const incidentDetailSchema = incidentSchema.extend({
       description: z.string(),
       occurredAt: z.string().datetime(),
       actor: incidentActorSchema.nullable(),
-      phase: z
-        .enum(["containment", "eradication", "recovery"])
-        .nullable(),
+      phase: z.enum(["containment", "eradication", "recovery"]).nullable(),
     }),
   ),
 });
@@ -165,12 +164,22 @@ export const assignIncidentFormSchema = z.object({
     .max(2000),
 });
 export const updateIncidentProgressFormSchema = z.object({
-  status: z.enum(["in_progress", "escalated", "resolved", "closed"]),
+  status: z.enum([
+    "triage",
+    "containment",
+    "eradication",
+    "recovery",
+    "lessons_learned",
+  ]),
+  confirmed: z
+    .boolean()
+    .refine((value) => value, "Confirm the phase transition."),
+  skipReason: z.string().trim().max(2000).optional(),
   note: z
     .string()
     .trim()
     .min(10, "Describe the progress in at least 10 characters")
-    .max(5000),
+    .max(2000),
 });
 export const incidentEvidenceSchema = z.object({
   id: z.uuid(),

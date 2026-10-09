@@ -354,7 +354,12 @@ export function useUpdateIncidentHandlingProgress() {
   return useMutation({
     mutationFn: updateIncidentHandlingProgress,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["incidents"], refetchType: "all" }),
+    onError: (error) => {
+      if (error instanceof ApiError && [403, 404, 409].includes(error.status))
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+    },
   });
 }
 export const useIncidentEvidence = (id: string | undefined, page: number) =>

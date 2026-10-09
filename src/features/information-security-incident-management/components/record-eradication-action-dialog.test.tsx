@@ -36,7 +36,7 @@ const incident = incidentSchema.parse({
   description: null,
   category: null,
   severity: "medium",
-  status: "open",
+  status: "eradication",
   occurredAt: null,
   detectedAt: null,
   confirmedAt: null,

@@ -36,7 +36,7 @@ const incident = incidentSchema.parse({
   description: null,
   category: null,
   severity: "medium",
-  status: "open",
+  status: "recovery",
   occurredAt: null,
   detectedAt: null,
   confirmedAt: null,
@@ -98,6 +98,43 @@ it("preserves inputs between tabs and opens history after save", async () => {
       "aria-selected",
       "true",
     ),
+  );
+});
+it("records work without offering a phase completion shortcut", async () => {
+  render(<RecordRecoveryActionDialog incident={incident} onClose={vi.fn()} />);
+  const user = userEvent.setup();
+  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  await user.type(
+    screen.getByLabelText("Recovery action"),
+    "Restored service and verified normal operations.",
+  );
+  await user.type(screen.getByLabelText("Performed at"), "2026-01-01T09:30");
+  await user.click(screen.getByRole("button", { name: "Record action" }));
+  await waitFor(() =>
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({
+      id,
+      values: {
+        description: "Restored service and verified normal operations.",
+        performedAt: "2026-01-01T09:30",
+      },
+    }),
+  );
+  expect(mocks.success).toHaveBeenCalledWith(
+    "Recovery action recorded",
+    expect.stringContaining("handling phase is unchanged"),
+  );
+});
+it("keeps future-phase recording disabled and opens history", () => {
+  render(
+    <RecordRecoveryActionDialog
+      incident={{ ...incident, status: "open" }}
+      onClose={vi.fn()}
+    />,
+  );
+  expect(screen.getByRole("tab", { name: "Record action" })).toBeDisabled();
+  expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute(
+    "aria-selected",
+    "true",
   );
 });
 it("opens closed incidents read-only and offers retry", async () => {

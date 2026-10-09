@@ -22,7 +22,7 @@ for (const width of [375, 768, 1024, 1440]) {
       description: null,
       category: null,
       severity: "medium",
-      status: "open",
+      status: "eradication",
       occurredAt: null,
       detectedAt: null,
       confirmedAt: null,

@@ -22,7 +22,7 @@ for (const width of [375, 768, 1024, 1440]) {
       description: null,
       category: null,
       severity: "medium",
-      status: "open",
+      status: "recovery",
       occurredAt: null,
       detectedAt: null,
       confirmedAt: null,
@@ -164,6 +164,11 @@ for (const width of [375, 768, 1024, 1440]) {
     ).toBe(true);
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await actions.click();
+    const rcaAction = page.getByRole("button", {
+      name: "Root cause & lessons learned",
+      exact: true,
+    });
+    await expect(rcaAction).toHaveCount(0);
     await page
       .getByRole("button", { name: "Record recovery action", exact: true })
       .click();

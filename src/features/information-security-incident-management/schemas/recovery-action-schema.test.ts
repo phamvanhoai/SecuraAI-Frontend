@@ -20,6 +20,7 @@ it("validates completed recovery descriptions and local timestamps", () => {
     { ...input, description: "x".repeat(4001) },
     { ...input, performedAt: "invalid" },
     { ...input, performedAt: "2099-01-01T00:00" },
+    { ...input, recoveryCompleted: "yes" },
   ])
     expect(recoveryFormSchema.safeParse(invalid).success).toBe(false);
 });

@@ -1,21 +1,23 @@
 import { z } from "zod";
 
-export const recoveryFormSchema = z.object({
-  description: z
-    .string()
-    .trim()
-    .min(10, "Enter at least 10 characters.")
-    .max(4000),
-  performedAt: z
-    .string()
-    .min(1, "Choose when the action was performed.")
-    .refine(
-      (value) =>
-        Number.isFinite(new Date(value).getTime()) &&
-        new Date(value).getTime() <= Date.now(),
-      "Choose a valid time that is not in the future.",
-    ),
-});
+export const recoveryFormSchema = z
+  .object({
+    description: z
+      .string()
+      .trim()
+      .min(10, "Enter at least 10 characters.")
+      .max(4000),
+    performedAt: z
+      .string()
+      .min(1, "Choose when the action was performed.")
+      .refine(
+        (value) =>
+          Number.isFinite(new Date(value).getTime()) &&
+          new Date(value).getTime() <= Date.now(),
+        "Choose a valid time that is not in the future.",
+      ),
+  })
+  .strict();
 export type RecoveryForm = z.infer<typeof recoveryFormSchema>;
 export const recoveryActionSchema = z.object({
   id: z.uuid(),
