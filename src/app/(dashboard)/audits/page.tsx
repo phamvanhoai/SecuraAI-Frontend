@@ -6,7 +6,7 @@ import { ProductPageHeader } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { useSessionUser } from "@/features/authentication-account";
 import {
-  AuditLogListManager,
+  AuditLogsManager,
   EventDataGovernancePolicy,
   IntegrationApiKeyList,
   UserActivityAuditLogManager,
@@ -69,7 +69,7 @@ export default function AuditsPage() {
             />
           </div>
           <div role="tabpanel">
-            {activeView === "all" ? <AuditLogListManager /> : null}
+            {activeView === "all" ? <AuditLogsManager /> : null}
             {activeView === "user-activity" ? (
               <UserActivityAuditLogManager />
             ) : null}
