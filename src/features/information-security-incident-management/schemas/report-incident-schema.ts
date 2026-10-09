@@ -93,6 +93,46 @@ export const incidentSchema = z.object({
     risks: z.number().int().min(0),
   }),
 });
+const incidentActorSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+});
+export const incidentDetailSchema = incidentSchema.extend({
+  affectedAssets: z.array(
+    z.object({
+      id: z.uuid(),
+      assetCode: z.string(),
+      name: z.string(),
+      assetType: z.string(),
+      criticality: z.string().nullable(),
+      status: z.string(),
+      linkedAt: z.string().datetime(),
+      linkedBy: incidentActorSchema.nullable(),
+    }),
+  ),
+  responseActions: z.array(
+    z.object({
+      id: z.uuid(),
+      phase: z.enum(["containment", "eradication", "recovery"]),
+      description: z.string(),
+      performedAt: z.string().datetime(),
+      performedBy: incidentActorSchema.nullable(),
+    }),
+  ),
+  handlingHistory: z.array(
+    z.object({
+      id: z.string(),
+      type: z.enum(["reported", "confirmed", "response_action", "closed"]),
+      description: z.string(),
+      occurredAt: z.string().datetime(),
+      actor: incidentActorSchema.nullable(),
+      phase: z
+        .enum(["containment", "eradication", "recovery"])
+        .nullable(),
+    }),
+  ),
+});
 export const myIncidentsSchema = z.object({
   items: z.array(incidentSchema),
   pagination: z.object({
@@ -167,6 +207,7 @@ export const removedIncidentEvidenceSchema = z.object({
 });
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
+export type IncidentDetail = z.infer<typeof incidentDetailSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
 export type IncidentSeverity = z.infer<typeof severitySchema>;
 export type AssignIncidentForm = z.infer<typeof assignIncidentFormSchema>;
