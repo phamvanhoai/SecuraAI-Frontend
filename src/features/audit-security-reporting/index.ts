@@ -1,2 +1,4 @@
-/** Audit public API. Implementation awaits backend contracts. */
-export {};
+export * from "./schemas/audit-log-schema";
+export * from "./api/audit-logs";
+export * from "./hooks/use-audit-logs";
+export * from "./components/audit-logs-manager";
