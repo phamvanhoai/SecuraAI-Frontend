@@ -1,75 +1,280 @@
 "use client";
-
-import { HeartPulse, Info } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { StatusBadge } from "@/components/data-display/static-product";
-import { useToast } from "@/components/feedback/toast";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormField } from "@/components/forms/form-field";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/data-display/pagination";
+import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import type { Incident } from "../schemas/report-incident-schema";
+import {
+  recoveryFormSchema,
+  type RecoveryForm,
+} from "../schemas/recovery-action-schema";
+import {
+  useRecoveryHistory,
+  useRecordRecoveryAction,
+} from "../hooks/use-recovery-actions";
 
-type View = "record" | "history";
-const previewHistory = [
-  { id: "REC-2026-0012", action: "Restored finance workstation from verified image", target: "FIN-WS-014", availability: "Operational", analyst: "securityofficer@gmail.com", performedAt: "2026-10-06T10:20:00Z" },
-  { id: "REC-2026-0011", action: "Re-enabled VPN access after credential validation", target: "Corporate VPN", availability: "Monitoring", analyst: "securityofficer@gmail.com", performedAt: "2026-10-06T09:35:00Z" },
-] as const;
-
-export function RecordRecoveryActionDialog({ incident, onClose }: { incident: Incident | undefined; onClose: () => void }) {
+export function RecordRecoveryActionDialog({
+  incident,
+  onClose,
+}: {
+  incident: Incident | undefined;
+  onClose: () => void;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<View>("record");
+  const [tab, setTab] = useState<"record" | "history">("record");
+  const [page, setPage] = useState(1);
+  const form = useForm<RecoveryForm>({
+    resolver: zodResolver(recoveryFormSchema),
+    defaultValues: { description: "", performedAt: "" },
+  });
+  const mutation = useRecordRecoveryAction();
+  const history = useRecoveryHistory(incident?.id, page);
   const toast = useToast();
+  const resetForm = form.reset;
+  const resetMutation = mutation.reset;
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (incident && !dialog.open) { setView("record"); dialog.showModal(); }
+    if (incident && !dialog.open) {
+      resetForm({ description: "", performedAt: "" });
+      resetMutation();
+      setPage(1);
+      setTab(incident.status === "closed" ? "history" : "record");
+      dialog.showModal();
+    }
     if (!incident && dialog.open) dialog.close();
-  }, [incident]);
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    toast.info("Recovery action validated", "UI preview only. The action was not saved to the incident backend.");
-    setView("history");
+  }, [incident, resetForm, resetMutation]);
+  const submit = async (values: RecoveryForm) => {
+    if (!incident) return;
+    try {
+      await mutation.mutateAsync({ id: incident.id, values });
+      form.reset();
+      setPage(1);
+      setTab("history");
+      toast.success(
+        "Recovery action recorded",
+        "The action is saved in incident response history.",
+      );
+    } catch {
+      /* The persistent error below keeps the entered values available. */
+    }
   };
   return (
-    <Dialog className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto" dialogRef={dialogRef} onClose={onClose} title="Record recovery action">
-      {incident ? <div className="space-y-5">
-        <div className="border-border border-b pb-4"><p className="text-muted font-mono text-xs">{incident.incidentCode}</p><p className="mt-1 font-semibold">{incident.title}</p></div>
-        <div aria-label="Recovery action views" className="border-border bg-background inline-flex w-full gap-1 rounded-lg border p-1 sm:w-auto" role="tablist">
-          <Tab active={view === "record"} label="Record action" onClick={() => setView("record")} />
-          <Tab active={view === "history"} label="Action history" onClick={() => setView("history")} />
+    <Dialog
+      dialogRef={dialogRef}
+      title="Record recovery action"
+      onClose={onClose}
+      onCancel={(event) => {
+        if (mutation.isPending) event.preventDefault();
+      }}
+      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] max-w-none overflow-y-auto"
+    >
+      {incident ? (
+        <div className="space-y-5">
+          <div className="border-border bg-neutral-soft rounded-lg border p-4">
+            <p className="text-muted text-xs font-medium">
+              {incident.incidentCode}
+            </p>
+            <p className="mt-1 font-semibold [overflow-wrap:anywhere]">
+              {incident.title}
+            </p>
+          </div>
+          <div
+            role="tablist"
+            aria-label="Recovery action views"
+            className="border-border bg-surface inline-flex w-fit max-w-full items-center gap-1 rounded-xl border p-1"
+          >
+            {(["record", "history"] as const).map((view) => (
+              <button
+                key={view}
+                id={`recovery-${view}-tab`}
+                type="button"
+                role="tab"
+                aria-selected={tab === view}
+                aria-controls={`recovery-${view}-panel`}
+                tabIndex={tab === view ? 0 : -1}
+                disabled={view === "record" && incident.status === "closed"}
+                className={cn(
+                  "focus-visible:outline-brand inline-flex min-h-11 flex-none items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10",
+                  tab === view
+                    ? "bg-brand text-brand-contrast font-semibold"
+                    : "text-muted hover:bg-neutral-soft",
+                )}
+                onClick={() => setTab(view)}
+                onKeyDown={(event) => {
+                  if (
+                    incident.status === "closed" ||
+                    !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                      event.key,
+                    )
+                  )
+                    return;
+                  event.preventDefault();
+                  const next =
+                    event.key === "Home"
+                      ? "record"
+                      : event.key === "End"
+                        ? "history"
+                        : view === "record"
+                          ? "history"
+                          : "record";
+                  setTab(next);
+                  event.currentTarget.parentElement
+                    ?.querySelector<HTMLButtonElement>(`#recovery-${next}-tab`)
+                    ?.focus();
+                }}
+              >
+                {view === "record" ? "Record action" : "History"}
+              </button>
+            ))}
+          </div>
+          <form
+            id="recovery-record-panel"
+            role="tabpanel"
+            aria-labelledby="recovery-record-tab"
+            hidden={tab !== "record"}
+            className="space-y-4"
+            noValidate
+            onSubmit={form.handleSubmit(submit)}
+          >
+            {mutation.isError ? (
+              <Alert role="alert">{mutation.error.message}</Alert>
+            ) : null}
+            <FormField
+              id="recovery-description"
+              label="Recovery action"
+              error={form.formState.errors.description?.message}
+            >
+              <Textarea
+                id="recovery-description"
+                rows={5}
+                maxLength={4000}
+                disabled={mutation.isPending}
+                aria-invalid={Boolean(form.formState.errors.description)}
+                aria-describedby={
+                  form.formState.errors.description
+                    ? "recovery-description-error"
+                    : "recovery-description-help"
+                }
+                {...form.register("description")}
+              />
+              <p id="recovery-description-help" className="text-muted text-xs">
+                Describe the restored system or service, recovery steps,
+                validation results, operational status, and any monitoring or
+                remaining restrictions.
+              </p>
+            </FormField>
+            <FormField
+              id="recovery-time"
+              label="Performed at"
+              error={form.formState.errors.performedAt?.message}
+            >
+              <Input
+                id="recovery-time"
+                type="datetime-local"
+                disabled={mutation.isPending}
+                aria-invalid={Boolean(form.formState.errors.performedAt)}
+                aria-describedby={
+                  form.formState.errors.performedAt
+                    ? "recovery-time-error"
+                    : "recovery-time-help"
+                }
+                {...form.register("performedAt")}
+              />
+              <p id="recovery-time-help" className="text-muted text-xs">
+                Your local time. The signed-in Security Officer is recorded as
+                the performer.
+              </p>
+            </FormField>
+            <Alert>
+              Record actions already performed. This does not automatically
+              change the response phase or close the incident.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                disabled={mutation.isPending}
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving…" : "Record action"}
+              </Button>
+            </div>
+          </form>
+          <div
+            id="recovery-history-panel"
+            role="tabpanel"
+            aria-labelledby="recovery-history-tab"
+            hidden={tab !== "history"}
+            className="space-y-4"
+          >
+            {history.isPending ? (
+              <div role="status" aria-busy="true">
+                <span className="sr-only">Loading recovery history</span>
+                <Skeleton className="h-28" />
+              </div>
+            ) : history.isError ? (
+              <Alert role="alert">
+                Unable to load recovery history.{" "}
+                <Button
+                  variant="secondary"
+                  onClick={() => void history.refetch()}
+                >
+                  Try again
+                </Button>
+              </Alert>
+            ) : history.data?.items.length ? (
+              <>
+                <ol className="space-y-3">
+                  {history.data.items.map((action) => (
+                    <li
+                      key={action.id}
+                      className="border-border rounded-lg border p-4"
+                    >
+                      <p className="text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
+                        {action.description}
+                      </p>
+                      <p className="text-muted mt-2 text-xs [overflow-wrap:anywhere]">
+                        {action.performedBy.name} ·{" "}
+                        <time dateTime={action.performedAt}>
+                          {new Date(action.performedAt).toLocaleString()}
+                        </time>
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+                <Pagination
+                  page={page}
+                  pageCount={history.data.pagination.totalPages}
+                  onPageChange={setPage}
+                />
+              </>
+            ) : (
+              <Alert>No recovery actions recorded for this incident.</Alert>
+            )}
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                disabled={mutation.isPending}
+                onClick={onClose}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
-        {view === "record" ? <form className="space-y-5" onSubmit={submit}>
-          <Alert className="border-info/25 bg-info-soft text-info"><div className="flex items-start gap-2"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><p>UI preview for UC62. Record completed steps used to restore affected systems or services to normal operation.</p></div></Alert>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Recovery action type" htmlFor="recovery-action-type"><Select id="recovery-action-type" defaultValue="system-restore" required><option value="system-restore">Restore system or service</option><option value="backup-restore">Restore from backup</option><option value="access-restore">Restore user or network access</option><option value="rebuild">Rebuild affected component</option><option value="configuration-restore">Restore secure configuration</option><option value="other">Other recovery action</option></Select></Field>
-            <Field label="Performed at" htmlFor="recovery-performed-at"><Input id="recovery-performed-at" type="datetime-local" required /></Field>
-          </div>
-          <Field label="Action summary" htmlFor="recovery-summary"><Input id="recovery-summary" minLength={5} maxLength={160} placeholder="e.g. Restored workstation from verified image" required /></Field>
-          <Field label="Restored asset or service" htmlFor="recovery-target"><Input id="recovery-target" minLength={2} maxLength={160} placeholder="e.g. FIN-WS-014 or Corporate VPN" required /></Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Operational status" htmlFor="recovery-status"><Select id="recovery-status" defaultValue="operational" required><option value="operational">Fully operational</option><option value="degraded">Operational with limitations</option><option value="monitoring">Restored — under monitoring</option><option value="failed">Recovery unsuccessful</option></Select></Field>
-            <Field label="Monitoring period (hours)" htmlFor="recovery-monitoring-hours"><Input id="recovery-monitoring-hours" defaultValue="24" min="0" max="720" type="number" required /></Field>
-          </div>
-          <Field label="Validation performed" htmlFor="recovery-validation"><Textarea id="recovery-validation" minLength={10} maxLength={1200} placeholder="Describe health checks, service tests, user validation, or integrity verification completed after restoration." required /></Field>
-          <Field label="Recovery notes and remaining limitations" htmlFor="recovery-notes"><Textarea id="recovery-notes" minLength={10} maxLength={2000} placeholder="Record recovery steps, remaining restrictions, follow-up monitoring, and handover details." required /></Field>
-          <Alert>Recording recovery work supports progress tracking but does not automatically resolve or close the incident.</Alert>
-          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onClose}>Close</Button><Button type="submit"><HeartPulse aria-hidden="true" className="size-4" />Record action</Button></div>
-        </form> : <div className="space-y-4">
-          <Alert>Example history for documentation. Production records will come from the incident action API.</Alert>
-          <div className="space-y-3">{previewHistory.map((entry) => <article className="border-border rounded-lg border p-4" key={entry.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold">{entry.action}</p><p className="text-muted mt-1 font-mono text-xs">{entry.id}</p></div><StatusBadge tone={entry.availability === "Operational" ? "success" : "warning"}>{entry.availability}</StatusBadge></div><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3"><Detail label="Restored target" value={entry.target} /><Detail label="Analyst" value={entry.analyst} /><Detail label="Performed" value={formatDate(entry.performedAt)} /></dl></article>)}</div>
-          <div className="border-border flex justify-end border-t pt-4"><Button type="button" variant="secondary" onClick={onClose}>Close</Button></div>
-        </div>}
-      </div> : null}
+      ) : null}
     </Dialog>
   );
 }
-
-function Tab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) { return <button aria-selected={active} className={cn("focus-visible:outline-brand min-h-10 flex-1 rounded-md px-3 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 sm:flex-none", active ? "bg-brand text-white" : "text-muted hover:bg-neutral-soft hover:text-foreground")} onClick={onClick} role="tab" type="button">{label}</button>; }
-function Field({ children, htmlFor, label }: { children: ReactNode; htmlFor: string; label: string }) { return <div className="space-y-1.5"><Label htmlFor={htmlFor}>{label}</Label>{children}</div>; }
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-muted text-xs font-medium uppercase">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>; }
-function formatDate(value: string) { return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(value)); }

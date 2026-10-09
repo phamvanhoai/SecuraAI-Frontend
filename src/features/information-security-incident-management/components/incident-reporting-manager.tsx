@@ -717,8 +717,7 @@ export function IncidentReportingManager() {
                 Root cause & lessons learned
               </button>
             ) : null}
-            {isSecurityOfficer &&
-            !["resolved", "closed"].includes(item.status) ? (
+            {isSecurityOfficer ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRecoveryTarget(item)}
@@ -729,7 +728,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Record recovery action
+                {item.status === "closed"
+                  ? "View recovery history"
+                  : "Record recovery action"}
               </button>
             ) : null}
             {isSecurityOfficer ? (
