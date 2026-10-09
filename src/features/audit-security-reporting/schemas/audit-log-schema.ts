@@ -67,3 +67,67 @@ export const listAuditLogsQuerySchema = z.object({
 });
 
 export type ListAuditLogsQuery = z.infer<typeof listAuditLogsQuerySchema>;
+
+export const propertyChangeTypes = ["ADDED", "MODIFIED", "REMOVED", "UNCHANGED"] as const;
+export type PropertyChangeType = (typeof propertyChangeTypes)[number];
+
+export const propertyChangeSchema = z.object({
+  property: z.string(),
+  changeType: z.enum(propertyChangeTypes),
+  beforeValue: z.unknown(),
+  afterValue: z.unknown(),
+});
+
+export type PropertyChange = z.infer<typeof propertyChangeSchema>;
+
+export const auditLogDiffSchema = z.object({
+  id: z.string().uuid(),
+  action: z.string(),
+  resourceType: z.string(),
+  resourceId: z.string().nullable(),
+  occurredAt: z.string(),
+  totalProperties: z.number().int(),
+  totalModified: z.number().int(),
+  totalAdded: z.number().int(),
+  totalRemoved: z.number().int(),
+  totalUnchanged: z.number().int(),
+  hasChanges: z.boolean(),
+  changes: z.array(propertyChangeSchema),
+});
+
+export type AuditLogDiff = z.infer<typeof auditLogDiffSchema>;
+
+export function computePropertyChanges(
+  beforeData: Record<string, unknown> | null,
+  afterData: Record<string, unknown> | null,
+): PropertyChange[] {
+  const before = beforeData ?? {};
+  const after = afterData ?? {};
+  const allKeys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)])).sort();
+
+  return allKeys.map((key) => {
+    const hasBefore = Object.prototype.hasOwnProperty.call(before, key);
+    const hasAfter = Object.prototype.hasOwnProperty.call(after, key);
+    const beforeVal = hasBefore ? before[key] : undefined;
+    const afterVal = hasAfter ? after[key] : undefined;
+
+    let changeType: PropertyChangeType;
+    if (!hasBefore && hasAfter) {
+      changeType = "ADDED";
+    } else if (hasBefore && !hasAfter) {
+      changeType = "REMOVED";
+    } else if (JSON.stringify(beforeVal) !== JSON.stringify(afterVal)) {
+      changeType = "MODIFIED";
+    } else {
+      changeType = "UNCHANGED";
+    }
+
+    return {
+      property: key,
+      changeType,
+      beforeValue: beforeVal ?? null,
+      afterValue: afterVal ?? null,
+    };
+  });
+}
+

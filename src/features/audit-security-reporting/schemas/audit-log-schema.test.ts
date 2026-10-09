@@ -93,3 +93,42 @@ describe("listAuditLogsQuerySchema", () => {
     expect(result.correlationId).toBe("corr-789");
   });
 });
+
+describe("auditLogDiffSchema & computePropertyChanges", () => {
+  it("computes property diff and identifies change types accurately", async () => {
+    const { computePropertyChanges, auditLogDiffSchema } = await import(
+      "./audit-log-schema"
+    );
+
+    const before = { role: "EMPLOYEE", status: "ACTIVE", tag: "old" };
+    const after = { role: "SECURITY_OFFICER", status: "ACTIVE", level: 2 };
+
+    const changes = computePropertyChanges(before, after);
+
+    expect(changes).toEqual([
+      { property: "level", changeType: "ADDED", beforeValue: null, afterValue: 2 },
+      { property: "role", changeType: "MODIFIED", beforeValue: "EMPLOYEE", afterValue: "SECURITY_OFFICER" },
+      { property: "status", changeType: "UNCHANGED", beforeValue: "ACTIVE", afterValue: "ACTIVE" },
+      { property: "tag", changeType: "REMOVED", beforeValue: "old", afterValue: null },
+    ]);
+
+    const diffPayload = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      action: "UPDATE_USER_ROLE",
+      resourceType: "users",
+      resourceId: "550e8400-e29b-41d4-a716-446655440001",
+      occurredAt: "2026-10-08T12:00:00.000Z",
+      totalProperties: 4,
+      totalModified: 1,
+      totalAdded: 1,
+      totalRemoved: 1,
+      totalUnchanged: 1,
+      hasChanges: true,
+      changes,
+    };
+
+    const parsed = auditLogDiffSchema.safeParse(diffPayload);
+    expect(parsed.success).toBe(true);
+  });
+});
+

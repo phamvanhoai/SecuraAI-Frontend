@@ -3,6 +3,7 @@
 import {
   Calendar,
   Eye,
+  FileDiff,
   Filter,
   History,
   Key,
@@ -38,6 +39,7 @@ import {
   type ListAuditLogsQuery,
 } from "../schemas/audit-log-schema";
 import { AuditLogDetailDialog } from "./audit-log-detail-dialog";
+import { AuditLogChangesDialog } from "./audit-log-changes-dialog";
 import { cn } from "@/lib/utils";
 
 function getActionTone(action: string): "success" | "warning" | "danger" | "info" | "neutral" {
@@ -119,6 +121,8 @@ export function AuditLogsManager() {
 
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
+  const [selectedDiffLogId, setSelectedDiffLogId] = useState<string | null>(null);
+  const [selectedDiffLog, setSelectedDiffLog] = useState<AuditLogItem | null>(null);
 
   const [page, setPage] = useState(1);
   const limit = 20;
@@ -303,19 +307,34 @@ export function AuditLogsManager() {
       key: "actions",
       header: "Actions",
       cell: (item: AuditLogItem) => (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            setSelectedLogId(item.id);
-            setSelectedLog(item);
-          }}
-          className="size-7 p-0"
-          title="View audit record details"
-          aria-label={`View details for ${item.action}`}
-        >
-          <Eye className="size-3.5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setSelectedLogId(item.id);
+              setSelectedLog(item);
+            }}
+            className="size-7 p-0"
+            title="View audit record details"
+            aria-label={`View details for ${item.action}`}
+          >
+            <Eye className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setSelectedDiffLogId(item.id);
+              setSelectedDiffLog(item);
+            }}
+            className="size-7 p-0 text-amber-600 hover:text-amber-700 dark:text-amber-400"
+            title="View entity before/after property changes"
+            aria-label={`View before/after changes for ${item.action}`}
+          >
+            <FileDiff className="size-3.5" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -644,6 +663,17 @@ export function AuditLogsManager() {
           setSelectedLog(null);
         }}
       />
+
+      {/* Entity State Before/After Changes Diff Modal */}
+      <AuditLogChangesDialog
+        logId={selectedDiffLogId}
+        initialData={selectedDiffLog}
+        onClose={() => {
+          setSelectedDiffLogId(null);
+          setSelectedDiffLog(null);
+        }}
+      />
     </>
   );
 }
+

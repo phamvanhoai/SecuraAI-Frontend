@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseAuditLogs = vi.fn();
 const mockUseAuditLogDetail = vi.fn();
+const mockUseAuditLogDiff = vi.fn();
 
 vi.mock("../hooks/use-audit-logs", () => ({
   useAuditLogs: (params?: unknown) => mockUseAuditLogs(params),
   useAuditLogDetail: (id?: string | null) => mockUseAuditLogDetail(id),
+  useAuditLogDiff: (id?: string | null) => mockUseAuditLogDiff(id),
 }));
 
 import { AuditLogsManager } from "./audit-logs-manager";
@@ -38,6 +40,28 @@ const sampleAuditLog = {
   createdAt: new Date().toISOString(),
 };
 
+const sampleDiffData = {
+  id: "550e8400-e29b-41d4-a716-446655440000",
+  action: "UPDATE_USER_ROLE",
+  resourceType: "users",
+  resourceId: "550e8400-e29b-41d4-a716-446655440002",
+  occurredAt: new Date().toISOString(),
+  totalProperties: 1,
+  totalModified: 1,
+  totalAdded: 0,
+  totalRemoved: 0,
+  totalUnchanged: 0,
+  hasChanges: true,
+  changes: [
+    {
+      property: "role",
+      changeType: "MODIFIED" as const,
+      beforeValue: "EMPLOYEE",
+      afterValue: "SECURITY_OFFICER",
+    },
+  ],
+};
+
 describe("AuditLogsManager Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,6 +89,11 @@ describe("AuditLogsManager Component", () => {
     });
     mockUseAuditLogDetail.mockReturnValue({
       data: sampleAuditLog,
+      isLoading: false,
+      isError: false,
+    });
+    mockUseAuditLogDiff.mockReturnValue({
+      data: sampleDiffData,
       isLoading: false,
       isError: false,
     });
@@ -128,5 +157,24 @@ describe("AuditLogsManager Component", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("corr-12345")).toBeInTheDocument();
   });
+
+  it("opens before/after changes diff dialog when clicking the FileDiff action button", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<AuditLogsManager />);
+
+    const diffButton = screen.getByRole("button", {
+      name: /View before\/after changes for UPDATE_USER_ROLE/i,
+    });
+    fireEvent.click(diffButton);
+
+    expect(
+      screen.getByRole("heading", { name: /View Before \/ After Changes/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("MODIFIED")).toBeInTheDocument();
+    expect(screen.getByText("role")).toBeInTheDocument();
+    expect(screen.getByText("EMPLOYEE")).toBeInTheDocument();
+    expect(screen.getByText("SECURITY_OFFICER")).toBeInTheDocument();
+  });
 });
+
 

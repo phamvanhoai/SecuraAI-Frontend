@@ -109,5 +109,43 @@ describe("audit logs API client", () => {
     expect(result.id).toBe("550e8400-e29b-41d4-a716-446655440000");
     expect(result.action).toBe("UPDATE_USER_ROLE");
   });
+
+  it("getAuditLogDiff calls /api/audit-logs/:id/diff", async () => {
+    const diffSample = {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      action: "UPDATE_USER_ROLE",
+      resourceType: "users",
+      resourceId: "550e8400-e29b-41d4-a716-446655440002",
+      occurredAt: "2026-10-08T12:00:00.000Z",
+      totalProperties: 1,
+      totalModified: 1,
+      totalAdded: 0,
+      totalRemoved: 0,
+      totalUnchanged: 0,
+      hasChanges: true,
+      changes: [
+        {
+          property: "role",
+          changeType: "MODIFIED",
+          beforeValue: "EMPLOYEE",
+          afterValue: "SECURITY_OFFICER",
+        },
+      ],
+    };
+    vi.mocked(apiRequest).mockResolvedValueOnce(diffSample);
+
+    const result = await (await import("./audit-logs")).getAuditLogDiff(
+      "550e8400-e29b-41d4-a716-446655440000",
+    );
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/audit-logs/550e8400-e29b-41d4-a716-446655440000/diff",
+      { target: "same-origin" },
+    );
+    expect(result.hasChanges).toBe(true);
+    expect(result.changes).toHaveLength(1);
+    expect(result.changes[0]?.property).toBe("role");
+  });
 });
+
 

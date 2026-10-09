@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAuditLogDetail, listAuditLogs } from "../api/audit-logs";
+import { getAuditLogDetail, getAuditLogDiff, listAuditLogs } from "../api/audit-logs";
 import type {
+  AuditLogDiff,
   AuditLogItem,
   ListAuditLogsQuery,
   PaginatedAuditLogs,
@@ -23,3 +24,15 @@ export function useAuditLogDetail(id: string | null) {
     enabled: Boolean(id),
   });
 }
+
+export function useAuditLogDiff(id: string | null) {
+  return useQuery<AuditLogDiff, Error>({
+    queryKey: ["audit-log-diff", id],
+    queryFn: () => {
+      if (!id) throw new Error("Audit log ID is required");
+      return getAuditLogDiff(id);
+    },
+    enabled: Boolean(id),
+  });
+}
+

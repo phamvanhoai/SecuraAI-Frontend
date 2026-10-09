@@ -1,7 +1,9 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  auditLogDiffSchema,
   auditLogItemSchema,
   paginatedAuditLogsSchema,
+  type AuditLogDiff,
   type AuditLogItem,
   type ListAuditLogsQuery,
   type PaginatedAuditLogs,
@@ -42,3 +44,12 @@ export async function getAuditLogDetail(id: string): Promise<AuditLogItem> {
 
   return auditLogItemSchema.parse(data);
 }
+
+export async function getAuditLogDiff(id: string): Promise<AuditLogDiff> {
+  const data = await apiRequest<unknown>(`/api/audit-logs/${encodeURIComponent(id)}/diff`, {
+    target: "same-origin",
+  });
+
+  return auditLogDiffSchema.parse(data);
+}
+
