@@ -67,4 +67,28 @@ describe("AuditLogsManager Component", () => {
     expect(screen.getByText("192.168.1.100")).toBeInTheDocument();
     expect(screen.getByText("users")).toBeInTheDocument();
   });
+
+  it("updates search query and opens filter drawer", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<AuditLogsManager />);
+
+    const searchInput = screen.getByPlaceholderText(
+      /Search by action, resource, IP, user, correlation ID/i,
+    );
+    fireEvent.change(searchInput, { target: { value: "LOGIN_FAILED" } });
+
+    expect(mockUseAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: "LOGIN_FAILED",
+      }),
+    );
+
+    const filterButton = screen.getByRole("button", { name: /Filters/i });
+    fireEvent.click(filterButton);
+
+    expect(screen.getByLabelText(/Actor Type/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Action Type/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Affected Resource/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Correlation ID/i)).toBeInTheDocument();
+  });
 });

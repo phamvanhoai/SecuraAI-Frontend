@@ -22,7 +22,7 @@ export const auditLogItemSchema = z.object({
   actor: auditLogActorSchema.nullable(),
   action: z.string(),
   resourceType: z.string(),
-  resourceId: z.string().uuid().nullable(),
+  resourceId: z.string().nullable(),
   occurredAt: z.string(),
   beforeData: z.record(z.string(), z.unknown()).nullable(),
   afterData: z.record(z.string(), z.unknown()).nullable(),
@@ -52,6 +52,14 @@ export type PaginatedAuditLogs = z.infer<typeof paginatedAuditLogsSchema>;
 export const listAuditLogsQuerySchema = z.object({
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(100).optional(),
+  actor: z.string().trim().max(100).optional(),
+  actorType: z.enum(auditActorTypes).optional(),
+  action: z.string().trim().max(100).optional(),
+  resourceType: z.string().trim().max(100).optional(),
+  correlationId: z.string().trim().max(100).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   sortBy: z
     .enum(["occurredAt", "action", "resourceType", "actorType", "sourceIp", "createdAt"])
     .default("occurredAt"),

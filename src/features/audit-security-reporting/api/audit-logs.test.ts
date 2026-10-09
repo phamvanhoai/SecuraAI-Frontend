@@ -57,4 +57,41 @@ describe("audit logs API client", () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.action).toBe("UPDATE_USER_ROLE");
   });
+
+  it("listAuditLogs serializes search, actor, action, resource, correlationId and date range", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [sampleAuditItem],
+      pagination: { page: 1, limit: 10, totalItems: 1, totalPages: 1 },
+    });
+
+    await listAuditLogs({
+      page: 2,
+      limit: 10,
+      search: "role update",
+      actor: "admin",
+      actorType: "USER",
+      action: "UPDATE_USER_ROLE",
+      resourceType: "users",
+      correlationId: "corr-12345",
+      startDate: "2026-10-01T00:00:00.000Z",
+      endDate: "2026-10-08T23:59:59.000Z",
+    });
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("search=role+update"),
+      { target: "same-origin" },
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("actor=admin"),
+      { target: "same-origin" },
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("actorType=USER"),
+      { target: "same-origin" },
+    );
+    expect(apiRequest).toHaveBeenCalledWith(
+      expect.stringContaining("correlationId=corr-12345"),
+      { target: "same-origin" },
+    );
+  });
 });

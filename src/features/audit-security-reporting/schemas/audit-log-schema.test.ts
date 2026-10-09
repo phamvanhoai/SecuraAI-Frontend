@@ -71,4 +71,25 @@ describe("listAuditLogsQuerySchema", () => {
     expect(result.sortBy).toBe("occurredAt");
     expect(result.sortOrder).toBe("desc");
   });
+
+  it("parses search and filter criteria", () => {
+    const result = listAuditLogsQuerySchema.parse({
+      page: 2,
+      limit: 50,
+      search: "incident review",
+      actor: "sec-officer",
+      actorType: "USER",
+      action: "CONFIRM_INCIDENT",
+      resourceType: "incidents",
+      correlationId: "corr-789",
+      startDate: "2026-10-01T00:00:00.000Z",
+      endDate: "2026-10-09T00:00:00.000Z",
+    });
+    expect(result.search).toBe("incident review");
+    expect(result.actor).toBe("sec-officer");
+    expect(result.actorType).toBe("USER");
+    expect(result.action).toBe("CONFIRM_INCIDENT");
+    expect(result.resourceType).toBe("incidents");
+    expect(result.correlationId).toBe("corr-789");
+  });
 });
