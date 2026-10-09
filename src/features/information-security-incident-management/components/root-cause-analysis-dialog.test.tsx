@@ -149,12 +149,7 @@ it("hydrates saved findings and uses the saved concurrency token", async () => {
     isError: false,
   });
   const user = userEvent.setup();
-  render(
-    <RootCauseAnalysisDialog
-      incident={{ ...incident, status: "closed" }}
-      onClose={vi.fn()}
-    />,
-  );
+  render(<RootCauseAnalysisDialog incident={incident} onClose={vi.fn()} />);
   expect(screen.getByLabelText("Identified root cause")).toHaveValue(
     values.rootCause,
   );
@@ -212,4 +207,75 @@ it("does not discard unsaved findings when dismissal is cancelled", async () => 
   expect(close).not.toHaveBeenCalled();
   expect(confirm).toHaveBeenCalled();
   confirm.mockRestore();
+});
+it.each([false, true])(
+  "keeps closed findings read-only even with stale canEdit=%s",
+  async (canEdit) => {
+    mocks.current.mockReturnValue({
+      data: {
+        analysis,
+        canEdit,
+        editRestriction:
+          "This incident is closed. Findings and history are read-only.",
+      },
+      isPending: false,
+      isError: false,
+    });
+    const user = userEvent.setup();
+    render(
+      <RootCauseAnalysisDialog
+        incident={{ ...incident, status: "closed" }}
+        onClose={vi.fn()}
+      />,
+    );
+    const field = screen.getByLabelText("Identified root cause");
+    expect(field).toHaveValue(values.rootCause);
+    expect(field).toHaveAttribute("readonly");
+    expect(field).not.toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Save findings" }),
+    ).not.toBeInTheDocument();
+    await user.type(field, "Changed cause");
+    expect(field).toHaveValue(values.rootCause);
+    await user.click(screen.getByRole("tab", { name: "History" }));
+    expect(screen.getByRole("tab", { name: "History" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(mocks.mutateAsync).not.toHaveBeenCalled();
+  },
+);
+it("replaces an unsaved draft with saved findings if the incident closes while open", async () => {
+  mocks.current.mockReturnValue({
+    data: { analysis, canEdit: true, editRestriction: null },
+    isPending: false,
+    isError: false,
+  });
+  const user = userEvent.setup();
+  const { rerender } = render(
+    <RootCauseAnalysisDialog incident={incident} onClose={vi.fn()} />,
+  );
+  await user.clear(screen.getByLabelText("Identified root cause"));
+  await user.type(
+    screen.getByLabelText("Identified root cause"),
+    "Unsaved amendment",
+  );
+  mocks.current.mockReturnValue({
+    data: { analysis, canEdit: false, editRestriction: "Incident closed." },
+    isPending: false,
+    isError: false,
+  });
+  rerender(
+    <RootCauseAnalysisDialog
+      incident={{ ...incident, status: "closed" }}
+      onClose={vi.fn()}
+    />,
+  );
+  expect(screen.getByLabelText("Identified root cause")).toHaveValue(
+    values.rootCause,
+  );
+  expect(screen.getByLabelText("Identified root cause")).toHaveAttribute(
+    "readonly",
+  );
+  expect(mocks.mutateAsync).not.toHaveBeenCalled();
 });
