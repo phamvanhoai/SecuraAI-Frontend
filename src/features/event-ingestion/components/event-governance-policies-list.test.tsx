@@ -8,6 +8,7 @@ vi.mock("../hooks/use-event-governance", () => ({
   useEventGovernancePolicies: (params: unknown) => mockUsePolicies(params),
   useEventGovernanceSummary: () => mockUseSummary(),
   useEventGovernancePolicyDetail: () => ({ data: null, isPending: false, isError: false, error: null }),
+  useUpdateEventGovernancePolicy: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({

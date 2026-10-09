@@ -126,6 +126,7 @@ export {
 } from "./hooks/use-normalized-events";
 export { EventGovernancePoliciesList } from "./components/event-governance-policies-list";
 export { EventGovernancePolicyDetailDialog } from "./components/event-governance-policy-detail-dialog";
+export { EditEventGovernancePolicyDialog } from "./components/edit-event-governance-policy-dialog";
 export {
   governancePolicyStatuses,
   governanceEventFamilies,
@@ -134,6 +135,7 @@ export {
   paginatedEventGovernancePoliciesSchema,
   eventGovernanceLifecycleSummarySchema,
   listEventGovernancePoliciesParamsSchema,
+  updateEventGovernancePolicySchema,
   type GovernancePolicyStatus,
   type GovernanceEventFamily,
   type UserSummary,
@@ -141,16 +143,19 @@ export {
   type PaginatedEventGovernancePolicies,
   type EventGovernanceLifecycleSummary,
   type ListEventGovernancePoliciesParams,
+  type UpdateEventGovernancePolicyForm,
 } from "./schemas/event-governance-schema";
 export {
   listEventGovernancePolicies,
   getEventGovernancePolicy,
+  updateEventGovernancePolicy,
   getEventGovernanceLifecycleSummary,
 } from "./api/event-governance";
 export {
   useEventGovernancePolicies,
   useEventGovernancePolicyDetail,
   useEventGovernanceSummary,
+  useUpdateEventGovernancePolicy,
 } from "./hooks/use-event-governance";
 
 

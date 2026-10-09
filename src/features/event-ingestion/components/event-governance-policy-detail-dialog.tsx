@@ -10,6 +10,7 @@ import {
   FileCheck,
   Globe,
   Lock,
+  Pencil,
   Shield,
   Trash2,
   User,
@@ -24,11 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEventGovernancePolicyDetail } from "../hooks/use-event-governance";
+import type { EventGovernancePolicy } from "../schemas/event-governance-schema";
 
 interface EventGovernancePolicyDetailDialogProps {
   policyId: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onEditClick?: (policy: EventGovernancePolicy) => void;
 }
 
 const familyLabels: Record<string, string> = {
@@ -47,6 +50,7 @@ export function EventGovernancePolicyDetailDialog({
   policyId,
   isOpen,
   onClose,
+  onEditClick,
 }: EventGovernancePolicyDetailDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toast = useToast();
@@ -276,8 +280,7 @@ export function EventGovernancePolicyDetailDialog({
                     Effective retention period
                   </span>
                   <p className="text-foreground text-sm font-medium">
-                    {policy.retentionDays} days (~
-                    {(policy.retentionDays / 30).toFixed(1)} months)
+                    {policy.retentionDays} days
                   </p>
                 </div>
 
@@ -393,9 +396,22 @@ export function EventGovernancePolicyDetailDialog({
             <span>{copied ? "Copied" : "Copy JSON"}</span>
           </Button>
 
-          <Button variant="secondary" onClick={onClose} className="text-xs">
-            Close
-          </Button>
+          <div className="flex items-center gap-2">
+            {policy && onEditClick ? (
+              <Button
+                variant="primary"
+                onClick={() => onEditClick(policy)}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span>Edit</span>
+              </Button>
+            ) : null}
+
+            <Button variant="secondary" onClick={onClose} className="text-xs">
+              Close
+            </Button>
+          </div>
         </div>
       </div>
     </Dialog>

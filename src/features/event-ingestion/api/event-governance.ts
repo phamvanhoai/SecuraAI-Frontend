@@ -7,6 +7,7 @@ import {
   type EventGovernancePolicy,
   type ListEventGovernancePoliciesParams,
   type PaginatedEventGovernancePolicies,
+  type UpdateEventGovernancePolicyForm,
 } from "../schemas/event-governance-schema";
 
 export async function listEventGovernancePolicies(
@@ -38,6 +39,22 @@ export async function getEventGovernancePolicy(id: string): Promise<EventGoverna
     {
       target: "same-origin",
       method: "GET",
+    },
+  );
+
+  return eventGovernancePolicySchema.parse(data);
+}
+
+export async function updateEventGovernancePolicy(
+  id: string,
+  payload: UpdateEventGovernancePolicyForm,
+): Promise<EventGovernancePolicy> {
+  const data = await apiRequest<unknown>(
+    `/api/event-governance/policies/${encodeURIComponent(id)}`,
+    {
+      target: "same-origin",
+      method: "PATCH",
+      body: payload,
     },
   );
 
