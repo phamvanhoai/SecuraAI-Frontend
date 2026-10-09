@@ -2,7 +2,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Ellipsis,
-  Activity,
   Download,
   Paperclip,
   Eye,
@@ -19,7 +18,6 @@ import {
   Sparkles,
   HeartPulse,
   BookOpenCheck,
-  CheckCircle2,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -41,6 +39,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { canRecordIncidentAction } from "../schemas/incident-workflow";
+import { IncidentPhaseHistory } from "./incident-phase-history";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
@@ -102,18 +103,21 @@ const classificationDefaults: ClassifyIncidentForm = {
 };
 const assignmentDefaults: AssignIncidentForm = { assigneeUserId: "", note: "" };
 const progressDefaults: UpdateIncidentProgressForm = {
-  status: "in_progress",
+  status: "triage",
   note: "",
+  confirmed: false,
+  skipReason: "",
 };
 const removalDefaults: RemoveIncidentEvidenceForm = { reason: "" };
 const progressOptions: Record<
   string,
   readonly UpdateIncidentProgressForm["status"][]
 > = {
-  assigned: ["in_progress", "escalated"],
-  in_progress: ["escalated", "resolved"],
-  escalated: ["in_progress", "resolved"],
-  resolved: ["closed"],
+  open: ["triage", "containment", "eradication", "recovery"],
+  triage: ["containment", "eradication", "recovery"],
+  containment: ["eradication", "recovery"],
+  eradication: ["recovery"],
+  recovery: ["lessons_learned"],
 };
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("vi-VN", {
@@ -173,8 +177,6 @@ export function IncidentReportingManager() {
   const canRead = isSecurityOfficer;
   const canClassify = isSecurityOfficer;
   const canAssign = isSecurityOfficer;
-  const canUpdateProgress = isSecurityOfficer;
-  const canManageEvidence = isSecurityOfficer;
   const canLinkAssets = isSecurityOfficer;
   const canLinkControls = isSecurityOfficer;
   const canLinkRisks = isSecurityOfficer;
@@ -357,7 +359,9 @@ export function IncidentReportingManager() {
     }
   };
   const openClassification = (incident: Incident) => {
-    setClassificationTab("classification");
+    setClassificationTab(
+      incident.status === "closed" ? "history" : "classification",
+    );
     classificationForm.reset({
       severity: incident.severity as IncidentSeverity,
       rationale: "",
@@ -420,13 +424,6 @@ export function IncidentReportingManager() {
       // The persistent API error is rendered inside the dialog.
     }
   };
-  const openProgress = (incident: Incident) => {
-    const nextStatus = progressOptions[incident.status]?.[0];
-    if (!nextStatus) return;
-    progressForm.reset({ status: nextStatus, note: "" });
-    progressMutation.reset();
-    setProgressTarget(incident);
-  };
   const closeProgress = () => {
     setProgressTarget(undefined);
     progressForm.reset(progressDefaults);
@@ -434,10 +431,28 @@ export function IncidentReportingManager() {
   };
   const submitProgress = async (values: UpdateIncidentProgressForm) => {
     if (!progressTarget) return;
+    const options = progressOptions[progressTarget.status];
+    if (
+      values.status !== options?.[0] &&
+      (values.skipReason?.trim().length ?? 0) < 10
+    ) {
+      progressForm.setError("skipReason", {
+        message: "Explain why phases must be skipped (at least 10 characters).",
+      });
+      return;
+    }
+    if (values.skipReason?.trim() && values.skipReason.trim().length < 10) {
+      progressForm.setError("skipReason", {
+        message: "Use at least 10 characters for an emergency exception.",
+      });
+      return;
+    }
     try {
       const updated = await progressMutation.mutateAsync({
         id: progressTarget.id,
         values,
+        expectedStatus: progressTarget.status,
+        expectedUpdatedAt: progressTarget.updatedAt,
       });
       closeProgress();
       toast.success(
@@ -447,14 +462,6 @@ export function IncidentReportingManager() {
     } catch {
       // Persistent error is rendered in the dialog.
     }
-  };
-  const openEvidence = (incident: Incident) => {
-    setEvidencePage(1);
-    setEvidenceTarget(incident);
-    setEvidenceFile(undefined);
-    setEvidenceDescription("");
-    setEvidenceError(undefined);
-    evidenceMutation.reset();
   };
   const closeEvidence = () => {
     setRemovalTarget(undefined);
@@ -622,9 +629,31 @@ export function IncidentReportingManager() {
               <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
               View details
             </button>
+            {isSecurityOfficer ? (
+              <button
+                type="button"
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2"
+                onClick={() => {
+                  progressMutation.reset();
+                  progressForm.reset({
+                    ...progressDefaults,
+                    status: progressOptions[item.status]?.[0] ?? "triage",
+                  });
+                  setProgressTarget(item);
+                }}
+              >
+                <GitBranch
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {progressOptions[item.status]?.length
+                  ? "Update handling phase"
+                  : "View phase history"}
+              </button>
+            ) : null}
             <button
               className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={item.status === "closed"}
               onClick={() => openClassification(item)}
               type="button"
             >
@@ -633,9 +662,11 @@ export function IncidentReportingManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              {item.classificationCount > 0
-                ? "Reclassify severity"
-                : "Classify severity"}
+              {item.status === "closed"
+                ? "View severity history"
+                : item.classificationCount > 0
+                  ? "Reclassify severity"
+                  : "Classify severity"}
             </button>
             {canAssign ? (
               <button
@@ -655,36 +686,6 @@ export function IncidentReportingManager() {
                     : "Assign handler"}
               </button>
             ) : null}
-            {canUpdateProgress &&
-            item.status !== "resolved" &&
-            progressOptions[item.status]?.length ? (
-              <button
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                onClick={() => openProgress(item)}
-                type="button"
-              >
-                <Activity
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Update progress
-              </button>
-            ) : null}
-            {isSecurityOfficer && item.status === "resolved" ? (
-              <button
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                onClick={() => setCloseIncidentTarget(item)}
-                type="button"
-              >
-                <CheckCircle2
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Close incident
-              </button>
-            ) : null}
             {isSecurityOfficer ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
@@ -696,14 +697,14 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.status === "closed"
+                {!canRecordIncidentAction(item.status, "eradication")
                   ? "View eradication history"
                   : "Record eradication action"}
               </button>
             ) : null}
             {isSecurityOfficer &&
-            item.classified &&
-            !["reported", "assigned"].includes(item.status) ? (
+            (["lessons_learned", "closed"].includes(item.status) ||
+              item.hasAnalysis) ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRootCauseTarget(item)}
@@ -714,7 +715,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Root cause & lessons learned
+                {["lessons_learned", "closed"].includes(item.status)
+                  ? "Root cause & lessons learned"
+                  : "View root cause & lessons learned"}
               </button>
             ) : null}
             {isSecurityOfficer ? (
@@ -728,7 +731,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.status === "closed"
+                {!canRecordIncidentAction(item.status, "recovery")
                   ? "View recovery history"
                   : "Record recovery action"}
               </button>
@@ -744,7 +747,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.status === "closed"
+                {!canRecordIncidentAction(item.status, "containment")
                   ? "View containment history"
                   : "Record containment action"}
               </button>
@@ -823,20 +826,6 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Request risk reassessment
-              </button>
-            ) : null}
-            {canManageEvidence ? (
-              <button
-                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
-                onClick={() => openEvidence(item)}
-                type="button"
-              >
-                <Paperclip
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Evidence and logs
               </button>
             ) : null}
           </DropdownMenu>
@@ -1751,9 +1740,12 @@ export function IncidentReportingManager() {
       </Dialog>
       <Dialog
         dialogRef={progressDialogRef}
-        title="Update incident handling progress"
+        title="Incident handling phase"
         className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
         onClose={closeProgress}
+        onCancel={(event) => {
+          if (progressMutation.isPending) event.preventDefault();
+        }}
       >
         {progressTarget ? (
           <form
@@ -1772,59 +1764,150 @@ export function IncidentReportingManager() {
                 Current status: {incidentStatus(progressTarget.status).label}
               </p>
             </div>
+            <IncidentPhaseHistory
+              key={progressTarget.id}
+              incidentId={progressTarget.id}
+            />
             {progressMutation.isError ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
+              <Alert
+                role="alert"
+                className="border-danger/25 bg-danger-soft text-danger"
+              >
                 {progressMutation.error instanceof Error
                   ? progressMutation.error.message
                   : "Unable to update incident progress."}
               </Alert>
             ) : null}
-            <FormField
-              id="incident-progress-status"
-              label="Next status"
-              error={progressForm.formState.errors.status?.message}
-            >
-              <Select
-                id="incident-progress-status"
-                autoFocus
-                {...progressForm.register("status")}
-              >
-                {progressOptions[progressTarget.status]?.map((status) => (
-                  <option key={status} value={status}>
-                    {incidentStatus(status).label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField
-              id="incident-progress-note"
-              label="Progress note"
-              error={progressForm.formState.errors.note?.message}
-            >
-              <Textarea
-                id="incident-progress-note"
-                className="min-h-32"
-                maxLength={5000}
-                placeholder="Describe actions completed, findings, impact changes, blockers and the next response step."
-                {...progressForm.register("note")}
-              />
-              <p className="text-muted text-xs">
-                This note and status transition are retained in incident history
-                and the audit log.
-              </p>
-            </FormField>
-            <Alert>
-              Workflow transitions are controlled. Closed incidents cannot be
-              reopened from this function.
-            </Alert>
-            <div className="flex justify-end gap-2">
+            {progressOptions[progressTarget.status]?.length ? (
+              <>
+                <FormField
+                  id="incident-progress-status"
+                  label="Next handling phase"
+                  error={progressForm.formState.errors.status?.message}
+                >
+                  <Select
+                    id="incident-progress-status"
+                    autoFocus
+                    disabled={progressMutation.isPending}
+                    aria-invalid={Boolean(progressForm.formState.errors.status)}
+                    aria-describedby={
+                      progressForm.formState.errors.status
+                        ? "incident-progress-status-error"
+                        : undefined
+                    }
+                    {...progressForm.register("status")}
+                  >
+                    {progressOptions[progressTarget.status]?.map((status) => (
+                      <option key={status} value={status}>
+                        {incidentStatus(status).label}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+                <FormField
+                  id="incident-progress-note"
+                  label="Transition assessment and results"
+                  error={progressForm.formState.errors.note?.message}
+                >
+                  <Textarea
+                    id="incident-progress-note"
+                    className="min-h-32"
+                    maxLength={2000}
+                    disabled={progressMutation.isPending}
+                    aria-invalid={Boolean(progressForm.formState.errors.note)}
+                    aria-describedby={
+                      progressForm.formState.errors.note
+                        ? "incident-progress-note-error"
+                        : undefined
+                    }
+                    placeholder="Explain why the incident is ready for the next phase, including results, remaining work and any validation performed."
+                    {...progressForm.register("note")}
+                  />
+                  <p className="text-muted text-xs">
+                    Your assessment and the phase transition are retained in
+                    incident history. The system does not infer completion from
+                    the number of recorded actions.
+                  </p>
+                </FormField>
+                <FormField
+                  id="incident-skip-reason"
+                  label="Emergency skip reason (optional)"
+                  error={progressForm.formState.errors.skipReason?.message}
+                >
+                  <Textarea
+                    id="incident-skip-reason"
+                    maxLength={2000}
+                    rows={2}
+                    disabled={progressMutation.isPending}
+                    aria-invalid={Boolean(
+                      progressForm.formState.errors.skipReason,
+                    )}
+                    aria-describedby={
+                      progressForm.formState.errors.skipReason
+                        ? "incident-skip-reason-error"
+                        : undefined
+                    }
+                    {...progressForm.register("skipReason")}
+                  />
+                  <p className="text-muted text-xs">
+                    Required when skipping phases or deferring completion of the
+                    current phase. Skipped work is not marked complete. Recovery
+                    verification cannot be skipped.
+                  </p>
+                </FormField>
+                <FormField
+                  id="incident-phase-confirm"
+                  label="Confirm transition"
+                  error={progressForm.formState.errors.confirmed?.message}
+                >
+                  <label className="flex items-start gap-3 text-sm">
+                    <Checkbox
+                      id="incident-phase-confirm"
+                      disabled={progressMutation.isPending}
+                      aria-invalid={Boolean(
+                        progressForm.formState.errors.confirmed,
+                      )}
+                      aria-describedby={
+                        progressForm.formState.errors.confirmed
+                          ? "incident-phase-confirm-error"
+                          : undefined
+                      }
+                      {...progressForm.register("confirmed")}
+                    />
+                    <span>
+                      I have assessed that the incident is ready for the
+                      selected phase, with results or an emergency exception
+                      documented above. When leaving Recovery, I confirm
+                      affected systems/services are restored and validation
+                      results are documented above.
+                    </span>
+                  </label>
+                </FormField>
+                <Alert>
+                  Saving response actions does not change the handling phase.
+                  Classification and handler assignment do not change it either.
+                  This is a manual, audited assessment, not automated
+                  verification of response tasks. This function never closes an
+                  incident.
+                </Alert>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={closeProgress}
+                    disabled={progressMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={progressMutation.isPending}>
+                    {progressMutation.isPending ? "Saving…" : "Save progress"}
+                  </Button>
+                </div>
+              </>
+            ) : (
               <Button variant="secondary" onClick={closeProgress}>
-                Cancel
+                Close
               </Button>
-              <Button type="submit" disabled={progressMutation.isPending}>
-                {progressMutation.isPending ? "Saving…" : "Save progress"}
-              </Button>
-            </div>
+            )}
           </form>
         ) : null}
       </Dialog>

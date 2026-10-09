@@ -78,6 +78,7 @@ const incident: Incident = {
   createdAt: timestamp,
   updatedAt: timestamp,
   classified: true,
+  hasAnalysis: false,
   classificationCount: 1,
   lastClassification: null,
   currentAssignment: null,

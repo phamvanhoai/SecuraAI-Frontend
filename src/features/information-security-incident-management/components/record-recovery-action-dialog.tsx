@@ -13,6 +13,7 @@ import { Pagination } from "@/components/data-display/pagination";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import type { Incident } from "../schemas/report-incident-schema";
+import { canRecordIncidentAction } from "../schemas/incident-workflow";
 import {
   recoveryFormSchema,
   type RecoveryForm,
@@ -34,7 +35,10 @@ export function RecordRecoveryActionDialog({
   const [page, setPage] = useState(1);
   const form = useForm<RecoveryForm>({
     resolver: zodResolver(recoveryFormSchema),
-    defaultValues: { description: "", performedAt: "" },
+    defaultValues: {
+      description: "",
+      performedAt: "",
+    },
   });
   const mutation = useRecordRecoveryAction();
   const history = useRecoveryHistory(incident?.id, page);
@@ -48,13 +52,18 @@ export function RecordRecoveryActionDialog({
       resetForm({ description: "", performedAt: "" });
       resetMutation();
       setPage(1);
-      setTab(incident.status === "closed" ? "history" : "record");
+      setTab(
+        canRecordIncidentAction(incident.status, "recovery")
+          ? "record"
+          : "history",
+      );
       dialog.showModal();
     }
     if (!incident && dialog.open) dialog.close();
   }, [incident, resetForm, resetMutation]);
   const submit = async (values: RecoveryForm) => {
-    if (!incident) return;
+    if (!incident || !canRecordIncidentAction(incident.status, "recovery"))
+      return;
     try {
       await mutation.mutateAsync({ id: incident.id, values });
       form.reset();
@@ -62,7 +71,7 @@ export function RecordRecoveryActionDialog({
       setTab("history");
       toast.success(
         "Recovery action recorded",
-        "The action is saved in incident response history.",
+        "The action is saved in incident response history. The handling phase is unchanged.",
       );
     } catch {
       /* The persistent error below keeps the entered values available. */
@@ -80,6 +89,13 @@ export function RecordRecoveryActionDialog({
     >
       {incident ? (
         <div className="space-y-5">
+          {!canRecordIncidentAction(incident.status, "recovery") &&
+          incident.status !== "closed" ? (
+            <Alert>
+              Recovery has not started. Use Actions → Update handling phase
+              before recording recovery actions.
+            </Alert>
+          ) : null}
           <div className="border-border bg-neutral-soft rounded-lg border p-4">
             <p className="text-muted text-xs font-medium">
               {incident.incidentCode}
@@ -102,7 +118,10 @@ export function RecordRecoveryActionDialog({
                 aria-selected={tab === view}
                 aria-controls={`recovery-${view}-panel`}
                 tabIndex={tab === view ? 0 : -1}
-                disabled={view === "record" && incident.status === "closed"}
+                disabled={
+                  view === "record" &&
+                  !canRecordIncidentAction(incident.status, "recovery")
+                }
                 className={cn(
                   "focus-visible:outline-brand inline-flex min-h-11 flex-none items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10",
                   tab === view
@@ -112,7 +131,7 @@ export function RecordRecoveryActionDialog({
                 onClick={() => setTab(view)}
                 onKeyDown={(event) => {
                   if (
-                    incident.status === "closed" ||
+                    !canRecordIncidentAction(incident.status, "recovery") ||
                     !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
                       event.key,
                     )
@@ -196,8 +215,9 @@ export function RecordRecoveryActionDialog({
               </p>
             </FormField>
             <Alert>
-              Record actions already performed. This does not automatically
-              change the response phase or close the incident.
+              Recording an action does not change the handling phase. Use
+              Actions → Update handling phase to confirm verified recovery and
+              start Lessons learned.
             </Alert>
             <div className="flex justify-end gap-2">
               <Button

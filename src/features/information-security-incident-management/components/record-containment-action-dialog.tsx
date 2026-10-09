@@ -13,6 +13,7 @@ import { Pagination } from "@/components/data-display/pagination";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import type { Incident } from "../schemas/report-incident-schema";
+import { canRecordIncidentAction } from "../schemas/incident-workflow";
 import {
   containmentFormSchema,
   type ContainmentForm,
@@ -48,13 +49,18 @@ export function RecordContainmentActionDialog({
       resetForm({ description: "", performedAt: "" });
       resetMutation();
       setPage(1);
-      setTab(incident.status === "closed" ? "history" : "record");
+      setTab(
+        canRecordIncidentAction(incident.status, "containment")
+          ? "record"
+          : "history",
+      );
       dialog.showModal();
     }
     if (!incident && dialog.open) dialog.close();
   }, [incident, resetForm, resetMutation]);
   const submit = async (values: ContainmentForm) => {
-    if (!incident) return;
+    if (!incident || !canRecordIncidentAction(incident.status, "containment"))
+      return;
     try {
       await mutation.mutateAsync({ id: incident.id, values });
       form.reset();
@@ -80,6 +86,13 @@ export function RecordContainmentActionDialog({
     >
       {incident ? (
         <div className="space-y-5">
+          {!canRecordIncidentAction(incident.status, "containment") &&
+          incident.status !== "closed" ? (
+            <Alert>
+              Containment has not started. Use Actions → Update handling phase
+              before recording containment actions.
+            </Alert>
+          ) : null}
           <div className="border-border bg-neutral-soft rounded-lg border p-4">
             <p className="text-muted text-xs font-medium">
               {incident.incidentCode}
@@ -102,7 +115,10 @@ export function RecordContainmentActionDialog({
                 aria-selected={tab === view}
                 aria-controls={`containment-${view}-panel`}
                 tabIndex={tab === view ? 0 : -1}
-                disabled={view === "record" && incident.status === "closed"}
+                disabled={
+                  view === "record" &&
+                  !canRecordIncidentAction(incident.status, "containment")
+                }
                 className={cn(
                   "focus-visible:outline-brand inline-flex min-h-11 flex-none items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10",
                   tab === view
@@ -112,7 +128,7 @@ export function RecordContainmentActionDialog({
                 onClick={() => setTab(view)}
                 onKeyDown={(event) => {
                   if (
-                    incident.status === "closed" ||
+                    !canRecordIncidentAction(incident.status, "containment") ||
                     !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
                       event.key,
                     )
@@ -200,8 +216,8 @@ export function RecordContainmentActionDialog({
               </p>
             </FormField>
             <Alert>
-              Record actions already performed. This does not automatically
-              change the response phase or close the incident.
+              Saving an action does not change the handling phase. Use Actions →
+              Update handling phase after completing this phase.
             </Alert>
             <div className="flex justify-end gap-2">
               <Button

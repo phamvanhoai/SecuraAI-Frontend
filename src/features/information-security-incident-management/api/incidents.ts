@@ -449,6 +449,8 @@ export async function assignIncidentHandler(input: {
 export async function updateIncidentHandlingProgress(input: {
   id: string;
   values: UpdateIncidentProgressForm;
+  expectedStatus: string;
+  expectedUpdatedAt: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -456,7 +458,16 @@ export async function updateIncidentHandlingProgress(input: {
       {
         target: "same-origin",
         method: "PATCH",
-        body: { status: input.values.status, note: input.values.note.trim() },
+        body: {
+          status: input.values.status,
+          note: input.values.note.trim(),
+          confirmed: input.values.confirmed,
+          expectedStatus: input.expectedStatus,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+          ...(input.values.skipReason?.trim()
+            ? { skipReason: input.values.skipReason.trim() }
+            : {}),
+        },
       },
     ),
   );

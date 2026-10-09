@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { RecordContainmentActionDialog } from "./record-containment-action-dialog";
@@ -30,7 +36,7 @@ const incident = incidentSchema.parse({
   description: null,
   category: null,
   severity: "medium",
-  status: "open",
+  status: "containment",
   occurredAt: null,
   detectedAt: null,
   confirmedAt: null,
@@ -78,9 +84,7 @@ it("preserves inputs between tabs and opens history after save", async () => {
   expect(dialog.getByLabelText("Containment action")).toHaveValue(
     "Isolated affected host from the corporate network.",
   );
-  await user.click(
-    dialog.getByRole("button", { name: "Record action" }),
-  );
+  await user.click(dialog.getByRole("button", { name: "Record action" }));
   await waitFor(() =>
     expect(mocks.mutateAsync).toHaveBeenCalledWith({
       id,

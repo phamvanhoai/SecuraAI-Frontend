@@ -117,7 +117,13 @@ describe("incidentDetailSchema", () => {
       lastClassification: null,
       currentAssignment: null,
       createdBy: null,
-      relatedCounts: { actions: 1, assets: 1, controls: 0, evidence: 0, risks: 0 },
+      relatedCounts: {
+        actions: 1,
+        assets: 1,
+        controls: 0,
+        evidence: 0,
+        risks: 0,
+      },
       affectedAssets: [
         {
           id: "33333333-3333-4333-8333-333333333333",
@@ -190,7 +196,8 @@ describe("updateIncidentProgressFormSchema", () => {
   it("requires a supported next status and meaningful progress note", () => {
     expect(
       updateIncidentProgressFormSchema.safeParse({
-        status: "resolved",
+        status: "eradication",
+        confirmed: true,
         note: "Containment is complete and validation found no remaining exposure.",
       }).success,
     ).toBe(true);

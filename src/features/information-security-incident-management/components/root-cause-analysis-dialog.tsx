@@ -1,76 +1,395 @@
 "use client";
-
-import { BookOpenCheck, Info } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { StatusBadge } from "@/components/data-display/static-product";
-import { useToast } from "@/components/feedback/toast";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormField } from "@/components/forms/form-field";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/data-display/pagination";
+import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import type { Incident } from "../schemas/report-incident-schema";
+import {
+  analysisFormSchema,
+  type AnalysisForm,
+} from "../schemas/incident-analysis-schema";
+import {
+  useIncidentAnalysis,
+  useAnalysisHistory,
+  useSaveIncidentAnalysis,
+} from "../hooks/use-incident-analysis";
 
-type View = "analysis" | "history";
-const previewHistory = [
-  { id: "RCA-2026-0008", version: "Version 2", cause: "Privileged service account remained exempt from MFA enforcement.", analyst: "securityofficer@gmail.com", completedAt: "2026-10-06T14:10:00Z", status: "Final" },
-  { id: "RCA-2026-0007", version: "Version 1", cause: "Initial evidence indicated an authentication control gap.", analyst: "securityofficer@gmail.com", completedAt: "2026-10-06T11:30:00Z", status: "Superseded" },
+const empty: AnalysisForm = {
+  rootCause: "",
+  lessonsLearned: "",
+  improvementActions: "",
+};
+const fields = [
+  {
+    key: "rootCause",
+    label: "Identified root cause",
+    help: "Explain the verified underlying cause, contributing factors, and supporting investigation references.",
+  },
+  {
+    key: "lessonsLearned",
+    label: "Lessons learned",
+    help: "Describe what worked, what failed, and what should change in future responses.",
+  },
+  {
+    key: "improvementActions",
+    label: "Recommended improvements",
+    help: "Document preventive controls or process improvements, responsible teams, and suggested target dates.",
+  },
 ] as const;
 
-export function RootCauseAnalysisDialog({ incident, onClose }: { incident: Incident | undefined; onClose: () => void }) {
+export function RootCauseAnalysisDialog({
+  incident,
+  onClose,
+}: {
+  incident: Incident | undefined;
+  onClose: () => void;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<View>("analysis");
+  const hydratedId = useRef<string | undefined>(undefined);
+  const [tab, setTab] = useState<"findings" | "history">("findings");
+  const [page, setPage] = useState(1);
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = useState<string | null>(
+    null,
+  );
+  const form = useForm<AnalysisForm>({
+    resolver: zodResolver(analysisFormSchema),
+    defaultValues: empty,
+  });
+  const current = useIncidentAnalysis(incident?.id);
+  const history = useAnalysisHistory(incident?.id, page);
+  const mutation = useSaveIncidentAnalysis();
   const toast = useToast();
+  const reset = form.reset;
+  const isDirty = form.formState.isDirty;
+  const resetMutation = mutation.reset;
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (incident && !dialog.open) { setView("analysis"); dialog.showModal(); }
-    if (!incident && dialog.open) dialog.close();
-  }, [incident]);
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    toast.info("Root cause analysis validated", "UI preview only. Findings were not saved to the incident backend.");
-    setView("history");
+    if (incident && !dialog.open) {
+      hydratedId.current = undefined;
+      reset(empty);
+      resetMutation();
+      setPage(1);
+      setTab("findings");
+      setExpectedUpdatedAt(null);
+      dialog.showModal();
+    }
+    if (!incident && dialog.open) {
+      hydratedId.current = undefined;
+      dialog.close();
+    }
+  }, [incident, reset, resetMutation]);
+  useEffect(() => {
+    if (!incident || !current.data || hydratedId.current === incident.id)
+      return;
+    const analysis = current.data.analysis;
+    reset({
+      rootCause: analysis?.rootCause ?? "",
+      lessonsLearned: analysis?.lessonsLearned ?? "",
+      improvementActions: analysis?.improvementActions ?? "",
+    });
+    setExpectedUpdatedAt(analysis?.updatedAt ?? null);
+    hydratedId.current = incident.id;
+  }, [incident, current.data, reset]);
+  const close = () => {
+    if (mutation.isPending) return;
+    if (isDirty && !window.confirm("Discard unsaved findings?")) return;
+    onClose();
+  };
+  const reload = async () => {
+    if (
+      isDirty &&
+      !window.confirm(
+        "Replace your unsaved findings with the latest saved findings?",
+      )
+    )
+      return;
+    const result = await current.refetch();
+    if (!result.data || result.isError) return;
+    const analysis = result.data.analysis;
+    reset({
+      rootCause: analysis?.rootCause ?? "",
+      lessonsLearned: analysis?.lessonsLearned ?? "",
+      improvementActions: analysis?.improvementActions ?? "",
+    });
+    setExpectedUpdatedAt(analysis?.updatedAt ?? null);
+    resetMutation();
+  };
+  const submit = async (values: AnalysisForm) => {
+    if (!incident || !current.data?.canEdit) return;
+    try {
+      const analysis = await mutation.mutateAsync({
+        id: incident.id,
+        values,
+        expectedUpdatedAt,
+      });
+      reset(values);
+      setExpectedUpdatedAt(analysis.updatedAt);
+      setPage(1);
+      setTab("history");
+      toast.success(
+        "Findings saved",
+        "Root cause, lessons learned and recommendations are recorded.",
+      );
+    } catch {
+      /* Keep entered findings and show the persistent error. */
+    }
   };
   return (
-    <Dialog className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto" dialogRef={dialogRef} onClose={onClose} title="Root cause analysis & lessons learned">
-      {incident ? <div className="space-y-5">
-        <div className="border-border border-b pb-4"><p className="text-muted font-mono text-xs">{incident.incidentCode}</p><p className="mt-1 font-semibold">{incident.title}</p></div>
-        <div aria-label="Root cause analysis views" className="border-border bg-background inline-flex w-full gap-1 rounded-lg border p-1 sm:w-auto" role="tablist">
-          <Tab active={view === "analysis"} label="Document findings" onClick={() => setView("analysis")} />
-          <Tab active={view === "history"} label="Analysis history" onClick={() => setView("history")} />
+    <Dialog
+      dialogRef={dialogRef}
+      title="Root cause analysis & lessons learned"
+      onClose={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        close();
+      }}
+      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] max-w-none overflow-y-auto"
+    >
+      {incident ? (
+        <div className="space-y-5">
+          <div className="border-border bg-neutral-soft rounded-lg border p-4">
+            <p className="text-muted text-xs font-medium">
+              {incident.incidentCode}
+            </p>
+            <p className="mt-1 font-semibold [overflow-wrap:anywhere]">
+              {incident.title}
+            </p>
+          </div>
+          <div
+            role="tablist"
+            aria-label="Root cause analysis views"
+            className="border-border bg-surface inline-flex w-fit max-w-full items-center gap-1 rounded-xl border p-1"
+          >
+            {(["findings", "history"] as const).map((view) => (
+              <button
+                key={view}
+                type="button"
+                role="tab"
+                id={`rca-${view}-tab`}
+                aria-selected={tab === view}
+                aria-controls={`rca-${view}-panel`}
+                tabIndex={tab === view ? 0 : -1}
+                className={cn(
+                  "focus-visible:outline-brand inline-flex min-h-11 flex-none items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-2 sm:min-h-10",
+                  tab === view
+                    ? "bg-brand text-brand-contrast font-semibold"
+                    : "text-muted hover:bg-neutral-soft",
+                )}
+                onClick={() => setTab(view)}
+                onKeyDown={(event) => {
+                  if (
+                    !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                      event.key,
+                    )
+                  )
+                    return;
+                  event.preventDefault();
+                  const next =
+                    event.key === "Home"
+                      ? "findings"
+                      : event.key === "End"
+                        ? "history"
+                        : view === "findings"
+                          ? "history"
+                          : "findings";
+                  setTab(next);
+                  event.currentTarget.parentElement
+                    ?.querySelector<HTMLButtonElement>(`#rca-${next}-tab`)
+                    ?.focus();
+                }}
+              >
+                {view === "findings" ? "Findings" : "History"}
+              </button>
+            ))}
+          </div>
+          <div
+            role="tabpanel"
+            id="rca-findings-panel"
+            aria-labelledby="rca-findings-tab"
+            hidden={tab !== "findings"}
+            className="space-y-4"
+          >
+            {current.isPending ? (
+              <div role="status" aria-busy="true">
+                <span className="sr-only">Loading findings</span>
+                <Skeleton className="h-48" />
+              </div>
+            ) : current.isError ? (
+              <Alert role="alert">
+                Unable to load findings.{" "}
+                <Button
+                  variant="secondary"
+                  onClick={() => void current.refetch()}
+                >
+                  Try again
+                </Button>
+              </Alert>
+            ) : current.data ? (
+              <form
+                className="space-y-4"
+                noValidate
+                onSubmit={form.handleSubmit(submit)}
+              >
+                {mutation.isError ? (
+                  <Alert role="alert">
+                    {mutation.error.message}{" "}
+                    <Button variant="secondary" onClick={() => void reload()}>
+                      Reload latest findings
+                    </Button>
+                  </Alert>
+                ) : null}
+                {!current.data.canEdit ? (
+                  <Alert>{current.data.editRestriction}</Alert>
+                ) : (
+                  <Alert>
+                    Document verified findings after response is complete.
+                    Saving does not close the incident or complete improvement
+                    work.
+                  </Alert>
+                )}
+                {fields.map((field) => (
+                  <FormField
+                    key={field.key}
+                    id={`rca-${field.key}`}
+                    label={field.label}
+                    error={form.formState.errors[field.key]?.message}
+                  >
+                    <Textarea
+                      id={`rca-${field.key}`}
+                      rows={4}
+                      maxLength={4000}
+                      readOnly={!current.data?.canEdit}
+                      disabled={mutation.isPending}
+                      aria-invalid={Boolean(form.formState.errors[field.key])}
+                      aria-describedby={
+                        form.formState.errors[field.key]
+                          ? `rca-${field.key}-error`
+                          : `rca-${field.key}-help`
+                      }
+                      {...form.register(field.key)}
+                    />
+                    <p
+                      id={`rca-${field.key}-help`}
+                      className="text-muted text-xs"
+                    >
+                      {field.help}
+                    </p>
+                  </FormField>
+                ))}
+                {current.data.analysis ? (
+                  <p className="text-muted text-xs">
+                    Last saved by {current.data.analysis.analyzedBy.name} ·{" "}
+                    <time dateTime={current.data.analysis.analyzedAt}>
+                      {new Date(
+                        current.data.analysis.analyzedAt,
+                      ).toLocaleString()}
+                    </time>
+                  </p>
+                ) : null}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={close}
+                    disabled={mutation.isPending}
+                  >
+                    Close
+                  </Button>
+                  {current.data.canEdit ? (
+                    <Button type="submit" disabled={mutation.isPending}>
+                      {mutation.isPending ? "Saving…" : "Save findings"}
+                    </Button>
+                  ) : null}
+                </div>
+              </form>
+            ) : null}
+          </div>
+          <div
+            role="tabpanel"
+            id="rca-history-panel"
+            aria-labelledby="rca-history-tab"
+            hidden={tab !== "history"}
+            className="space-y-4"
+          >
+            {history.isPending ? (
+              <div role="status" aria-busy="true">
+                <span className="sr-only">Loading analysis history</span>
+                <Skeleton className="h-48" />
+              </div>
+            ) : history.isError ? (
+              <Alert role="alert">
+                Unable to load analysis history.{" "}
+                <Button
+                  variant="secondary"
+                  onClick={() => void history.refetch()}
+                >
+                  Try again
+                </Button>
+              </Alert>
+            ) : history.data?.items.length ? (
+              <>
+                <ol className="space-y-3">
+                  {history.data.items.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="border-border rounded-lg border p-4"
+                    >
+                      <p className="text-muted text-xs">
+                        {entry.savedBy?.name ?? "Unknown officer"} ·{" "}
+                        <time dateTime={entry.savedAt}>
+                          {new Date(entry.savedAt).toLocaleString()}
+                        </time>
+                      </p>
+                      {entry.findings ? (
+                        <dl className="mt-3 space-y-3">
+                          {fields.map((field) => (
+                            <div key={field.key}>
+                              <dt className="text-sm font-semibold">
+                                {field.label}
+                              </dt>
+                              <dd className="mt-1 text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
+                                {entry.findings?.[field.key] ?? "Not recorded"}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : (
+                        <Alert>
+                          Findings for this historical record are unavailable.
+                        </Alert>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                <Pagination
+                  page={page}
+                  pageCount={history.data.pagination.totalPages}
+                  onPageChange={setPage}
+                />
+              </>
+            ) : (
+              <Alert>No analysis history recorded for this incident.</Alert>
+            )}
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={close}
+                disabled={mutation.isPending}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
-        {view === "analysis" ? <form className="space-y-5" onSubmit={submit}>
-          <Alert className="border-info/25 bg-info-soft text-info"><div className="flex items-start gap-2"><Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><p>UI preview for UC63. Base conclusions on verified investigation evidence and distinguish the root cause from the incident symptoms.</p></div></Alert>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Root cause category" htmlFor="rca-category"><Select id="rca-category" defaultValue="process" required><option value="people">People</option><option value="process">Process</option><option value="technology">Technology</option><option value="third-party">Third party</option><option value="control-gap">Security control gap</option><option value="multiple">Multiple causes</option></Select></Field>
-            <Field label="Analysis completed at" htmlFor="rca-completed-at"><Input id="rca-completed-at" type="datetime-local" required /></Field>
-          </div>
-          <Field label="Identified root cause" htmlFor="rca-root-cause"><Textarea id="rca-root-cause" minLength={20} maxLength={2000} placeholder="Describe the verified underlying condition that allowed the incident to occur." required /></Field>
-          <Field label="Contributing factors" htmlFor="rca-contributing-factors"><Textarea id="rca-contributing-factors" minLength={10} maxLength={2000} placeholder="Record control gaps, process failures, environmental conditions, or human factors that increased impact or likelihood." required /></Field>
-          <Field label="Lessons learned" htmlFor="rca-lessons"><Textarea id="rca-lessons" minLength={20} maxLength={2500} placeholder="Explain what worked, what failed, and what the organization should do differently in future incidents." required /></Field>
-          <Field label="Recommended improvements" htmlFor="rca-improvements"><Textarea id="rca-improvements" minLength={20} maxLength={2500} placeholder="List preventive control, process, monitoring, training, or technology improvements." required /></Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Improvement owner" htmlFor="rca-owner"><Input id="rca-owner" minLength={2} maxLength={120} placeholder="Team or responsible person" required /></Field>
-            <Field label="Target completion date" htmlFor="rca-target-date"><Input id="rca-target-date" type="date" required /></Field>
-          </div>
-          <Field label="Evidence and related records" htmlFor="rca-evidence"><Input id="rca-evidence" maxLength={300} placeholder="Evidence IDs, control findings, risks, or investigation references" /></Field>
-          <Alert>Saving an RCA documents findings for prevention and improvement. It does not automatically complete improvement actions or close the incident.</Alert>
-          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onClose}>Close</Button><Button type="submit"><BookOpenCheck aria-hidden="true" className="size-4" />Save findings</Button></div>
-        </form> : <div className="space-y-4">
-          <Alert>Example version history for documentation. Production findings will come from the incident analysis API.</Alert>
-          <div className="space-y-3">{previewHistory.map((entry) => <article className="border-border rounded-lg border p-4" key={entry.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold">{entry.version}</p><p className="text-muted mt-1 font-mono text-xs">{entry.id}</p></div><StatusBadge tone={entry.status === "Final" ? "success" : "neutral"}>{entry.status}</StatusBadge></div><p className="mt-3 text-sm leading-6">{entry.cause}</p><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2"><Detail label="Analyst" value={entry.analyst} /><Detail label="Completed" value={formatDate(entry.completedAt)} /></dl></article>)}</div>
-          <div className="border-border flex justify-end border-t pt-4"><Button type="button" variant="secondary" onClick={onClose}>Close</Button></div>
-        </div>}
-      </div> : null}
+      ) : null}
     </Dialog>
   );
 }
-
-function Tab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) { return <button aria-selected={active} className={cn("focus-visible:outline-brand min-h-10 flex-1 rounded-md px-3 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 sm:flex-none", active ? "bg-brand text-white" : "text-muted hover:bg-neutral-soft hover:text-foreground")} onClick={onClick} role="tab" type="button">{label}</button>; }
-function Field({ children, htmlFor, label }: { children: ReactNode; htmlFor: string; label: string }) { return <div className="space-y-1.5"><Label htmlFor={htmlFor}>{label}</Label>{children}</div>; }
-function Detail({ label, value }: { label: string; value: string }) { return <div><dt className="text-muted text-xs font-medium uppercase">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>; }
-function formatDate(value: string) { return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(value)); }
