@@ -685,8 +685,7 @@ export function IncidentReportingManager() {
                 Close incident
               </button>
             ) : null}
-            {isSecurityOfficer &&
-            !["resolved", "closed"].includes(item.status) ? (
+            {isSecurityOfficer ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setEradicationTarget(item)}
@@ -697,7 +696,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Record eradication action
+                {item.status === "closed"
+                  ? "View eradication history"
+                  : "Record eradication action"}
               </button>
             ) : null}
             {isSecurityOfficer &&

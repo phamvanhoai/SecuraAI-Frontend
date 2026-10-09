@@ -1,39 +1,26 @@
 "use client";
-
-import { Info, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { StatusBadge } from "@/components/data-display/static-product";
-import { useToast } from "@/components/feedback/toast";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FormField } from "@/components/forms/form-field";
 import { Dialog } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/data-display/pagination";
+import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import type { Incident } from "../schemas/report-incident-schema";
-
-type View = "record" | "history";
-
-const previewHistory = [
-  {
-    id: "ERA-2026-0018",
-    action: "Removed malicious scheduled task",
-    target: "FIN-WS-014",
-    performedBy: "securityofficer@gmail.com",
-    performedAt: "2026-10-06T08:42:00Z",
-    verification: "Verified",
-  },
-  {
-    id: "ERA-2026-0017",
-    action: "Reset compromised privileged credentials",
-    target: "admin-finance account",
-    performedBy: "securityofficer@gmail.com",
-    performedAt: "2026-10-06T08:15:00Z",
-    verification: "Monitoring",
-  },
-] as const;
+import {
+  eradicationFormSchema,
+  type EradicationForm,
+} from "../schemas/eradication-action-schema";
+import {
+  useEradicationHistory,
+  useRecordEradicationAction,
+} from "../hooks/use-eradication-actions";
 
 export function RecordEradicationActionDialog({
   incident,
@@ -43,154 +30,256 @@ export function RecordEradicationActionDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [view, setView] = useState<View>("record");
+  const [tab, setTab] = useState<"record" | "history">("record");
+  const [page, setPage] = useState(1);
+  const form = useForm<EradicationForm>({
+    resolver: zodResolver(eradicationFormSchema),
+    defaultValues: { description: "", performedAt: "" },
+  });
+  const mutation = useRecordEradicationAction();
+  const history = useEradicationHistory(incident?.id, page);
   const toast = useToast();
-
+  const resetForm = form.reset;
+  const resetMutation = mutation.reset;
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (incident && !dialog.open) {
-      setView("record");
+      resetForm({ description: "", performedAt: "" });
+      resetMutation();
+      setPage(1);
+      setTab(incident.status === "closed" ? "history" : "record");
       dialog.showModal();
     }
     if (!incident && dialog.open) dialog.close();
-  }, [incident]);
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    toast.info(
-      "Eradication action validated",
-      "UI preview only. The action was not saved to the incident backend.",
-    );
-    setView("history");
+  }, [incident, resetForm, resetMutation]);
+  const submit = async (values: EradicationForm) => {
+    if (!incident) return;
+    try {
+      await mutation.mutateAsync({ id: incident.id, values });
+      form.reset();
+      setPage(1);
+      setTab("history");
+      toast.success(
+        "Eradication action recorded",
+        "The action is saved in incident response history.",
+      );
+    } catch {
+      /* The persistent error below keeps the entered values available. */
+    }
   };
-
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
-      onClose={onClose}
       title="Record eradication action"
+      onClose={onClose}
+      onCancel={(event) => {
+        if (mutation.isPending) event.preventDefault();
+      }}
+      className="max-h-[calc(100dvh-2rem)] w-[min(46rem,calc(100vw-2rem))] max-w-none overflow-y-auto"
     >
       {incident ? (
         <div className="space-y-5">
-          <div className="border-border border-b pb-4">
-            <p className="text-muted font-mono text-xs">{incident.incidentCode}</p>
-            <p className="mt-1 font-semibold">{incident.title}</p>
+          <div className="border-border bg-neutral-soft rounded-lg border p-4">
+            <p className="text-muted text-xs font-medium">
+              {incident.incidentCode}
+            </p>
+            <p className="mt-1 font-semibold [overflow-wrap:anywhere]">
+              {incident.title}
+            </p>
           </div>
           <div
-            aria-label="Eradication action views"
-            className="border-border bg-background inline-flex w-full gap-1 rounded-lg border p-1 sm:w-auto"
             role="tablist"
+            aria-label="Eradication action views"
+            className="border-border bg-surface inline-flex w-fit max-w-full items-center gap-1 rounded-xl border p-1"
           >
-            <Tab active={view === "record"} label="Record action" onClick={() => setView("record")} />
-            <Tab active={view === "history"} label="Action history" onClick={() => setView("history")} />
+            {(["record", "history"] as const).map((view) => (
+              <button
+                key={view}
+                id={`eradication-${view}-tab`}
+                type="button"
+                role="tab"
+                aria-selected={tab === view}
+                aria-controls={`eradication-${view}-panel`}
+                tabIndex={tab === view ? 0 : -1}
+                disabled={view === "record" && incident.status === "closed"}
+                className={cn(
+                  "focus-visible:outline-brand inline-flex min-h-11 flex-none items-center justify-center rounded-lg px-3.5 py-2 text-sm font-medium focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10",
+                  tab === view
+                    ? "bg-brand text-brand-contrast font-semibold"
+                    : "text-muted hover:bg-neutral-soft",
+                )}
+                onClick={() => setTab(view)}
+                onKeyDown={(event) => {
+                  if (
+                    incident.status === "closed" ||
+                    !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                      event.key,
+                    )
+                  )
+                    return;
+                  event.preventDefault();
+                  const next =
+                    event.key === "Home"
+                      ? "record"
+                      : event.key === "End"
+                        ? "history"
+                        : view === "record"
+                          ? "history"
+                          : "record";
+                  setTab(next);
+                  event.currentTarget.parentElement
+                    ?.querySelector<HTMLButtonElement>(
+                      `#eradication-${next}-tab`,
+                    )
+                    ?.focus();
+                }}
+              >
+                {view === "record" ? "Record action" : "History"}
+              </button>
+            ))}
           </div>
-
-          {view === "record" ? (
-            <form className="space-y-5" onSubmit={submit}>
-              <Alert className="border-info/25 bg-info-soft text-info">
-                <div className="flex items-start gap-2">
-                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                  <p>
-                    UI preview for UC61. Record only actions actually completed
-                    to remove the root cause, malicious components, or threats.
-                  </p>
-                </div>
-              </Alert>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Action type" htmlFor="eradication-action-type">
-                  <Select id="eradication-action-type" defaultValue="malware-removal" required>
-                    <option value="malware-removal">Remove malicious component</option>
-                    <option value="credential-reset">Reset compromised credentials</option>
-                    <option value="vulnerability-remediation">Remediate vulnerability</option>
-                    <option value="persistence-removal">Remove persistence mechanism</option>
-                    <option value="configuration-fix">Correct insecure configuration</option>
-                    <option value="other">Other eradication action</option>
-                  </Select>
-                </Field>
-                <Field label="Performed at" htmlFor="eradication-performed-at">
-                  <Input id="eradication-performed-at" type="datetime-local" required />
-                </Field>
-              </div>
-              <Field label="Action summary" htmlFor="eradication-summary">
-                <Input id="eradication-summary" minLength={5} maxLength={160} placeholder="e.g. Removed malicious scheduled task" required />
-              </Field>
-              <Field label="Affected asset, account, or component" htmlFor="eradication-target">
-                <Input id="eradication-target" minLength={2} maxLength={160} placeholder="e.g. FIN-WS-014 or privileged account" required />
-              </Field>
-              <Field label="Threat or root cause removed" htmlFor="eradication-threat">
-                <Textarea id="eradication-threat" minLength={10} maxLength={1000} placeholder="Describe the malicious component, persistence mechanism, vulnerability, or root cause removed." required />
-              </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Verification result" htmlFor="eradication-verification">
-                  <Select id="eradication-verification" defaultValue="verified" required>
-                    <option value="verified">Verified removed</option>
-                    <option value="monitoring">Removed — monitoring required</option>
-                    <option value="follow-up">Follow-up action required</option>
-                  </Select>
-                </Field>
-                <Field label="Evidence reference" htmlFor="eradication-evidence">
-                  <Input id="eradication-evidence" maxLength={120} placeholder="Optional evidence ID or log reference" />
-                </Field>
-              </div>
-              <Field label="Implementation and validation notes" htmlFor="eradication-notes">
-                <Textarea id="eradication-notes" minLength={10} maxLength={2000} placeholder="Record commands or procedures used, validation performed, and any remaining monitoring requirements." required />
-              </Field>
-              <Alert>
-                Recording an eradication action does not automatically resolve
-                or close the incident. Update incident progress separately after
-                verification is complete.
-              </Alert>
-              <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-                <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
-                <Button type="submit"><ShieldCheck aria-hidden="true" className="size-4" />Record action</Button>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              <Alert>Example history for documentation. Production records will come from the incident action API.</Alert>
-              <div className="space-y-3">
-                {previewHistory.map((entry) => (
-                  <article className="border-border rounded-lg border p-4" key={entry.id}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{entry.action}</p>
-                        <p className="text-muted mt-1 font-mono text-xs">{entry.id}</p>
-                      </div>
-                      <StatusBadge tone={entry.verification === "Verified" ? "success" : "warning"}>{entry.verification}</StatusBadge>
-                    </div>
-                    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-                      <HistoryDetail label="Target" value={entry.target} />
-                      <HistoryDetail label="Analyst" value={entry.performedBy} />
-                      <HistoryDetail label="Performed" value={formatDate(entry.performedAt)} />
-                    </dl>
-                  </article>
-                ))}
-              </div>
-              <div className="border-border flex justify-end border-t pt-4">
-                <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
-              </div>
+          <form
+            id="eradication-record-panel"
+            role="tabpanel"
+            aria-labelledby="eradication-record-tab"
+            hidden={tab !== "record"}
+            className="space-y-4"
+            noValidate
+            onSubmit={form.handleSubmit(submit)}
+          >
+            {mutation.isError ? (
+              <Alert role="alert">{mutation.error.message}</Alert>
+            ) : null}
+            <FormField
+              id="eradication-description"
+              label="Eradication action"
+              error={form.formState.errors.description?.message}
+            >
+              <Textarea
+                id="eradication-description"
+                rows={5}
+                maxLength={4000}
+                disabled={mutation.isPending}
+                aria-invalid={Boolean(form.formState.errors.description)}
+                aria-describedby={
+                  form.formState.errors.description
+                    ? "eradication-description-error"
+                    : "eradication-description-help"
+                }
+                {...form.register("description")}
+              />
+              <p
+                id="eradication-description-help"
+                className="text-muted text-xs"
+              >
+                Describe what root cause, malicious component, or threat was
+                removed, the affected asset or account, and verification
+                results.
+              </p>
+            </FormField>
+            <FormField
+              id="eradication-time"
+              label="Performed at"
+              error={form.formState.errors.performedAt?.message}
+            >
+              <Input
+                id="eradication-time"
+                type="datetime-local"
+                disabled={mutation.isPending}
+                aria-invalid={Boolean(form.formState.errors.performedAt)}
+                aria-describedby={
+                  form.formState.errors.performedAt
+                    ? "eradication-time-error"
+                    : "eradication-time-help"
+                }
+                {...form.register("performedAt")}
+              />
+              <p id="eradication-time-help" className="text-muted text-xs">
+                Your local time. The signed-in Security Officer is recorded as
+                the performer.
+              </p>
+            </FormField>
+            <Alert>
+              Record actions already performed. This does not automatically
+              change the response phase or close the incident.
+            </Alert>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                disabled={mutation.isPending}
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving…" : "Record action"}
+              </Button>
             </div>
-          )}
+          </form>
+          <div
+            id="eradication-history-panel"
+            role="tabpanel"
+            aria-labelledby="eradication-history-tab"
+            hidden={tab !== "history"}
+            className="space-y-4"
+          >
+            {history.isPending ? (
+              <div role="status" aria-busy="true">
+                <span className="sr-only">Loading eradication history</span>
+                <Skeleton className="h-28" />
+              </div>
+            ) : history.isError ? (
+              <Alert role="alert">
+                Unable to load eradication history.{" "}
+                <Button
+                  variant="secondary"
+                  onClick={() => void history.refetch()}
+                >
+                  Try again
+                </Button>
+              </Alert>
+            ) : history.data?.items.length ? (
+              <>
+                <ol className="space-y-3">
+                  {history.data.items.map((action) => (
+                    <li
+                      key={action.id}
+                      className="border-border rounded-lg border p-4"
+                    >
+                      <p className="text-sm [overflow-wrap:anywhere] whitespace-pre-wrap">
+                        {action.description}
+                      </p>
+                      <p className="text-muted mt-2 text-xs [overflow-wrap:anywhere]">
+                        {action.performedBy.name} ·{" "}
+                        <time dateTime={action.performedAt}>
+                          {new Date(action.performedAt).toLocaleString()}
+                        </time>
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+                <Pagination
+                  page={page}
+                  pageCount={history.data.pagination.totalPages}
+                  onPageChange={setPage}
+                />
+              </>
+            ) : (
+              <Alert>No eradication actions recorded for this incident.</Alert>
+            )}
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                disabled={mutation.isPending}
+                onClick={onClose}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </div>
       ) : null}
     </Dialog>
   );
-}
-
-function Tab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return <button aria-selected={active} className={cn("focus-visible:outline-brand min-h-10 flex-1 rounded-md px-3 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 sm:flex-none", active ? "bg-brand text-white" : "text-muted hover:bg-neutral-soft hover:text-foreground")} onClick={onClick} role="tab" type="button">{label}</button>;
-}
-
-function Field({ children, htmlFor, label }: { children: ReactNode; htmlFor: string; label: string }) {
-  return <div className="space-y-1.5"><Label htmlFor={htmlFor}>{label}</Label>{children}</div>;
-}
-
-function HistoryDetail({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-muted text-xs font-medium uppercase">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(value));
 }
