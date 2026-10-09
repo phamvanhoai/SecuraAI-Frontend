@@ -86,6 +86,7 @@ import { RootCauseAnalysisDialog } from "./root-cause-analysis-dialog";
 import { CloseIncidentDialog } from "./close-incident-dialog";
 import { ClassificationHistory } from "./classification-history";
 import { AssignmentHistory } from "./assignment-history";
+import { RecordContainmentActionDialog } from "./record-containment-action-dialog";
 
 const defaults: ReportIncidentForm = {
   creationMode: "source",
@@ -207,6 +208,7 @@ export function IncidentReportingManager() {
     useState<Incident>();
   const [eradicationTarget, setEradicationTarget] = useState<Incident>();
   const [recoveryTarget, setRecoveryTarget] = useState<Incident>();
+  const [containmentTarget, setContainmentTarget] = useState<Incident>();
   const [rootCauseTarget, setRootCauseTarget] = useState<Incident>();
   const [closeIncidentTarget, setCloseIncidentTarget] = useState<Incident>();
   const [removalTarget, setRemovalTarget] = useState<IncidentEvidence>();
@@ -727,6 +729,22 @@ export function IncidentReportingManager() {
                   strokeWidth={1.8}
                 />
                 Record recovery action
+              </button>
+            ) : null}
+            {isSecurityOfficer ? (
+              <button
+                className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2"
+                onClick={() => setContainmentTarget(item)}
+                type="button"
+              >
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
+                {item.status === "closed"
+                  ? "View containment history"
+                  : "Record containment action"}
               </button>
             ) : null}
             {canLinkAssets ? (
@@ -2310,6 +2328,10 @@ export function IncidentReportingManager() {
       <RecordRecoveryActionDialog
         incident={recoveryTarget}
         onClose={() => setRecoveryTarget(undefined)}
+      />
+      <RecordContainmentActionDialog
+        incident={containmentTarget}
+        onClose={() => setContainmentTarget(undefined)}
       />
       <RootCauseAnalysisDialog
         incident={rootCauseTarget}
