@@ -1,7 +1,10 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api/api-error";
 import {
   classifyIncidentSeverity,
+  listClassificationHistory,
+  listAssignmentHistory,
   assignIncidentHandler,
   updateIncidentHandlingProgress,
   listIncidentEvidence,
@@ -29,6 +32,20 @@ import {
   createRiskReassessmentRequest,
   listRiskReassessmentRequestHistory,
 } from "../api/incidents";
+
+export const useClassificationHistory = (id: string, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "severity-history", id, page],
+    queryFn: ({ signal }) => listClassificationHistory(id, page, signal),
+    retry: false,
+  });
+
+export const useAssignmentHistory = (id: string, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "assignment-history", id, page],
+    queryFn: ({ signal }) => listAssignmentHistory(id, page, signal),
+    retry: false,
+  });
 
 export const useRiskReassessmentRequestHistory = (
   id: string | undefined,
@@ -291,6 +308,14 @@ export function useClassifyIncidentSeverity() {
     mutationFn: classifyIncidentSeverity,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onError: (error) => {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 409)
+      ) {
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+      }
+    },
   });
 }
 export const useIncidentAssignmentOptions = (enabled: boolean) =>
@@ -305,7 +330,23 @@ export function useAssignIncidentHandler() {
   return useMutation({
     mutationFn: assignIncidentHandler,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: async (_data, input) => {
+      await client.invalidateQueries({ queryKey: ["incidents"] });
+      // History is unmounted while the Assignment tab is open. Refresh its
+      // cached pages as well before reporting the save as complete.
+      await client.invalidateQueries({
+        queryKey: ["incidents", "assignment-history", input.id],
+        refetchType: "all",
+      });
+    },
+    onError: (error) => {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 409)
+      ) {
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+      }
+    },
   });
 }
 export function useUpdateIncidentHandlingProgress() {
@@ -313,7 +354,12 @@ export function useUpdateIncidentHandlingProgress() {
   return useMutation({
     mutationFn: updateIncidentHandlingProgress,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["incidents"], refetchType: "all" }),
+    onError: (error) => {
+      if (error instanceof ApiError && [403, 404, 409].includes(error.status))
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+    },
   });
 }
 export const useIncidentEvidence = (id: string | undefined, page: number) =>

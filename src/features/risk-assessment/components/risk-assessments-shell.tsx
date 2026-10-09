@@ -74,9 +74,11 @@ const statusTone = {
 } as const;
 const date = (value: string | null) =>
   value
-    ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
-        new Date(value),
-      )
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(new Date(value))
     : "Not scheduled";
 
 function fromParams(params: URLSearchParams): RiskRegisterQuery {
@@ -108,7 +110,9 @@ export function RiskAssessmentsShell() {
   );
   const [targetRisk, setTargetRisk] = useState<RiskRegisterItem | null>(null);
   const [planRisk, setPlanRisk] = useState<RiskRegisterItem | null>(null);
-  const [planUpdateRisk, setPlanUpdateRisk] = useState<RiskRegisterItem | null>(null);
+  const [planUpdateRisk, setPlanUpdateRisk] = useState<RiskRegisterItem | null>(
+    null,
+  );
   const navigate = (next: Partial<RiskRegisterQuery>) => {
     const search = new URLSearchParams();
     Object.entries({ ...query, ...next }).forEach(([key, value]) => {
@@ -141,9 +145,16 @@ export function RiskAssessmentsShell() {
     },
     {
       key: "assets",
-      header: "Related assets",
+      header: "Scope / related assets",
       cell: (item) =>
-        item.assets.length ? (
+        item.scope?.type === "business_service" ? (
+          <span className="block max-w-56">
+            Business service: {item.scope.businessService.name}
+            <span className="text-muted block text-xs">
+              {item.assets.length} recorded assets
+            </span>
+          </span>
+        ) : item.assets.length ? (
           <span className="block max-w-56">
             {item.assets
               .slice(0, 2)
@@ -197,33 +208,70 @@ export function RiskAssessmentsShell() {
           label={
             <span className="grid size-6 place-items-center">
               <span className="sr-only">Actions for {item.riskCode}</span>
-              <Ellipsis className="size-5" strokeWidth={1.8} aria-hidden="true" />
+              <Ellipsis
+                className="size-5"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </span>
           }
         >
-          <RiskAction icon={Eye} label="View details" onClick={() => setSelectedId(item.id)} />
+          <RiskAction
+            icon={Eye}
+            label="View details"
+            onClick={() => setSelectedId(item.id)}
+          />
           <div className="border-border my-1 border-t" aria-hidden="true" />
           {canCreate ? (
-            <RiskAction icon={Bug} label="Identify vulnerability" onClick={() => setVulnerabilityRisk(item)} />
+            <RiskAction
+              icon={Bug}
+              label="Identify vulnerability"
+              disabled={!["open", "under_treatment"].includes(item.status)}
+              onClick={() => setVulnerabilityRisk(item)}
+            />
           ) : null}
           {canCreate ? (
-            <RiskAction icon={ShieldAlert} label="Identify threat" onClick={() => setThreatRisk(item)} />
+            <RiskAction
+              icon={ShieldAlert}
+              label="Identify threat"
+              onClick={() => setThreatRisk(item)}
+            />
           ) : null}
           {canCreate ? (
-            <RiskAction icon={Gauge} label="Assess inherent risk" onClick={() => setInherentRisk(item)} />
+            <RiskAction
+              icon={Gauge}
+              label="Assess inherent risk"
+              onClick={() => setInherentRisk(item)}
+            />
           ) : null}
           {item.owner?.id === session.data?.id ? (
-            <RiskAction icon={GaugeCircle} label="Assess residual risk" onClick={() => setResidualRisk(item)} />
+            <RiskAction
+              icon={GaugeCircle}
+              label="Assess residual risk"
+              onClick={() => setResidualRisk(item)}
+            />
           ) : null}
           {canCreate || item.owner?.id === session.data?.id ? (
             item.activeTreatmentPlan ? (
-              <RiskAction icon={Pencil} label="Update treatment plan" onClick={() => setPlanUpdateRisk(item)} />
+              <RiskAction
+                icon={Pencil}
+                label="Update treatment plan"
+                onClick={() => setPlanUpdateRisk(item)}
+              />
             ) : (
-              <RiskAction icon={ClipboardList} label="Create treatment plan" onClick={() => setPlanRisk(item)} />
+              <RiskAction
+                icon={ClipboardList}
+                label="Create treatment plan"
+                onClick={() => setPlanRisk(item)}
+              />
             )
           ) : null}
           {item.owner?.id === session.data?.id ? (
-            <RiskAction icon={Target} label="Define target risk" onClick={() => setTargetRisk(item)} />
+            <RiskAction
+              icon={Target}
+              label="Define target risk"
+              onClick={() => setTargetRisk(item)}
+            />
           ) : null}
         </DropdownMenu>
       ),
@@ -243,11 +291,19 @@ export function RiskAssessmentsShell() {
     <>
       <div className="space-y-5">
         <ProductPageHeader
-          title={view === "register" ? "Risk Register" : "Reassessment Requests"}
-          description={view === "register"
-            ? "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
-            : "Review incident-driven reassessment requests for risks assigned to you."}
-          additionalActions={view === "register" && canCreate ? <CreateRiskAssessmentDialog /> : null}
+          title={
+            view === "register" ? "Risk Register" : "Reassessment Requests"
+          }
+          description={
+            view === "register"
+              ? "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
+              : "Review incident-driven reassessment requests for risks assigned to you."
+          }
+          additionalActions={
+            view === "register" && canCreate ? (
+              <CreateRiskAssessmentDialog />
+            ) : null
+          }
         />
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div
@@ -281,7 +337,7 @@ export function RiskAssessmentsShell() {
                   className={cn(
                     "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
                     view === "register"
-                      ? "bg-white/20 text-brand-contrast"
+                      ? "text-brand-contrast bg-white/20"
                       : "border-border bg-neutral-soft text-muted border",
                   )}
                 >
@@ -316,125 +372,126 @@ export function RiskAssessmentsShell() {
         {view === "requests" ? (
           <RiskReassessmentReviewPanel enabled={canRead} />
         ) : (
-        <ProductPanel title="Risk records">
-          <form
-            className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]"
-            onSubmit={(event: FormEvent) => {
-              event.preventDefault();
-              navigate({ page: 1, q: draft.trim() || undefined });
-            }}
-          >
-            <label className="text-sm font-medium">
-              Search
-              <Input
-                className="mt-1"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder="Risk code, title, owner, or asset"
-                maxLength={100}
-              />
-            </label>
-            <label className="text-sm font-medium">
-              Status
-              <Select
-                className="mt-1"
-                value={query.status ?? ""}
-                onChange={(event) =>
-                  navigate({
-                    page: 1,
-                    status: event.target.value
-                      ? (event.target.value as RiskRegisterQuery["status"])
-                      : undefined,
-                  })
-                }
-              >
-                <option value="">All statuses</option>
-                {Object.entries(labels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <label className="text-sm font-medium">
-              Rating
-              <Select
-                className="mt-1"
-                value={query.riskRating ?? ""}
-                onChange={(event) =>
-                  navigate({
-                    page: 1,
-                    riskRating: event.target.value
-                      ? (event.target.value as RiskRegisterQuery["riskRating"])
-                      : undefined,
-                  })
-                }
-              >
-                <option value="">All ratings</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </Select>
-            </label>
-            <div className="flex items-end gap-2">
-              <Button type="submit">
-                <Search className="size-4" aria-hidden="true" />
+          <ProductPanel title="Risk records">
+            <form
+              className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]"
+              onSubmit={(event: FormEvent) => {
+                event.preventDefault();
+                navigate({ page: 1, q: draft.trim() || undefined });
+              }}
+            >
+              <label className="text-sm font-medium">
                 Search
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                aria-label="Clear filters"
-                onClick={() => {
-                  setDraft("");
-                  router.push("/risks");
-                }}
-              >
-                <X className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </form>
-          <div className="p-4">
-            {risks.isPending ? (
-              <TableSkeleton rows={8} columns={7} />
-            ) : risks.isError ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
-                <strong className="block">
-                  Unable to load the risk register
-                </strong>
-                <span>Check the backend connection and try again.</span>
-                <Button
-                  className="mt-3"
-                  variant="secondary"
-                  onClick={() => void risks.refetch()}
-                >
-                  Try again
-                </Button>
-              </Alert>
-            ) : risks.data?.items.length ? (
-              <>
-                <DataTable
-                  columns={columns}
-                  rows={risks.data.items}
-                  getRowKey={(item) => item.id}
+                <Input
+                  className="mt-1"
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder="Risk code, title, owner, or asset"
+                  maxLength={100}
                 />
-                <div className="mt-4">
-                  <Pagination
-                    page={risks.data.pagination.page}
-                    pageCount={risks.data.pagination.totalPages}
-                    onPageChange={(page) => navigate({ page })}
+              </label>
+              <label className="text-sm font-medium">
+                Status
+                <Select
+                  className="mt-1"
+                  value={query.status ?? ""}
+                  onChange={(event) =>
+                    navigate({
+                      page: 1,
+                      status: event.target.value
+                        ? (event.target.value as RiskRegisterQuery["status"])
+                        : undefined,
+                    })
+                  }
+                >
+                  <option value="">All statuses</option>
+                  {Object.entries(labels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="text-sm font-medium">
+                Rating
+                <Select
+                  className="mt-1"
+                  value={query.riskRating ?? ""}
+                  onChange={(event) =>
+                    navigate({
+                      page: 1,
+                      riskRating: event.target.value
+                        ? (event.target
+                            .value as RiskRegisterQuery["riskRating"])
+                        : undefined,
+                    })
+                  }
+                >
+                  <option value="">All ratings</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </Select>
+              </label>
+              <div className="flex items-end gap-2">
+                <Button type="submit">
+                  <Search className="size-4" aria-hidden="true" />
+                  Search
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-label="Clear filters"
+                  onClick={() => {
+                    setDraft("");
+                    router.push("/risks");
+                  }}
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </form>
+            <div className="p-4">
+              {risks.isPending ? (
+                <TableSkeleton rows={8} columns={7} />
+              ) : risks.isError ? (
+                <Alert className="border-danger/25 bg-danger-soft text-danger">
+                  <strong className="block">
+                    Unable to load the risk register
+                  </strong>
+                  <span>Check the backend connection and try again.</span>
+                  <Button
+                    className="mt-3"
+                    variant="secondary"
+                    onClick={() => void risks.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </Alert>
+              ) : risks.data?.items.length ? (
+                <>
+                  <DataTable
+                    columns={columns}
+                    rows={risks.data.items}
+                    getRowKey={(item) => item.id}
                   />
-                </div>
-              </>
-            ) : (
-              <EmptyState
-                title="No risks found"
-                description="Adjust the filters, or create risk records through an implemented risk workflow."
-              />
-            )}
-          </div>
-        </ProductPanel>
+                  <div className="mt-4">
+                    <Pagination
+                      page={risks.data.pagination.page}
+                      pageCount={risks.data.pagination.totalPages}
+                      onPageChange={(page) => navigate({ page })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <EmptyState
+                  title="No risks found"
+                  description="Adjust the filters, or create risk records through an implemented risk workflow."
+                />
+              )}
+            </div>
+          </ProductPanel>
         )}
       </div>
       <RiskAssessmentDetailDialog
@@ -478,7 +535,11 @@ export function RiskAssessmentsShell() {
         }
         onClose={() => setTargetRisk(null)}
       />
-      <CreateRiskTreatmentPlanDialog riskId={planRisk?.id ?? null} riskLabel={planRisk ? `${planRisk.riskCode} — ${planRisk.title}` : ""} onClose={() => setPlanRisk(null)} />
+      <CreateRiskTreatmentPlanDialog
+        riskId={planRisk?.id ?? null}
+        riskLabel={planRisk ? `${planRisk.riskCode} — ${planRisk.title}` : ""}
+        onClose={() => setPlanRisk(null)}
+      />
       <UpdateActiveTreatmentPlanDialog
         riskId={planUpdateRisk?.id ?? null}
         planId={planUpdateRisk?.activeTreatmentPlan?.id ?? null}
@@ -492,15 +553,23 @@ function RiskAction({
   icon: Icon,
   label,
   onClick,
+  disabled = false,
 }: {
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
-      className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+      className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
       onClick={onClick}
+      disabled={disabled}
+      title={
+        disabled
+          ? "Review is required before adding vulnerabilities to an accepted, closed or archived risk."
+          : undefined
+      }
       type="button"
     >
       <Icon className="size-4" strokeWidth={1.8} aria-hidden="true" />

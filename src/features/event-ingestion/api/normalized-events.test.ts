@@ -123,4 +123,51 @@ describe("normalized-events api client", () => {
     });
     expect(result.totalEvents).toBe(10);
   });
+
+  it("calls updateEventMapping and parses response", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      id: "22222222-2222-4222-8222-222222222222",
+      eventId: "33333333-3333-4333-8333-333333333333",
+      userId: "44444444-4444-4444-8444-444444444444",
+      monitoredAccountId: null,
+      assetId: null,
+      mappingMethod: "MANUAL",
+      confidence: 0.9,
+      reason: "Manual verification",
+      mappedBy: null,
+      mappedAt: "2026-10-02T12:00:05.000Z",
+      isActive: true,
+      supersedesMappingId: null,
+      mappedUser: {
+        id: "44444444-4444-4444-8444-444444444444",
+        email: "test@secura.ai",
+        fullName: "Test User",
+      },
+      mappedAsset: null,
+      monitoredAccount: null,
+      createdAt: "2026-10-02T12:00:05.000Z",
+    });
+
+    const payload = {
+      userId: "44444444-4444-4444-8444-444444444444",
+      assetId: null,
+      monitoredAccountId: null,
+      reason: "Manual verification",
+      confidence: 0.9,
+    };
+
+    const { updateEventMapping } = await import("./normalized-events");
+    const result = await updateEventMapping("33333333-3333-4333-8333-333333333333", payload);
+
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/events/33333333-3333-4333-8333-333333333333/mappings",
+      {
+        method: "PUT",
+        target: "same-origin",
+        body: payload,
+      },
+    );
+    expect(result.mappingMethod).toBe("MANUAL");
+    expect(result.confidence).toBe(0.9);
+  });
 });

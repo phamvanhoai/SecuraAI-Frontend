@@ -34,6 +34,7 @@ import { DeleteAssetDialog } from "./delete-asset-dialog";
 import { AssignAssetOwnerDialog } from "./assign-asset-owner-dialog";
 import { ClassifyAssetCriticalityDialog } from "./classify-asset-criticality-dialog";
 import { LinkAssetContextDialog } from "./link-asset-context-dialog";
+import { AssetManagementTabs } from "./asset-management-tabs";
 const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "asset",
@@ -200,6 +201,7 @@ export function AssetsShell() {
         description="View the organization’s managed IT assets, ownership, business context, classification, and lifecycle status."
         additionalActions={canCreate ? <CreateAssetDialog /> : undefined}
       />
+      <AssetManagementTabs active="assets" canReadServices={session.data?.permissions.includes("business-services.read") ?? false} />
       <ProductPanel title="Asset directory">
         <form
           aria-label="Asset filters"

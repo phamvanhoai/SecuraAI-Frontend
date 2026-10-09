@@ -1,7 +1,45 @@
 import { apiRequest } from "@/lib/api/api-client";
+import { classificationHistorySchema } from "../schemas/classification-history-schema";
+import { assignmentHistorySchema } from "../schemas/assignment-history-schema";
+
+export async function listAssignmentHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return assignmentHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/assignee`,
+      {
+        target: "same-origin",
+        cache: "no-store",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
+
+export async function listClassificationHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return classificationHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/severity`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 import { ApiError, normalizeApiError } from "@/lib/api/api-error";
 import {
   incidentSchema,
+  incidentDetailSchema,
   incidentEvidenceListSchema,
   incidentEvidenceSchema,
   removedIncidentEvidenceSchema,
@@ -326,7 +364,7 @@ export async function listMyIncidents(page: number, signal?: AbortSignal) {
   );
 }
 export async function getMyIncident(id: string, signal?: AbortSignal) {
-  return incidentSchema.parse(
+  return incidentDetailSchema.parse(
     await apiRequest<unknown>(`/api/incidents/${encodeURIComponent(id)}`, {
       target: "same-origin",
       ...(signal ? { signal } : {}),
@@ -359,6 +397,7 @@ export async function listIncidentsForClassification(
 export async function classifyIncidentSeverity(input: {
   id: string;
   values: ClassifyIncidentForm;
+  expectedUpdatedAt?: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -369,6 +408,9 @@ export async function classifyIncidentSeverity(input: {
         body: {
           severity: input.values.severity,
           rationale: input.values.rationale.trim(),
+          ...(input.expectedUpdatedAt
+            ? { expectedUpdatedAt: input.expectedUpdatedAt }
+            : {}),
         },
       },
     ),
@@ -385,6 +427,7 @@ export async function listIncidentAssignmentOptions(signal?: AbortSignal) {
 export async function assignIncidentHandler(input: {
   id: string;
   values: AssignIncidentForm;
+  expectedUpdatedAt?: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -395,6 +438,9 @@ export async function assignIncidentHandler(input: {
         body: {
           assigneeUserId: input.values.assigneeUserId,
           note: input.values.note.trim(),
+          ...(input.expectedUpdatedAt
+            ? { expectedUpdatedAt: input.expectedUpdatedAt }
+            : {}),
         },
       },
     ),
@@ -403,6 +449,8 @@ export async function assignIncidentHandler(input: {
 export async function updateIncidentHandlingProgress(input: {
   id: string;
   values: UpdateIncidentProgressForm;
+  expectedStatus: string;
+  expectedUpdatedAt: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -410,7 +458,16 @@ export async function updateIncidentHandlingProgress(input: {
       {
         target: "same-origin",
         method: "PATCH",
-        body: { status: input.values.status, note: input.values.note.trim() },
+        body: {
+          status: input.values.status,
+          note: input.values.note.trim(),
+          confirmed: input.values.confirmed,
+          expectedStatus: input.expectedStatus,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+          ...(input.values.skipReason?.trim()
+            ? { skipReason: input.values.skipReason.trim() }
+            : {}),
+        },
       },
     ),
   );

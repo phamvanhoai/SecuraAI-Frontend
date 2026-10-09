@@ -35,9 +35,11 @@ export function DropdownMenu({
     const trigger = menuRef.current?.querySelector("summary");
     if (!trigger) return;
     const bounds = trigger.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - bounds.bottom;
+    const spaceBelow = Math.max(0, window.innerHeight - bounds.bottom - VIEWPORT_GAP * 2);
+    const spaceAbove = Math.max(0, bounds.top - VIEWPORT_GAP * 2);
     const menuHeight = measuredHeightRef.current;
-    const openAbove = spaceBelow < menuHeight && bounds.top > spaceBelow;
+    const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+    const maxHeight = Math.min(360, openAbove ? spaceAbove : spaceBelow);
     const right = Math.min(
       Math.max(VIEWPORT_GAP, window.innerWidth - bounds.right),
       window.innerWidth - MENU_WIDTH - VIEWPORT_GAP,
@@ -46,9 +48,10 @@ export function DropdownMenu({
       openAbove
         ? {
             right,
+            maxHeight,
             bottom: window.innerHeight - bounds.top + VIEWPORT_GAP,
           }
-        : { right, top: bounds.bottom + VIEWPORT_GAP },
+        : { right, top: bounds.bottom + VIEWPORT_GAP, maxHeight },
     );
   }, []);
 
@@ -56,7 +59,7 @@ export function DropdownMenu({
     (node: HTMLDivElement | null): void => {
       contentRef.current = node;
       if (!node) return;
-      const measuredHeight = node.getBoundingClientRect().height;
+      const measuredHeight = node.scrollHeight;
       if (measuredHeight <= 0) return;
       if (measuredHeight === measuredHeightRef.current) return;
       measuredHeightRef.current = measuredHeight;
@@ -87,7 +90,8 @@ export function DropdownMenu({
       menu.querySelector("summary")?.focus();
     }
 
-    function closeWhenViewportMoves(): void {
+    function closeWhenViewportMoves(event: Event): void {
+      if (event.target instanceof Node && contentRef.current?.contains(event.target)) return;
       const menu = menuRef.current;
       if (!menu?.open) return;
       menu.open = false;
@@ -135,7 +139,7 @@ export function DropdownMenu({
         ? createPortal(
             <div
               ref={captureContent}
-              className="border-border bg-surface fixed z-50 min-w-48 rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]"
+              className="border-border bg-surface fixed z-50 min-w-48 overflow-y-auto overscroll-contain rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]"
               onClick={(event) => {
                 if (!(event.target instanceof Element)) return;
                 if (!event.target.closest("button")) return;

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Library,
   ScrollText,
+  SearchCode,
   Settings,
   ShieldAlert,
   Users,
@@ -28,6 +29,7 @@ export type NavigationItem = {
   section:
     "Overview" | "Management" | "AI & Monitoring" | "Reporting" | "Settings";
   requiredAnyPermission?: readonly string[];
+  allowedRoleCodes?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
@@ -70,12 +72,7 @@ const modules = {
   incidents: {
     title: "Incidents",
     slug: "incidents",
-    requiredAnyPermission: [
-      "incidents.read",
-      "incidents.report",
-      "incidents.assign",
-      "incidents.update-progress",
-    ],
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"],
     icon: Bell,
     section: "Management",
   },
@@ -104,7 +101,7 @@ const modules = {
     title: "Audit",
     slug: "audits",
     icon: History,
-    requiredAnyPermission: ["audit.read"],
+    allowedRoleCodes: ["ADMIN"],
     section: "Management",
   },
   policies: {
@@ -174,6 +171,13 @@ const modules = {
     icon: Bell,
     section: "Reporting",
   },
+  systemLogs: {
+    title: "System Logs",
+    slug: "system-logs",
+    icon: SearchCode,
+    section: "Reporting",
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER"],
+  },
   settings: {
     title: "Settings",
     slug: "settings",
@@ -209,6 +213,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -230,6 +235,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -239,6 +245,8 @@ export const panelModules = {
     modules.risks,
     modules.incidents,
     modules.controls,
+    modules.compliance,
+    modules.audits,
     modules.policies,
     modules.workflowDefinitions,
     modules.anomalyMonitoring,
@@ -246,6 +254,7 @@ export const panelModules = {
     modules.eventLogs,
     modules.reports,
     modules.notifications,
+    modules.systemLogs,
   ],
   employee: [
     modules.assets,
@@ -259,7 +268,6 @@ export const panelModules = {
     modules.anomalyMonitoring,
     modules.risks,
     modules.compliance,
-    modules.audits,
     modules.policies,
     modules.workflowDefinitions,
     modules.reports,
@@ -329,14 +337,17 @@ export function canAccessPanel(
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
-  _roleCodes: readonly string[] = [],
+  roleCodes: readonly string[] = [],
 ): boolean {
-  return (
+  const roleAllowed =
+    !item.allowedRoleCodes?.length ||
+    item.allowedRoleCodes.some((role) => roleCodes.includes(role));
+  const permissionAllowed =
     !item.requiredAnyPermission?.length ||
     item.requiredAnyPermission.some((permission) =>
       permissions.includes(permission),
-    )
-  );
+    );
+  return roleAllowed && permissionAllowed;
 }
 
 export function getPanelKind(

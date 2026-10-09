@@ -35,6 +35,85 @@ export const mappedAssetSchema = z.object({
 
 export type MappedAsset = z.infer<typeof mappedAssetSchema>;
 
+export const monitoredAccountSummarySchema = z.object({
+  id: z.string().uuid(),
+  accountIdentifier: z.string(),
+  sourceSystem: z.string(),
+  displayName: z.string().nullable().optional(),
+});
+
+export type MonitoredAccountSummary = z.infer<
+  typeof monitoredAccountSummarySchema
+>;
+
+export const entityMappingSchema = z.object({
+  id: z.string().uuid(),
+  eventId: z.string().uuid(),
+  userId: z.string().uuid().nullable(),
+  monitoredAccountId: z.string().uuid().nullable(),
+  assetId: z.string().uuid().nullable(),
+  mappingMethod: z.enum(["AUTO", "MANUAL"]),
+  confidence: z.number().nullable(),
+  reason: z.string().nullable(),
+  mappedBy: z
+    .object({
+      id: z.string(),
+      email: z.string(),
+      fullName: z.string().nullable(),
+    })
+    .nullable(),
+  mappedAt: z.string(),
+  isActive: z.boolean(),
+  supersedesMappingId: z.string().nullable(),
+  mappedUser: mappedUserSchema.nullable(),
+  mappedAsset: mappedAssetSchema.nullable(),
+  monitoredAccount: monitoredAccountSummarySchema.nullable(),
+  createdAt: z.string(),
+});
+
+export type EntityMapping = z.infer<typeof entityMappingSchema>;
+
+export const updateEntityMappingSchema = z.object({
+  userId: z.string().uuid().nullable().optional(),
+  assetId: z.string().uuid().nullable().optional(),
+  monitoredAccountId: z.string().uuid().nullable().optional(),
+  reason: z.string().trim().min(1, "Reason for correction is required").max(500),
+  confidence: z.number().min(0).max(1).optional().default(1.0),
+});
+
+export type UpdateEntityMappingPayload = z.infer<
+  typeof updateEntityMappingSchema
+>;
+
+export const mappingOptionsSchema = z.object({
+  users: z.array(
+    z.object({
+      id: z.string().uuid(),
+      email: z.string().email(),
+      fullName: z.string().nullable(),
+    }),
+  ),
+  assets: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      assetCode: z.string(),
+      assetType: z.string(),
+      criticality: z.string().nullable(),
+    }),
+  ),
+  monitoredAccounts: z.array(
+    z.object({
+      id: z.string().uuid(),
+      accountIdentifier: z.string(),
+      sourceSystem: z.string(),
+      displayName: z.string().nullable(),
+    }),
+  ),
+});
+
+export type MappingOptions = z.infer<typeof mappingOptionsSchema>;
+
 export const normalizedEventItemSchema = z.object({
   id: z.string().uuid(),
   eventSourceId: z.string().uuid(),
@@ -73,6 +152,8 @@ export type AnomalyDetectionItem = z.infer<typeof anomalyDetectionItemSchema>;
 
 export const normalizedEventDetailSchema = normalizedEventItemSchema.extend({
   normalizedPayload: z.record(z.string(), z.unknown()),
+  activeMapping: entityMappingSchema.nullable().optional(),
+  mappingHistory: z.array(entityMappingSchema).optional().default([]),
   anomalyDetections: z.array(anomalyDetectionItemSchema).optional(),
 });
 

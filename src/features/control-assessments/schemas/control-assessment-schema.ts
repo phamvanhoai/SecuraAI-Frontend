@@ -17,6 +17,7 @@ export const controlAssessmentListSchema = z.object({
       controlCode: z.string(),
       name: z.string(),
       description: z.string().nullable(),
+      canManageEvidence: z.boolean().default(false),
       applicability: z.string(),
       implementationStatus: z.string(),
       owner: z.object({ id: z.uuid(), fullName: z.string() }).nullable(),
