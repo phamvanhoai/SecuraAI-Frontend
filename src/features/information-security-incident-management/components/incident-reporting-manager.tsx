@@ -45,6 +45,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api/api-error";
 import {
   useClassifyIncidentSeverity,
   useAssignIncidentHandler,
@@ -83,6 +84,7 @@ import { RecordEradicationActionDialog } from "./record-eradication-action-dialo
 import { RecordRecoveryActionDialog } from "./record-recovery-action-dialog";
 import { RootCauseAnalysisDialog } from "./root-cause-analysis-dialog";
 import { CloseIncidentDialog } from "./close-incident-dialog";
+import { ClassificationHistory } from "./classification-history";
 
 const defaults: ReportIncidentForm = {
   creationMode: "source",
@@ -186,6 +188,9 @@ export function IncidentReportingManager() {
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>();
   const [classificationTarget, setClassificationTarget] = useState<Incident>();
+  const [classificationTab, setClassificationTab] = useState<
+    "classification" | "history"
+  >("classification");
   const [assignmentTarget, setAssignmentTarget] = useState<Incident>();
   const [progressTarget, setProgressTarget] = useState<Incident>();
   const [evidenceTarget, setEvidenceTarget] = useState<Incident>();
@@ -346,6 +351,7 @@ export function IncidentReportingManager() {
     }
   };
   const openClassification = (incident: Incident) => {
+    setClassificationTab("classification");
     classificationForm.reset({
       severity: incident.severity as IncidentSeverity,
       rationale: "",
@@ -364,6 +370,7 @@ export function IncidentReportingManager() {
       const updated = await classificationMutation.mutateAsync({
         id: classificationTarget.id,
         values,
+        expectedUpdatedAt: classificationTarget.updatedAt,
       });
       closeClassification();
       toast.success(
@@ -618,7 +625,9 @@ export function IncidentReportingManager() {
                 className="size-4"
                 strokeWidth={1.8}
               />
-              {item.classified ? "Reclassify severity" : "Classify severity"}
+              {item.classificationCount > 0
+                ? "Reclassify severity"
+                : "Classify severity"}
             </button>
             {canAssign ? (
               <button
@@ -637,7 +646,9 @@ export function IncidentReportingManager() {
                 {item.currentAssignment ? "Reassign handler" : "Assign handler"}
               </button>
             ) : null}
-            {canUpdateProgress && item.status !== "resolved" && progressOptions[item.status]?.length ? (
+            {canUpdateProgress &&
+            item.status !== "resolved" &&
+            progressOptions[item.status]?.length ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => openProgress(item)}
@@ -657,11 +668,16 @@ export function IncidentReportingManager() {
                 onClick={() => setCloseIncidentTarget(item)}
                 type="button"
               >
-                <CheckCircle2 aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                <CheckCircle2
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
                 Close incident
               </button>
             ) : null}
-            {isSecurityOfficer && !["resolved", "closed"].includes(item.status) ? (
+            {isSecurityOfficer &&
+            !["resolved", "closed"].includes(item.status) ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setEradicationTarget(item)}
@@ -675,17 +691,24 @@ export function IncidentReportingManager() {
                 Record eradication action
               </button>
             ) : null}
-            {isSecurityOfficer && item.classified && !["reported", "assigned"].includes(item.status) ? (
+            {isSecurityOfficer &&
+            item.classified &&
+            !["reported", "assigned"].includes(item.status) ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRootCauseTarget(item)}
                 type="button"
               >
-                <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                <BookOpenCheck
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.8}
+                />
                 Root cause & lessons learned
               </button>
             ) : null}
-            {isSecurityOfficer && !["resolved", "closed"].includes(item.status) ? (
+            {isSecurityOfficer &&
+            !["resolved", "closed"].includes(item.status) ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRecoveryTarget(item)}
@@ -1699,11 +1722,7 @@ export function IncidentReportingManager() {
         onClose={closeClassification}
       >
         {classificationTarget ? (
-          <form
-            className="space-y-5"
-            noValidate
-            onSubmit={classificationForm.handleSubmit(submitClassification)}
-          >
+          <div className="space-y-5">
             <div className="border-border bg-neutral-soft rounded-lg border p-4">
               <p className="text-muted text-xs font-medium tracking-wide uppercase">
                 {classificationTarget.incidentCode}
@@ -1715,107 +1734,202 @@ export function IncidentReportingManager() {
                 {classificationTarget.description}
               </p>
             </div>
-            {classificationTarget.lastClassification ? (
-              <div className="border-border rounded-lg border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold">
-                    Latest classification
-                  </h3>
-                  <span className="text-muted text-xs">
-                    {classificationTarget.classificationCount} classification
-                    {classificationTarget.classificationCount === 1
-                      ? ""
-                      : "s"}{" "}
-                    recorded
-                  </span>
-                </div>
-                <p className="text-muted mt-2 text-sm">
-                  {classificationTarget.lastClassification.classifiedBy?.name ??
-                    "Unknown user"}{" "}
-                  ·{" "}
-                  {formatDate(
-                    classificationTarget.lastClassification.classifiedAt,
+            <div
+              role="tablist"
+              aria-label="Incident severity views"
+              className="border-border bg-surface inline-flex w-full gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+            >
+              {(["classification", "history"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  id={`severity-${tab}-tab`}
+                  type="button"
+                  role="tab"
+                  aria-selected={classificationTab === tab}
+                  aria-controls={`severity-${tab}-panel`}
+                  tabIndex={classificationTab === tab ? 0 : -1}
+                  disabled={
+                    tab === "classification" &&
+                    classificationTarget.status === "closed"
+                  }
+                  className={cn(
+                    "focus-visible:outline-brand min-h-10 flex-1 rounded-lg px-3.5 py-2 text-sm font-medium capitalize transition-colors focus-visible:outline-2",
+                    classificationTab === tab
+                      ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                      : "text-muted hover:bg-neutral-soft hover:text-foreground",
                   )}
-                </p>
-                {classificationTarget.lastClassification.rationale ? (
-                  <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap">
-                    {classificationTarget.lastClassification.rationale}
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <Alert>
-                This incident has not been formally classified. Its stored
-                medium severity is the database default, not an officer
-                decision.
-              </Alert>
-            )}
-            {classificationMutation.isError ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
-                {classificationMutation.error instanceof Error
-                  ? classificationMutation.error.message
-                  : "Unable to classify this incident. Review the values and try again."}
-              </Alert>
-            ) : null}
-            <FormField
-              id="incident-severity"
-              label="Severity"
-              error={classificationForm.formState.errors.severity?.message}
-            >
-              <Select
-                id="incident-severity"
-                autoFocus
-                {...classificationForm.register("severity")}
-              >
-                <option value="low">
-                  Low — limited impact, routine response
-                </option>
-                <option value="medium">
-                  Medium — contained but requires investigation
-                </option>
-                <option value="high">
-                  High — significant impact or active threat
-                </option>
-                <option value="critical">
-                  Critical — severe, widespread or urgent impact
-                </option>
-              </Select>
-            </FormField>
-            <FormField
-              id="classification-rationale"
-              label="Classification rationale"
-              error={classificationForm.formState.errors.rationale?.message}
-            >
-              <Textarea
-                id="classification-rationale"
-                className="min-h-28"
-                maxLength={2000}
-                placeholder="Describe the observed impact, scope, affected services and urgency supporting this severity."
-                aria-invalid={Boolean(
-                  classificationForm.formState.errors.rationale,
-                )}
-                {...classificationForm.register("rationale")}
-              />
-              <p className="text-muted text-xs">
-                This rationale is retained in the incident update history and
-                audit log.
-              </p>
-            </FormField>
-            <Alert>
-              Classification prioritizes response; it does not assign the
-              incident or change its workflow status.
-            </Alert>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={closeClassification}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={classificationMutation.isPending}>
-                {classificationMutation.isPending
-                  ? "Saving…"
-                  : "Save classification"}
-              </Button>
+                  onClick={() => setClassificationTab(tab)}
+                  onKeyDown={(event) => {
+                    if (classificationTarget.status === "closed") return;
+                    if (
+                      ["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                        event.key,
+                      )
+                    ) {
+                      event.preventDefault();
+                      const next =
+                        event.key === "Home"
+                          ? "classification"
+                          : event.key === "End"
+                            ? "history"
+                            : tab === "history"
+                              ? "classification"
+                              : "history";
+                      setClassificationTab(next);
+                      event.currentTarget.parentElement
+                        ?.querySelector<HTMLButtonElement>(
+                          `#severity-${next}-tab`,
+                        )
+                        ?.focus();
+                    }
+                  }}
+                >
+                  {tab === "history" ? "History" : "Classification"}
+                </button>
+              ))}
             </div>
-          </form>
+            <div
+              id="severity-history-panel"
+              role="tabpanel"
+              aria-labelledby="severity-history-tab"
+              hidden={classificationTab !== "history"}
+            >
+              {classificationTab === "history" ? (
+                <div className="space-y-4">
+                  <ClassificationHistory
+                    key={classificationTarget.id}
+                    incidentId={classificationTarget.id}
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="secondary" onClick={closeClassification}>
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <form
+              id="severity-classification-panel"
+              role="tabpanel"
+              aria-labelledby="severity-classification-tab"
+              hidden={classificationTab !== "classification"}
+              className="space-y-5"
+              noValidate
+              onSubmit={classificationForm.handleSubmit(submitClassification)}
+            >
+              {classificationTarget.lastClassification ? (
+                <div className="border-border rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold">
+                      Latest classification
+                    </h3>
+                    <span className="text-muted text-xs">
+                      {classificationTarget.classificationCount} classification
+                      {classificationTarget.classificationCount === 1
+                        ? ""
+                        : "s"}{" "}
+                      recorded
+                    </span>
+                  </div>
+                  <p className="text-muted mt-2 text-sm">
+                    {classificationTarget.lastClassification.classifiedBy
+                      ?.name ?? "Unknown user"}{" "}
+                    ·{" "}
+                    {formatDate(
+                      classificationTarget.lastClassification.classifiedAt,
+                    )}
+                  </p>
+                  {classificationTarget.lastClassification.rationale ? (
+                    <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap">
+                      {classificationTarget.lastClassification.rationale}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <Alert>
+                  Current severity: {classificationTarget.severity}. No separate
+                  classification rationale has been recorded yet.
+                </Alert>
+              )}
+              {classificationMutation.isError ? (
+                <Alert className="border-danger/25 bg-danger-soft text-danger">
+                  {classificationMutation.error instanceof Error
+                    ? classificationMutation.error.message
+                    : "Unable to classify this incident. Review the values and try again."}
+                  {classificationMutation.error instanceof ApiError &&
+                  [403, 409].includes(classificationMutation.error.status)
+                    ? " Close this dialog and reopen the incident from the refreshed list before trying again."
+                    : null}
+                </Alert>
+              ) : null}
+              <FormField
+                id="incident-severity"
+                label="Severity"
+                error={classificationForm.formState.errors.severity?.message}
+              >
+                <Select
+                  id="incident-severity"
+                  autoFocus
+                  {...classificationForm.register("severity")}
+                >
+                  <option value="low">
+                    Low — limited impact, routine response
+                  </option>
+                  <option value="medium">
+                    Medium — contained but requires investigation
+                  </option>
+                  <option value="high">
+                    High — significant impact or active threat
+                  </option>
+                  <option value="critical">
+                    Critical — severe, widespread or urgent impact
+                  </option>
+                </Select>
+              </FormField>
+              <FormField
+                id="classification-rationale"
+                label="Classification rationale"
+                error={classificationForm.formState.errors.rationale?.message}
+              >
+                <Textarea
+                  id="classification-rationale"
+                  className="min-h-28"
+                  maxLength={2000}
+                  placeholder="Describe the observed impact, scope, affected services and urgency supporting this severity."
+                  aria-invalid={Boolean(
+                    classificationForm.formState.errors.rationale,
+                  )}
+                  {...classificationForm.register("rationale")}
+                />
+                <p className="text-muted text-xs">
+                  The severity, rationale, acting officer and time are retained
+                  in the classification audit history.
+                </p>
+              </FormField>
+              <Alert>
+                Classification prioritizes response; it does not assign the
+                incident or change its workflow status.
+              </Alert>
+              <div className="flex justify-end gap-2">
+                <Button variant="secondary" onClick={closeClassification}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    classificationMutation.isPending ||
+                    classificationTarget.status === "closed" ||
+                    (classificationMutation.error instanceof ApiError &&
+                      [403, 409].includes(classificationMutation.error.status))
+                  }
+                >
+                  {classificationMutation.isPending
+                    ? "Saving…"
+                    : "Save classification"}
+                </Button>
+              </div>
+            </form>
+          </div>
         ) : null}
       </Dialog>
       <Dialog
@@ -1921,7 +2035,10 @@ export function IncidentReportingManager() {
             </div>
             <section aria-labelledby="affected-assets-heading">
               <div className="flex items-center justify-between gap-3">
-                <h3 id="affected-assets-heading" className="text-sm font-semibold">
+                <h3
+                  id="affected-assets-heading"
+                  className="text-sm font-semibold"
+                >
                   Affected assets
                 </h3>
                 <span className="text-muted text-xs tabular-nums">
@@ -1943,8 +2060,12 @@ export function IncidentReportingManager() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         {asset.criticality ? (
-                          <StatusBadge tone={severityTone(asset.criticality.toLowerCase())}>
-                            {formatWorkflowLabel(asset.criticality.toLowerCase())}
+                          <StatusBadge
+                            tone={severityTone(asset.criticality.toLowerCase())}
+                          >
+                            {formatWorkflowLabel(
+                              asset.criticality.toLowerCase(),
+                            )}
                           </StatusBadge>
                         ) : null}
                         <span className="text-muted text-xs">
@@ -1962,7 +2083,10 @@ export function IncidentReportingManager() {
             </section>
             <section aria-labelledby="response-actions-heading">
               <div className="flex items-center justify-between gap-3">
-                <h3 id="response-actions-heading" className="text-sm font-semibold">
+                <h3
+                  id="response-actions-heading"
+                  className="text-sm font-semibold"
+                >
                   Response actions
                 </h3>
                 <span className="text-muted text-xs tabular-nums">
@@ -1972,12 +2096,18 @@ export function IncidentReportingManager() {
               {detail.data.responseActions.length ? (
                 <ol className="mt-3 space-y-2">
                   {detail.data.responseActions.map((action) => (
-                    <li className="border-border rounded-lg border p-3" key={action.id}>
+                    <li
+                      className="border-border rounded-lg border p-3"
+                      key={action.id}
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <StatusBadge tone="info">
                           {formatWorkflowLabel(action.phase)}
                         </StatusBadge>
-                        <time className="text-muted text-xs" dateTime={action.performedAt}>
+                        <time
+                          className="text-muted text-xs"
+                          dateTime={action.performedAt}
+                        >
                           {formatDate(action.performedAt)}
                         </time>
                       </div>
@@ -1985,7 +2115,8 @@ export function IncidentReportingManager() {
                         {action.description}
                       </p>
                       <p className="text-muted mt-1 text-xs">
-                        Performed by {action.performedBy?.name ?? "Unknown user"}
+                        Performed by{" "}
+                        {action.performedBy?.name ?? "Unknown user"}
                       </p>
                     </li>
                   ))}
@@ -1997,7 +2128,10 @@ export function IncidentReportingManager() {
               )}
             </section>
             <section aria-labelledby="handling-history-heading">
-              <h3 id="handling-history-heading" className="text-sm font-semibold">
+              <h3
+                id="handling-history-heading"
+                className="text-sm font-semibold"
+              >
                 Handling history
               </h3>
               <ol className="border-border mt-3 space-y-0 border-l pl-4">

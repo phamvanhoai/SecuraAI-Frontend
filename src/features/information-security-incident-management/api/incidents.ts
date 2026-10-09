@@ -1,4 +1,22 @@
 import { apiRequest } from "@/lib/api/api-client";
+import { classificationHistorySchema } from "../schemas/classification-history-schema";
+
+export async function listClassificationHistory(
+  id: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return classificationHistorySchema.parse(
+    await apiRequest<unknown>(
+      `/api/incidents/${encodeURIComponent(id)}/severity`,
+      {
+        target: "same-origin",
+        query: { page, limit: 10 },
+        ...(signal ? { signal } : {}),
+      },
+    ),
+  );
+}
 import { ApiError, normalizeApiError } from "@/lib/api/api-error";
 import {
   incidentSchema,
@@ -360,6 +378,7 @@ export async function listIncidentsForClassification(
 export async function classifyIncidentSeverity(input: {
   id: string;
   values: ClassifyIncidentForm;
+  expectedUpdatedAt?: string;
 }) {
   return incidentSchema.parse(
     await apiRequest<unknown>(
@@ -370,6 +389,9 @@ export async function classifyIncidentSeverity(input: {
         body: {
           severity: input.values.severity,
           rationale: input.values.rationale.trim(),
+          ...(input.expectedUpdatedAt
+            ? { expectedUpdatedAt: input.expectedUpdatedAt }
+            : {}),
         },
       },
     ),

@@ -1,5 +1,7 @@
 # SecuraAI Frontend
 
+Incident severity: Security Officers use **Classification | History** in the classification dialog, without a separate History action in the incident menu. History reads paginated audit-backed transitions through `GET /api/incidents/:incidentId/severity`. Switching tabs preserves unsaved classification inputs. Saving invalidates incident lists, detail and history queries. No client-generated history is used.
+
 ## Controls and Evidence references
 
 `/controls` uses the existing Control Effectiveness API. Security Officers can Create/Edit Control metadata; assigned Employee Control Owners see only their own Controls. Module discovery uses `compliance.assess-controls`; catalog writes additionally require `controls.create`/`controls.update`. All ownership and status rules are enforced again by BE.

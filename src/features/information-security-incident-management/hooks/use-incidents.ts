@@ -1,7 +1,9 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api/api-error";
 import {
   classifyIncidentSeverity,
+  listClassificationHistory,
   assignIncidentHandler,
   updateIncidentHandlingProgress,
   listIncidentEvidence,
@@ -29,6 +31,13 @@ import {
   createRiskReassessmentRequest,
   listRiskReassessmentRequestHistory,
 } from "../api/incidents";
+
+export const useClassificationHistory = (id: string, page: number) =>
+  useQuery({
+    queryKey: ["incidents", "severity-history", id, page],
+    queryFn: ({ signal }) => listClassificationHistory(id, page, signal),
+    retry: false,
+  });
 
 export const useRiskReassessmentRequestHistory = (
   id: string | undefined,
@@ -291,6 +300,14 @@ export function useClassifyIncidentSeverity() {
     mutationFn: classifyIncidentSeverity,
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: ["incidents"] }),
+    onError: (error) => {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 409)
+      ) {
+        void client.invalidateQueries({ queryKey: ["incidents"] });
+      }
+    },
   });
 }
 export const useIncidentAssignmentOptions = (enabled: boolean) =>
