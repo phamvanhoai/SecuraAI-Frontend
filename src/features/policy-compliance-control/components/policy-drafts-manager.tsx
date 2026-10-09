@@ -5,10 +5,13 @@ import {
   Ellipsis,
   Eye,
   FilePenLine,
+  History,
   Pencil,
   Search,
   Send,
   Link2,
+  Files,
+  BookOpenCheck,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -38,6 +41,7 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   usePolicyDraft,
   usePolicyDrafts,
@@ -48,7 +52,14 @@ import {
   type OwnedPolicyDraft,
   type PolicyDraftQuery,
 } from "../schemas/policy-draft-schema";
+import { useRejectedPolicies } from "../hooks/use-policy-publication";
+import type {
+  RejectedPolicyListItem,
+  RejectedPolicyQuery,
+} from "../schemas/policy-publication-schema";
 import { PolicyDraftFormDialog } from "./policy-draft-form-dialog";
+import { PolicyViewTabs } from "./policy-view-tabs";
+import { PolicyApplicabilityDialog } from "./policy-applicability-dialog";
 
 function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
   const parsed = policyDraftQuerySchema.safeParse(
@@ -58,6 +69,11 @@ function queryFromParams(params: URLSearchParams): PolicyDraftQuery {
 }
 
 const overviewQuery = policyDraftQuerySchema.parse({});
+const initialRejectedQuery: RejectedPolicyQuery = {
+  page: 1,
+  limit: 20,
+  sortOrder: "desc",
+};
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -66,14 +82,62 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
+const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
+  {
+    key: "policy",
+    header: "Policy",
+    cell: (item) => (
+      <span className="block min-w-56">
+        <strong className="block">{item.title}</strong>
+        <span className="text-muted text-xs">{item.policyCode}</span>
+      </span>
+    ),
+  },
+  {
+    key: "version",
+    header: "Version",
+    cell: (item) => `v${item.version.versionNumber}`,
+  },
+  {
+    key: "status",
+    header: "Status",
+    cell: () => <StatusBadge tone="danger">Rejected</StatusBadge>,
+  },
+  {
+    key: "reason",
+    header: "Reason",
+    cell: (item) => (
+      <span className="block max-w-md whitespace-normal">
+        {item.rejection.reason}
+      </span>
+    ),
+  },
+  {
+    key: "decision",
+    header: "Rejected by",
+    cell: (item) => (
+      <span>
+        <span className="block">{item.rejection.rejectedByName}</span>
+        <span className="text-muted text-xs">
+          {formatDate(item.rejection.rejectedAt)}
+        </span>
+      </span>
+    ),
+  },
+];
+
 export function PolicyDraftsManager({
   onAssignDepartments,
   onCreateNewVersion,
   onMapControls,
+  onViewPublished,
+  onViewHistory,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
   onMapControls?: () => void;
+  onViewPublished?: () => void;
+  onViewHistory?: () => void;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,6 +152,9 @@ export function PolicyDraftsManager({
   const drafts = usePolicyDrafts(query, canManageDrafts);
   const metricDrafts = usePolicyDrafts(overviewQuery, canManageDrafts);
   const [search, setSearch] = useState(query.q ?? "");
+  const [activeTab, setActiveTab] = useState<"drafts" | "rejected">("drafts");
+  const [rejectedQuery, setRejectedQuery] = useState(initialRejectedQuery);
+  const [rejectedSearch, setRejectedSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<{
     policyId: string;
@@ -95,7 +162,10 @@ export function PolicyDraftsManager({
   } | null>(null);
   const [editing, setEditing] = useState<OwnedPolicyDraft | null>(null);
   const [submitting, setSubmitting] = useState<OwnedPolicyDraft | null>(null);
+  const [definingApplicability, setDefiningApplicability] =
+    useState<OwnedPolicyDraft | null>(null);
   const submitMutation = useSubmitPolicyForReview();
+  const rejectedPolicies = useRejectedPolicies(rejectedQuery, canManageDrafts);
   const detail = usePolicyDraft(
     selected?.policyId ?? null,
     selected?.versionId ?? null,
@@ -121,6 +191,16 @@ export function PolicyDraftsManager({
     navigate({
       page: 1,
       ...(search.trim() ? { q: search.trim() } : { q: undefined }),
+    });
+  };
+  const submitRejectedSearch = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const q = rejectedSearch.trim();
+    setRejectedQuery((current) => {
+      if (q) return { ...current, page: 1, q };
+      const next = { ...current };
+      delete next.q;
+      return { ...next, page: 1 };
     });
   };
   const closeActionMenu = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -201,6 +281,21 @@ export function PolicyDraftsManager({
               <Pencil className="size-4" strokeWidth={1.8} aria-hidden="true" />
               Edit
             </button>
+            <button
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+              onClick={(event) => {
+                closeActionMenu(event);
+                setDefiningApplicability(draft);
+              }}
+              type="button"
+            >
+              <Building2
+                className="size-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              Define applicability
+            </button>
             {canSubmitDrafts ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
@@ -243,7 +338,7 @@ export function PolicyDraftsManager({
   return (
     <>
       <ProductPageHeader
-        {...(onAssignDepartments || onMapControls
+        {...(onAssignDepartments || onMapControls || onViewHistory
           ? {
               additionalActions: (
                 <>
@@ -273,6 +368,20 @@ export function PolicyDraftsManager({
                         strokeWidth={1.8}
                       />
                       Assign departments
+                    </Button>
+                  ) : null}
+                  {onViewHistory ? (
+                    <Button
+                      className="min-h-10 px-3.5 font-medium"
+                      onClick={onViewHistory}
+                      variant="secondary"
+                    >
+                      <History
+                        aria-hidden="true"
+                        className="size-4"
+                        strokeWidth={1.8}
+                      />
+                      Version history
                     </Button>
                   ) : null}
                 </>
@@ -329,93 +438,250 @@ export function PolicyDraftsManager({
           },
         ]}
       />
+      {onViewPublished ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="draft-workspace"
+            tabs={[
+              {
+                id: "draft-workspace",
+                label: "Draft workspace",
+                icon: (
+                  <Files
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
+                onSelect: () => undefined,
+              },
+              {
+                id: "published",
+                label: "Published policies",
+                icon: (
+                  <BookOpenCheck
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
+                onSelect: onViewPublished,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         description={
-          drafts.data
-            ? `${drafts.data.pagination.total} drafts found`
-            : "Loading backend data"
+          activeTab === "drafts"
+            ? drafts.data
+              ? `${drafts.data.pagination.total} drafts found`
+              : "Loading backend data"
+            : rejectedPolicies.data
+              ? `${rejectedPolicies.data.pagination.total} rejected policies found`
+              : "Loading backend data"
         }
-        title="Draft list"
+        title="Policy drafts"
       >
-        <form
-          aria-label="Draft filters"
-          className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
-          onSubmit={submitSearch}
+        <div
+          aria-label="Policy draft status"
+          className="border-border flex overflow-x-auto border-b px-4"
+          role="tablist"
         >
-          <label className="relative block w-full sm:max-w-md">
-            <span className="sr-only">Search by policy code or title</span>
-            <Search
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-            <Input
-              className="bg-background min-h-10 pl-9"
-              maxLength={100}
-              placeholder="Search by policy code or title"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
-          <Select
-            aria-label="Updated date order"
-            className="min-h-10 sm:w-48"
-            value={query.sortOrder}
-            onChange={(event) =>
-              navigate({
-                page: 1,
-                sortOrder: event.target.value === "asc" ? "asc" : "desc",
-              })
-            }
-          >
-            <option value="desc">Recently updated first</option>
-            <option value="asc">Oldest updated first</option>
-          </Select>
-          <Button className="min-h-10" type="submit">
-            Search
-          </Button>
-        </form>
-        <div className="p-4">
-          {drafts.isPending ? <DraftTableSkeleton /> : null}
-          {drafts.isError ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              <strong className="block">Unable to load policy drafts</strong>
-              <span>
-                {drafts.error instanceof Error
-                  ? drafts.error.message
-                  : "Check the backend connection and try again."}
-              </span>
-              <Button
-                className="mt-3"
-                variant="secondary"
-                onClick={() => void drafts.refetch()}
-              >
-                Try again
-              </Button>
-            </Alert>
-          ) : null}
-          {drafts.data && drafts.data.items.length === 0 ? (
-            <p className="text-muted py-10 text-center">
-              No policy drafts found.
-            </p>
-          ) : null}
-          {drafts.data && drafts.data.items.length > 0 ? (
-            <DataTable
-              columns={columns}
-              rows={drafts.data.items}
-              getRowKey={(draft) => draft.version.id}
-            />
-          ) : null}
+          {[
+            { id: "drafts" as const, label: "Drafts" },
+            { id: "rejected" as const, label: "Rejected" },
+          ].map((tab) => (
+            <button
+              aria-controls={`${tab.id}-policies-panel`}
+              aria-selected={activeTab === tab.id}
+              className={cn(
+                "focus-visible:outline-brand min-h-11 shrink-0 border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]",
+                activeTab === tab.id
+                  ? "border-brand text-foreground"
+                  : "text-muted hover:text-foreground border-transparent",
+              )}
+              id={`${tab.id}-policies-tab`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        {drafts.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              page={drafts.data.pagination.page}
-              pageCount={drafts.data.pagination.totalPages}
-              onPageChange={(page) => navigate({ page })}
-            />
+        {activeTab === "drafts" ? (
+          <div
+            aria-labelledby="drafts-policies-tab"
+            id="drafts-policies-panel"
+            role="tabpanel"
+          >
+            <form
+              aria-label="Draft filters"
+              className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
+              onSubmit={submitSearch}
+            >
+              <label className="relative block w-full sm:max-w-md">
+                <span className="sr-only">Search by policy code or title</span>
+                <Search
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <Input
+                  className="bg-background min-h-10 pl-9"
+                  maxLength={100}
+                  placeholder="Search by policy code or title"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </label>
+              <Select
+                aria-label="Updated date order"
+                className="min-h-10 sm:w-48"
+                value={query.sortOrder}
+                onChange={(event) =>
+                  navigate({
+                    page: 1,
+                    sortOrder: event.target.value === "asc" ? "asc" : "desc",
+                  })
+                }
+              >
+                <option value="desc">Recently updated first</option>
+                <option value="asc">Oldest updated first</option>
+              </Select>
+              <Button className="min-h-10" type="submit">
+                Search
+              </Button>
+            </form>
+            <div className="p-4">
+              {drafts.isPending ? <DraftTableSkeleton /> : null}
+              {drafts.isError ? (
+                <Alert className="border-danger/25 bg-danger-soft text-danger">
+                  <strong className="block">
+                    Unable to load policy drafts
+                  </strong>
+                  <span>
+                    {drafts.error instanceof Error
+                      ? drafts.error.message
+                      : "Check the backend connection and try again."}
+                  </span>
+                  <Button
+                    className="mt-3"
+                    variant="secondary"
+                    onClick={() => void drafts.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </Alert>
+              ) : null}
+              {drafts.data && drafts.data.items.length === 0 ? (
+                <p className="text-muted py-10 text-center">
+                  No policy drafts found.
+                </p>
+              ) : null}
+              {drafts.data && drafts.data.items.length > 0 ? (
+                <DataTable
+                  columns={columns}
+                  rows={drafts.data.items}
+                  getRowKey={(draft) => draft.version.id}
+                />
+              ) : null}
+            </div>
+            {drafts.data ? (
+              <div className="border-border border-t p-4">
+                <Pagination
+                  page={drafts.data.pagination.page}
+                  pageCount={drafts.data.pagination.totalPages}
+                  onPageChange={(page) => navigate({ page })}
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div
+            aria-labelledby="rejected-policies-tab"
+            id="rejected-policies-panel"
+            role="tabpanel"
+          >
+            <form
+              aria-label="Rejected policy filters"
+              className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
+              onSubmit={submitRejectedSearch}
+            >
+              <label className="relative block w-full sm:max-w-md">
+                <span className="sr-only">
+                  Search rejected policies by code or title
+                </span>
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  strokeWidth={1.8}
+                />
+                <Input
+                  className="bg-background min-h-10 pl-9"
+                  maxLength={100}
+                  placeholder="Search rejected policies"
+                  value={rejectedSearch}
+                  onChange={(event) => setRejectedSearch(event.target.value)}
+                />
+              </label>
+              <Button className="min-h-10" type="submit">
+                Search
+              </Button>
+            </form>
+            <div className="p-4">
+              {rejectedPolicies.isPending ? (
+                <DraftTableSkeleton label="Loading rejected policies" />
+              ) : null}
+              {rejectedPolicies.isError ? (
+                <Alert className="border-danger/25 bg-danger-soft text-danger">
+                  <strong className="block">
+                    Unable to load rejected policies
+                  </strong>
+                  <span>
+                    {rejectedPolicies.error instanceof Error
+                      ? rejectedPolicies.error.message
+                      : "Check the backend connection and try again."}
+                  </span>
+                  <Button
+                    className="mt-3"
+                    variant="secondary"
+                    onClick={() => void rejectedPolicies.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </Alert>
+              ) : null}
+              {rejectedPolicies.data &&
+              rejectedPolicies.data.items.length === 0 ? (
+                <p className="text-muted py-10 text-center">
+                  No rejected policies found.
+                </p>
+              ) : null}
+              {rejectedPolicies.data &&
+              rejectedPolicies.data.items.length > 0 ? (
+                <DataTable
+                  columns={rejectedColumns}
+                  rows={rejectedPolicies.data.items}
+                  getRowKey={(item) => item.version.id}
+                />
+              ) : null}
+            </div>
+            {rejectedPolicies.data ? (
+              <div className="border-border border-t p-4">
+                <Pagination
+                  page={rejectedPolicies.data.pagination.page}
+                  pageCount={rejectedPolicies.data.pagination.totalPages}
+                  onPageChange={(page) =>
+                    setRejectedQuery((current) => ({ ...current, page }))
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
       </ProductPanel>
 
       <PolicyDraftFormDialog
@@ -423,6 +689,12 @@ export function PolicyDraftsManager({
         draft={null}
         onClose={() => setCreateOpen(false)}
       />
+      {definingApplicability ? (
+        <PolicyApplicabilityDialog
+          draft={definingApplicability}
+          onClose={() => setDefiningApplicability(null)}
+        />
+      ) : null}
       <PolicyDraftFormDialog
         open={editing !== null}
         draft={editing}
@@ -500,18 +772,15 @@ function SubmitPolicyDraftDialog({
       {draft ? (
         <div className="space-y-5">
           <p className="text-muted text-sm leading-6">
-            Submit <strong className="text-foreground">{draft.title}</strong>{" "}
-            (v{draft.version.versionNumber}) to Admin for review. The draft can
-            no longer be edited after submission.
+            Submit <strong className="text-foreground">{draft.title}</strong> (v
+            {draft.version.versionNumber}) to Admin for review. The draft can no
+            longer be edited after submission.
           </p>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" disabled={pending} onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              disabled={pending}
-              onClick={() => void onSubmit(draft)}
-            >
+            <Button disabled={pending} onClick={() => void onSubmit(draft)}>
               <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
               {pending ? "Submitting…" : "Submit for review"}
             </Button>
@@ -522,9 +791,13 @@ function SubmitPolicyDraftDialog({
   );
 }
 
-function DraftTableSkeleton() {
+function DraftTableSkeleton({
+  label = "Loading policy drafts",
+}: {
+  label?: string;
+}) {
   return (
-    <div aria-label="Loading policy drafts" className="space-y-3" role="status">
+    <div aria-label={label} className="space-y-3" role="status">
       {[1, 2, 3].map((row) => (
         <div
           className="bg-neutral-soft h-14 animate-pulse rounded-lg motion-reduce:animate-none"

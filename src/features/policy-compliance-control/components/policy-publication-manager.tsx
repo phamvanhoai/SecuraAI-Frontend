@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Eye, Search } from "lucide-react";
+import { Ellipsis, Eye, History, Search } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -27,20 +27,39 @@ import { Dialog } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   usePolicyReview,
   usePublishablePolicies,
+  useApprovePolicyForPublication,
+  useRequestPolicyRevision,
+  useRejectPolicy,
+  useRejectedPolicies,
+  useReviewPolicy,
   usePublishPolicyVersion,
 } from "../hooks/use-policy-publication";
 import type {
   PublishablePolicy,
   PublishablePolicyQuery,
+  RejectedPolicyListItem,
+  RejectedPolicyQuery,
 } from "../schemas/policy-publication-schema";
+import {
+  rejectPolicyInputSchema,
+  requestPolicyRevisionInputSchema,
+} from "../schemas/policy-publication-schema";
+import { Textarea } from "@/components/ui/textarea";
 
 const initialQuery: PublishablePolicyQuery = {
   page: 1,
   limit: 20,
   sortBy: "updatedAt",
+  sortOrder: "desc",
+};
+
+const initialRejectedQuery: RejectedPolicyQuery = {
+  page: 1,
+  limit: 10,
   sortOrder: "desc",
 };
 
@@ -54,15 +73,71 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Please try again.";
 }
 
-export function PolicyPublicationManager() {
+const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
+  {
+    key: "policy",
+    header: "Policy",
+    cell: (item) => (
+      <span>
+        <strong className="block">{item.title}</strong>
+        <span className="text-muted text-xs">{item.policyCode}</span>
+      </span>
+    ),
+  },
+  {
+    key: "version",
+    header: "Version",
+    cell: (item) => `v${item.version.versionNumber}`,
+  },
+  {
+    key: "status",
+    header: "Status",
+    cell: () => <StatusBadge tone="danger">Rejected</StatusBadge>,
+  },
+  {
+    key: "reason",
+    header: "Reason",
+    cell: (item) => (
+      <span className="block max-w-md whitespace-normal">
+        {item.rejection.reason}
+      </span>
+    ),
+  },
+  {
+    key: "decision",
+    header: "Decision",
+    cell: (item) => (
+      <span>
+        <span className="block">{item.rejection.rejectedByName}</span>
+        <span className="text-muted text-xs">
+          {formatDate(item.rejection.rejectedAt)}
+        </span>
+      </span>
+    ),
+  },
+];
+
+export function PolicyPublicationManager({
+  onViewHistory,
+}: {
+  onViewHistory?: () => void;
+}) {
   const toast = useToast();
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState<"pending" | "rejected">("pending");
+  const [rejectedQuery, setRejectedQuery] = useState(initialRejectedQuery);
+  const [rejectedSearch, setRejectedSearch] = useState("");
   const [selected, setSelected] = useState<{
     policyId: string;
     versionId: string;
   } | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState("");
+  const [requestingRevision, setRequestingRevision] = useState(false);
+  const [revisionComment, setRevisionComment] = useState("");
+  const [revisionError, setRevisionError] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionError, setRejectionError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const policies = usePublishablePolicies(query);
   const metricPolicies = usePublishablePolicies(initialQuery);
@@ -70,7 +145,22 @@ export function PolicyPublicationManager() {
     selected?.policyId ?? null,
     selected?.versionId ?? null,
   );
-  const publish = usePublishPolicyVersion();
+  const approve = useApprovePolicyForPublication();
+  const completeReview = useReviewPolicy();
+  const publishVersion = usePublishPolicyVersion();
+  const requestRevision = useRequestPolicyRevision();
+  const reject = useRejectPolicy();
+  const rejectedPolicies = useRejectedPolicies(rejectedQuery);
+
+  function closeReview(): void {
+    setSelected(null);
+    setRequestingRevision(false);
+    setRevisionComment("");
+    setRevisionError(null);
+    setRejecting(false);
+    setRejectionReason("");
+    setRejectionError(null);
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -99,9 +189,14 @@ export function PolicyPublicationManager() {
       {
         key: "status",
         header: "Status",
-        cell: () => (
-          <StatusBadge tone="warning">Pending publication</StatusBadge>
-        ),
+        cell: (item) =>
+          item.draftVersion.status === "approved" ? (
+            <StatusBadge tone="success">Approved</StatusBadge>
+          ) : item.draftVersion.status === "waiting_approval" ? (
+            <StatusBadge tone="success">Reviewed</StatusBadge>
+          ) : (
+            <StatusBadge tone="warning">In review</StatusBadge>
+          ),
       },
       {
         key: "updatedAt",
@@ -161,21 +256,104 @@ export function PolicyPublicationManager() {
     });
   }
 
-  async function confirmPublish(): Promise<void> {
+  async function confirmApproval(): Promise<void> {
     if (!selected) return;
     try {
-      await publish.mutateAsync({
-        ...selected,
-        ...(effectiveDate ? { effectiveDate } : {}),
-      });
+      await approve.mutateAsync(selected);
+      toast.success(
+        "Policy approved",
+        "The reviewed version is approved and ready for publication.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to approve policy", errorMessage(error));
+    }
+  }
+
+  async function confirmRevisionRequest(): Promise<void> {
+    if (!selected) return;
+    const parsed = requestPolicyRevisionInputSchema.safeParse({
+      comment: revisionComment,
+    });
+    if (!parsed.success) {
+      setRevisionError(
+        parsed.error.issues[0]?.message ??
+          "Revision instructions are required.",
+      );
+      return;
+    }
+    setRevisionError(null);
+    try {
+      await requestRevision.mutateAsync({ ...selected, body: parsed.data });
+      toast.success(
+        "Revision requested",
+        "The draft was returned to the Security Officer with your instructions.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to request revision", errorMessage(error));
+    }
+  }
+
+  async function confirmReview(): Promise<void> {
+    if (!selected) return;
+    try {
+      await completeReview.mutateAsync(selected);
+      toast.success(
+        "Policy review completed",
+        "The review was recorded and the version is ready for an approval decision.",
+      );
+    } catch (error: unknown) {
+      toast.error("Unable to complete review", errorMessage(error));
+    }
+  }
+
+  async function confirmPublication(): Promise<void> {
+    if (!selected) return;
+    try {
+      await publishVersion.mutateAsync(selected);
       toast.success(
         "Policy published",
-        "The official version was published and recorded in the audit log.",
+        "The approved version is now the current official policy.",
       );
-      setSelected(null);
-      setEffectiveDate("");
+      closeReview();
     } catch (error: unknown) {
       toast.error("Unable to publish policy", errorMessage(error));
+    }
+  }
+
+  function submitRejectedSearch(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const q = rejectedSearch.trim();
+    setRejectedQuery((current) => {
+      if (q) return { ...current, page: 1, q };
+      const next = { ...current };
+      delete next.q;
+      return { ...next, page: 1 };
+    });
+  }
+
+  async function confirmRejection(): Promise<void> {
+    if (!selected) return;
+    const parsed = rejectPolicyInputSchema.safeParse({
+      reason: rejectionReason,
+    });
+    if (!parsed.success) {
+      setRejectionError(
+        parsed.error.issues[0]?.message ?? "A rejection reason is required.",
+      );
+      return;
+    }
+    setRejectionError(null);
+    try {
+      await reject.mutateAsync({ ...selected, body: parsed.data });
+      toast.success(
+        "Policy rejected",
+        "The decision and rejection reason were recorded for this version.",
+      );
+      closeReview();
+    } catch (error: unknown) {
+      toast.error("Unable to reject policy", errorMessage(error));
     }
   }
 
@@ -188,17 +366,25 @@ export function PolicyPublicationManager() {
   return (
     <>
       <ProductPageHeader
-        description="Review draft content and publish official information security policy versions."
+        additionalActions={
+          onViewHistory ? (
+            <Button variant="secondary" onClick={onViewHistory}>
+              <History aria-hidden="true" className="size-4" />
+              View version history
+            </Button>
+          ) : undefined
+        }
+        description="Review submitted policy content and approve eligible versions for publication."
         showSampleNotice={false}
-        title="Publish official policy versions"
+        title="Approve policy versions"
       />
       <MetricStrip
         ariaLabel="Policy publication metrics"
         metrics={[
           {
-            label: "Pending publication",
+            label: "Open workflow",
             value: String(total),
-            detail: "Draft versions ready for review",
+            detail: "Review, approval, or publication pending",
             tone: "warning",
             loading: metricPolicies.isPending,
           },
@@ -227,75 +413,194 @@ export function PolicyPublicationManager() {
       />
       <ProductPanel
         description={
-          policies.data
-            ? `${policies.data.pagination.total} policy drafts found`
-            : "Backend-managed policy drafts ready for publication"
+          activeTab === "pending"
+            ? policies.data
+              ? `${policies.data.pagination.total} policy drafts found`
+              : "Backend-managed policy drafts ready for publication"
+            : rejectedPolicies.data
+              ? `${rejectedPolicies.data.pagination.total} rejected policy versions`
+              : "Recorded rejection decisions and reasons"
         }
-        title="Policy drafts awaiting publication"
+        title="Policy review queue"
       >
-        <form
-          className="border-border flex gap-2 border-b p-4"
-          onSubmit={submitSearch}
+        <div
+          aria-label="Policy review status"
+          className="border-border flex overflow-x-auto border-b px-4"
+          role="tablist"
         >
-          <label className="relative block w-full max-w-md">
-            <span className="sr-only">Search policy drafts</span>
-            <Search
-              aria-hidden="true"
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            />
-            <Input
-              className="pl-9"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by policy code or title"
-              value={search}
-            />
-          </label>
-          <Button className="min-h-10" type="submit">
-            Search
-          </Button>
-        </form>
-        <div className="p-4">
-          {policies.isPending ? (
-            <TableSkeleton
-              columns={5}
-              label="Loading policy drafts awaiting publication"
-            />
-          ) : policies.isError ? (
-            <Alert>
-              <strong className="block">
-                Unable to load policy drafts awaiting publication
-              </strong>
-              <span>{errorMessage(policies.error)}</span>
-            </Alert>
-          ) : policies.data?.items.length === 0 ? (
-            <p className="text-muted py-10 text-center">
-              No policy drafts awaiting publication were found.
-            </p>
-          ) : policies.data ? (
-            <DataTable
-              columns={columns}
-              getRowKey={(item) => item.id}
-              rows={policies.data.items}
-            />
-          ) : null}
+          {(
+            [
+              { id: "pending", label: "Review & publish", count: total },
+              {
+                id: "rejected",
+                label: "Rejected",
+                count: rejectedPolicies.data?.pagination.total ?? 0,
+              },
+            ] as const
+          ).map((tab) => (
+            <button
+              aria-controls={`policy-${tab.id}-panel`}
+              aria-selected={activeTab === tab.id}
+              className={cn(
+                "focus-visible:outline-brand flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-4 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]",
+                activeTab === tab.id
+                  ? "border-brand text-brand"
+                  : "text-muted hover:text-foreground border-transparent",
+              )}
+              id={`policy-${tab.id}-tab`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+              <span className="bg-neutral-soft text-foreground min-w-6 rounded-full px-2 py-0.5 text-center text-xs tabular-nums">
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
-        {policies.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              onPageChange={(page) =>
-                setQuery((current) => ({ ...current, page }))
-              }
-              page={query.page}
-              pageCount={policies.data?.pagination.totalPages ?? 0}
-            />
+        {activeTab === "pending" ? (
+          <div
+            aria-labelledby="policy-pending-tab"
+            id="policy-pending-panel"
+            role="tabpanel"
+          >
+            <form
+              className="border-border flex gap-2 border-b p-4"
+              onSubmit={submitSearch}
+            >
+              <label className="relative block w-full max-w-md">
+                <span className="sr-only">Search policy drafts</span>
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by policy code or title"
+                  value={search}
+                />
+              </label>
+              <Button
+                aria-label="Search policy drafts"
+                className="min-h-10"
+                type="submit"
+              >
+                Search
+              </Button>
+            </form>
+            <div className="p-4">
+              {policies.isPending ? (
+                <TableSkeleton
+                  columns={5}
+                  label="Loading policy drafts awaiting publication"
+                />
+              ) : policies.isError ? (
+                <Alert>
+                  <strong className="block">
+                    Unable to load policy drafts awaiting publication
+                  </strong>
+                  <span>{errorMessage(policies.error)}</span>
+                </Alert>
+              ) : policies.data?.items.length === 0 ? (
+                <p className="text-muted py-10 text-center">
+                  No policy versions require an Admin action.
+                </p>
+              ) : policies.data ? (
+                <DataTable
+                  columns={columns}
+                  getRowKey={(item) => item.id}
+                  rows={policies.data.items}
+                />
+              ) : null}
+            </div>
+            {policies.data ? (
+              <div className="border-border border-t p-4">
+                <Pagination
+                  onPageChange={(page) =>
+                    setQuery((current) => ({ ...current, page }))
+                  }
+                  page={query.page}
+                  pageCount={policies.data.pagination.totalPages}
+                />
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        ) : (
+          <div
+            aria-labelledby="policy-rejected-tab"
+            id="policy-rejected-panel"
+            role="tabpanel"
+          >
+            <form
+              className="border-border flex gap-2 border-b p-4"
+              onSubmit={submitRejectedSearch}
+            >
+              <label className="relative block w-full max-w-md">
+                <span className="sr-only">Search rejected policies</span>
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setRejectedSearch(event.target.value)}
+                  placeholder="Search rejected policies by code or title"
+                  value={rejectedSearch}
+                />
+              </label>
+              <Button
+                aria-label="Search rejected policies"
+                className="min-h-10"
+                type="submit"
+                variant="secondary"
+              >
+                Search
+              </Button>
+            </form>
+            <div className="p-4">
+              {rejectedPolicies.isPending ? (
+                <TableSkeleton columns={5} label="Loading rejected policies" />
+              ) : rejectedPolicies.isError ? (
+                <Alert>
+                  <strong className="block">
+                    Unable to load rejected policies
+                  </strong>
+                  <span>{errorMessage(rejectedPolicies.error)}</span>
+                </Alert>
+              ) : rejectedPolicies.data?.items.length === 0 ? (
+                <p className="text-muted py-10 text-center">
+                  No rejected policy versions were found.
+                </p>
+              ) : rejectedPolicies.data ? (
+                <DataTable
+                  columns={rejectedColumns}
+                  getRowKey={(item) => item.rejection.id}
+                  rows={rejectedPolicies.data.items}
+                />
+              ) : null}
+            </div>
+            {rejectedPolicies.data ? (
+              <div className="border-border border-t p-4">
+                <Pagination
+                  onPageChange={(page) =>
+                    setRejectedQuery((current) => ({ ...current, page }))
+                  }
+                  page={rejectedQuery.page}
+                  pageCount={rejectedPolicies.data.pagination.totalPages}
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
       </ProductPanel>
 
       <Dialog
         className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
         dialogRef={dialogRef}
-        onClose={() => setSelected(null)}
+        onClose={closeReview}
         title="Review policy version"
       >
         {review.isPending ? (
@@ -332,26 +637,175 @@ export function PolicyPublicationManager() {
                 {review.data.version.changeSummary}
               </p>
             ) : null}
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">
-                Effective date
-              </span>
-              <Input
-                onChange={(event) => setEffectiveDate(event.target.value)}
-                type="date"
-                value={effectiveDate}
-              />
-              <span className="text-muted mt-1 block text-xs">
-                Leave blank to use the current publication date.
-              </span>
-            </label>
+            {requestingRevision ? (
+              <div className="border-border bg-neutral-soft space-y-2 rounded-lg border p-4">
+                <label className="block" htmlFor="policy-revision-comment">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    Revision instructions
+                  </span>
+                  <Textarea
+                    aria-describedby={
+                      revisionError ? "policy-revision-error" : undefined
+                    }
+                    aria-invalid={revisionError ? true : undefined}
+                    id="policy-revision-comment"
+                    maxLength={5_000}
+                    onChange={(event) => {
+                      setRevisionComment(event.target.value);
+                      if (revisionError) setRevisionError(null);
+                    }}
+                    placeholder="Explain what must be revised before approval."
+                    value={revisionComment}
+                  />
+                </label>
+                {revisionError ? (
+                  <p className="text-danger text-sm" id="policy-revision-error">
+                    {revisionError}
+                  </p>
+                ) : (
+                  <p className="text-muted text-xs">
+                    These instructions will be recorded with the review
+                    decision.
+                  </p>
+                )}
+              </div>
+            ) : rejecting ? (
+              <div className="border-danger/30 bg-danger/5 space-y-2 rounded-lg border p-4">
+                <label className="block" htmlFor="policy-rejection-reason">
+                  <span className="mb-1.5 block text-sm font-medium">
+                    Rejection reason
+                  </span>
+                  <Textarea
+                    aria-describedby={
+                      rejectionError ? "policy-rejection-error" : undefined
+                    }
+                    aria-invalid={rejectionError ? true : undefined}
+                    id="policy-rejection-reason"
+                    maxLength={5_000}
+                    onChange={(event) => {
+                      setRejectionReason(event.target.value);
+                      if (rejectionError) setRejectionError(null);
+                    }}
+                    placeholder="Explain why this policy cannot be approved."
+                    value={rejectionReason}
+                  />
+                </label>
+                {rejectionError ? (
+                  <p
+                    className="text-danger text-sm"
+                    id="policy-rejection-error"
+                  >
+                    {rejectionError}
+                  </p>
+                ) : (
+                  <p className="text-muted text-xs">
+                    Rejection is final for this version and will be recorded in
+                    the audit trail.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Alert>
+                {review.data.version.status === "approved"
+                  ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
+                  : review.data.version.status === "waiting_approval"
+                    ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
+                    : "Confirm that you have reviewed the complete policy content before making an approval decision."}
+              </Alert>
+            )}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button onClick={() => setSelected(null)} variant="secondary">
-                Cancel
-              </Button>
-              <Button disabled={publish.isPending} onClick={confirmPublish}>
-                {publish.isPending ? "Publishing..." : "Publish version"}
-              </Button>
+              {requestingRevision ? (
+                <>
+                  <Button
+                    disabled={requestRevision.isPending}
+                    onClick={() => {
+                      setRequestingRevision(false);
+                      setRevisionError(null);
+                    }}
+                    variant="secondary"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    disabled={requestRevision.isPending}
+                    onClick={confirmRevisionRequest}
+                  >
+                    {requestRevision.isPending
+                      ? "Sending..."
+                      : "Send revision request"}
+                  </Button>
+                </>
+              ) : rejecting ? (
+                <>
+                  <Button
+                    disabled={reject.isPending}
+                    onClick={() => {
+                      setRejecting(false);
+                      setRejectionError(null);
+                    }}
+                    variant="secondary"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    disabled={reject.isPending}
+                    onClick={confirmRejection}
+                    variant="danger"
+                  >
+                    {reject.isPending ? "Rejecting..." : "Confirm rejection"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={closeReview} variant="secondary">
+                    Cancel
+                  </Button>
+                  {review.data.version.status !== "approved" ? (
+                    <>
+                      <Button
+                        onClick={() => setRequestingRevision(true)}
+                        variant="secondary"
+                      >
+                        Request revision
+                      </Button>
+                      <Button
+                        onClick={() => setRejecting(true)}
+                        variant="danger"
+                      >
+                        Reject policy
+                      </Button>
+                    </>
+                  ) : null}
+                  {review.data.version.status === "approved" ? (
+                    <Button
+                      disabled={publishVersion.isPending}
+                      onClick={confirmPublication}
+                    >
+                      {publishVersion.isPending
+                        ? "Publishing..."
+                        : "Publish official version"}
+                    </Button>
+                  ) : review.data.version.status === "waiting_approval" ? (
+                    <Button
+                      disabled={approve.isPending}
+                      onClick={confirmApproval}
+                    >
+                      {approve.isPending
+                        ? "Approving..."
+                        : "Approve for publication"}
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled={completeReview.isPending}
+                      onClick={confirmReview}
+                    >
+                      {completeReview.isPending
+                        ? "Recording review..."
+                        : "Complete review"}
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         ) : null}

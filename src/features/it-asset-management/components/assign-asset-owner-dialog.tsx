@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ApiError } from "@/lib/api/api-error";
 import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
 import { useAssignAssetOwner } from "../hooks/use-assign-asset-owner";
 import {
@@ -30,6 +31,8 @@ export function AssignAssetOwnerDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
+  const [removalConfirmed, setRemovalConfirmed] = useState(false);
+  const [stale, setStale] = useState(false);
   const options = useAssetCreateOptions(asset !== null);
   const mutation = useAssignAssetOwner(asset?.id ?? null);
   const toast = useToast();
@@ -37,6 +40,7 @@ export function AssignAssetOwnerDialog({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<AssignAssetOwnerInput, unknown, AssignAssetOwnerRequest>({
     resolver: zodResolver(assignAssetOwnerSchema),
@@ -58,10 +62,17 @@ export function AssignAssetOwnerDialog({
   const close = (): void => {
     reset(defaults);
     setMessage(undefined);
+    setRemovalConfirmed(false);
+    setStale(false);
     onClose();
   };
   const submit = async (values: AssignAssetOwnerRequest): Promise<void> => {
     if (!asset) return;
+    if (asset.status !== "active" || stale || mutation.isPending) return;
+    if (values.ownerUserId === null && asset.owner && !removalConfirmed) {
+      setMessage("Confirm owner removal before saving.");
+      return;
+    }
     setMessage(undefined);
     try {
       const result = await mutation.mutateAsync(values);
@@ -77,6 +88,7 @@ export function AssignAssetOwnerDialog({
           : `${asset.assetCode} currently has no owner.`,
       );
     } catch (error: unknown) {
+      if (error instanceof ApiError && [403, 404, 409].includes(error.status)) setStale(true);
       setMessage(
         error instanceof Error
           ? error.message
@@ -86,6 +98,9 @@ export function AssignAssetOwnerDialog({
   };
 
   const disposed = asset?.status === "disposed";
+  const locked = asset?.status !== "active" || stale || mutation.isPending;
+  const selectedOwner = useWatch({ control, name: "ownerUserId" });
+  const removingOwner = Boolean(asset?.owner) && (selectedOwner === "" || selectedOwner === null);
   return (
     <Dialog
       title="Assign Asset Owner"
@@ -99,14 +114,20 @@ export function AssignAssetOwnerDialog({
             <strong>{asset.assetCode}</strong> – {asset.name}. Current owner: {asset.owner?.fullName ?? "Unassigned"}.
           </p>
           {disposed ? <Alert>Disposed assets cannot be assigned an owner.</Alert> : null}
+          {asset.status === "archived" ? <Alert>Archived assets cannot be assigned an owner.</Alert> : null}
+          {stale ? <Alert>Asset state or permissions changed. Close and reopen this form to review the latest data.</Alert> : null}
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
           ) : null}
           <FormField id="asset-owner" label="New owner" error={errors.ownerUserId?.message}>
             <Select
               id="asset-owner"
-              disabled={disposed || options.isPending || options.isError}
+              disabled={locked || options.isPending || options.isError}
               {...register("ownerUserId")}
+              onChange={(event) => {
+                setRemovalConfirmed(false);
+                void register("ownerUserId").onChange(event);
+              }}
             >
               <option value="">
                 {options.isPending ? "Loading users…" : "Remove owner"}
@@ -127,13 +148,23 @@ export function AssignAssetOwnerDialog({
             <Textarea
               id="owner-assignment-reason"
               maxLength={1000}
-              disabled={disposed}
+              disabled={locked}
               {...register("reason")}
             />
           </FormField>
           <p className="text-muted text-xs">
-            Assigning, reassigning, or removing an owner is recorded in change history and audit logs.
+            The owner is responsible for this asset. Changing ownership does not transfer ownership of related risks or controls.
           </p>
+          {removingOwner ? (
+            <div className="space-y-2 rounded-lg border border-warning/25 bg-warning/10 p-3">
+              <p className="text-sm">Removing the owner leaves this asset unassigned.</p>
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input type="checkbox" checked={removalConfirmed} disabled={locked}
+                  onChange={(event) => setRemovalConfirmed(event.target.checked)} />
+                I confirm removing the current owner
+              </label>
+            </div>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -144,7 +175,7 @@ export function AssignAssetOwnerDialog({
             </Button>
             <Button
               type="submit"
-              disabled={disposed || options.isPending || options.isError || mutation.isPending}
+              disabled={locked || options.isPending || options.isError || (removingOwner && !removalConfirmed)}
             >
               {mutation.isPending ? "Saving…" : "Save owner"}
             </Button>

@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Library,
   ScrollText,
+  SearchCode,
   Settings,
   ShieldAlert,
   Users,
@@ -25,71 +26,68 @@ export type NavigationItem = {
   title: string;
   href: string;
   icon: LucideIcon;
-  section: "Tổng quan" | "Quản lý" | "AI & Giám sát" | "Báo cáo" | "Cài đặt";
+  section:
+    "Overview" | "Management" | "AI & Monitoring" | "Reporting" | "Settings";
   requiredAnyPermission?: readonly string[];
+  allowedRoleCodes?: readonly string[];
 };
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
 const modules = {
   alerts: {
-    title: "Cảnh báo",
+    title: "Alerts",
     slug: "alerts",
     requiredAnyPermission: ["ai-alerts.read", "ai-alerts.thresholds.manage"],
     icon: Bell,
-    section: "Tổng quan",
+    section: "Overview",
   },
   users: {
-    title: "Người dùng",
+    title: "Users",
     slug: "users",
     icon: Users,
-    section: "Quản lý",
+    section: "Management",
     requiredAnyPermission: ["users.read"],
   },
   roles: {
-    title: "Vai trò & quyền",
+    title: "Roles & Permissions",
     slug: "roles",
     icon: KeyRound,
-    section: "Quản lý",
+    section: "Management",
     requiredAnyPermission: ["roles.read"],
   },
   assets: {
-    title: "Tài sản",
+    title: "Assets",
     slug: "assets",
     icon: Boxes,
-    section: "Quản lý",
+    section: "Management",
     requiredAnyPermission: ["assets.read"],
   },
   risks: {
-    title: "Rủi ro",
+    title: "Risks",
     slug: "risks",
     requiredAnyPermission: ["risks.read", "risks.create", "risks.update"],
     icon: ShieldAlert,
-    section: "Quản lý",
+    section: "Management",
   },
   incidents: {
-    title: "Sự cố",
+    title: "Incidents",
     slug: "incidents",
-    requiredAnyPermission: [
-      "incidents.read",
-      "incidents.report",
-      "incidents.assign",
-      "incidents.update-progress",
-    ],
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER", "EXECUTIVE", "EMPLOYEE"],
     icon: Bell,
-    section: "Quản lý",
+    section: "Management",
   },
   controls: {
-    title: "Kiểm soát",
+    title: "Controls",
     slug: "controls",
     requiredAnyPermission: [
       "compliance.assess-controls",
       "compliance.map-controls",
     ],
     icon: ClipboardCheck,
-    section: "Quản lý",
+    section: "Management",
   },
   compliance: {
-    title: "Tuân thủ",
+    title: "Compliance",
     slug: "compliance",
     requiredAnyPermission: [
       "compliance.assess-controls",
@@ -97,20 +95,20 @@ const modules = {
       "compliance.evidence.upload",
     ],
     icon: Library,
-    section: "Quản lý",
+    section: "Management",
   },
   audits: {
-    title: "Kiểm toán",
+    title: "Audit",
     slug: "audits",
     icon: History,
-    requiredAnyPermission: ["audit.read"],
-    section: "Quản lý",
+    allowedRoleCodes: ["ADMIN"],
+    section: "Management",
   },
   policies: {
-    title: "Chính sách",
+    title: "Policies",
     slug: "policies",
     icon: ScrollText,
-    section: "Quản lý",
+    section: "Management",
     requiredAnyPermission: [
       "policies.create",
       "policies.update",
@@ -119,72 +117,79 @@ const modules = {
     ],
   },
   workflowDefinitions: {
-    title: "Quy trình phê duyệt",
+    title: "Approval Workflows",
     slug: "workflow-definitions",
     icon: GitBranch,
-    section: "Quản lý",
+    section: "Management",
     requiredAnyPermission: ["workflows.read"],
   },
   anomalyMonitoring: {
-    title: "Giám sát bất thường",
+    title: "Anomaly Monitoring",
     slug: "anomaly-monitoring",
     icon: Activity,
-    section: "AI & Giám sát",
+    section: "AI & Monitoring",
     requiredAnyPermission: ["ai-alerts.read"],
   },
   aiModels: {
-    title: "Mô hình AI",
+    title: "AI Models",
     slug: "ai-models",
     icon: BrainCircuit,
-    section: "AI & Giám sát",
+    section: "AI & Monitoring",
     requiredAnyPermission: ["ai-models.read"],
   },
   eventLogs: {
-    title: "Log & Sự kiện",
+    title: "Event & Log Sources",
     slug: "event-logs",
     icon: FileStack,
-    section: "AI & Giám sát",
+    section: "AI & Monitoring",
     requiredAnyPermission: ["log-sources.read"],
   },
   integrationSchedules: {
     title: "Sync Schedules",
     slug: "integrations/schedules",
     icon: CalendarClock,
-    section: "AI & Giám sát",
+    section: "AI & Monitoring",
     requiredAnyPermission: ["integrations.read"],
   },
   reports: {
-    title: "Báo cáo",
+    title: "Reports",
     slug: "reports",
     icon: FileStack,
     requiredAnyPermission: ["reports.read"],
-    section: "Báo cáo",
+    section: "Reporting",
   },
   customDashboard: {
-    title: "Dashboard tùy chỉnh",
+    title: "Custom Dashboard",
     slug: "custom-dashboard",
     icon: LayoutDashboard,
     requiredAnyPermission: ["reports.read"],
-    section: "Báo cáo",
+    section: "Reporting",
   },
   notifications: {
-    title: "Thông báo",
+    title: "Notifications",
     slug: "notifications",
     icon: Bell,
-    section: "Báo cáo",
+    section: "Reporting",
+  },
+  systemLogs: {
+    title: "System Logs",
+    slug: "system-logs",
+    icon: SearchCode,
+    section: "Reporting",
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER"],
   },
   settings: {
-    title: "Cài đặt",
+    title: "Settings",
     slug: "settings",
     icon: Settings,
     requiredAnyPermission: ["system-settings.read"],
-    section: "Cài đặt",
+    section: "Settings",
   },
   loginHistory: {
     title: "Login history",
     slug: "login-history",
     icon: History,
-    section: "Báo cáo",
+    section: "Reporting",
     requiredAnyPermission: ["login-history.read"],
   },
 } as const satisfies Record<string, ModuleDefinition>;
@@ -208,6 +213,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -229,6 +235,7 @@ export const panelModules = {
     modules.reports,
     modules.customDashboard,
     modules.notifications,
+    modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
@@ -247,9 +254,11 @@ export const panelModules = {
     modules.eventLogs,
     modules.reports,
     modules.notifications,
+    modules.systemLogs,
   ],
   employee: [
     modules.assets,
+    modules.risks,
     modules.policies,
     modules.incidents,
     modules.notifications,
@@ -269,10 +278,10 @@ export const panelModules = {
 
 export const panelLabels: Record<PanelKind, string> = {
   dashboard: "Dashboard",
-  admin: "Quản trị hệ thống",
-  "security-officer": "Chuyên viên ATTT",
-  employee: "Nhân viên",
-  "executive-auditor": "Lãnh đạo / Kiểm toán",
+  admin: "System Administration",
+  "security-officer": "Security Officer",
+  employee: "Employee",
+  "executive-auditor": "Executive / Auditor",
 };
 
 export const panelRoleCodes: Record<PanelKind, string> = {
@@ -328,14 +337,17 @@ export function canAccessPanel(
 export function canAccessNavigationItem(
   permissions: readonly string[],
   item: NavigationItem,
-  _roleCodes: readonly string[] = [],
+  roleCodes: readonly string[] = [],
 ): boolean {
-  return (
+  const roleAllowed =
+    !item.allowedRoleCodes?.length ||
+    item.allowedRoleCodes.some((role) => roleCodes.includes(role));
+  const permissionAllowed =
     !item.requiredAnyPermission?.length ||
     item.requiredAnyPermission.some((permission) =>
       permissions.includes(permission),
-    )
-  );
+    );
+  return roleAllowed && permissionAllowed;
 }
 
 export function getPanelKind(
@@ -361,10 +373,10 @@ export function getPanelNavigation(
 ): readonly NavigationItem[] {
   const base: NavigationItem[] = [
     {
-      title: "Tổng quan",
+      title: "Overview",
       href: `/${panel}`,
       icon: Gauge,
-      section: "Tổng quan",
+      section: "Overview",
     },
     ...panelModules[panel].map((item) => ({
       ...item,
@@ -374,11 +386,11 @@ export function getPanelNavigation(
 
   // Add direct-href items that are not panel-scoped
   if (panel === "admin") {
-    base.splice(base.findIndex((i) => i.title === "Mô hình AI") + 1, 0, {
+    base.splice(base.findIndex((i) => i.title === "AI Models") + 1, 0, {
       title: "Sync Schedules",
       href: "/integrations/schedules",
       icon: CalendarClock,
-      section: "AI & Giám sát",
+      section: "AI & Monitoring",
       requiredAnyPermission: ["integrations.read"],
     });
   }

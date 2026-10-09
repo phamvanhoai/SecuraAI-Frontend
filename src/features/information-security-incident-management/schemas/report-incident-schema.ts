@@ -1,34 +1,65 @@
 import { z } from "zod";
-export const reportIncidentFormSchema = z.object({
-  title: z.string().trim().min(5, "Enter at least 5 characters").max(255),
-  description: z
-    .string()
-    .trim()
-    .min(20, "Describe what happened in at least 20 characters")
-    .max(10_000),
-  category: z.enum([
-    "phishing",
-    "malware",
-    "account_compromise",
-    "data_exposure",
-    "network",
-    "physical",
-    "other",
-  ]),
-  occurredAt: z.string(),
+export const reportIncidentFormSchema = z
+  .object({
+    creationMode: z.enum(["source", "manual"]),
+    sourceId: z.string(),
+    title: z.string().trim().min(5, "Enter at least 5 characters").max(255),
+    description: z
+      .string()
+      .trim()
+      .min(20, "Describe what happened in at least 20 characters")
+      .max(10_000),
+    severity: z.enum(["low", "medium", "high", "critical"]),
+    occurredAt: z.string(),
+  })
+  .superRefine((value, context) => {
+    if (
+      value.creationMode === "source" &&
+      !z.uuid().safeParse(value.sourceId).success
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceId"],
+        message: "Select a confirmed alert or finding",
+      });
+    }
+  });
+export const incidentSourceOptionsSchema = z.object({
+  items: z.array(
+    z.object({
+      findingId: z.uuid(),
+      alertId: z.uuid(),
+      title: z.string(),
+      description: z.string().nullable(),
+      severity: z.enum(["low", "medium", "high", "critical"]),
+      findingStatus: z.string(),
+      detectedAt: z.string().datetime(),
+      identifiedAt: z.string().datetime(),
+    }),
+  ),
+  pagination: z.object({
+    page: z.number().int().min(1),
+    limit: z.number().int().min(1),
+    total: z.number().int().min(0),
+    totalPages: z.number().int().min(0),
+  }),
 });
 export const incidentSchema = z.object({
   id: z.uuid(),
   incidentCode: z.string(),
   title: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullable(),
   category: z.string().nullable(),
   severity: z.string(),
   status: z.string(),
   occurredAt: z.string().datetime().nullable(),
-  detectedAt: z.string().datetime(),
+  detectedAt: z.string().datetime().nullable(),
+  confirmedAt: z.string().datetime().nullable(),
+  closedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
   classified: z.boolean(),
+  hasAnalysis: z.boolean().default(false),
   classificationCount: z.number().int().min(0),
   lastClassification: z
     .object({
@@ -39,10 +70,67 @@ export const incidentSchema = z.object({
     .nullable(),
   currentAssignment: z
     .object({
-      assignedAt: z.string().datetime(),
+      assignedAt: z.string().datetime().nullable(),
       assignee: z.object({ id: z.uuid(), name: z.string(), email: z.email() }),
     })
     .nullable(),
+  createdBy: z
+    .object({ id: z.uuid(), name: z.string(), email: z.email() })
+    .nullable(),
+  source: z
+    .object({
+      findingId: z.uuid(),
+      alertId: z.uuid(),
+      title: z.string(),
+      findingStatus: z.string(),
+    })
+    .nullable()
+    .optional(),
+  relatedCounts: z.object({
+    actions: z.number().int().min(0),
+    assets: z.number().int().min(0),
+    controls: z.number().int().min(0),
+    evidence: z.number().int().min(0),
+    risks: z.number().int().min(0),
+  }),
+});
+const incidentActorSchema = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.email(),
+});
+export const incidentDetailSchema = incidentSchema.extend({
+  affectedAssets: z.array(
+    z.object({
+      id: z.uuid(),
+      assetCode: z.string(),
+      name: z.string(),
+      assetType: z.string(),
+      criticality: z.string().nullable(),
+      status: z.string(),
+      linkedAt: z.string().datetime(),
+      linkedBy: incidentActorSchema.nullable(),
+    }),
+  ),
+  responseActions: z.array(
+    z.object({
+      id: z.uuid(),
+      phase: z.enum(["containment", "eradication", "recovery"]),
+      description: z.string(),
+      performedAt: z.string().datetime(),
+      performedBy: incidentActorSchema.nullable(),
+    }),
+  ),
+  handlingHistory: z.array(
+    z.object({
+      id: z.string(),
+      type: z.enum(["reported", "confirmed", "response_action", "closed"]),
+      description: z.string(),
+      occurredAt: z.string().datetime(),
+      actor: incidentActorSchema.nullable(),
+      phase: z.enum(["containment", "eradication", "recovery"]).nullable(),
+    }),
+  ),
 });
 export const myIncidentsSchema = z.object({
   items: z.array(incidentSchema),
@@ -76,12 +164,22 @@ export const assignIncidentFormSchema = z.object({
     .max(2000),
 });
 export const updateIncidentProgressFormSchema = z.object({
-  status: z.enum(["in_progress", "escalated", "resolved", "closed"]),
+  status: z.enum([
+    "triage",
+    "containment",
+    "eradication",
+    "recovery",
+    "lessons_learned",
+  ]),
+  confirmed: z
+    .boolean()
+    .refine((value) => value, "Confirm the phase transition."),
+  skipReason: z.string().trim().max(2000).optional(),
   note: z
     .string()
     .trim()
     .min(10, "Describe the progress in at least 10 characters")
-    .max(5000),
+    .max(2000),
 });
 export const incidentEvidenceSchema = z.object({
   id: z.uuid(),
@@ -118,6 +216,7 @@ export const removedIncidentEvidenceSchema = z.object({
 });
 export type ReportIncidentForm = z.infer<typeof reportIncidentFormSchema>;
 export type Incident = z.infer<typeof incidentSchema>;
+export type IncidentDetail = z.infer<typeof incidentDetailSchema>;
 export type ClassifyIncidentForm = z.infer<typeof classifyIncidentFormSchema>;
 export type IncidentSeverity = z.infer<typeof severitySchema>;
 export type AssignIncidentForm = z.infer<typeof assignIncidentFormSchema>;

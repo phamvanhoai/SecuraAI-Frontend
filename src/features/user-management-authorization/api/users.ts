@@ -12,6 +12,8 @@ import {
   userCreateOptionsSchema,
   userListResponseSchema,
   type UpdateUserPayload,
+  type UserImportResult,
+  userImportResultSchema,
 } from "../schemas/user-schema";
 
 export async function listUsers(
@@ -46,10 +48,10 @@ export async function createUser(
   const body = {
     email: input.email,
     fullName: input.fullName,
+    role: input.role,
     ...(input.phone ? { phone: input.phone } : {}),
-    employeeCode: input.employeeCode,
-    departmentId: input.departmentId,
-    roleCodes: input.roleCodes,
+    ...(input.employeeCode ? { employeeCode: input.employeeCode } : {}),
+    ...(input.departmentId ? { departmentId: input.departmentId } : {}),
   };
   const data = await apiRequest<unknown>("/api/users", {
     method: "POST",
@@ -68,6 +70,7 @@ export async function updateUser(
     phone: input.phone || null,
     employeeCode: input.employeeCode || null,
     departmentId: input.departmentId || null,
+    status: input.status.toUpperCase(),
   };
   const data = await apiRequest<unknown>(
     `/api/users/${encodeURIComponent(userId)}`,
@@ -117,8 +120,51 @@ export async function getUserCreateOptions(
       parsed.error.flatten(),
     );
   }
-  return {
-    ...parsed.data,
-    roles: parsed.data.roles.filter((role) => role.code !== "ALL"),
-  };
+  return parsed.data;
+}
+
+export async function importUsers(file: File): Promise<UserImportResult> {
+  const form = new FormData();
+  form.set("file", file);
+  const response = await fetch("/api/users/import", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    const message =
+      typeof payload === "object" && payload !== null && "error" in payload
+        ? String(
+            (payload as { error?: { message?: unknown } }).error?.message ??
+              "Import failed",
+          )
+        : "Import failed";
+    throw new ApiError(message, response.status, "UNKNOWN_ERROR", payload);
+  }
+  const data =
+    typeof payload === "object" && payload !== null && "data" in payload
+      ? (payload as { data: unknown }).data
+      : undefined;
+  return userImportResultSchema.parse(data);
+}
+
+export async function getUserDepartments(
+  signal?: AbortSignal,
+): Promise<UserCreateOptions> {
+  const data = await apiRequest<unknown>("/api/users/departments", {
+    method: "GET",
+    target: "same-origin",
+    ...(signal ? { signal } : {}),
+  });
+  const parsed = userCreateOptionsSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new ApiError(
+      "The server returned invalid department filter options.",
+      502,
+      "UNKNOWN_ERROR",
+      parsed.error.flatten(),
+    );
+  }
+  return parsed.data;
 }

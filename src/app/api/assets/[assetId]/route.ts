@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { updateAssetSchema } from "@/features/it-asset-management";
+import { archiveAssetSchema, updateAssetSchema } from "@/features/it-asset-management";
 import {
   authCookieNames,
   clearAuthCookies,
@@ -203,6 +203,12 @@ export async function DELETE(
       { status: 422 },
     );
   }
+  let body: unknown;
+  try { body = await request.json(); } catch {
+    return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Archive reason is required" } }, { status: 422 });
+  }
+  const input = archiveAssetSchema.safeParse(body);
+  if (!input.success) return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Enter an archive reason (1–1000 characters)." } }, { status: 422 });
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(authCookieNames.access)?.value;
   if (!accessToken) {
@@ -224,7 +230,9 @@ export async function DELETE(
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify(input.data),
       cache: "no-store",
     });
 

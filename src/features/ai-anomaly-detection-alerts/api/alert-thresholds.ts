@@ -13,11 +13,13 @@ import {
 } from "../schemas/alert-threshold-schema";
 
 export async function listAlertThresholdAssetOptions(
+  q?: string,
   signal?: AbortSignal,
 ): Promise<AlertThresholdAssetOption[]> {
   return alertThresholdAssetOptionsSchema.parse(
     await apiRequest<unknown>("/api/ai-alerts/thresholds/assets/options", {
       target: "same-origin",
+      query: { q },
       ...(signal ? { signal } : {}),
     }),
   );
@@ -47,12 +49,13 @@ export async function configureDetectionThreshold(
 
 export async function listAlertThresholds(
   page: number,
+  q?: string,
   signal?: AbortSignal,
 ): Promise<AlertThresholdList> {
   return alertThresholdListSchema.parse(
     await apiRequest<unknown>("/api/ai-alerts/thresholds/assets", {
       target: "same-origin",
-      query: { page, limit: 100 },
+      query: { page, limit: 10, q },
       ...(signal ? { signal } : {}),
     }),
   );

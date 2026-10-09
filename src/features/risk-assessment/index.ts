@@ -1,15 +1,4 @@
 export { RiskAssessmentsShell } from "./components/risk-assessments-shell";
-export { TreatmentPlansShell } from "./components/treatment-plans-shell";
-export { TreatmentPlanDetailShell } from "./components/treatment-plan-detail-shell";
-export { treatmentPlanDetailSchema } from "./schemas/treatment-plan-detail-schema";
-export type { TreatmentPlanDetail } from "./schemas/treatment-plan-detail-schema";
-export {
-  treatmentPlanListQuerySchema,
-  treatmentPlanListResponseSchema,
-  type TreatmentPlanListQuery,
-  type TreatmentPlanListItem,
-  type TreatmentPlanListResponse,
-} from "./schemas/treatment-plan-list-schema";
 export {
   riskListQuerySchema,
   riskListResponseSchema,
@@ -38,3 +27,6 @@ export { updateTreatmentPlanRequestSchema } from "./schemas/update-treatment-pla
 export { cancelTreatmentPlanRequestSchema } from "./schemas/cancel-treatment-plan-schema";
 export { updateTreatmentActionProgressRequestSchema } from "./schemas/update-treatment-action-progress-schema";
 export { performResidualRiskAssessmentRequestSchema } from "./schemas/perform-residual-risk-assessment-schema";
+export { createRiskTreatmentPlanSchema } from "./schemas/create-risk-treatment-plan-schema";
+export { updateRiskTreatmentPlanSchema } from "./schemas/update-risk-treatment-plan-schema";
+export { submitRiskAcceptanceSchema, decideRiskAcceptanceSchema } from "./schemas/risk-acceptance-schema";

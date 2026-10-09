@@ -128,6 +128,7 @@ export function AiAlertDetailDialog({
                 <ExplanationData
                   label="Feature contributions"
                   value={explanation.data.featureContributions}
+                  variant="contributions"
                 />
                 <ExplanationData
                   label="Baseline data"
@@ -150,18 +151,154 @@ export function AiAlertDetailDialog({
   );
 }
 
-function ExplanationData({ label, value }: { label: string; value: unknown }) {
+type ExplanationDataProps = {
+  label: string;
+  value: unknown;
+  variant?: "metrics" | "contributions";
+};
+
+function ExplanationData({
+  label,
+  value,
+  variant = "metrics",
+}: ExplanationDataProps) {
   if (value === null) return null;
+
+  const contributions =
+    variant === "contributions" ? parseContributions(value) : null;
+
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <h5 className="text-muted text-xs font-medium tracking-wide uppercase">
         {label}
       </h5>
-      <pre className="bg-neutral-soft max-h-48 overflow-auto rounded-lg p-3 text-xs [overflow-wrap:anywhere] whitespace-pre-wrap">
-        {JSON.stringify(value, null, 2)}
-      </pre>
+      {contributions ? (
+        contributions.length > 0 ? (
+          <div className="border-border overflow-hidden rounded-lg border">
+            <div className="bg-neutral-soft text-muted hidden grid-cols-[minmax(0,1fr)_minmax(7rem,0.65fr)_7rem] gap-3 border-b px-3 py-2 text-xs font-medium sm:grid">
+              <span>Feature</span>
+              <span>Observed value</span>
+              <span>Contribution</span>
+            </div>
+            <dl className="divide-border divide-y">
+              {contributions.map((feature, index) => (
+                <div
+                  className="grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(7rem,0.65fr)_7rem] sm:items-center sm:gap-3"
+                  key={`${feature.name}-${feature.rank ?? index}`}
+                >
+                  <div className="min-w-0">
+                    <dt className="font-medium [overflow-wrap:anywhere]">
+                      {formatLabel(feature.name)}
+                    </dt>
+                    {feature.rank !== null ? (
+                      <dd className="text-muted mt-0.5 text-xs">
+                        Influence rank {feature.rank}
+                      </dd>
+                    ) : null}
+                  </div>
+                  <div>
+                    <dt className="text-muted text-xs sm:hidden">
+                      Observed value
+                    </dt>
+                    <dd className="mt-0.5 font-mono text-xs [overflow-wrap:anywhere] sm:mt-0">
+                      {feature.value ?? "Not recorded"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted text-xs sm:hidden">
+                      Contribution
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-semibold tabular-nums sm:mt-0">
+                      {formatContribution(feature.score)}
+                    </dd>
+                    <span className="text-muted text-xs">
+                      {feature.score === null
+                        ? "Impact unavailable"
+                        : feature.score >= 0
+                          ? "Raises score"
+                          : "Lowers score"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : (
+          <p className="text-muted text-sm">
+            No contributing features were recorded.
+          </p>
+        )
+      ) : isRecord(value) ? (
+        <dl className="border-border grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
+          {Object.entries(value).map(([key, entry]) => (
+            <div className="bg-surface min-w-0 p-3" key={key}>
+              <dt className="text-muted text-xs font-medium">
+                {formatLabel(key)}
+              </dt>
+              <dd className="mt-1 text-sm font-semibold tabular-nums [overflow-wrap:anywhere]">
+                {formatMetric(entry)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="bg-neutral-soft rounded-lg p-3 text-sm [overflow-wrap:anywhere]">
+          {formatMetric(value)}
+        </p>
+      )}
     </div>
   );
+}
+
+type Contribution = {
+  name: string;
+  value: string | null;
+  score: number | null;
+  rank: number | null;
+};
+
+function parseContributions(value: unknown): Contribution[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.flatMap((entry) => {
+    if (!isRecord(entry) || typeof entry.featureName !== "string") return [];
+    return [{
+      name: entry.featureName,
+      value: typeof entry.featureValue === "string" ? entry.featureValue : null,
+      score: typeof entry.contributionScore === "number" ? entry.contributionScore : null,
+      rank: typeof entry.rank === "number" ? entry.rank : null,
+    }];
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatLabel(value: string): string {
+  const spaced = value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+function formatContribution(value: number | null): string {
+  if (value === null) return "Not available";
+  const formatted = new Intl.NumberFormat("en", {
+    maximumFractionDigits: 4,
+    signDisplay: "always",
+  }).format(value);
+  return formatted;
+}
+
+function formatMetric(value: unknown): string {
+  if (value === null) return "Not available";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") {
+    return new Intl.NumberFormat("en", { maximumFractionDigits: 4 }).format(value);
+  }
+  if (typeof value === "string") return formatLabel(value);
+  return JSON.stringify(value);
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
@@ -184,15 +321,18 @@ function formatRiskLevel(level: string): string {
 }
 
 export function formatStatus(status: AiAlert["status"]): string {
+  if (status === "needs_investigation") return "Needs further investigation";
   return status
     .replaceAll("_", " ")
     .replace(/^./, (value) => value.toUpperCase());
 }
 
 export function statusTone(status: AiAlert["status"]) {
-  if (status === "new" || status === "confirmed") return "danger" as const;
-  if (status === "reviewing") return "warning" as const;
-  if (status === "resolved") return "success" as const;
+  if (status === "new") return "info" as const;
+  if (status === "reviewing" || status === "needs_investigation")
+    return "warning" as const;
+  if (status === "confirmed" || status === "resolved")
+    return "success" as const;
   return "neutral" as const;
 }
 

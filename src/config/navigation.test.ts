@@ -7,9 +7,13 @@ import {
   getPanelNavigation,
 } from "./navigation";
 
-function visiblePaths(panel: "admin" | "dashboard", capabilities: string[]) {
+function visiblePaths(
+  panel: "admin" | "dashboard" | "employee",
+  capabilities: string[],
+  roleCodes: string[],
+) {
   return getPanelNavigation(panel)
-    .filter((item) => canAccessNavigationItem(capabilities, item))
+    .filter((item) => canAccessNavigationItem(capabilities, item, roleCodes))
     .map((item) => item.href);
 }
 
@@ -40,12 +44,16 @@ describe("V2 role navigation", () => {
   });
 
   it("shows admin management but not ungranted modules", () => {
-    const paths = visiblePaths("admin", [
-      "users.read",
-      "audit.read",
-      "system-settings.read",
-      "login-history.read",
-    ]);
+    const paths = visiblePaths(
+      "admin",
+      [
+        "users.read",
+        "audit.read",
+        "system-settings.read",
+        "login-history.read",
+      ],
+      ["ADMIN"],
+    );
     expect(paths).toContain("/users");
     expect(paths).toContain("/audits");
     expect(paths).toContain("/settings");
@@ -55,13 +63,17 @@ describe("V2 role navigation", () => {
   });
 
   it("shows security officer operational modules", () => {
-    const paths = visiblePaths("dashboard", [
-      "assets.read",
-      "risks.read",
-      "incidents.read",
-      "ai-alerts.read",
-      "reports.read",
-    ]);
+    const paths = visiblePaths(
+      "dashboard",
+      [
+        "assets.read",
+        "risks.read",
+        "incidents.read",
+        "ai-alerts.read",
+        "reports.read",
+      ],
+      ["SECURITY_OFFICER"],
+    );
     expect(paths).toContain("/assets");
     expect(paths).toContain("/risks");
     expect(paths).toContain("/incidents");
@@ -71,18 +83,37 @@ describe("V2 role navigation", () => {
   });
 
   it("limits executive navigation to assigned work", () => {
-    const paths = visiblePaths("dashboard", ["incidents.read", "reports.read"]);
+    const paths = visiblePaths(
+      "dashboard",
+      ["incidents.read", "reports.read"],
+      ["EXECUTIVE"],
+    );
     expect(paths).toContain("/incidents");
     expect(paths).toContain("/reports");
     expect(paths).not.toContain("/users");
     expect(paths).not.toContain("/policies");
   });
 
-  it("limits employee navigation to policy acknowledgement", () => {
-    const paths = visiblePaths("dashboard", ["policies.acknowledge"]);
+  it("shows owned risk work in employee navigation", () => {
+    const paths = visiblePaths(
+      "employee",
+      ["policies.acknowledge", "risks.read"],
+      ["EMPLOYEE"],
+    );
+    expect(paths).toContain("/policies");
+    expect(paths).toContain("/risks");
+    expect(paths).toContain("/incidents");
+    expect(paths).not.toContain("/reports");
+  });
+
+  it("hides risk work from an employee without owned risks", () => {
+    const paths = visiblePaths(
+      "employee",
+      ["assets.read", "policies.acknowledge"],
+      ["EMPLOYEE"],
+    );
+    expect(paths).toContain("/assets");
     expect(paths).toContain("/policies");
     expect(paths).not.toContain("/risks");
-    expect(paths).not.toContain("/incidents");
-    expect(paths).not.toContain("/reports");
   });
 });

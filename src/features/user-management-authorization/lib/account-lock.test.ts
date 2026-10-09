@@ -13,7 +13,6 @@ const actor: AuthSessionUser = {
   fullName: "Admin",
   status: "active",
   mustChangePassword: false,
-  mfaEnabled: false,
   roles: [{ code: "ADMIN", name: "Administrator" }],
   permissions: ["users.lock", "users.unlock"],
 };

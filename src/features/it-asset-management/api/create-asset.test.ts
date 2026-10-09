@@ -10,15 +10,13 @@ describe("createAsset", () => {
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
-      criticality: "medium",
+      criticality: null,
       status: "active",
       location: null,
       department: null,
       owner: null,
       updatedAt: "2026-09-10T00:00:00.000Z",
       description: null,
-      hostname: null,
-      ipAddress: null,
       createdAt: "2026-09-10T00:00:00.000Z",
     };
     const fetchMock = vi.fn().mockResolvedValue(
@@ -33,9 +31,8 @@ describe("createAsset", () => {
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        description: undefined,
-        hostname: undefined,
-        location: undefined,
+        dependencies: [],
+        eventSourceIds: [],
       }),
     ).resolves.toEqual(created);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -46,6 +43,8 @@ describe("createAsset", () => {
           assetCode: "AST-002",
           name: "Server",
           assetType: "server",
+          dependencies: [],
+          eventSourceIds: [],
         }),
       }),
     );
@@ -72,9 +71,8 @@ describe("createAsset", () => {
         assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        description: undefined,
-        hostname: undefined,
-        location: undefined,
+        dependencies: [],
+        eventSourceIds: [],
       }),
     ).rejects.toMatchObject({
       status: 409,

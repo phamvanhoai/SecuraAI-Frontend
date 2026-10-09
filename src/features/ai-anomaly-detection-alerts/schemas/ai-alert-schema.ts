@@ -3,6 +3,7 @@ import { z } from "zod";
 export const aiAlertStatuses = [
   "new",
   "reviewing",
+  "needs_investigation",
   "confirmed",
   "false_positive",
   "resolved",
@@ -59,6 +60,15 @@ export const aiAlertMetricsSchema = z.object({
   confirmed: z.number().int().nonnegative(),
 });
 
+export const startAiAlertTriageResultSchema = z.object({
+  id: z.uuid(),
+  alertCode: z.string(),
+  status: z.literal("reviewing"),
+  assignedToUserId: z.uuid(),
+  triageStartedAt: z.iso.datetime(),
+  changed: z.boolean(),
+});
+
 export const aiAlertExplanationSchema = z.object({
   id: z.uuid(),
   alertId: z.uuid(),
@@ -90,8 +100,20 @@ export const aiAlertFeedbackSchema = z.object({
   id: z.uuid(),
   alertId: z.uuid(),
   reviewedByUserId: z.uuid().nullable(),
+  analyst: z.object({
+    id: z.uuid(),
+    name: z.string(),
+    email: z.email(),
+  }),
   feedbackLabel: z.enum(aiAlertFeedbackLabels),
   comment: z.string().nullable(),
+  reason: z.string(),
+  recordedAt: z.iso.datetime(),
+  modelVersion: z.object({
+    id: z.uuid(),
+    modelName: z.string(),
+    version: z.string(),
+  }),
   createdAt: z.iso.datetime(),
 });
 
@@ -121,9 +143,9 @@ export const confirmAiAlertResultSchema = z.object({
   reviewedByUserId: z.uuid().nullable(),
   reviewedAt: z.iso.datetime().nullable(),
   changed: z.boolean(),
-  incident: z.object({
+  finding: z.object({
     id: z.uuid(),
-    code: z.string(),
+    title: z.string(),
     status: z.string(),
     created: z.boolean(),
   }),
@@ -140,10 +162,30 @@ export const markFalsePositiveResultSchema = z.object({
   changed: z.boolean(),
 });
 
+export const markFurtherInvestigationSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Investigation reason must be at least 10 characters.")
+    .max(2000, "Investigation reason must be 2,000 characters or fewer."),
+});
+
+export const markFurtherInvestigationResultSchema = z.object({
+  id: z.uuid(),
+  alertCode: z.string(),
+  status: z.literal("needs_investigation"),
+  reviewedByUserId: z.uuid().nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
+  changed: z.boolean(),
+});
+
 export type AiAlert = z.infer<typeof aiAlertSchema>;
 export type AiAlertExplanation = z.infer<typeof aiAlertExplanationSchema>;
 export type AiAlertList = z.infer<typeof aiAlertListSchema>;
 export type AiAlertStatus = (typeof aiAlertStatuses)[number];
+export type StartAiAlertTriageResult = z.infer<
+  typeof startAiAlertTriageResultSchema
+>;
 export type AiAlertFeedbackLabel = (typeof aiAlertFeedbackLabels)[number];
 export type EvaluateAiAlertReliabilityInput = z.input<
   typeof evaluateAiAlertReliabilitySchema
@@ -160,4 +202,13 @@ export type MarkFalsePositiveInput = z.input<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveRequest = z.output<typeof markFalsePositiveSchema>;
 export type MarkFalsePositiveResult = z.infer<
   typeof markFalsePositiveResultSchema
+>;
+export type MarkFurtherInvestigationInput = z.input<
+  typeof markFurtherInvestigationSchema
+>;
+export type MarkFurtherInvestigationRequest = z.output<
+  typeof markFurtherInvestigationSchema
+>;
+export type MarkFurtherInvestigationResult = z.infer<
+  typeof markFurtherInvestigationResultSchema
 >;

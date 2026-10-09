@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Search } from "lucide-react";
+import { BookOpenCheck, Eye, History, Search } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Pagination } from "@/components/data-display/pagination";
 import {
@@ -21,6 +21,7 @@ import type {
   PolicyVersionHistoryItem,
   PolicyVersionHistoryQuery,
 } from "../schemas/policy-version-history-schema";
+import { PolicyViewTabs } from "./policy-view-tabs";
 
 const initialQuery: PolicyVersionHistoryQuery = {
   page: 1,
@@ -34,17 +35,15 @@ const formatDate = (value: string | null) =>
         timeStyle: "short",
       }).format(new Date(value))
     : "—";
-const tone = (status: string): "success" | "warning" | "neutral" =>
-  status === "published"
-    ? "success"
-    : status === "draft"
-      ? "warning"
-      : "neutral";
+const tone = (status: string): "success" | "neutral" =>
+  status === "published" ? "success" : "neutral";
 
 export function PolicyVersionHistoryManager({
   onBack,
+  backLabel = "Drafts",
 }: {
   onBack?: () => void;
+  backLabel?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
@@ -110,13 +109,34 @@ export function PolicyVersionHistoryManager({
         description="Review every recorded version of information security policies."
         showSampleNotice={false}
         additionalActions={
-          onBack ? (
+          onBack && backLabel !== "Published" ? (
             <Button variant="secondary" onClick={onBack}>
               Back to policy workspace
             </Button>
           ) : undefined
         }
       />
+      {onBack && backLabel === "Published" ? (
+        <div className="mb-5">
+          <PolicyViewTabs
+            activeId="history"
+            tabs={[
+              {
+                id: "published",
+                label: "Published policies",
+                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: onBack,
+              },
+              {
+                id: "history",
+                label: "Version history",
+                icon: <History aria-hidden="true" className="size-4" strokeWidth={2} />,
+                onSelect: () => undefined,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
       <ProductPanel
         title="Version history"
         description={
@@ -157,9 +177,6 @@ export function PolicyVersionHistoryManager({
           >
             <option value="all">All statuses</option>
             <option value="published">Published</option>
-            {list.data?.canViewDrafts ? (
-              <option value="draft">Draft</option>
-            ) : null}
             <option value="archived">Archived</option>
           </Select>
           <Button type="submit">Search</Button>
