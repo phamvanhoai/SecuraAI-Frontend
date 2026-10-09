@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/api-client";
 import { ApiError, normalizeApiError } from "@/lib/api/api-error";
 import {
   incidentSchema,
+  incidentDetailSchema,
   incidentEvidenceListSchema,
   incidentEvidenceSchema,
   removedIncidentEvidenceSchema,
@@ -326,7 +327,7 @@ export async function listMyIncidents(page: number, signal?: AbortSignal) {
   );
 }
 export async function getMyIncident(id: string, signal?: AbortSignal) {
-  return incidentSchema.parse(
+  return incidentDetailSchema.parse(
     await apiRequest<unknown>(`/api/incidents/${encodeURIComponent(id)}`, {
       target: "same-origin",
       ...(signal ? { signal } : {}),

@@ -102,53 +102,6 @@ const progressDefaults: UpdateIncidentProgressForm = {
   note: "",
 };
 const removalDefaults: RemoveIncidentEvidenceForm = { reason: "" };
-const closurePreviewIncident: Incident = {
-  id: "3ef1fe2d-9fd5-4ed5-9d91-6c2c64982fb1",
-  incidentCode: "INC-PREVIEW-CLOSE-001",
-  title: "Resolved VPN credential compromise (closure preview)",
-  description:
-    "Preview incident with response, eradication, recovery, and root cause documentation completed for testing UC64.",
-  category: "Account compromise",
-  severity: "high",
-  status: "resolved",
-  occurredAt: "2026-10-05T02:20:00.000Z",
-  detectedAt: "2026-10-05T02:26:00.000Z",
-  confirmedAt: "2026-10-05T02:42:00.000Z",
-  closedAt: null,
-  createdAt: "2026-10-05T02:30:00.000Z",
-  updatedAt: "2026-10-06T09:45:00.000Z",
-  classified: true,
-  classificationCount: 1,
-  lastClassification: {
-    classifiedAt: "2026-10-05T02:42:00.000Z",
-    classifiedBy: {
-      id: "131c1646-748e-486b-adbc-f3860e2d0dad",
-      name: "Security Officer",
-    },
-    rationale: "Confirmed unauthorized use of a privileged VPN credential.",
-  },
-  currentAssignment: {
-    assignedAt: "2026-10-05T02:45:00.000Z",
-    assignee: {
-      id: "131c1646-748e-486b-adbc-f3860e2d0dad",
-      name: "Security Officer",
-      email: "securityofficer@gmail.com",
-    },
-  },
-  createdBy: {
-    id: "131c1646-748e-486b-adbc-f3860e2d0dad",
-    name: "Security Officer",
-    email: "securityofficer@gmail.com",
-  },
-  source: null,
-  relatedCounts: {
-    actions: 6,
-    assets: 1,
-    controls: 1,
-    evidence: 3,
-    risks: 1,
-  },
-};
 const progressOptions: Record<
   string,
   readonly UpdateIncidentProgressForm["status"][]
@@ -163,6 +116,11 @@ const formatDate = (value: string) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+const formatWorkflowLabel = (value: string) =>
+  value
+    .split("_")
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 const severityTone = (severity: string) => {
   if (severity === "critical") return "danger" as const;
   if (severity === "high") return "warning" as const;
@@ -570,10 +528,7 @@ export function IncidentReportingManager() {
       status: "",
     });
   };
-  const displayedItems =
-    canRead && page === 1
-      ? [closurePreviewIncident, ...(displayedList.data?.items ?? [])]
-      : (displayedList.data?.items ?? []);
+  const displayedItems = displayedList.data?.items ?? [];
   const columns: readonly DataTableColumn<Incident>[] = [
     {
       key: "incident",
@@ -977,14 +932,6 @@ export function IncidentReportingManager() {
               </Button>
             </div>
           </form>
-        ) : null}
-        {canRead && page === 1 ? (
-          <div className="px-4 pt-4">
-            <Alert>
-              Open the Actions menu for INC-PREVIEW-CLOSE-001 and select Close
-              incident to test UC64 without changing backend data.
-            </Alert>
-          </div>
         ) : null}
         <div className="p-4">
           {displayedList.isPending ? (
@@ -1873,8 +1820,8 @@ export function IncidentReportingManager() {
       </Dialog>
       <Dialog
         dialogRef={detailDialogRef}
-        title="Incident report details"
-        className="max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
+        title="Incident details"
+        className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
         onClose={() => setSelectedId(undefined)}
       >
         {detail.isPending ? (
@@ -1885,7 +1832,10 @@ export function IncidentReportingManager() {
         ) : detail.isError ? (
           <div className="space-y-4">
             <Alert>Unable to load this incident report.</Alert>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => void detail.refetch()}>
+                Try again
+              </Button>
               <Button
                 variant="secondary"
                 onClick={() => setSelectedId(undefined)}
@@ -1969,6 +1919,117 @@ export function IncidentReportingManager() {
                 {detail.data.description ?? "No description available."}
               </p>
             </div>
+            <section aria-labelledby="affected-assets-heading">
+              <div className="flex items-center justify-between gap-3">
+                <h3 id="affected-assets-heading" className="text-sm font-semibold">
+                  Affected assets
+                </h3>
+                <span className="text-muted text-xs tabular-nums">
+                  {detail.data.affectedAssets.length} linked
+                </span>
+              </div>
+              {detail.data.affectedAssets.length ? (
+                <ul className="border-border mt-3 divide-y rounded-lg border">
+                  {detail.data.affectedAssets.map((asset) => (
+                    <li
+                      className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      key={asset.id}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium break-words">{asset.name}</p>
+                        <p className="text-muted mt-1 text-xs break-words">
+                          {asset.assetCode} · {asset.assetType}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {asset.criticality ? (
+                          <StatusBadge tone={severityTone(asset.criticality.toLowerCase())}>
+                            {formatWorkflowLabel(asset.criticality.toLowerCase())}
+                          </StatusBadge>
+                        ) : null}
+                        <span className="text-muted text-xs">
+                          Linked {formatDate(asset.linkedAt)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="border-border bg-neutral-soft text-muted mt-3 rounded-lg border p-4 text-sm">
+                  No affected assets have been linked to this incident.
+                </p>
+              )}
+            </section>
+            <section aria-labelledby="response-actions-heading">
+              <div className="flex items-center justify-between gap-3">
+                <h3 id="response-actions-heading" className="text-sm font-semibold">
+                  Response actions
+                </h3>
+                <span className="text-muted text-xs tabular-nums">
+                  {detail.data.responseActions.length} recorded
+                </span>
+              </div>
+              {detail.data.responseActions.length ? (
+                <ol className="mt-3 space-y-2">
+                  {detail.data.responseActions.map((action) => (
+                    <li className="border-border rounded-lg border p-3" key={action.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <StatusBadge tone="info">
+                          {formatWorkflowLabel(action.phase)}
+                        </StatusBadge>
+                        <time className="text-muted text-xs" dateTime={action.performedAt}>
+                          {formatDate(action.performedAt)}
+                        </time>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap">
+                        {action.description}
+                      </p>
+                      <p className="text-muted mt-1 text-xs">
+                        Performed by {action.performedBy?.name ?? "Unknown user"}
+                      </p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="border-border bg-neutral-soft text-muted mt-3 rounded-lg border p-4 text-sm">
+                  No response actions have been recorded yet.
+                </p>
+              )}
+            </section>
+            <section aria-labelledby="handling-history-heading">
+              <h3 id="handling-history-heading" className="text-sm font-semibold">
+                Handling history
+              </h3>
+              <ol className="border-border mt-3 space-y-0 border-l pl-4">
+                {detail.data.handlingHistory.map((event) => (
+                  <li className="relative pb-4 last:pb-0" key={event.id}>
+                    <span
+                      aria-hidden="true"
+                      className="border-surface bg-brand absolute top-1.5 -left-[1.3rem] size-2 rounded-full border-2"
+                    />
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words">
+                          {event.description}
+                        </p>
+                        <p className="text-muted text-xs">
+                          {event.phase
+                            ? formatWorkflowLabel(event.phase)
+                            : formatWorkflowLabel(event.type)}
+                          {event.actor ? ` · ${event.actor.name}` : ""}
+                        </p>
+                      </div>
+                      <time
+                        className="text-muted shrink-0 text-xs"
+                        dateTime={event.occurredAt}
+                      >
+                        {formatDate(event.occurredAt)}
+                      </time>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
             <section>
               <h3 className="text-sm font-semibold">Related records</h3>
               <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
