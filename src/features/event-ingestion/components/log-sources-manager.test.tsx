@@ -73,6 +73,40 @@ vi.mock("../hooks/use-normalized-events", () => ({
   }),
 }));
 
+vi.mock("../hooks/use-event-governance", () => ({
+  useEventGovernanceSummary: () => ({
+    data: {
+      totalPolicies: 0,
+      activePolicies: 0,
+      inactivePolicies: 0,
+      minRetentionDays: 0,
+      maxRetentionDays: 0,
+      avgRetentionDays: 0,
+      policiesWithArchival: 0,
+      policiesWithAutomatedDeletion: 0,
+      exportAllowedCount: 0,
+    },
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useEventGovernancePolicies: () => ({
+    data: {
+      items: [],
+      pagination: { page: 1, limit: 20, totalItems: 0, totalPages: 0 },
+    },
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+  useEventGovernancePolicyDetail: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({
     success: vi.fn(),
