@@ -5,6 +5,7 @@ import {
   evidenceDocumentUrlSchema,
   linkControlEvidenceSchema,
   listControlEvidenceQuerySchema,
+  uploadControlEvidenceSchema,
 } from "./control-evidence-schema";
 const body = {
   requestId: "00000000-0000-4000-8000-000000000001",
@@ -18,6 +19,23 @@ const body = {
 describe("Control Evidence reference contract", () => {
   it("accepts metadata/reference without inventing an uploaded file or review", () =>
     expect(addControlEvidenceSchema.parse(body)).toEqual(body));
+  it("accepts upload metadata without permitting a client file path", () => {
+    const uploadBody = {
+      requestId: body.requestId,
+      name: body.name,
+      source: body.source,
+      description: body.description,
+      collectedAt: body.collectedAt,
+      validUntil: body.validUntil,
+    };
+    expect(uploadControlEvidenceSchema.parse(uploadBody)).toEqual(uploadBody);
+    expect(
+      uploadControlEvidenceSchema.safeParse({
+        ...uploadBody,
+        storageUri: "uploads/control-evidence/unsafe.pdf",
+      }).success,
+    ).toBe(false);
+  });
   it.each([
     "http://docs.example.test/mfa",
     "javascript:alert(1)",

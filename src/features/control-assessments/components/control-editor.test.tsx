@@ -64,7 +64,7 @@ describe("ControlEditor", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Create control" }),
     );
-    expect(screen.getByLabelText("Control code *")).toHaveFocus();
+    expect(screen.getByLabelText("Control name *")).toHaveFocus();
     expect(screen.getByRole("alert")).toHaveTextContent("highlighted fields");
     expect(mutate).not.toHaveBeenCalled();
   });
@@ -72,7 +72,6 @@ describe("ControlEditor", () => {
     detail.mockReturnValue({ data: undefined });
     const close = vi.fn();
     render(<ControlEditor onClose={close} />);
-    await userEvent.type(screen.getByLabelText("Control code *"), "CTRL-MFA");
     await userEvent.type(
       screen.getByLabelText("Control name *"),
       "Administrator MFA",
@@ -87,7 +86,6 @@ describe("ControlEditor", () => {
     expect(mutate).toHaveBeenCalledWith({
       mode: "create",
       body: {
-        controlCode: "CTRL-MFA",
         name: "Administrator MFA",
         description: "Require MFA for privileged access",
         ownerUserId: null,
@@ -99,7 +97,7 @@ describe("ControlEditor", () => {
   });
   it("keeps the code read-only and blocks no-op Edit", () => {
     render(<ControlEditor controlId={current.id} onClose={vi.fn()} />);
-    expect(screen.getByLabelText("Control code *")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Control code")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save control" })).toBeDisabled();
   });
   it("freezes the version despite background refetch, excludes code from Edit", async () => {
@@ -161,34 +159,10 @@ describe("ControlEditor", () => {
     );
     expect(screen.getByRole("button", { name: "Save control" })).toBeDisabled();
   });
-  it("lets users correct a duplicate code without closing Create", async () => {
+  it("does not allow manual control code editing during Create", async () => {
     detail.mockReturnValue({ data: undefined });
-    mutate.mockRejectedValue(
-      new ApiError("Control code is already in use", 409, "CONFLICT"),
-    );
     render(<ControlEditor onClose={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText("Control code *"), "CTRL-MFA");
-    await userEvent.type(
-      screen.getByLabelText("Control name *"),
-      "Administrator MFA",
-    );
-    await userEvent.type(
-      screen.getByLabelText("Purpose and description *"),
-      current.description,
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Create control" }),
-    );
-    await waitFor(() =>
-      expect(screen.getByLabelText("Control code *")).toHaveAttribute(
-        "aria-invalid",
-        "true",
-      ),
-    );
-    expect(screen.getByLabelText("Control code *")).toBeEnabled();
-    expect(
-      screen.getByRole("button", { name: "Create control" }),
-    ).toBeEnabled();
+    expect(screen.queryByLabelText("Control code")).not.toBeInTheDocument();
   });
   it("confirms discarding changes on Cancel", async () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);

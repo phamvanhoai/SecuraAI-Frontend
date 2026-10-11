@@ -14,7 +14,10 @@ const body = {
 };
 describe("Control catalog contract", () => {
   it("accepts an unassigned control without manufacturing an assessment", () =>
-    expect(createControlSchema.parse(body)).toEqual(body));
+    (() => {
+      const { controlCode: _controlCode, ...createBody } = body;
+      expect(createControlSchema.parse(createBody)).toEqual(createBody);
+    })());
   it.each([
     { controlCode: "bad code" },
     { name: " " },
