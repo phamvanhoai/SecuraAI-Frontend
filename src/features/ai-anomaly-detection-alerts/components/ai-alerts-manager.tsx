@@ -323,7 +323,7 @@ export function AiAlertsManager() {
   return (
     <>
       <ProductPageHeader
-        description="Monitor AI-generated anomaly alerts from connected security log sources."
+        description="Monitor alerts detected automatically from connected security log sources. Use manual detection to retry pending events when needed."
         additionalActions={
           canRunDetection ? (
             <Button
@@ -333,7 +333,7 @@ export function AiAlertsManager() {
                   .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
                   .then((result) => {
                     toast.success(
-                      "Anomaly detection completed",
+                      "Manual detection completed",
                       `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created.`,
                     );
                   })
@@ -354,7 +354,7 @@ export function AiAlertsManager() {
               />
               {runDetection.isPending
                 ? "Running detection…"
-                : "Run anomaly detection"}
+                : "Run manual detection"}
             </Button>
           ) : undefined
         }
