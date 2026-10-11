@@ -92,9 +92,15 @@ describe("ApiKeysTab", () => {
       integrationId,
       keyName: "Production Ingestion Key",
       keyFingerprint: "sec_a1b2...9z0",
+      scopes: ["events:ingest", "audit:read"],
       expiresAt: "2030-01-01T00:00:00.000Z",
       isActive: true,
       status: "ACTIVE" as const,
+      creator: {
+        id: "550e8400-e29b-41d4-a716-446655440099",
+        fullName: "Security Administrator",
+        email: "secadmin@secura.ai",
+      },
       createdAt: "2026-09-01T00:00:00.000Z",
     },
     {
@@ -102,9 +108,15 @@ describe("ApiKeysTab", () => {
       integrationId,
       keyName: "Staging Test Key",
       keyFingerprint: "sec_c3d4...8y1",
+      scopes: ["events:ingest"],
       expiresAt: null,
       isActive: false,
       status: "INACTIVE" as const,
+      creator: {
+        id: "550e8400-e29b-41d4-a716-446655440098",
+        fullName: "Test Engineer",
+        email: "tester@secura.ai",
+      },
       createdAt: "2026-09-02T00:00:00.000Z",
     },
     {
@@ -112,6 +124,7 @@ describe("ApiKeysTab", () => {
       integrationId,
       keyName: "Old Firewall Key",
       keyFingerprint: "sec_e5f6...7x2",
+      scopes: [],
       expiresAt: "2025-01-01T00:00:00.000Z",
       isActive: true,
       status: "EXPIRED" as const,
@@ -119,7 +132,7 @@ describe("ApiKeysTab", () => {
     },
   ];
 
-  it("renders existing API keys with computed badges and fingerprints", async () => {
+  it("renders existing API keys with computed badges, scopes, creator, and fingerprints", async () => {
     fetchMock.mockImplementation(() => {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: mockApiKeys }), {
@@ -136,9 +149,17 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("Staging Test Key")).toBeInTheDocument();
       expect(screen.getByText("Old Firewall Key")).toBeInTheDocument();
 
-      expect(screen.getByText("sec_a1b2...9z0")).toBeInTheDocument();
-      expect(screen.getByText("sec_c3d4...8y1")).toBeInTheDocument();
-      expect(screen.getByText("sec_e5f6...7x2")).toBeInTheDocument();
+      expect(screen.getByText("sec_a1b2...9z0...****")).toBeInTheDocument();
+      expect(screen.getByText("sec_c3d4...8y1...****")).toBeInTheDocument();
+      expect(screen.getByText("sec_e5f6...7x2...****")).toBeInTheDocument();
+
+      // Verify scopes
+      expect(screen.getAllByText("events:ingest").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("audit:read")).toBeInTheDocument();
+
+      // Verify creator
+      expect(screen.getByText("Security Administrator")).toBeInTheDocument();
+      expect(screen.getByText("secadmin@secura.ai")).toBeInTheDocument();
 
       expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Inactive").length).toBeGreaterThanOrEqual(1);
@@ -172,7 +193,7 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Search by key name or fingerprint...");
+    const searchInput = screen.getByPlaceholderText("Search by key name, scope, or creator...");
     fireEvent.change(searchInput, { target: { value: "Staging" } });
 
     await waitFor(() => {
