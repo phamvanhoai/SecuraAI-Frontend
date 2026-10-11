@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ExternalLink, Search } from "lucide-react";
+import { Download, ExternalLink, Search, Unlink, Upload } from "lucide-react";
 import { Pagination } from "@/components/data-display/pagination";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { EmptyState } from "@/components/feedback/empty-state";
@@ -18,6 +18,7 @@ import {
 } from "../hooks/use-control-evidence";
 import {
   addControlEvidenceSchema,
+  uploadControlEvidenceSchema,
   linkControlEvidenceSchema,
   evidenceDocumentUrlSchema,
   type ControlEvidenceItem,
@@ -90,13 +91,27 @@ function EvidenceInfo({ item }: { item: ControlEvidenceItem }) {
           Open supporting document (new tab)
         </a>
       ) : (
-        <p className="text-muted">
-          No supported HTTPS reference recorded. Existing metadata remains
-          available.
-        </p>
+        item.file ? (
+          <a
+            href={`/api/compliance/evidence/${encodeURIComponent(item.id)}/download`}
+            className="text-brand focus-visible:outline-brand inline-flex min-h-11 items-center gap-2 underline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Download {item.file.name} ({formatBytes(item.file.sizeBytes)})
+          </a>
+        ) : (
+          <p className="text-muted">No supported document source recorded.</p>
+        )
       )}
     </div>
   );
+}
+
+function formatBytes(value: number | null) {
+  if (value === null) return "size not recorded";
+  return value < 1024 * 1024
+    ? `${Math.ceil(value / 1024)} KB`
+    : `${(value / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export function ControlEvidenceDialog({
@@ -110,15 +125,19 @@ export function ControlEvidenceDialog({
   const busy = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"linked" | "add" | "link">("linked");
+  const [sourceKind, setSourceKind] = useState<"url" | "file">("url");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [chosen, setChosen] = useState<ControlEvidenceItem>();
+  const [unlinkTargetId, setUnlinkTargetId] = useState<string>();
+  const [unlinkReason, setUnlinkReason] = useState("");
   const [reason, setReason] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [collectedAt, setCollectedAt] = useState(bangkokInputNow);
   const [initialCollectedAt, setInitialCollectedAt] = useState(collectedAt);
   const [validUntil, setValidUntil] = useState("");
+  const [file, setFile] = useState<File>();
   const [values, setValues] = useState({
     name: "",
     source: "",
@@ -136,10 +155,15 @@ export function ControlEvidenceDialog({
   });
   const mutations = useEvidenceMutations();
   const toast = useToast();
-  const saving = mutations.add.isPending || mutations.link.isPending;
+  const saving =
+    mutations.add.isPending ||
+    mutations.link.isPending ||
+    mutations.unlink?.isPending ||
+    mutations.upload.isPending;
   const dirty =
     mode === "add"
       ? Object.values(values).some(Boolean) ||
+        Boolean(file) ||
         Boolean(validUntil) ||
         collectedAt !== initialCollectedAt
       : mode === "link" && (Boolean(chosen) || Boolean(reason));
@@ -164,15 +188,38 @@ export function ControlEvidenceDialog({
     setQ("");
     setSearch("");
     setChosen(undefined);
+    setUnlinkTargetId(undefined);
+    setUnlinkReason("");
     setReason("");
     setError(undefined);
     setErrors({});
     setValues({ name: "", source: "", description: "", documentUrl: "" });
+    setFile(undefined);
+    setSourceKind("url");
     setValidUntil("");
     const nextCollection = bangkokInputNow();
     setCollectedAt(nextCollection);
     setInitialCollectedAt(nextCollection);
     setRequestId(crypto.randomUUID());
+  };
+  const unlink = async (evidenceId: string) => {
+    if (unlinkReason.trim().length < 10) {
+      setError("Explain why this evidence link should be removed (at least 10 characters).");
+      return;
+    }
+    try {
+      await mutations.unlink.mutateAsync({
+        controlId,
+        evidenceId,
+        body: { reason: unlinkReason },
+      });
+      toast.success("Evidence unlinked", "The evidence record remains available and can be linked again later.");
+      setUnlinkTargetId(undefined);
+      setUnlinkReason("");
+      setPage(1);
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : "Unable to unlink this evidence.");
+    }
   };
   const clearFieldError = (key: string) => {
     setErrors((current) => {
@@ -225,8 +272,15 @@ export function ControlEvidenceDialog({
           invalid({ validUntil: "Enter a valid end date and time" });
           return;
         }
-        const parsed = addControlEvidenceSchema.safeParse({
-          ...values,
+        const parsed = (
+          sourceKind === "url"
+            ? addControlEvidenceSchema
+            : uploadControlEvidenceSchema
+        ).safeParse({
+          name: values.name,
+          source: values.source,
+          description: values.description,
+          ...(sourceKind === "url" ? { documentUrl: values.documentUrl } : {}),
           requestId,
           collectedAt: collected,
           validUntil: until,
@@ -251,13 +305,36 @@ export function ControlEvidenceDialog({
           return;
         }
         busy.current = true;
-        const result = await mutations.add.mutateAsync({
-          controlId,
-          body: parsed.data,
-        });
+        let result;
+        if (sourceKind === "file") {
+          if (!file) {
+            busy.current = false;
+            invalid({ file: "Choose one evidence file" });
+            return;
+          }
+          if (file.size > 10 * 1024 * 1024) {
+            busy.current = false;
+            invalid({ file: "Evidence files may not exceed 10 MB" });
+            return;
+          }
+          result = await mutations.upload.mutateAsync({
+            controlId,
+            body: uploadControlEvidenceSchema.parse(parsed.data),
+            file,
+          });
+        } else {
+          result = await mutations.add.mutateAsync({
+            controlId,
+            body: addControlEvidenceSchema.parse(parsed.data),
+          });
+        }
         toast.success(
-          result.created ? "Evidence added" : "Evidence already saved",
-          "The reference is linked. Review the document before assessing; effectiveness and Risk ratings are unchanged.",
+          result.created
+            ? sourceKind === "file"
+              ? "Evidence file uploaded"
+              : "Evidence added"
+            : "Evidence already saved",
+          "The evidence is linked to the Control. Effectiveness and Risk ratings are unchanged.",
         );
       } else if (mode === "link") {
         const parsed = linkControlEvidenceSchema.safeParse({
@@ -290,8 +367,12 @@ export function ControlEvidenceDialog({
       setQ("");
       setSearch("");
       setChosen(undefined);
+    setUnlinkTargetId(undefined);
+    setUnlinkReason("");
       setReason("");
       setValues({ name: "", source: "", description: "", documentUrl: "" });
+      setFile(undefined);
+      setSourceKind("url");
       setValidUntil("");
       setRequestId(crypto.randomUUID());
     } catch (cause) {
@@ -343,9 +424,9 @@ export function ControlEvidenceDialog({
         ) : null}
         <p className="text-muted text-sm">
           Register or reuse supporting evidence before assessing effectiveness.
-          Documents remain in the external repository; SecuraAI does not upload,
-          verify or grant access to them. Do not paste passwords or access
-          tokens into URLs.
+          Use a protected HTTPS reference or upload one approved file. Uploaded
+          files are stored privately and integrity-checked; external repository
+          permissions remain external. Do not include passwords or access tokens.
         </p>
         <div
           className="flex flex-wrap gap-2"
@@ -417,6 +498,68 @@ export function ControlEvidenceDialog({
               disabled={saving || blocked || !query.data.canAdd}
               className="space-y-4"
             >
+              <fieldset>
+                <legend className="font-medium">Evidence source *</legend>
+                <p className="text-muted mt-1 text-sm">
+                  First choose how this Evidence is stored. You will provide the
+                  link or select the file in the next field.
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {([
+                    {
+                      value: "url" as const,
+                      label: "HTTPS link",
+                      description: "Reference a document in an existing repository.",
+                      icon: ExternalLink,
+                    },
+                    {
+                      value: "file" as const,
+                      label: "Upload file",
+                      description: "Store one approved file privately in SecuraAI.",
+                      icon: Upload,
+                    },
+                  ]).map((option) => {
+                    const Icon = option.icon;
+                    return (
+                      <label
+                        key={option.value}
+                        className={`focus-within:outline-brand flex min-h-20 cursor-pointer gap-3 rounded-lg border p-3 transition-colors focus-within:outline-2 focus-within:outline-offset-2 hover:border-brand/60 ${
+                          sourceKind === option.value
+                            ? "border-brand bg-brand-soft"
+                            : "border-border"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="evidence-source-kind"
+                          value={option.value}
+                          checked={sourceKind === option.value}
+                          className="mt-1 size-4"
+                          onChange={() => {
+                            setSourceKind(option.value);
+                            setValues((current) => ({
+                              ...current,
+                              documentUrl: "",
+                            }));
+                            setFile(undefined);
+                            clearFieldError("documentUrl");
+                            clearFieldError("file");
+                          }}
+                        />
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 font-medium">
+                            <Icon className="size-4 shrink-0" aria-hidden="true" />
+                            {option.label}
+                          </span>
+                          <span className="text-muted mt-1 block text-sm">
+                            {option.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="evidence-name">Evidence name *</Label>
@@ -459,24 +602,72 @@ export function ControlEvidenceDialog({
                 />
                 {errorText("description")}
               </div>
-              <div>
-                <Label htmlFor="evidence-documentUrl">
-                  Supporting document URL (HTTPS) *
-                </Label>
-                <Input
-                  {...attributes("documentUrl")}
-                  className="mt-1.5"
-                  type="url"
-                  value={values.documentUrl}
-                  maxLength={2048}
-                  onChange={(event) => set("documentUrl", event.target.value)}
-                />
-                {errorText("documentUrl")}
-                <p className="text-muted mt-1 text-xs">
-                  Use a stable document link. The reviewer must have permission
-                  in that repository; the document need not be public.
-                </p>
-              </div>
+              {sourceKind === "url" ? (
+                <div>
+                  <Label htmlFor="evidence-documentUrl">
+                    Supporting document URL (HTTPS) *
+                  </Label>
+                  <Input
+                    {...attributes("documentUrl")}
+                    className="mt-1.5"
+                    type="url"
+                    value={values.documentUrl}
+                    maxLength={2048}
+                    onChange={(event) => set("documentUrl", event.target.value)}
+                  />
+                  {errorText("documentUrl")}
+                  <p className="text-muted mt-1 text-xs">
+                    Use a stable document link. The reviewer must have access in
+                    that repository.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="evidence-file">Evidence file *</Label>
+                  <label
+                    htmlFor="evidence-file"
+                    className={`focus-within:outline-brand mt-1.5 flex min-h-20 cursor-pointer items-center justify-between gap-4 rounded-lg border border-dashed p-4 transition-colors focus-within:outline-2 focus-within:outline-offset-2 hover:border-brand/60 ${
+                      errors.file ? "border-danger" : "border-border"
+                    }`}
+                  >
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 font-medium">
+                        <Upload className="size-4 shrink-0" aria-hidden="true" />
+                        {file ? file.name : "Choose one file"}
+                      </span>
+                      <span className="text-muted mt-1 block text-xs">
+                        {file
+                          ? `${formatBytes(file.size)} selected`
+                          : "PDF, PNG, JPG/JPEG, TXT, CSV or XLSX · maximum 10 MB"}
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-md border border-border px-3 py-2 text-sm font-semibold">
+                      Browse
+                    </span>
+                    <Input
+                      id="evidence-file"
+                      className="sr-only"
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.txt,.csv,.xlsx"
+                      aria-invalid={Boolean(errors.file)}
+                      aria-describedby={
+                        errors.file
+                          ? "evidence-file-help evidence-file-error"
+                          : "evidence-file-help"
+                      }
+                      onChange={(event) => {
+                        setFile(event.target.files?.[0]);
+                        clearFieldError("file");
+                      }}
+                    />
+                  </label>
+                  <p id="evidence-file-help" className="text-muted mt-1 text-xs">
+                    The file is format-checked and SHA-256 protected, but is not
+                    malware-scanned in this local/demo storage.
+                  </p>
+                  {errorText("file")}
+                </div>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="evidence-collectedAt">
@@ -513,8 +704,7 @@ export function ControlEvidenceDialog({
               </div>
               <p className="text-muted text-sm">
                 You are recorded as the Evidence owner and linking user. This
-                creates an Active reference, not a review or an effectiveness
-                result.
+                creates Active Evidence, not a review or an effectiveness result.
               </p>
             </fieldset>
             <div className="flex justify-end">
@@ -522,7 +712,13 @@ export function ControlEvidenceDialog({
                 type="submit"
                 disabled={saving || blocked || !query.data.canAdd}
               >
-                {saving ? "Saving…" : "Add and link evidence"}
+                {saving
+                  ? sourceKind === "file"
+                    ? "Uploading…"
+                    : "Saving…"
+                  : sourceKind === "file"
+                    ? "Upload and link evidence"
+                    : "Add and link evidence"}
               </Button>
             </div>
           </form>
@@ -595,6 +791,60 @@ export function ControlEvidenceDialog({
                       </label>
                     ) : null}
                     <EvidenceInfo item={item} />
+                    {mode === "linked" && query.data.canLink ? (
+                      <div className="mt-3 border-t border-border pt-3">
+                        {unlinkTargetId !== item.id ? (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={saving || blocked}
+                            onClick={() => {
+                              setUnlinkTargetId(item.id);
+                              setUnlinkReason("");
+                              setError(undefined);
+                            }}
+                          >
+                            <Unlink className="size-4" aria-hidden="true" />
+                            Unlink
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label htmlFor={`unlink-reason-${item.id}`}>
+                              Reason for unlinking *
+                            </Label>
+                            <Textarea
+                              id={`unlink-reason-${item.id}`}
+                              rows={2}
+                              maxLength={2000}
+                              value={unlinkReason}
+                              onChange={(event) => setUnlinkReason(event.target.value)}
+                              placeholder="Explain why this evidence was linked by mistake or is no longer relevant."
+                            />
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                disabled={saving}
+                                onClick={() => {
+                                  setUnlinkTargetId(undefined);
+                                  setUnlinkReason("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="danger"
+                                disabled={saving || unlinkReason.trim().length < 10}
+                                onClick={() => void unlink(item.id)}
+                              >
+                                {mutations.unlink?.isPending ? "Unlinking…" : "Confirm unlink"}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>

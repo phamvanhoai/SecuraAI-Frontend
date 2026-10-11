@@ -52,6 +52,25 @@ export const addControlEvidenceSchema = z
 export const linkControlEvidenceSchema = z
   .object({ evidenceId: z.uuid(), reason: z.string().trim().min(10).max(2000) })
   .strict();
+export const unlinkControlEvidenceSchema = z
+  .object({ reason: z.string().trim().min(10).max(2000) })
+  .strict();
+export const uploadControlEvidenceSchema = z
+  .object({
+    requestId: z.uuid(),
+    name: z.string().trim().min(3).max(255),
+    source: z.string().trim().min(3).max(255),
+    description: z.string().trim().min(10).max(5000),
+    collectedAt: z.iso.datetime({ offset: true }),
+    validUntil: z.iso.datetime({ offset: true }).nullable(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      !value.validUntil ||
+      new Date(value.validUntil) > new Date(value.collectedAt),
+    { path: ["validUntil"], message: "Validity must end after collection" },
+  );
 export const listControlEvidenceQuerySchema = z
   .object({
     page: z.coerce.number().int().min(1).max(100000).default(1),
@@ -67,6 +86,16 @@ export const controlEvidenceItemSchema = z.object({
   source: z.string(),
   description: z.string().nullable(),
   documentUrl: evidenceDocumentUrlSchema.nullable(),
+  evidenceType: z.enum(["external_url", "uploaded_file"]),
+  file: z
+    .object({
+      name: z.string(),
+      mimeType: z.string().nullable(),
+      sizeBytes: z.number().int().nonnegative().nullable(),
+      sha256: z.string().nullable(),
+      downloadUrl: z.string(),
+    })
+    .nullable(),
   status: z.enum(["active", "expired", "invalid", "archived"]),
   usable: z.boolean(),
   collectedAt: z.iso.datetime({ offset: true }),
@@ -110,6 +139,10 @@ export const linkControlEvidenceResultSchema = z.object({
 });
 export type AddControlEvidence = z.infer<typeof addControlEvidenceSchema>;
 export type LinkControlEvidence = z.infer<typeof linkControlEvidenceSchema>;
+export type UnlinkControlEvidence = z.infer<typeof unlinkControlEvidenceSchema>;
+export type UploadControlEvidence = z.infer<
+  typeof uploadControlEvidenceSchema
+>;
 export type ControlEvidenceQuery = z.infer<
   typeof listControlEvidenceQuerySchema
 >;

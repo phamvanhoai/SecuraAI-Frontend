@@ -17,7 +17,7 @@ const fail = (status: number, message: string) =>
 export async function proxyEvidence(
   request: Request,
   id: string,
-  operation: "list" | "add" | "link",
+  operation: "list" | "add" | "link" | "unlink",
 ) {
   if (!z.uuid().safeParse(id).success) return fail(400, "Invalid Control ID");
   const path = `/compliance/controls/${encodeURIComponent(id)}`;
@@ -37,6 +37,29 @@ export async function proxyEvidence(
     request.headers.get("sec-fetch-site") === "cross-site"
   )
     return fail(403, "Same-origin request required");
+  if (operation === "unlink") {
+    const evidenceId = new URL(request.url).searchParams.get("evidenceId");
+    if (!evidenceId || !z.uuid().safeParse(evidenceId).success) return fail(400, "Invalid Evidence ID");
+    if (!request.headers.get("content-type")?.startsWith("application/json"))
+      return fail(415, "JSON body required");
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return fail(400, "Invalid JSON body");
+    }
+    const parsed = z.object({ reason: z.string().trim().min(10).max(2000) }).safeParse(body);
+    if (!parsed.success) return fail(400, "Invalid unlink reason");
+    return proxyAuthenticatedRequest(
+      `${path}/evidence-links/${encodeURIComponent(evidenceId)}`,
+      {
+        method: "DELETE",
+        body: JSON.stringify(parsed.data),
+        headers: { "content-type": "application/json" },
+        signal: request.signal,
+      },
+    );
+  }
   if (!request.headers.get("content-type")?.startsWith("application/json"))
     return fail(415, "JSON body required");
   let body: unknown;

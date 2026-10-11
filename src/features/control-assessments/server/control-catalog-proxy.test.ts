@@ -10,7 +10,6 @@ import {
   proxyControlOwners,
 } from "./control-catalog-proxy";
 const body = {
-  controlCode: "CTRL-MFA",
   name: "Administrator MFA",
   description: "Require MFA for privileged access",
   ownerUserId: null,

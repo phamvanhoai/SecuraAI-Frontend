@@ -1,5 +1,5 @@
 "use client";
-import { ClipboardCheck, Search, Plus, Pencil, Paperclip } from "lucide-react";
+import { ClipboardCheck, Ellipsis, Search, Plus, Pencil, Paperclip, History } from "lucide-react";
 import { ControlEvidenceDialog } from "./control-evidence-dialog";
 import { ControlEditor } from "./control-editor";
 import { useRef, useState, type FormEvent } from "react";
@@ -18,6 +18,7 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -53,7 +54,7 @@ export function ControlAssessmentManager() {
   const [search, setSearch] = useState("");
   const [q, setQ] = useState<string>();
   const query = useControlAssessments(
-    { page, limit: 20, ...(q ? { q } : {}) },
+    { page, limit: 10, ...(q ? { q } : {}) },
     enabled,
   );
   const mutation = useCreateControlAssessment();
@@ -64,6 +65,11 @@ export function ControlAssessmentManager() {
   const [result, setResult] = useState<keyof typeof labels>("effective");
   const [effectiveness, setEffectiveness] = useState("100");
   const [notes, setNotes] = useState("");
+  const [assessmentTab, setAssessmentTab] = useState<"assess" | "history">(
+    "assess",
+  );
+  const [historyPage, setHistoryPage] = useState(1);
+  const historyPageSize = 5;
   const [error, setError] = useState<string>();
   const open = (item: ControlAssessmentItem) => {
     setSelected(item);
@@ -71,6 +77,8 @@ export function ControlAssessmentManager() {
     setResult("effective");
     setEffectiveness(item.assessments[0]?.effectiveness?.toString() ?? "100");
     setNotes("");
+    setAssessmentTab("assess");
+    setHistoryPage(1);
     setError(undefined);
     ref.current?.showModal();
   };
@@ -166,34 +174,45 @@ export function ControlAssessmentManager() {
       key: "action",
       header: "Action",
       cell: (item) => (
-        <div className="flex flex-wrap gap-2">
+        <DropdownMenu
+          className="w-fit"
+          label={
+            <span className="grid size-8 place-items-center">
+              <span className="sr-only">Actions for {item.controlCode}</span>
+              <Ellipsis aria-hidden="true" className="size-5" strokeWidth={1.8} />
+            </span>
+          }
+        >
           {item.canManageEvidence ? (
-            <Button
-              variant="secondary"
+            <button
+              type="button"
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setEvidenceControl(item.id)}
             >
               <Paperclip className="size-4" aria-hidden="true" />
               Evidence
-            </Button>
+            </button>
           ) : null}
-          <Button
-            variant="secondary"
+          <button
+            type="button"
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!item.evidence.length}
             onClick={() => open(item)}
           >
             <ClipboardCheck className="size-4" aria-hidden="true" />
             Assess
-          </Button>
+          </button>
           {canEdit ? (
-            <Button
-              variant="secondary"
+            <button
+              type="button"
+              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
               onClick={() => setEditor({ controlId: item.id })}
             >
               <Pencil className="size-4" aria-hidden="true" />
               Edit
-            </Button>
+            </button>
           ) : null}
-        </div>
+        </DropdownMenu>
       ),
     },
   ];
@@ -298,7 +317,139 @@ export function ControlAssessmentManager() {
         dialogRef={ref}
         className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
       >
-        <form className="space-y-4" onSubmit={submit}>
+        <div
+          className="border-border bg-surface mb-4 inline-flex w-full gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+          role="tablist"
+          aria-label="Control assessment views"
+        >
+          <button
+            id="control-assess-tab"
+            type="button"
+            role="tab"
+            aria-selected={assessmentTab === "assess"}
+            aria-controls="control-assessment-panel"
+            tabIndex={assessmentTab === "assess" ? 0 : -1}
+            className={`min-h-10 flex-1 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${assessmentTab === "assess" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+            onClick={() => setAssessmentTab("assess")}
+            onKeyDown={(event) => {
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                event.preventDefault();
+                setAssessmentTab("assess");
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>("#control-history-tab")
+                  ?.focus();
+              }
+            }}
+          >
+            Assess control
+          </button>
+          <button
+            id="control-history-tab"
+            type="button"
+            role="tab"
+            aria-selected={assessmentTab === "history"}
+            aria-controls="control-history-panel"
+            tabIndex={assessmentTab === "history" ? 0 : -1}
+            className={`min-h-10 inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${assessmentTab === "history" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+            onClick={() => setAssessmentTab("history")}
+            onKeyDown={(event) => {
+              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                event.preventDefault();
+                setAssessmentTab("history");
+                event.currentTarget.parentElement
+                  ?.querySelector<HTMLButtonElement>("#control-assess-tab")
+                  ?.focus();
+              }
+            }}
+          >
+            <History className="size-4" aria-hidden="true" />
+            History ({selected?.assessments.length ?? 0})
+          </button>
+        </div>
+        {assessmentTab === "history" ? (
+          <section id="control-history-panel" role="tabpanel" aria-labelledby="control-history-tab" className="space-y-3">
+            <p className="text-muted text-sm">
+              Previous assessment results are read-only. Saving a new assessment
+              creates a new record and does not overwrite this history.
+            </p>
+            {selected?.assessments.length ? (
+              selected.assessments
+                .slice(
+                  (historyPage - 1) * historyPageSize,
+                  historyPage * historyPageSize,
+                )
+                .map((assessment) => {
+                const assessmentLabel = assessment.result
+                  ? labels[assessment.result]
+                  : "Not assessed";
+                const assessmentTone = assessment.result
+                  ? tones[assessment.result]
+                  : "neutral";
+                return (
+                <article
+                  key={assessment.id}
+                  className="border-border rounded-lg border p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">
+                        {assessmentLabel}
+                      </p>
+                      <p className="text-muted text-sm">
+                        {new Intl.DateTimeFormat("en-GB", {
+                          timeZone: "Asia/Bangkok",
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(assessment.assessedAt))} (UTC+7)
+                      </p>
+                    </div>
+                    <StatusBadge tone={assessmentTone}>
+                      {assessment.effectiveness ?? "—"}% effective
+                    </StatusBadge>
+                  </div>
+                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-muted">Assessed by</dt>
+                      <dd>{assessment.assessor.fullName}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted">Test method</dt>
+                      <dd className="whitespace-pre-wrap">{assessment.testMethod}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-3 whitespace-pre-wrap text-sm">{assessment.notes}</p>
+                </article>
+                );
+                })
+            ) : (
+              <div className="border-border rounded-lg border border-dashed p-6 text-center">
+                <p className="font-medium">No assessment history</p>
+                <p className="text-muted mt-1 text-sm">
+                  The first saved assessment will appear here.
+                </p>
+              </div>
+            )}
+            {selected?.assessments.length ? (
+              <Pagination
+                page={historyPage}
+                pageCount={Math.ceil(
+                  selected.assessments.length / historyPageSize,
+                )}
+                onPageChange={setHistoryPage}
+              />
+            ) : null}
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => ref.current?.close()}
+              >
+                Close
+              </Button>
+            </div>
+          </section>
+        ) : (
+        <form id="control-assessment-panel" className="space-y-4" onSubmit={submit}>
           {error ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {error}
@@ -388,6 +539,7 @@ export function ControlAssessmentManager() {
             </Button>
           </div>
         </form>
+        )}
       </Dialog>
     </>
   );

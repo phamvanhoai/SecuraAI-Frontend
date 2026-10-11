@@ -23,6 +23,8 @@ const candidate: ControlEvidenceItem = {
   description:
     "Configuration review confirms the relevant administrative access policy.",
   documentUrl: "https://docs.example.test/reports/mfa-config",
+  evidenceType: "external_url",
+  file: null,
   status: "active",
   usable: true,
   collectedAt: "2020-01-01T00:00:00Z",

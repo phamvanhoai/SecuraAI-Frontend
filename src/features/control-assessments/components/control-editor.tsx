@@ -88,9 +88,10 @@ function ControlFields({
   dialog: React.RefObject<HTMLDialogElement | null>;
   onClose: () => void;
 }) {
+  type FormValues = CreateControl & { controlCode: string };
   // Freeze the edit baseline. A background refresh must never silently replace the expected version.
   const [baseline] = useState(initial);
-  const defaults: CreateControl = {
+  const defaults: FormValues = {
     controlCode: baseline?.controlCode ?? "",
     name: baseline?.name ?? "",
     description: baseline?.description ?? "",
@@ -98,7 +99,7 @@ function ControlFields({
     applicability: baseline?.applicability ?? "under_review",
     implementationStatus: baseline?.implementationStatus ?? "not_implemented",
   };
-  const [values, setValues] = useState(defaults);
+  const [values, setValues] = useState<FormValues>(defaults);
   const [reason, setReason] = useState("");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -107,6 +108,7 @@ function ControlFields({
   const [blocked, setBlocked] = useState(false);
   const busy = useRef(false);
   const form = useRef<HTMLFormElement>(null);
+  const ownerSelect = useRef<HTMLSelectElement>(null);
   const save = useSaveCatalogControl();
   const toast = useToast();
   const owners = useControlOwners(q, true);
@@ -132,9 +134,9 @@ function ControlFields({
     element?.addEventListener("cancel", cancel);
     return () => element?.removeEventListener("cancel", cancel);
   });
-  const set = <K extends keyof CreateControl>(
+  const set = <K extends keyof FormValues>(
     key: K,
-    value: CreateControl[K],
+    value: FormValues[K],
   ) => setValues((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -150,7 +152,11 @@ function ControlFields({
           expectedUpdatedAt: baseline.updatedAt,
           expectedRevision: baseline.revision,
         })
-      : createControlSchema.safeParse(values);
+      : createControlSchema.safeParse(
+          Object.fromEntries(
+            Object.entries(values).filter(([key]) => key !== "controlCode"),
+          ),
+        );
     if (!parsed.success) {
       const next: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -235,22 +241,24 @@ function ControlFields({
       ) : null}
       <fieldset disabled={save.isPending || blocked} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="control-controlCode">Control code *</Label>
-            <Input
-              {...attributes("controlCode")}
-              className="mt-1.5"
-              value={values.controlCode}
-              readOnly={Boolean(baseline)}
-              maxLength={100}
-              onChange={(event) => set("controlCode", event.target.value)}
-            />
-            {message("controlCode")}
-            <p className="text-muted mt-1 text-xs">
-              Unique, uppercase when created. Cannot be changed later.
-            </p>
-          </div>
-          <div>
+          {baseline ? (
+            <div>
+              <Label htmlFor="control-controlCode">Control code</Label>
+              <Input
+                {...attributes("controlCode")}
+                className="mt-1.5"
+                value={baseline.controlCode}
+                readOnly
+                disabled
+                maxLength={100}
+              />
+              {message("controlCode")}
+              <p className="text-muted mt-1 text-xs">
+                Locked after creation; the control code is the permanent identifier.
+              </p>
+            </div>
+          ) : null}
+          <div className={baseline ? undefined : "sm:col-span-2"}>
             <Label htmlFor="control-name">Control name *</Label>
             <Input
               {...attributes("name")}
@@ -282,15 +290,25 @@ function ControlFields({
             value={search}
             maxLength={100}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              setQ(search.trim());
+              window.setTimeout(() => {
+                ownerSelect.current?.focus();
+                ownerSelect.current?.showPicker?.();
+              }, 0);
+            }}
           />
           <p className="text-muted mt-1 text-xs">
             Active Employees and Security Officers; at most 10 results. Search
-            by name.
+            by name or email.
           </p>
         </div>
         <div>
           <Label htmlFor="control-ownerUserId">Control Owner (optional)</Label>
           <Select
+            ref={ownerSelect}
             {...attributes("ownerUserId")}
             className="mt-1.5"
             value={values.ownerUserId ?? ""}
@@ -302,7 +320,7 @@ function ControlFields({
               (value) => value.id === baseline.owner?.id,
             ) ? (
               <option value={baseline.owner.id}>
-                {baseline.owner.fullName} (current
+                {baseline.owner.fullName} — {baseline.owner.email} (current
                 {baseline.owner.status === "active" ? "" : ", inactive"})
               </option>
             ) : null}
@@ -315,7 +333,7 @@ function ControlFields({
             ) : null}
             {owners.data?.items.map((value) => (
               <option key={value.id} value={value.id}>
-                {value.fullName}
+                {value.fullName} — {value.email}
               </option>
             ))}
           </Select>
