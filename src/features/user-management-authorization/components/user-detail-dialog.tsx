@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Activity,
-  Building2,
-  KeyRound,
-  Mail,
-  ShieldCheck,
-  UserRound,
-} from "lucide-react";
+import { Activity, KeyRound, Mail, UserRound } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
@@ -32,16 +25,13 @@ export function UserDetailDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const detail = useUserDetail(userId);
-
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (userId && !dialog.open) dialog.showModal();
     if (!userId && dialog.open) dialog.close();
   }, [userId]);
-
   const status = detail.data ? statusPresentation[detail.data.status] : null;
-
   return (
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
@@ -51,7 +41,7 @@ export function UserDetailDialog({
     >
       {detail.isPending ? (
         <p className="text-muted py-10 text-center" role="status">
-          Loading user details…
+          Loading user details...
         </p>
       ) : null}
       {detail.isError ? (
@@ -92,7 +82,6 @@ export function UserDetailDialog({
             </div>
             <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
           </div>
-
           <DetailSection
             icon={
               <UserRound
@@ -104,22 +93,13 @@ export function UserDetailDialog({
             title="Account information"
           >
             <Detail label="Full name" value={detail.data.fullName} />
+            <Detail label="Username" value={detail.data.username} />
             <Detail
               label="Employee code"
               value={detail.data.employeeCode ?? "Not assigned"}
             />
+            <Detail label="Phone" value={detail.data.phone ?? "Not provided"} />
             <Detail
-              label="Phone"
-              value={detail.data.phone ?? "Not provided"}
-            />
-            <Detail
-              icon={
-                <Building2
-                  aria-hidden="true"
-                  className="size-3.5"
-                  strokeWidth={1.8}
-                />
-              }
               label="Department"
               value={detail.data.department?.name ?? "Not assigned"}
             />
@@ -127,66 +107,20 @@ export function UserDetailDialog({
               label="Department code"
               value={detail.data.department?.code ?? "Not assigned"}
             />
-            <Detail
-              label="Email verification"
-              value={detail.data.emailVerifiedAt ? "Verified" : "Not verified"}
-            />
-            <Detail
-              label="Password status"
-              value={
-                detail.data.mustChangePassword
-                  ? "Password change required"
-                  : "No change required"
-              }
-            />
           </DetailSection>
-
-          <section
-            aria-labelledby="assigned-roles-heading"
-            className="border-border rounded-xl border p-4"
+          <DetailSection
+            icon={
+              <KeyRound
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+            }
+            title="Access assignment"
           >
-            <SectionHeading
-              icon={
-                <ShieldCheck
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-              }
-              id="assigned-roles-heading"
-              title="Assigned roles"
-            />
-            {detail.data.roles.length === 0 ? (
-              <p className="bg-neutral-soft text-muted rounded-lg px-3 py-4 text-sm">
-                No roles assigned.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {detail.data.roles.map((role) => (
-                  <li
-                    className="bg-neutral-soft rounded-lg px-3 py-3"
-                    key={role.id}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <KeyRound
-                        aria-hidden="true"
-                        className="text-brand mt-0.5 size-4 shrink-0"
-                        strokeWidth={1.8}
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{role.name}</p>
-                        <p className="text-muted mt-0.5 text-xs [overflow-wrap:anywhere]">
-                          {role.code}
-                          {role.description ? ` — ${role.description}` : ""}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
+            <Detail label="Role" value={detail.data.role.name} />
+            <Detail label="Role code" value={detail.data.role.code} />
+          </DetailSection>
           <DetailSection
             icon={
               <Activity
@@ -202,8 +136,8 @@ export function UserDetailDialog({
               value={formatDate(detail.data.lastLoginAt)}
             />
             <Detail
-              label="Last locked"
-              value={formatDate(detail.data.lastLockedAt)}
+              label="Password changed"
+              value={formatDate(detail.data.passwordChangedAt)}
             />
             <Detail label="Created" value={formatDate(detail.data.createdAt)} />
             <Detail
@@ -237,44 +171,29 @@ function DetailSection({
       aria-labelledby={id}
       className="border-border rounded-xl border p-4"
     >
-      <SectionHeading id={id} icon={icon} title={title} />
+      <h4
+        className="mb-4 flex items-center gap-2 text-sm font-semibold"
+        id={id}
+      >
+        <span className="bg-brand-soft text-brand grid size-7 place-items-center rounded-lg">
+          {icon}
+        </span>
+        {title}
+      </h4>
       <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{children}</dl>
     </section>
   );
 }
-
-function SectionHeading({
-  id,
-  icon,
-  title,
-}: {
-  id: string;
-  icon: ReactNode;
-  title: string;
-}) {
-  return (
-    <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold" id={id}>
-      <span className="bg-brand-soft text-brand grid size-7 place-items-center rounded-lg">
-        {icon}
-      </span>
-      {title}
-    </h4>
-  );
-}
-
 function Detail({
   label,
   value,
-  icon,
 }: {
   label: string;
   value: string | null | undefined;
-  icon?: ReactNode;
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-muted flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-        {icon}
+      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
         {label}
       </dt>
       <dd className="mt-1.5 text-sm font-medium [overflow-wrap:anywhere]">
@@ -283,7 +202,6 @@ function Detail({
     </div>
   );
 }
-
 function initials(name: string): string {
   return name
     .split(" ")
@@ -293,7 +211,6 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
-
 function formatDate(value: UserDetail["lastLoginAt"]): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat("en-US", {

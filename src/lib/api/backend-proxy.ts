@@ -1,39 +1,17 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { authCookieNames, setAuthCookies } from "@/lib/auth/auth-cookies";
+import {
+  authCookieNames,
+  clearAuthCookies,
+  setAuthCookies,
+} from "@/lib/auth/auth-cookies";
+import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";
 
 function backendUrl(path: string): string {
   return `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}${path}`;
-}
-
-async function tryRefreshTokens(
-  refreshToken: string,
-): Promise<{ accessToken: string; refreshToken: string } | null> {
-  try {
-    const res = await fetch(backendUrl("/auth/refresh"), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken }),
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      success?: boolean;
-      data?: { accessToken: string; refreshToken: string };
-    };
-    if (data?.success && data?.data?.accessToken && data?.data?.refreshToken) {
-      return data.data;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export async function proxyAuthenticatedRequest(
@@ -41,69 +19,63 @@ export async function proxyAuthenticatedRequest(
   init: RequestInit = {},
 ): Promise<Response> {
   const cookieStore = await cookies();
-  let accessToken = cookieStore.get(authCookieNames.access)?.value;
+  const accessToken = cookieStore.get(authCookieNames.access)?.value;
   const refreshToken = cookieStore.get(authCookieNames.refresh)?.value;
-  let newTokens: { accessToken: string; refreshToken: string } | null = null;
+  const requestHeaders = await headers();
 
-  if (!accessToken && refreshToken) {
-    newTokens = await tryRefreshTokens(refreshToken);
-    if (newTokens) {
-      accessToken = newTokens.accessToken;
-    }
-  }
-
-  if (!accessToken) {
-    return Response.json(
-      {
-        success: false,
-        error: { code: "UNAUTHENTICATED", message: "Authentication required" },
-      },
-      { status: 401 },
-    );
-  }
-
-  try {
-    let response = await fetch(backendUrl(path), {
+  const send = (token: string) =>
+    fetch(backendUrl(path), {
       ...init,
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
         ...init.headers,
       },
     });
 
-    if (response.status === 401 && refreshToken && !newTokens) {
-      newTokens = await tryRefreshTokens(refreshToken);
-      if (newTokens) {
-        response = await fetch(backendUrl(path), {
-          ...init,
-          cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${newTokens.accessToken}`,
-            ...init.headers,
-          },
-        });
-      }
+  try {
+    let backendResponse = accessToken
+      ? await send(accessToken)
+      : new Response(null, { status: 401 });
+    let refreshedTokens;
+
+    if (backendResponse.status === 401 && refreshToken) {
+      const userAgent = requestHeaders.get("user-agent");
+      const refreshRequest = new Request("http://localhost/api/auth/refresh", {
+        headers: {
+          ...(userAgent ? { "User-Agent": userAgent } : {}),
+        },
+      });
+      const refreshed = await requestTokenPair(
+        "/auth/refresh",
+        { refreshToken },
+        refreshRequest,
+      );
+      refreshedTokens = refreshed.tokens;
+      if (refreshedTokens)
+        backendResponse = await send(refreshedTokens.accessToken);
     }
 
-    const headers = new Headers();
-    const contentType = response.headers.get("content-type");
-    if (contentType) headers.set("Content-Type", contentType);
-    const contentDisposition = response.headers.get("content-disposition");
-    if (contentDisposition) headers.set("Content-Disposition", contentDisposition);
-
-    const nextResponse = new NextResponse(response.body, {
-      status: response.status,
-      headers,
+    const responseHeaders = new Headers();
+    const contentType = backendResponse.headers.get("content-type");
+    if (contentType) responseHeaders.set("Content-Type", contentType);
+    const contentDisposition = backendResponse.headers.get(
+      "content-disposition",
+    );
+    if (contentDisposition)
+      responseHeaders.set("Content-Disposition", contentDisposition);
+    const contentDigest = backendResponse.headers.get("content-digest");
+    if (contentDigest) responseHeaders.set("Content-Digest", contentDigest);
+    const contentSha256 = backendResponse.headers.get("x-content-sha256");
+    if (contentSha256) responseHeaders.set("X-Content-SHA256", contentSha256);
+    const response = new NextResponse(backendResponse.body, {
+      status: backendResponse.status,
+      headers: responseHeaders,
     });
-
-    if (newTokens) {
-      setAuthCookies(nextResponse, newTokens);
-    }
-
-    return nextResponse;
+    if (refreshedTokens) setAuthCookies(response, refreshedTokens);
+    if (backendResponse.status === 401) clearAuthCookies(response);
+    return response;
   } catch {
     return Response.json(
       {

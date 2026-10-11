@@ -9,11 +9,10 @@ const mocks = vi.hoisted(() => ({
   detail: {
     id: "00000000-0000-4000-8000-000000000010",
     email: "analyst@example.com",
+    username: "analyst",
     fullName: "Security Analyst",
-    phone: "0901111111",
-    employeeCode: "SEC-010",
-    department: { id: "00000000-0000-4000-8000-000000000020", code: "SEC", name: "Security" },
-    roles: [{ code: "EMPLOYEE" }],
+    role: { code: "EMPLOYEE", name: "Employee" },
+    status: "active",
   },
 }));
 
@@ -35,10 +34,7 @@ vi.mock("../hooks/use-user-detail", () => ({
 }));
 vi.mock("../hooks/use-user-create-options", () => ({
   useUserCreateOptions: () => ({
-    data: {
-      departments: [{ id: "00000000-0000-4000-8000-000000000020", code: "SEC", name: "Security" }],
-      roles: [{ id: "00000000-0000-4000-8000-000000000030", code: "EMPLOYEE", name: "Employee" }],
-    },
+    data: { departments: [] },
     isPending: false,
     isError: false,
     refetch: vi.fn(),
@@ -53,11 +49,15 @@ import { EditUserDialog } from "./edit-user-dialog";
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
-    value(this: HTMLDialogElement) { this.setAttribute("open", ""); },
+    value(this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    },
   });
   Object.defineProperty(HTMLDialogElement.prototype, "close", {
     configurable: true,
-    value(this: HTMLDialogElement) { this.removeAttribute("open"); },
+    value(this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    },
   });
 });
 
@@ -86,9 +86,10 @@ describe("EditUserDialog", () => {
     await waitFor(() =>
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
         fullName: "Updated Analyst",
-        phone: "0901111111",
-        employeeCode: "SEC-010",
-        departmentId: "00000000-0000-4000-8000-000000000020",
+        phone: "",
+        employeeCode: "",
+        departmentId: "",
+        status: "active",
       }),
     );
   });

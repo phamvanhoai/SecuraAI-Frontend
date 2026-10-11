@@ -67,8 +67,20 @@ describe("AlertFeedbackHistoryDialog", () => {
             id: "55555555-5555-4555-8555-555555555555",
             alertId: alert.id,
             reviewedByUserId: "66666666-6666-4666-8666-666666666666",
+            analyst: {
+              id: "66666666-6666-4666-8666-666666666666",
+              name: "Security Officer",
+              email: "securityofficer@gmail.com",
+            },
             feedbackLabel: "needs_review",
             comment: "Verify the source manually",
+            reason: "Verify the source manually",
+            recordedAt: "2026-09-13T03:00:00.000Z",
+            modelVersion: {
+              id: "77777777-7777-4777-8777-777777777777",
+              modelName: "secura-behavior",
+              version: "1.0.0",
+            },
             createdAt: "2026-09-13T03:00:00.000Z",
           },
         ],
@@ -82,9 +94,10 @@ describe("AlertFeedbackHistoryDialog", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
     expect(screen.getByText("Needs further review")).toBeInTheDocument();
     expect(screen.getByText("Verify the source manually")).toBeInTheDocument();
-    expect(
-      screen.getByText("66666666-6666-4666-8666-666666666666"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Security Officer")).toBeInTheDocument();
+    expect(screen.getByText("securityofficer@gmail.com")).toBeInTheDocument();
+    expect(screen.getByText("secura-behavior")).toBeInTheDocument();
+    expect(screen.getByText("v1.0.0")).toBeInTheDocument();
   });
 
   it("shows an empty state and closes", async () => {

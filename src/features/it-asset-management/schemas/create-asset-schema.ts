@@ -1,65 +1,79 @@
 import { z } from "zod";
 import { assetListItemSchema } from "./asset-list-schema";
 
+const optionalUuid = z
+  .union([z.literal(""), z.uuid()])
+  .optional()
+  .transform((value) => value || undefined);
 const optionalText = (maximum: number) =>
   z
     .string()
     .trim()
     .max(maximum)
     .optional()
-    .transform((value) => (value === "" ? undefined : value));
+    .transform((value) => value || undefined);
 
-const optionalUuid = z
-  .union([z.literal(""), z.uuid()])
-  .optional()
-  .transform((value) => (value === "" ? undefined : value))
-  .pipe(z.uuid().optional());
-
-export const createAssetSchema = z.object({
-  assetCode: z
-    .string()
-    .trim()
-    .min(1, "Asset code is required")
-    .max(50)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, "Asset code format is invalid")
-    .transform((value) => value.toUpperCase()),
-  name: z.string().trim().min(1, "Asset name is required").max(150),
-  assetType: z.string().trim().min(1, "Asset type is required").max(50),
-  description: optionalText(10_000),
-  hostname: optionalText(255),
-  ipAddress: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => (value === "" ? undefined : value))
-    .pipe(z.union([z.ipv4(), z.ipv6()]).optional()),
-  location: optionalText(255),
-  departmentId: optionalUuid,
-  ownerUserId: optionalUuid,
-}).strict();
+export const createAssetSchema = z
+  .object({
+    assetCode: z
+      .string()
+      .trim()
+      .min(1, "Asset code is required")
+      .max(100)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, "Asset code format is invalid")
+      .transform((value) => value.toUpperCase()),
+    name: z.string().trim().min(1, "Asset name is required").max(255),
+    assetType: z.string().trim().min(1, "Asset type is required").max(100),
+    ownerUserId: optionalUuid,
+    description: optionalText(10_000),
+    dependencyIds: z.array(z.uuid()).max(50).default([]),
+    eventSourceIds: z.array(z.uuid()).max(50).default([]),
+  })
+  .strict();
 
 export const assetCreateOptionsSchema = z.object({
-  departments: z.array(
-    z.object({ id: z.uuid(), code: z.string(), name: z.string() }),
-  ),
   owners: z.array(
     z.object({
       id: z.uuid(),
       fullName: z.string(),
-      employeeCode: z.string().nullable(),
+      role: z.string(),
+      employeeCode: z.string().nullable().optional(),
     }),
   ),
-  truncated: z.object({ departments: z.boolean(), owners: z.boolean() }),
+  businessServices: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  assets: z.array(
+    z.object({ id: z.uuid(), assetCode: z.string(), name: z.string() }),
+  ),
+  eventSources: z.array(
+    z.object({ id: z.uuid(), name: z.string(), sourceType: z.string() }),
+  ),
+  departments: z
+    .array(z.object({ id: z.uuid(), code: z.string(), name: z.string() }))
+    .default([]),
+  truncated: z
+    .object({ departments: z.boolean(), owners: z.boolean() })
+    .default({ departments: false, owners: false }),
 });
 
+export const createdAssetSchema = assetListItemSchema;
+export const createAssetRequestSchema = z.object({
+  assetCode: z.string().trim().min(1).max(100),
+  name: z.string().trim().min(1).max(255),
+  assetType: z.string().trim().min(1).max(100),
+  ownerUserId: z.uuid().optional(),
+  description: z.string().trim().max(10_000).optional(),
+  dependencies: z.array(z.object({ assetId: z.uuid() })).max(50),
+  eventSourceIds: z.array(z.uuid()).max(50),
+}).strict();
 export const assetDetailSchema = assetListItemSchema.extend({
   description: z.string().nullable(),
-  hostname: z.string().nullable(),
-  ipAddress: z.string().nullable(),
+  hostname: z.string().nullable().optional(),
+  ipAddress: z.string().nullable().optional(),
   createdAt: z.iso.datetime({ offset: true }),
 });
-
 export type CreateAssetInput = z.input<typeof createAssetSchema>;
-export type CreateAssetRequest = z.output<typeof createAssetSchema>;
+export type CreateAssetOutput = z.output<typeof createAssetSchema>;
+export type CreateAssetRequest = z.infer<typeof createAssetRequestSchema>;
+export type CreatedAsset = z.infer<typeof createdAssetSchema>;
 export type AssetDetail = z.infer<typeof assetDetailSchema>;
 export type AssetCreateOptions = z.infer<typeof assetCreateOptionsSchema>;

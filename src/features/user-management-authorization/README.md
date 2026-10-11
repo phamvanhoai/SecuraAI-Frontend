@@ -14,7 +14,7 @@ availability, and the backend protects the last active administrator.
 Administrators with `users.update` can edit a user's name, phone, employee code,
 and department. Role assignment is a separate privileged action. The dialog loads the current View User data,
 keeps email read-only, and refreshes the list and detail cache after a successful
-PATCH request. Password, MFA, and lock status remain separate workflows.
+PATCH request. Password and lock status remain separate workflows.
 
 ## Assign user roles
 
@@ -29,20 +29,18 @@ with roles requires both `users.create` and `users.assign-role`.
 The user table is backed by the paginated administration API. Users with
 `users.read` can select **View** on any row to load current account details from
 `/api/users/{userId}`. The dialog presents profile, department, assigned roles,
-MFA status and account activity with explicit loading, retry, empty-value and
+and account activity with explicit loading, retry, empty-value and
 not-found/error states. The same-origin BFF keeps tokens in HttpOnly cookies and
 forwards the request to `/admin/users/{userId}`.
 
 ## Add user accounts
 
-Administrators with both `users.create` and `users.assign-role` can open the **Add user** dialog. The form
-loads active departments and assignable roles from the backend instead of asking
-for internal UUIDs or manually entered role codes. It validates labeled profile
-fields, requires at least one role, disables submission until reference data is
-available, and provides inline error, retry, pending, and success feedback.
+Administrators with `users.create` can open the **Add user** dialog. The V2 form
+accepts email, full name, and exactly one non-Admin database role. It provides
+labeled fields, inline validation, pending feedback, and a responsive dialog.
 
-The typed same-origin BFF forwards creation and option requests with HttpOnly
-cookie authentication. Successful creation refreshes the user list; the
+The typed same-origin BFF forwards `POST /users` with HttpOnly-cookie
+authentication. Successful creation refreshes the user list; the
 temporary password is delivered by the backend email flow and never enters the
 browser response.
 
@@ -56,8 +54,8 @@ of the last active administrator with both account-management permissions.
 
 Both actions require a NFKC-normalized, trimmed reason of 10–1,000 characters.
 The confirmation contains the target account, reason and action buttons.
-The backend revokes sessions/MFA challenges while preserving passwords, MFA
-settings, roles and business records. Unlock requires a fresh login and does not
+The backend revokes sessions while preserving passwords, roles and business
+records. Unlock requires a fresh login and does not
 restore old sessions. Reasons are submitted to the backend
 audit flow; the frontend does not write separate audit records.
 

@@ -15,14 +15,18 @@ export default async function ChangePasswordPage({
   const params = await searchParams;
   const required = params.required === "1";
   return (
-    <div className="mx-auto max-w-3xl">
-      <ProductPageHeader title="Change password" showSampleNotice={false} />
+    <>
+      <ProductPageHeader
+        title="Change password"
+        description="Update your password to keep your SecuraAI account protected."
+        showSampleNotice={false}
+      />
       <ProductPanel
         title="Account security"
         description="Enter your current password before choosing a new one."
       >
         <ChangePasswordForm required={required} />
       </ProductPanel>
-    </div>
+    </>
   );
 }

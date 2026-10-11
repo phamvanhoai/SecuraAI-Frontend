@@ -17,14 +17,24 @@ export async function changeAccountAvailability(input: {
     input.action === "deactivate"
       ? `/api/users/${encodeURIComponent(input.userId)}/deactivate`
       : `/api/users/${encodeURIComponent(input.userId)}`,
-    { method: input.action === "deactivate" ? "POST" : "DELETE", target: "same-origin",
-      body: accountAvailabilityBodySchema.parse(input.body) },
+    {
+      method: input.action === "deactivate" ? "POST" : "DELETE",
+      target: "same-origin",
+      body: accountAvailabilityBodySchema.parse(input.body),
+    },
   );
   const parsed = accountAvailabilityResultSchema.safeParse(data);
-  if (!parsed.success || parsed.data.id !== input.userId ||
+  if (
+    !parsed.success ||
+    parsed.data.id !== input.userId ||
     (input.action === "deactivate" && parsed.data.status !== "disabled") ||
-    (input.action === "remove" && parsed.data.deletedAt === null)) {
-    throw new ApiError("Unable to verify the account change. Reload and try again.", 502, "UNKNOWN_ERROR");
+    (input.action === "remove" && parsed.data.deletedAt === null)
+  ) {
+    throw new ApiError(
+      "Unable to verify the account change. Reload and try again.",
+      502,
+      "UNKNOWN_ERROR",
+    );
   }
   return parsed.data;
 }

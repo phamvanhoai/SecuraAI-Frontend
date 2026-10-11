@@ -76,6 +76,10 @@ export const publishedPolicyForNewVersionSchema = z
     title: z.string(),
     description: z.string().nullable(),
     currentVersion: z.string().nullable(),
+    content: z.string().optional(),
+    changeSummary: z.string().nullable().optional(),
+    publishedAt: z.string().datetime().nullable().optional(),
+    eligibleForNewVersion: z.boolean().optional(),
     updatedAt: z.string(),
   })
   .strict();

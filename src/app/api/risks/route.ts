@@ -1,9 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  createRiskAssessmentRequestSchema,
-  riskListQuerySchema,
-} from "@/features/risk-assessment";
+import { createRiskAssessmentRequestSchema } from "@/features/risk-assessment";
+import { riskRegisterQuerySchema } from "@/features/risk-assessment/schemas/risk-register-schema";
 import {
   authCookieNames,
   clearAuthCookies,
@@ -23,7 +21,7 @@ export async function GET(request: Request): Promise<Response> {
       },
       { status: 401 },
     );
-  const parsed = riskListQuerySchema.safeParse(
+  const parsed = riskRegisterQuerySchema.safeParse(
     Object.fromEntries(new URL(request.url).searchParams.entries()),
   );
   if (!parsed.success)
@@ -103,7 +101,9 @@ export async function POST(request: Request): Promise<Response> {
         success: false,
         error: {
           code: "VALIDATION_ERROR",
-          message: "Invalid risk assessment data",
+          message:
+            parsed.error.issues.find((issue) => issue.path[0] === "reviewDate")
+              ?.message ?? "Invalid risk data",
         },
       },
       { status: 422 },

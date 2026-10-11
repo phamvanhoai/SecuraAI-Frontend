@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Search } from "lucide-react";
+import { Eye, Search, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import {
   DataTable,
@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useModelConfigurations } from "../hooks/use-model-configurations";
 import type { ModelConfiguration } from "../schemas/model-configuration-schema";
+import { ConfigureDetectionThresholdDialog } from "./configure-detection-threshold-dialog";
 import { ModelConfigurationDetailDialog } from "./model-configuration-detail-dialog";
 
 type ModelStatus = ModelConfiguration["status"];
@@ -30,6 +32,10 @@ export function ModelConfigurationsManager() {
   const [modelName, setModelName] = useState("");
   const [status, setStatus] = useState<ModelStatus | "all">("all");
   const [viewing, setViewing] = useState<ModelConfiguration | null>(null);
+  const [thresholdOpen, setThresholdOpen] = useState(false);
+  const session = useSessionUser();
+  const canManageThreshold =
+    session.data?.permissions.includes("ai-alerts.thresholds.manage") ?? false;
   const models = useModelConfigurations({
     page,
     limit: 20,
@@ -112,6 +118,18 @@ export function ModelConfigurationsManager() {
       <ProductPageHeader
         title="Model versions & evaluation"
         description="Review deployed and historical anomaly detection models with their latest measured performance."
+        additionalActions={
+          canManageThreshold ? (
+            <Button onClick={() => setThresholdOpen(true)}>
+              <SlidersHorizontal
+                aria-hidden="true"
+                className="size-4"
+                strokeWidth={1.8}
+              />
+              Configure Detection Threshold
+            </Button>
+          ) : null
+        }
         showSampleNotice={false}
       />
       <MetricStrip
@@ -245,6 +263,10 @@ export function ModelConfigurationsManager() {
       <ModelConfigurationDetailDialog
         configuration={viewing}
         onClose={() => setViewing(null)}
+      />
+      <ConfigureDetectionThresholdDialog
+        open={thresholdOpen}
+        onClose={() => setThresholdOpen(false)}
       />
     </>
   );
