@@ -34,7 +34,7 @@ import { OneTimeSecretDialog } from "./one-time-secret-dialog";
 export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   if (status === "ACTIVE") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
         <ShieldCheck className="size-3" />
         Active
       </span>
@@ -42,7 +42,7 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   }
   if (status === "EXPIRED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400 border border-amber-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20">
         <ShieldAlert className="size-3" />
         Expired
       </span>
@@ -50,7 +50,7 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   }
   if (status === "REVOKED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-400 border border-rose-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 border border-rose-500/20">
         <ShieldX className="size-3" />
         Revoked
       </span>
@@ -58,7 +58,7 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   }
   if (status === "ROTATED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-400 border border-purple-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600 dark:text-purple-400 border border-purple-500/20">
         <RefreshCw className="size-3" />
         Rotated
       </span>
