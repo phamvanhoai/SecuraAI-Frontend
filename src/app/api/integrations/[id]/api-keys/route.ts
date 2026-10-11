@@ -19,8 +19,12 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await context.params;
+  const targetPath =
+    id === "all" || !id
+      ? "/integrations/api-keys"
+      : `/integrations/${encodeURIComponent(id)}/api-keys`;
   return proxyAuthenticatedRequest(
-    `/integrations/${encodeURIComponent(id)}/api-keys`,
+    targetPath,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

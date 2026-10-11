@@ -94,11 +94,11 @@ export function OneTimeSecretDialog({
       </div>
 
       <div className="space-y-4 p-5 text-xs">
-        <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-200">
-          <div className="flex items-start gap-2">
-            <ShieldAlert className="size-4 shrink-0 text-amber-400 mt-0.5" />
-            <p className="text-xs leading-relaxed text-amber-200/90">
-              Copy and store this secret securely now. You will <strong>not be able to view</strong> this secret again after closing this dialog.
+        <Alert className="border-warning/30 bg-warning-soft text-warning">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert className="size-4 shrink-0 text-warning mt-0.5" />
+            <p className="text-xs leading-relaxed text-warning font-medium">
+              Copy and store this secret securely now. You will <strong className="font-bold underline decoration-warning/60 underline-offset-2">not be able to view</strong> this secret again after closing this dialog.
             </p>
           </div>
         </Alert>

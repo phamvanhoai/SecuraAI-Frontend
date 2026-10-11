@@ -273,33 +273,92 @@ export const integrationApiKeyListSchema = z.union([
 ]);
 export type IntegrationApiKeyList = z.infer<typeof integrationApiKeyListSchema>;
 
-export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema.extend({
-  secret: z.string(),
-});
+export const standardApiKeyScopes = [
+  "events:ingest",
+  "events:read",
+  "alerts:read",
+  "assets:read",
+  "compliance:read",
+] as const;
+
+export type StandardApiKeyScope = (typeof standardApiKeyScopes)[number];
+
+export const apiKeyScopeDetails: Record<
+  StandardApiKeyScope,
+  { label: string; description: string }
+> = {
+  "events:ingest": {
+    label: "Ingest Log Events",
+    description: "Submit raw security events and logs to the ingestion pipeline",
+  },
+  "events:read": {
+    label: "Read Normalized Events",
+    description: "Query and retrieve normalized security events and audit records",
+  },
+  "alerts:read": {
+    label: "Read AI Anomaly Alerts",
+    description: "Access real-time anomaly alerts and XAI explanation data",
+  },
+  "assets:read": {
+    label: "Read IT Assets",
+    description: "View IT infrastructure inventory and asset classifications",
+  },
+  "compliance:read": {
+    label: "Read Compliance Policies",
+    description: "Access ISMS policy guidelines and compliance control definitions",
+  },
+};
+
+export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema
+  .extend({
+    secret: z.string(),
+  })
+  .transform((item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+  }));
 export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;
 
-export const createApiKeyFormSchema = z.object({
-  keyName: z
-    .string()
-    .trim()
-    .min(1, "Key name is required")
-    .max(100, "Key name must not exceed 100 characters"),
-  secret: z
-    .string()
-    .trim()
-    .max(1000, "Secret must not exceed 1000 characters")
-    .optional()
-    .or(z.literal("")),
-  expiresAt: z
-    .string()
-    .nullable()
-    .optional()
-    .refine(
-      (val) => !val || new Date(val).getTime() > Date.now(),
-      { message: "Expiration date must be in the future" },
-    ),
-  isActive: z.boolean().default(false),
-});
+export const createApiKeyFormSchema = z
+  .object({
+    keyName: z
+      .string()
+      .trim()
+      .min(1, "Key name is required")
+      .max(255, "Key name must not exceed 255 characters")
+      .optional(),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Key name is required")
+      .max(255, "Key name must not exceed 255 characters")
+      .optional(),
+    scopes: z
+      .array(z.string())
+      .min(1, "At least one scope must be selected")
+      .default(["events:ingest"]),
+    expiresAt: z
+      .string()
+      .nullable()
+      .optional()
+      .refine(
+        (val) => !val || new Date(val).getTime() > Date.now(),
+        { message: "Expiration date must be in the future" },
+      ),
+    isActive: z.boolean().default(true),
+    eventSourceId: z.string().uuid().nullable().optional(),
+    integrationId: z.string().uuid().nullable().optional(),
+  })
+  .refine(
+    (data) => Boolean(data.keyName?.trim() || data.name?.trim()),
+    {
+      message: "Key name is required",
+      path: ["keyName"],
+    },
+  );
 export type CreateApiKeyInput = z.infer<typeof createApiKeyFormSchema>;
 
 export const updateApiKeyFormSchema = z.object({
