@@ -322,6 +322,53 @@ export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema
   }));
 export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;
 
+export const apiKeyUsageSchema = z.object({
+  lastUsedAt: z.string().nullable().optional(),
+  lastUsedIp: z.string().nullable().optional(),
+  totalAuditEvents: z.number().int().min(0).default(0),
+  isUsed: z.boolean().default(false),
+});
+export type ApiKeyUsage = z.infer<typeof apiKeyUsageSchema>;
+
+export const apiKeyDetailSchema = baseIntegrationApiKeySchema
+  .extend({
+    revokedBy: z.string().nullable().optional(),
+    revoker: z
+      .object({
+        id: z.string().optional(),
+        fullName: z.string().optional(),
+        email: z.string().optional(),
+        username: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    replacementKeyId: z.string().nullable().optional(),
+    replacementKey: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        keyPrefix: z.string().optional(),
+        status: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    usage: apiKeyUsageSchema.optional(),
+  })
+  .transform((item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+    usage: item.usage ?? {
+      lastUsedAt: item.lastUsedAt ?? null,
+      lastUsedIp: item.lastUsedIp ?? null,
+      totalAuditEvents: 0,
+      isUsed: Boolean(item.lastUsedAt),
+    },
+  }));
+export type ApiKeyDetail = z.infer<typeof apiKeyDetailSchema>;
+
 export const createApiKeyFormSchema = z
   .object({
     keyName: z

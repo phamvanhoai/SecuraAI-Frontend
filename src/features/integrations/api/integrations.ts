@@ -11,6 +11,7 @@ import {
   integrationApiKeySchema,
   integrationApiKeyListSchema,
   createdApiKeyResponseSchema,
+  apiKeyDetailSchema,
   connectionStatusSummarySchema,
   batchConnectionCheckResultSchema,
   integrationConnectionStatusSchema,
@@ -35,6 +36,7 @@ import {
   type IntegrationApiKey,
   type IntegrationApiKeyList,
   type CreatedApiKeyResponse,
+  type ApiKeyDetail,
   type ConnectionStatusSummary,
   type BatchConnectionCheckResult,
   type IntegrationConnectionStatus,
@@ -359,6 +361,19 @@ export function getApiKeyById(
   return integrationRequest(
     `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
     integrationApiKeySchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function getApiKeyDetail(
+  keyId: string,
+  integrationId?: string,
+  signal?: AbortSignal,
+): Promise<ApiKeyDetail> {
+  const targetId = integrationId?.trim() || "all";
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(targetId)}/api-keys/${encodeURIComponent(keyId)}`,
+    apiKeyDetailSchema,
     signal ? { signal } : undefined,
   );
 }

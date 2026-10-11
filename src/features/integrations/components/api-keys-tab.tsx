@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Copy,
   Edit2,
+  Eye,
   Key,
   PauseCircle,
   Plus,
@@ -30,6 +31,7 @@ import type {
 } from "../schemas/integration-schema";
 import { ApiKeyModal, type ApiKeyModalMode } from "./api-key-modal";
 import { OneTimeSecretDialog } from "./one-time-secret-dialog";
+import { ApiKeyDetailModal } from "./api-key-detail-modal";
 
 export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   if (status === "ACTIVE") {
@@ -97,6 +99,15 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
 
   // Revoke confirm dialog state
   const [keyToRevoke, setKeyToRevoke] = useState<IntegrationApiKey | null>(null);
+
+  // View detail modal state
+  const [detailKey, setDetailKey] = useState<IntegrationApiKey | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  function handleOpenDetail(key: IntegrationApiKey) {
+    setDetailKey(key);
+    setDetailModalOpen(true);
+  }
 
   function handleOpenCreate() {
     setSelectedKey(null);
@@ -342,9 +353,14 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                       <div className="flex items-center gap-2">
                         <Key className="text-muted size-3.5 shrink-0" />
                         <div>
-                          <span className="font-semibold text-foreground block">
+                          <button
+                            className="font-semibold text-foreground hover:text-brand transition-colors block text-left"
+                            onClick={() => handleOpenDetail(key)}
+                            title={`View metadata for ${key.keyName}`}
+                            type="button"
+                          >
                             {key.keyName}
-                          </span>
+                          </button>
                           {key.eventSource?.name ? (
                             <span className="text-[10px] text-muted">
                               {key.eventSource.name}
@@ -435,6 +451,17 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
+                          aria-label={`View API key details for ${key.keyName}`}
+                          className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                          onClick={() => handleOpenDetail(key)}
+                          title="View key metadata & usage details"
+                          type="button"
+                        >
+                          <Eye className="mr-1 size-3 text-muted" />
+                          View
+                        </Button>
+
+                        <Button
                           aria-label={`Rotate API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenRotate(key)}
@@ -504,6 +531,18 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
         onClose={() => setSecretDialogOpen(false)}
         open={secretDialogOpen}
         secret={secretDialogPlaintext}
+      />
+
+      {/* View Detail Modal */}
+      <ApiKeyDetailModal
+        initialData={detailKey}
+        integrationId={detailKey?.integrationId || effectiveIntegrationId}
+        keyId={detailKey?.id ?? null}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setDetailKey(null);
+        }}
+        open={detailModalOpen}
       />
 
       {/* Revoke Confirmation Dialog */}
