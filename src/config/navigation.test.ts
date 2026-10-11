@@ -35,7 +35,6 @@ describe("V2 role navigation", () => {
     const adminPaths = getPanelNavigation("admin").map((item) => item.href);
     expect(adminPaths).toContain("/users");
     expect(adminPaths).toContain("/settings");
-    expect(adminPaths).toContain("/integrations/schedules");
     expect(adminPaths).toContain("/login-history");
   });
 

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldX,
+  User,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/feedback/toast";
@@ -55,6 +56,14 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
       </span>
     );
   }
+  if (status === "ROTATED") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-400 border border-purple-500/20">
+        <RefreshCw className="size-3" />
+        Rotated
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-neutral-soft px-2 py-0.5 text-[11px] font-medium text-muted border border-border">
       <PauseCircle className="size-3" />
@@ -63,13 +72,14 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   );
 }
 
-export function ApiKeysTab({ integrationId }: { integrationId: string }) {
+export function ApiKeysTab({ integrationId }: { integrationId?: string | undefined }) {
   const toast = useToast();
+  const effectiveIntegrationId = integrationId?.trim() || "all";
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const apiKeysQuery = useApiKeys({
-    integrationId,
+    integrationId: effectiveIntegrationId,
   });
 
   const revokeMutation = useRevokeApiKey();
@@ -129,7 +139,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
     if (!keyToRevoke) return;
     try {
       await revokeMutation.mutateAsync({
-        integrationId,
+        integrationId: keyToRevoke.integrationId || effectiveIntegrationId,
         keyId: keyToRevoke.id,
       });
       toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
@@ -142,7 +152,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
   async function handleReactivate(key: IntegrationApiKey) {
     try {
       await updateMutation.mutateAsync({
-        integrationId,
+        integrationId: key.integrationId || effectiveIntegrationId,
         keyId: key.id,
         input: {
           isActive: true,
@@ -160,12 +170,21 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
       const term = searchTerm.trim().toLowerCase();
       const matchName = k.keyName.toLowerCase().includes(term);
       const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
-      if (!matchName && !matchFp) return false;
+      const matchPrefix = k.keyPrefix?.toLowerCase().includes(term) ?? false;
+      const matchScope = k.scopes?.some((s) => s.toLowerCase().includes(term)) ?? false;
+      const matchCreator =
+        k.creator?.fullName?.toLowerCase().includes(term) ||
+        k.creator?.email?.toLowerCase().includes(term) ||
+        false;
+      if (!matchName && !matchFp && !matchPrefix && !matchScope && !matchCreator) {
+        return false;
+      }
     }
     if (statusFilter === "active") return k.status === "ACTIVE";
     if (statusFilter === "inactive") return k.status === "INACTIVE";
     if (statusFilter === "expired") return k.status === "EXPIRED";
     if (statusFilter === "revoked") return k.status === "REVOKED";
+    if (statusFilter === "rotated") return k.status === "ROTATED";
     return true;
   });
 
@@ -174,12 +193,12 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
       {/* Action Header & Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+          <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
             <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
             <Input
               className="h-8 pl-8 text-xs"
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by key name or fingerprint..."
+              placeholder="Search by key name, scope, or creator..."
               value={searchTerm}
             />
           </div>
@@ -229,6 +248,17 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             >
               Expired
             </button>
+            <button
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                statusFilter === "revoked"
+                  ? "bg-surface text-foreground shadow-xs"
+                  : "text-muted hover:text-foreground"
+              }`}
+              onClick={() => setStatusFilter("revoked")}
+              type="button"
+            >
+              Revoked
+            </button>
           </div>
         </div>
 
@@ -251,7 +281,11 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
         </div>
       ) : apiKeysQuery.isError ? (
         <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-danger text-xs flex items-center justify-between">
-          <span>Failed to connect to the server. Please try again later.</span>
+          <span>
+            {apiKeysQuery.error instanceof Error
+              ? apiKeysQuery.error.message
+              : "Failed to connect to the server. Please try again later."}
+          </span>
           <Button
             className="min-h-7 px-2.5 text-xs"
             onClick={() => apiKeysQuery.refetch()}
@@ -266,10 +300,12 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             <Key className="size-5" />
           </div>
           <h4 className="mt-3 text-xs font-semibold text-foreground">
-            No API Keys Generated
+            No API Keys Found
           </h4>
           <p className="text-muted mt-1 max-w-sm text-[11px]">
-            Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders.
+            {searchTerm || statusFilter !== "all"
+              ? "No integration API keys match your active filter criteria."
+              : "Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders."}
           </p>
           <Button
             className="mt-4 min-h-8 px-3 text-xs"
@@ -288,7 +324,9 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                 <tr>
                   <th className="px-4 py-2.5">Key Identifier</th>
                   <th className="px-4 py-2.5">Key Fingerprint</th>
+                  <th className="px-4 py-2.5">Assigned Scopes</th>
                   <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Creator</th>
                   <th className="px-4 py-2.5">Expires At</th>
                   <th className="px-4 py-2.5">Created At</th>
                   <th className="px-4 py-2.5 text-right">Actions</th>
@@ -303,22 +341,31 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Key className="text-muted size-3.5 shrink-0" />
-                        <span className="font-semibold text-foreground">
-                          {key.keyName}
-                        </span>
+                        <div>
+                          <span className="font-semibold text-foreground block">
+                            {key.keyName}
+                          </span>
+                          {key.eventSource?.name ? (
+                            <span className="text-[10px] text-muted">
+                              {key.eventSource.name}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </td>
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className="border-border bg-neutral-soft/80 font-mono text-[11px] rounded border px-2 py-0.5 text-foreground select-all">
-                          {key.keyFingerprint || "—"}
+                          {key.keyFingerprint || key.keyPrefix ? `${key.keyPrefix || key.keyFingerprint}...****` : "—"}
                         </span>
-                        {key.keyFingerprint ? (
+                        {key.keyFingerprint || key.keyPrefix ? (
                           <button
                             aria-label="Copy Key Fingerprint"
                             className="text-muted hover:text-foreground p-1"
-                            onClick={() => handleCopyFingerprint(key.keyFingerprint)}
+                            onClick={() =>
+                              handleCopyFingerprint(key.keyFingerprint || key.keyPrefix)
+                            }
                             title="Copy Key Fingerprint"
                             type="button"
                           >
@@ -329,7 +376,40 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                     </td>
 
                     <td className="px-4 py-3">
+                      {key.scopes && key.scopes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {key.scopes.map((scope) => (
+                            <span
+                              className="inline-flex items-center rounded bg-neutral-soft/90 px-1.5 py-0.5 text-[10px] font-mono text-foreground border border-border"
+                              key={scope}
+                            >
+                              {scope}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted text-[11px] italic">No scopes</span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
                       <ApiKeyStatusBadge status={key.status} />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <User className="size-3 text-muted shrink-0" />
+                        <div className="flex flex-col text-[11px]">
+                          <span className="font-medium text-foreground">
+                            {key.creator?.fullName || "Administrator"}
+                          </span>
+                          {key.creator?.email ? (
+                            <span className="text-muted text-[10px]">
+                              {key.creator.email}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     </td>
 
                     <td className="text-muted px-4 py-3 text-[11px]">
@@ -410,7 +490,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
       {/* ApiKey Modal (Create / Edit / Rotate) */}
       <ApiKeyModal
         apiKey={selectedKey}
-        integrationId={integrationId}
+        integrationId={selectedKey?.integrationId || effectiveIntegrationId}
         key={`${modalMode}-${selectedKey?.id ?? "new"}-${modalOpen}`}
         mode={modalMode}
         onOpenChange={setModalOpen}

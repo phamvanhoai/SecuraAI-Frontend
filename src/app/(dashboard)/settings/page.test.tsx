@@ -24,8 +24,7 @@ describe("SettingsPage", () => {
       ["Tổ chức", "Thông tin tổ chức"],
       ["Bảo mật", "Chính sách phiên đăng nhập"],
       ["Thông báo", "Quy tắc thông báo"],
-      ["Tích hợp", "Third-Party SIEM & Firewall Integrations"],
-      ["API và khóa", "Khóa API"],
+      ["API và khóa", "Khóa API tích hợp"],
     ] as const) {
       await user.click(page.getByRole("button", { name: tab }));
       expect(page.getByRole("heading", { name: heading })).toBeVisible();

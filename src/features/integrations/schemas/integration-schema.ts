@@ -18,10 +18,11 @@ export const integrationStatusEnum = z.enum([
 export type IntegrationStatus = z.infer<typeof integrationStatusEnum>;
 
 export const paginationSchema = z.object({
-  total: z.coerce.number(),
-  page: z.coerce.number(),
-  limit: z.coerce.number(),
-  totalPages: z.coerce.number(),
+  total: z.coerce.number().optional(),
+  totalItems: z.coerce.number().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(20),
+  totalPages: z.coerce.number().default(0),
 });
 
 export const integrationSchema = z.object({
@@ -193,7 +194,7 @@ export const integrationLogListSchema = z.object({
 });
 export type IntegrationLogList = z.infer<typeof integrationLogListSchema>;
 
-export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED"]);
+export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED", "ROTATED"]);
 export type ApiKeyStatus = z.infer<typeof apiKeyStatusEnum>;
 
 export function deriveApiKeyStatus(
@@ -212,22 +213,67 @@ export function deriveApiKeyStatus(
   return "ACTIVE";
 }
 
-export const integrationApiKeySchema = z.object({
+export const baseIntegrationApiKeySchema = z.object({
   id: z.string().uuid(),
-  integrationId: z.string().uuid(),
-  keyName: z.string(),
+  integrationId: z.string().nullable().optional(),
+  eventSourceId: z.string().nullable().optional(),
+  keyName: z.string().optional().default(""),
+  name: z.string().optional().default(""),
+  keyPrefix: z.string().optional().default(""),
   keyFingerprint: z.string().nullable().optional(),
+  maskedKey: z.string().optional().default(""),
+  scopes: z.array(z.string()).default([]).optional(),
   expiresAt: z.string().nullable().optional(),
-  isActive: z.boolean(),
+  isActive: z.boolean().default(true),
   status: apiKeyStatusEnum,
+  creator: z
+    .object({
+      id: z.string().optional(),
+      fullName: z.string().optional(),
+      email: z.string().optional(),
+      username: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  createdBy: z.string().optional(),
   createdAt: z.string(),
+  lastUsedAt: z.string().nullable().optional(),
+  lastUsedIp: z.string().nullable().optional(),
+  rotatedAt: z.string().nullable().optional(),
+  revokedAt: z.string().nullable().optional(),
+  eventSource: z
+    .object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      sourceType: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
 });
+
+export const integrationApiKeySchema = baseIntegrationApiKeySchema.transform(
+  (item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+  }),
+);
 export type IntegrationApiKey = z.infer<typeof integrationApiKeySchema>;
 
-export const integrationApiKeyListSchema = z.array(integrationApiKeySchema);
+export const integrationApiKeyListSchema = z.union([
+  z.array(integrationApiKeySchema),
+  z
+    .object({
+      items: z.array(integrationApiKeySchema),
+      pagination: paginationSchema.optional(),
+    })
+    .transform((val) => val.items),
+]);
 export type IntegrationApiKeyList = z.infer<typeof integrationApiKeyListSchema>;
 
-export const createdApiKeyResponseSchema = integrationApiKeySchema.extend({
+export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema.extend({
   secret: z.string(),
 });
 export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;

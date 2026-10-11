@@ -47,8 +47,8 @@ export const integrationKeys = {
     [...integrationKeys.all, "list", input] as const,
   detail: (id: string) => [...integrationKeys.all, "detail", id] as const,
   schedules: (id: string) => [...integrationKeys.all, "schedules", id] as const,
-  apiKeys: (integrationId: string) =>
-    [...integrationKeys.all, "api-keys", integrationId] as const,
+  apiKeys: (integrationId?: string | undefined) =>
+    [...integrationKeys.all, "api-keys", integrationId ?? "all"] as const,
   jobs: (input: Omit<ListSyncJobsInput, "signal">) =>
     [...integrationKeys.all, "jobs", input] as const,
   logs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
@@ -257,12 +257,13 @@ export function useIntegrationLogs(
 // API Key Hooks
 // -------------------------------------------------------------
 export function useApiKeys(
-  input: Omit<ListApiKeysInput, "signal">,
+  input: Omit<ListApiKeysInput, "signal"> = {},
 ) {
+  const effectiveId = input.integrationId?.trim() || "all";
   return useQuery({
-    queryKey: [...integrationKeys.apiKeys(input.integrationId), input.isActive, input.search],
+    queryKey: [...integrationKeys.apiKeys(effectiveId), input.isActive, input.search],
     queryFn: ({ signal }) => listApiKeys({ ...input, signal }),
-    enabled: Boolean(input.integrationId),
+    enabled: true,
   });
 }
 

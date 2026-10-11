@@ -306,7 +306,7 @@ export function listIntegrationLogs(
 // Integration API Keys API Client
 // -------------------------------------------------------------
 export type ListApiKeysInput = {
-  integrationId: string;
+  integrationId?: string | undefined;
   isActive?: boolean | undefined;
   search?: string | undefined;
   signal?: AbortSignal | undefined;
@@ -320,7 +320,8 @@ export function listApiKeys(
   if (input.search) query.set("search", input.search);
 
   const qs = query.toString();
-  const path = `/api/integrations/${encodeURIComponent(input.integrationId)}/api-keys${qs ? `?${qs}` : ""}`;
+  const targetId = input.integrationId?.trim() || "all";
+  const path = `/api/integrations/${encodeURIComponent(targetId)}/api-keys${qs ? `?${qs}` : ""}`;
 
   return integrationRequest(
     path,

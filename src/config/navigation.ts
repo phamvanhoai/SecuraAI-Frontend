@@ -3,7 +3,6 @@ import {
   Bell,
   Boxes,
   BrainCircuit,
-  CalendarClock,
   ClipboardCheck,
   FileStack,
   Gauge,
@@ -145,13 +144,6 @@ const modules = {
     icon: FileStack,
     section: "AI & Giám sát",
     requiredAnyPermission: ["log-sources.read"],
-  },
-  integrationSchedules: {
-    title: "Sync Schedules",
-    slug: "integrations/schedules",
-    icon: CalendarClock,
-    section: "AI & Giám sát",
-    requiredAnyPermission: ["integrations.read"],
   },
   reports: {
     title: "Báo cáo",
@@ -371,17 +363,6 @@ export function getPanelNavigation(
       href: `/${item.slug}`,
     })),
   ];
-
-  // Add direct-href items that are not panel-scoped
-  if (panel === "admin") {
-    base.splice(base.findIndex((i) => i.title === "Mô hình AI") + 1, 0, {
-      title: "Sync Schedules",
-      href: "/integrations/schedules",
-      icon: CalendarClock,
-      section: "AI & Giám sát",
-      requiredAnyPermission: ["integrations.read"],
-    });
-  }
 
   return base;
 }

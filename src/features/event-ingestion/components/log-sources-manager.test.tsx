@@ -120,22 +120,39 @@ import { LogSourcesManager } from "./log-sources-manager";
 describe("LogSourcesManager", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows required errors beside fields before calling the API", async () => {
+  it("renders the 3 active V2 tabs and switches between them", async () => {
     const user = userEvent.setup();
     render(<LogSourcesManager />);
-    await user.click(
-      screen.getByRole("button", { name: /Legacy log sources/i }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Configure log source" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    const name = screen.getByLabelText("Name");
-    expect(await screen.findByText("Name is required")).toBeInTheDocument();
-    expect(name).toHaveAttribute("aria-invalid", "true");
-    expect(name).toHaveAttribute("aria-describedby", "log-source-name-error");
-    expect(createMock).not.toHaveBeenCalled();
-    expect(updateMock).not.toHaveBeenCalled();
+    // Assert the 3 active tabs exist
+    expect(
+      screen.getByRole("button", { name: /Security events/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Normalized event sources/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Data governance & Retention/i }),
+    ).toBeInTheDocument();
+
+    // Default tab is Security events
+    expect(screen.getByText("Total events")).toBeInTheDocument();
+
+    // Switch to Normalized event sources
+    await user.click(
+      screen.getByRole("button", { name: /Normalized event sources/i }),
+    );
+    expect(
+      screen.getAllByRole("button", { name: /Register event source/i }).length,
+    ).toBeGreaterThan(0);
+
+    // Switch to Data governance & Retention
+    await user.click(
+      screen.getByRole("button", { name: /Data governance & Retention/i }),
+    );
+    expect(
+      screen.getByText("Total policies"),
+    ).toBeInTheDocument();
   });
 });
+
