@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   afterEach,
   beforeAll,
@@ -15,6 +15,8 @@ const state = vi.hoisted(() => ({
   risk: undefined as RiskRegisterDetail | undefined,
   user: { id: "officer", roles: [{ code: "SECURITY_OFFICER" }] },
   refetch: vi.fn(),
+  editVulnerability: vi.fn(),
+  editThreat: vi.fn(),
 }));
 vi.mock("../hooks/use-risk-register", () => ({
   useRiskRecord: () => ({
@@ -69,6 +71,7 @@ beforeEach(() => {
     treatmentPlans: [
       {
         id: "plan",
+        riskId: "risk",
         title: "Secure access",
         strategy: "mitigate",
         status: "active",
@@ -77,6 +80,7 @@ beforeEach(() => {
         actionCount: 1,
         progress: 50,
         updatedAt: "2026-10-02T00:00:00Z",
+        controls: [],
         actions: [
           {
             id: "action",
@@ -88,10 +92,18 @@ beforeEach(() => {
         ],
       },
     ],
+    contextHistory: [],
   };
 });
 const open = () =>
-  render(<RiskAssessmentDetailDialog id="risk" onClose={vi.fn()} />);
+  render(
+    <RiskAssessmentDetailDialog
+      id="risk"
+      onClose={vi.fn()}
+      onEditVulnerability={state.editVulnerability}
+      onEditThreat={state.editThreat}
+    />,
+  );
 describe("Risk detail workflow", () => {
   it("warns when historical ratings no longer cover the vulnerability context", () => {
     if (state.risk)
@@ -211,5 +223,101 @@ describe("Risk detail workflow", () => {
       screen.getByText(/no status has been changed automatically/),
     ).toBeInTheDocument();
     expect(state.risk?.status).toBe("under_treatment");
+  });
+  it("offers inline edit for a vulnerability when the workflow allows changes", async () => {
+    if (state.risk) {
+      state.risk.vulnerabilityWorkflow = {
+        canIdentify: true,
+        blockedReason: null,
+        assessmentReviewRequired: false,
+      };
+      state.risk.vulnerabilities = [{
+        id: "00000000-0000-4000-8000-000000000001",
+        name: "Missing MFA",
+        description: "Administrator accounts do not require MFA.",
+        createdAt: "2026-10-01T00:00:00.000Z",
+        updatedAt: "2026-10-01T00:00:00.000Z",
+        controls: [],
+      }];
+    }
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Missing MFA" }));
+    const editAction = await screen.findByRole("menuitem", {
+      name: "Edit vulnerability",
+    });
+    expect(editAction.closest("dialog")).not.toBeNull();
+    fireEvent.click(editAction);
+    expect(state.editVulnerability).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "risk", riskCode: "RSK-001" }),
+      expect.objectContaining({ name: "Missing MFA" }),
+    );
+  });
+  it("keeps only one vulnerability actions menu open", () => {
+    if (state.risk) {
+      state.risk.vulnerabilityWorkflow = {
+        canIdentify: true,
+        blockedReason: null,
+        assessmentReviewRequired: false,
+      };
+      state.risk.vulnerabilities = [
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          name: "Missing MFA",
+          description: "Administrator accounts do not require MFA.",
+          createdAt: "2026-10-01T00:00:00.000Z",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+          controls: [],
+        },
+        {
+          id: "00000000-0000-4000-8000-000000000002",
+          name: "Missing recovery procedure",
+          description: "The recovery procedure is not documented.",
+          createdAt: "2026-10-01T00:00:00.000Z",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+          controls: [],
+        },
+      ];
+    }
+    open();
+    const firstTrigger = screen.getByRole("button", {
+      name: "Actions for Missing MFA",
+    });
+    const secondTrigger = screen.getByRole("button", {
+      name: "Actions for Missing recovery procedure",
+    });
+
+    fireEvent.click(firstTrigger);
+    expect(firstTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+
+    fireEvent.click(secondTrigger);
+    expect(firstTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(secondTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+  });
+  it("offers inline edit for a threat and closes another context menu", () => {
+    if (state.risk) {
+      state.risk.vulnerabilityWorkflow = {
+        canIdentify: true,
+        blockedReason: null,
+        assessmentReviewRequired: false,
+      };
+      state.risk.threats = [{
+        id: "00000000-0000-4000-8000-000000000010",
+        name: "Credential theft",
+        description: "Phishing captures privileged credentials.",
+        vulnerabilities: [{ id: "00000000-0000-4000-8000-000000000001", name: "Missing MFA" }],
+        createdAt: "2026-10-01T00:00:00.000Z",
+        updatedAt: "2026-10-01T00:00:00.000Z",
+      }];
+    }
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "Actions for threat Credential theft" }));
+    const action = screen.getByRole("menuitem", { name: "Edit threat" });
+    fireEvent.click(action);
+    expect(state.editThreat).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "risk", riskCode: "RSK-001" }),
+      expect.objectContaining({ name: "Credential theft" }),
+    );
   });
 });

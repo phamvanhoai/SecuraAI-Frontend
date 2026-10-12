@@ -26,7 +26,7 @@ export function UpdateRiskTreatmentPlanDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<Draft>(plan);
   const [error, setError] = useState("");
-  const options = useRiskTreatmentPlanOptions(true);
+  const options = useRiskTreatmentPlanOptions(plan.riskId);
   const mutation = useUpdateRiskTreatmentPlan(plan.id);
   const toast = useToast();
   useEffect(() => {
@@ -50,6 +50,7 @@ export function UpdateRiskTreatmentPlanDialog({
       targetDate: draft.targetCompletionDate?.slice(0, 10) ?? "",
       status: draft.status,
       expectedUpdatedAt: draft.updatedAt,
+      controlIds: draft.controls.map((item) => item.id),
       actions: draft.actions.map((item) => ({
         ...item,
         assignedToUserId: item.assignedToUserId ?? "",
@@ -175,6 +176,17 @@ export function UpdateRiskTreatmentPlanDialog({
             />
           </label>
         </div>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Controls addressed by this plan</legend>
+          <p className="text-muted text-xs">Only Controls already linked to this Risk are available. Existing selections cannot be removed after the plan is active.</p>
+          <div className="border-border grid max-h-40 gap-2 overflow-y-auto rounded-lg border p-3 md:grid-cols-2">
+            {options.data?.controls.length ? options.data.controls.map((control) => {
+              const checked = draft.controls.some((item) => item.id === control.id);
+              const locked = plan.status === "active" && plan.controls.some((item) => item.id === control.id);
+              return <label key={control.id} className="flex min-h-10 items-start gap-2 text-sm"><input className="mt-0.5 size-4" type="checkbox" checked={checked} disabled={locked} onChange={(event) => setDraft({ ...draft, controls: event.target.checked ? [...draft.controls, { id: control.id, code: control.code, name: control.name }] : draft.controls.filter((item) => item.id !== control.id) })} /><span>{control.code} — {control.name}{locked ? <span className="text-muted block text-xs">Locked while plan is active</span> : null}</span></label>;
+            }) : <p className="text-muted text-sm md:col-span-2">No eligible Controls are linked to this Risk.</p>}
+          </div>
+        </fieldset>
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
