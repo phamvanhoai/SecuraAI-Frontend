@@ -60,6 +60,7 @@ const assessment = z.object({
   assessedBy: person,
   assessedAt: z.iso.datetime({ offset: true }),
   reviewDate: z.iso.datetime({ offset: true }).nullable(),
+  methodologyVersion: z.string(),
 });
 export const riskRegisterItemSchema = z.object({
   scope: z
