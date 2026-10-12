@@ -1,8 +1,10 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Gauge } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Gauge, History } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { Pagination } from "@/components/data-display/pagination";
+import { StatusBadge } from "@/components/data-display/static-product";
 import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
@@ -36,6 +38,8 @@ export function AssessInherentRiskDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
+  const [tab, setTab] = useState<"assess" | "history">("assess");
+  const [historyPage, setHistoryPage] = useState(1);
   const risk = useRiskRecord(riskId);
   const mutation = useAssessInherentRisk(riskId);
   const toast = useToast();
@@ -54,6 +58,20 @@ export function AssessInherentRiskDialog({
     name: ["likelihood", "impact"],
   });
   const score = Number(likelihood) * Number(impact);
+  const historyPageSize = 5;
+  const inherentHistory = useMemo(
+    () =>
+      (risk.data?.assessments ?? []).filter(
+        (assessment) =>
+          assessment.inherentLikelihood !== null &&
+          assessment.inherentImpact !== null &&
+          assessment.inherentRating !== null &&
+          assessment.residualLikelihood === null &&
+          assessment.residualImpact === null &&
+          assessment.residualRating === null,
+      ),
+    [risk.data?.assessments],
+  );
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -63,6 +81,8 @@ export function AssessInherentRiskDialog({
   const close = () => {
     reset();
     setMessage(undefined);
+    setTab("assess");
+    setHistoryPage(1);
     onClose();
   };
   const submit = async (input: AssessInherentRiskInput) => {
@@ -93,7 +113,135 @@ export function AssessInherentRiskDialog({
       onClose={close}
       className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
     >
-      <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+      <div
+        className="border-border bg-surface mb-4 inline-flex w-full gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+        role="tablist"
+        aria-label="Inherent risk assessment views"
+      >
+        <button
+          id="inherent-assess-tab"
+          type="button"
+          role="tab"
+          aria-selected={tab === "assess"}
+          aria-controls="inherent-assess-panel"
+          tabIndex={tab === "assess" ? 0 : -1}
+          className={`min-h-10 flex-1 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${tab === "assess" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+          onClick={() => setTab("assess")}
+        >
+          Assess inherent risk
+        </button>
+        <button
+          id="inherent-history-tab"
+          type="button"
+          role="tab"
+          aria-selected={tab === "history"}
+          aria-controls="inherent-history-panel"
+          tabIndex={tab === "history" ? 0 : -1}
+          className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${tab === "history" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+          onClick={() => setTab("history")}
+        >
+          <History className="size-4" aria-hidden="true" />
+          History ({inherentHistory.length})
+        </button>
+      </div>
+      {tab === "history" ? (
+        <section
+          id="inherent-history-panel"
+          role="tabpanel"
+          aria-labelledby="inherent-history-tab"
+          className="space-y-3"
+        >
+          <p className="text-muted text-sm">
+            Previous inherent-risk assessments are read-only. Saving a new
+            assessment creates a new history record.
+          </p>
+          {inherentHistory.length ? (
+            inherentHistory
+              .slice(
+                (historyPage - 1) * historyPageSize,
+                historyPage * historyPageSize,
+              )
+              .map((assessment) => (
+                <article
+                  key={assessment.id}
+                  className="border-border rounded-lg border p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold">
+                        {assessment.inherentLikelihood} ×{" "}
+                        {assessment.inherentImpact} ={" "}
+                        {(assessment.inherentLikelihood ?? 0) *
+                          (assessment.inherentImpact ?? 0)}
+                      </p>
+                      <p className="text-muted text-sm">
+                        {new Intl.DateTimeFormat("en-GB", {
+                          timeZone: "Asia/Bangkok",
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(assessment.assessedAt))} {" "}
+                        (UTC+7)
+                      </p>
+                    </div>
+                    <StatusBadge
+                      tone={
+                        assessment.inherentRating === "low"
+                          ? "success"
+                          : assessment.inherentRating === "medium"
+                            ? "info"
+                            : assessment.inherentRating === "high"
+                              ? "warning"
+                              : "danger"
+                      }
+                    >
+                      {assessment.inherentRating?.replace(/^./, (letter) =>
+                        letter.toUpperCase(),
+                      )}
+                    </StatusBadge>
+                  </div>
+                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-muted">Assessed by</dt>
+                      <dd>
+                        {assessment.assessedBy?.fullName ?? "Unknown assessor"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted">Assessment type</dt>
+                      <dd>{assessment.type.replaceAll("_", " ")}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-3 text-sm">
+                    <p className="text-muted">Assessment basis</p>
+                    <p className="whitespace-pre-wrap">
+                      {assessment.reason ?? "No basis recorded."}
+                    </p>
+                  </div>
+                </article>
+              ))
+          ) : (
+            <div className="border-border rounded-lg border border-dashed p-6 text-center">
+              <p className="font-medium">No inherent risk history</p>
+              <p className="text-muted mt-1 text-sm">
+                The first saved inherent assessment will appear here.
+              </p>
+            </div>
+          )}
+          {inherentHistory.length ? (
+            <Pagination
+              page={historyPage}
+              pageCount={Math.ceil(inherentHistory.length / historyPageSize)}
+              onPageChange={setHistoryPage}
+            />
+          ) : null}
+          <div className="flex justify-end border-t border-border pt-4">
+            <Button type="button" variant="secondary" onClick={close}>
+              Close
+            </Button>
+          </div>
+        </section>
+      ) : (
+      <form id="inherent-assess-panel" role="tabpanel" aria-labelledby="inherent-assess-tab" className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
         <p className="text-muted text-sm">
           Assess exposure before considering existing security-control
           effectiveness for{" "}
@@ -203,6 +351,7 @@ export function AssessInherentRiskDialog({
           </Button>
         </div>
       </form>
+      )}
     </Dialog>
   );
 }
