@@ -72,10 +72,9 @@ describe("CreateAssetDialog", () => {
     expect(optionsMock).toHaveBeenLastCalledWith(false);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
     expect(optionsMock).toHaveBeenLastCalledWith(true);
-    await user.clear(screen.getByLabelText("Asset code"));
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     expect(
-      await screen.findByText("Asset code is required"),
+      await screen.findByText("Asset name is required"),
     ).toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
@@ -83,7 +82,8 @@ describe("CreateAssetDialog", () => {
     const user = userEvent.setup();
     render(<CreateAssetDialog />);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
-    await user.type(screen.getByLabelText("Asset code"), " ast-002 ");
+    expect(screen.queryByLabelText("Asset code")).not.toBeInTheDocument();
+    expect(screen.getByText(/system generates a unique asset code/i)).toBeInTheDocument();
     await user.type(
       screen.getByLabelText("Asset name"),
       " Application Server ",
@@ -94,7 +94,6 @@ describe("CreateAssetDialog", () => {
     await waitFor(() =>
       expect(mutateAsyncMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          assetCode: "AST-002",
           name: "Application Server",
           ownerUserId,
           dependencies: [],

@@ -21,7 +21,6 @@ import {
 } from "../schemas/create-asset-schema";
 
 const defaults: CreateAssetInput = {
-  assetCode: "",
   name: "",
   assetType: "",
   ownerUserId: "",
@@ -91,17 +90,6 @@ export function CreateAssetDialog() {
           ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              id="assetCode"
-              label="Asset code"
-              error={errors.assetCode?.message}
-            >
-              <Input
-                id="assetCode"
-                maxLength={100}
-                {...register("assetCode")}
-              />
-            </FormField>
-            <FormField
               id="name"
               label="Asset name"
               error={errors.name?.message}
@@ -139,7 +127,11 @@ export function CreateAssetDialog() {
               </Select>
             </FormField>
           </div>
-          <p className="text-muted text-sm">After creation, use Manage links to assign business context and Classify asset to determine criticality and data classification.</p>
+          <p className="text-muted text-sm">
+            The system generates a unique asset code after creation. Then use
+            Manage links to assign business context and Classify asset to
+            determine criticality and data classification.
+          </p>
           <FormField
             id="description"
             label="Description"
