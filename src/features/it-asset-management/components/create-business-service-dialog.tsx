@@ -38,9 +38,11 @@ export function CreateBusinessServiceDialog({
   const [open, setOpen] = useState(!!editingService);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
-  const [owner, setOwner] = useState<{ id: string; fullName: string } | null>(
-    editingService?.owner ?? null,
-  );
+  const [owner, setOwner] = useState<{
+    id: string;
+    fullName: string;
+    email: string;
+  } | null>(editingService?.owner ?? null);
   const [failure, setFailure] = useState<string | null>(null);
   const [discard, setDiscard] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -253,7 +255,7 @@ export function CreateBusinessServiceDialog({
                   maxLength={100}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search active users by name"
+                  placeholder="Search active users by name or email"
                   aria-invalid={!!errors.ownerUserId}
                   aria-describedby={
                     errors.ownerUserId
@@ -265,16 +267,21 @@ export function CreateBusinessServiceDialog({
                   Maximum 10 results. Ownership records responsibility; it does
                   not grant permissions.
                 </p>
-                <p className="text-sm">
-                  Selected owner:{" "}
-                  <strong>
+                <div className="text-sm">
+                  <span>Selected owner: </span>
+                  <strong className="block">
                     {owner?.fullName ?? "Unassigned"}
                     {editingService?.owner?.inactive &&
                     owner?.id === editingService.owner.id
                       ? " (Inactive — retained)"
                       : ""}
                   </strong>
-                </p>
+                  {owner ? (
+                    <span className="text-muted block break-words text-xs">
+                      {owner.email}
+                    </span>
+                  ) : null}
+                </div>
                 <Button
                   type="button"
                   variant="secondary"
@@ -319,15 +326,19 @@ export function CreateBusinessServiceDialog({
                               form.clearErrors("ownerUserId");
                             }}
                           />
-                          {item.fullName}{" "}
-                          <span className="text-muted text-xs">
-                            {item.role.replaceAll("_", " ")}
+                          <span className="min-w-0">
+                            <span className="block font-medium">
+                              {item.fullName}
+                            </span>
+                            <span className="text-muted block break-words text-xs">
+                              {item.email} · {item.role.replaceAll("_", " ")}
+                            </span>
                           </span>
                         </label>
                       ))
                     ) : (
                       <p className="text-muted p-2 text-sm">
-                        No active owners found. Try another name or leave
+                        No active owners found. Try another name or email, or leave
                         Unassigned.
                       </p>
                     )}

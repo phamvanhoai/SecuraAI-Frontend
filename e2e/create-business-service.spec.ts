@@ -56,7 +56,16 @@ test.beforeEach(async ({ page, context }) => {
     route.fulfill({
       json: {
         success: true,
-        data: { items: [{ id, fullName: "Employee Owner", role: "EMPLOYEE" }] },
+        data: {
+          items: [
+            {
+              id,
+              fullName: "Employee Owner",
+              email: "employee.owner@example.test",
+              role: "EMPLOYEE",
+            },
+          ],
+        },
       },
     }),
   );
