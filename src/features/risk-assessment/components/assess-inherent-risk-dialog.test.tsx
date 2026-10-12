@@ -24,11 +24,13 @@ const assessment = {
   },
   assessedAt: "2026-10-12T10:00:00.000Z",
   reviewDate: null,
+  methodologyVersion: "SECURAAI-RISK-MATRIX-v1",
 };
 
 vi.mock("../hooks/use-risk-register", () => ({
   useRiskRecord: () => ({
     data: {
+      status: "open",
       assets: [{ name: "Customer database", criticality: "high" }],
       threats: [{ name: "Database failure" }],
       vulnerabilities: [{ name: "Untested backups" }],
@@ -59,6 +61,27 @@ afterEach(() => {
 });
 
 describe("Assess Inherent Risk history", () => {
+  it("explains the scoring criteria and methodology", () => {
+    render(
+      <AssessInherentRiskDialog
+        riskId="00000000-0000-4000-8000-000000000001"
+        riskLabel="RSK-001"
+        onClose={onClose}
+      />,
+    );
+
+    expect(
+      screen.getByText("Methodology: SECURAAI-RISK-MATRIX-v1"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "3 — Possible" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "3 — Moderate" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Score = Likelihood/)).toBeInTheDocument();
+  });
+
   it("shows prior inherent assessments and closes from the history tab", () => {
     render(
       <AssessInherentRiskDialog
@@ -76,5 +99,33 @@ describe("Assess Inherent Risk history", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("warns and requires a detailed reason for a major rating reduction", async () => {
+    render(
+      <AssessInherentRiskDialog
+        riskId="00000000-0000-4000-8000-000000000001"
+        riskLabel="RSK-001"
+        onClose={onClose}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Likelihood (1–5)"), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText("Potential impact (1–5)"), {
+      target: { value: "2" },
+    });
+    expect(
+      screen.getByText(/rating is changing from Critical to Low/i),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Assessment basis"), {
+      target: { value: "Too short" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save assessment" }));
+    expect(
+      await screen.findByText(/at least 30 characters/i),
+    ).toBeInTheDocument();
   });
 });

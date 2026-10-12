@@ -239,7 +239,6 @@ export function RiskAssessmentsShell() {
             <RiskAction
               icon={Bug}
               label="Identify vulnerability"
-              disabled={!["open", "under_treatment"].includes(item.status)}
               onClick={() => setVulnerabilityRisk(item)}
             />
           ) : null}
