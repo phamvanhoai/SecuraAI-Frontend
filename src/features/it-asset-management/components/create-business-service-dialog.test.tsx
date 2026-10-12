@@ -53,7 +53,16 @@ describe("Create Business Service", () => {
     vi.clearAllMocks();
     mocks.pending = false;
     mocks.owners.mockReturnValue({
-      data: { items: [{ id, fullName: "Employee Owner", role: "EMPLOYEE" }] },
+      data: {
+        items: [
+          {
+            id,
+            fullName: "Employee Owner",
+            email: "employee.owner@example.test",
+            role: "EMPLOYEE",
+          },
+        ],
+      },
     });
   });
   const open = async () =>
@@ -95,6 +104,9 @@ describe("Create Business Service", () => {
     mocks.mutate.mockResolvedValue({ id, name: "Support" });
     render(<CreateBusinessServiceDialog onCreated={vi.fn()} />);
     await open();
+    expect(
+      screen.getByText(/employee\.owner@example\.test/),
+    ).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("radio", { name: /Employee Owner/ }),
     );

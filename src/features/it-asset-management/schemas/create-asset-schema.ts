@@ -15,13 +15,6 @@ const optionalText = (maximum: number) =>
 
 export const createAssetSchema = z
   .object({
-    assetCode: z
-      .string()
-      .trim()
-      .min(1, "Asset code is required")
-      .max(100)
-      .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/, "Asset code format is invalid")
-      .transform((value) => value.toUpperCase()),
     name: z.string().trim().min(1, "Asset name is required").max(255),
     assetType: z.string().trim().min(1, "Asset type is required").max(100),
     ownerUserId: optionalUuid,
@@ -57,7 +50,6 @@ export const assetCreateOptionsSchema = z.object({
 
 export const createdAssetSchema = assetListItemSchema;
 export const createAssetRequestSchema = z.object({
-  assetCode: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(255),
   assetType: z.string().trim().min(1).max(100),
   ownerUserId: z.uuid().optional(),

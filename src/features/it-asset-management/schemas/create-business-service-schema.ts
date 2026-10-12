@@ -46,6 +46,7 @@ export const businessServiceOwnersSchema = z.object({
       z.object({
         id: z.uuid(),
         fullName: z.string(),
+        email: z.email(),
         role: z.enum(["ADMIN", "SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"]),
       }),
     )

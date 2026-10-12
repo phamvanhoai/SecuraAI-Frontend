@@ -28,7 +28,6 @@ describe("createAsset", () => {
 
     await expect(
       createAsset({
-        assetCode: "AST-002",
         name: "Server",
         assetType: "server",
         dependencies: [],
@@ -40,7 +39,6 @@ describe("createAsset", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          assetCode: "AST-002",
           name: "Server",
           assetType: "server",
           dependencies: [],
@@ -58,8 +56,8 @@ describe("createAsset", () => {
           JSON.stringify({
             success: false,
             error: {
-              code: "ASSET_CODE_EXISTS",
-              message: "Asset code already exists",
+              code: "INVALID_ASSET_OWNER",
+              message: "Selected asset owner is unavailable",
             },
           }),
           { status: 409 },
@@ -68,7 +66,6 @@ describe("createAsset", () => {
     );
     await expect(
       createAsset({
-        assetCode: "AST-002",
         name: "Server",
         assetType: "server",
         dependencies: [],
@@ -77,7 +74,7 @@ describe("createAsset", () => {
     ).rejects.toMatchObject({
       status: 409,
       code: "CONFLICT",
-      message: "Asset code already exists",
+      message: "Selected asset owner is unavailable",
     });
   });
 });

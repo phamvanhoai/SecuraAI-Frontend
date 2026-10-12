@@ -23,7 +23,12 @@ export const businessServiceSchema = z.object({
   description: z.string().nullable(),
   status: z.enum(["active", "inactive"]),
   owner: z
-    .object({ id: z.uuid(), fullName: z.string(), inactive: z.boolean() })
+    .object({
+      id: z.uuid(),
+      fullName: z.string(),
+      email: z.email(),
+      inactive: z.boolean(),
+    })
     .nullable(),
   linkedAssetsCount: z.number().int().min(0),
   createdAt: z.iso.datetime({ offset: true }),

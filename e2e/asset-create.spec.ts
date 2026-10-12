@@ -11,7 +11,7 @@ for (const width of [375, 768, 1440]) {
     await page.route("**/api/assets?*", route => route.fulfill({ json: { success: true, data: { items: created ? [asset] : [], pagination: { page: 1, limit: 10, total: created ? 1 : 0, totalPages: 1 } } } }));
     await page.route("**/api/assets", async route => {
       expect(route.request().method()).toBe("POST");
-      expect(route.request().postDataJSON()).toEqual({ assetCode: "TEST-NEW", name: "New server", assetType: "SERVER", dependencies: [], eventSourceIds: [] });
+      expect(route.request().postDataJSON()).toEqual({ name: "New server", assetType: "SERVER", dependencies: [], eventSourceIds: [] });
       created = true;
       await route.fulfill({ status: 201, json: { success: true, data: asset } });
     });
@@ -19,7 +19,7 @@ for (const width of [375, 768, 1440]) {
     await page.getByRole("button", { name: "Add asset", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Create IT Asset" });
     for (const label of ["Criticality", "Data classification", "Business service"]) await expect(dialog.getByLabel(label, { exact: true })).toHaveCount(0);
-    await dialog.getByLabel("Asset code").fill("test-new");
+    await expect(dialog.getByLabel("Asset code")).toHaveCount(0);
     await dialog.getByLabel("Asset name").fill("New server");
     await dialog.getByLabel("Asset type").fill("SERVER");
     expect((await dialog.boundingBox())?.width).toBeLessThanOrEqual(width);

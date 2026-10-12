@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 const id = "00000000-0000-4000-8000-000000000010";
 const timestamp = "2026-10-07T00:00:00.000Z";
-const initial = { id, name: "Customer Support Service", description: "Existing purpose", status: "active", owner: { id, fullName: "Former owner", inactive: true }, linkedAssetsCount: 3, createdAt: timestamp, updatedAt: timestamp };
+const initial = { id, name: "Customer Support Service", description: "Existing purpose", status: "active", owner: { id, fullName: "Former owner", email: "former.owner@example.test", inactive: true }, linkedAssetsCount: 3, createdAt: timestamp, updatedAt: timestamp };
 test.beforeEach(async ({ page, context }) => {
   await context.addCookies([{ name: "securaai_access", value: "service-edit-test", domain: "127.0.0.1", path: "/" }]);
   await page.route("**/api/auth/session", route => route.fulfill({ json: { success: true, data: { user: { id, email: "officer@example.test", fullName: "Security Officer", status: "active", mustChangePassword: false, roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }], permissions: ["assets.read", "business-services.read", "business-services.update"] } } } }));
