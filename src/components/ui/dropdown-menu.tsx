@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const MENU_WIDTH = 192;
 const MENU_ESTIMATED_HEIGHT = 176;
 const VIEWPORT_GAP = 8;
+const DROPDOWN_OPEN_EVENT = "securaai:dropdown-open";
 
 export function DropdownMenu({
   label,
@@ -26,14 +28,17 @@ export function DropdownMenu({
   label: ReactNode;
   children: ReactNode;
 }) {
+  const menuId = useId();
   const menuRef = useRef<HTMLDetailsElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const measuredHeightRef = useRef(MENU_ESTIMATED_HEIGHT);
   const [position, setPosition] = useState<CSSProperties | null>(null);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   const positionMenu = useCallback((): void => {
     const trigger = menuRef.current?.querySelector("summary");
     if (!trigger) return;
+    setPortalTarget(trigger.closest("dialog") ?? document.body);
     const bounds = trigger.getBoundingClientRect();
     const spaceBelow = Math.max(0, window.innerHeight - bounds.bottom - VIEWPORT_GAP * 2);
     const spaceAbove = Math.max(0, bounds.top - VIEWPORT_GAP * 2);
@@ -98,17 +103,28 @@ export function DropdownMenu({
       setPosition(null);
     }
 
+    function closeWhenAnotherMenuOpens(event: Event): void {
+      if (!(event instanceof CustomEvent) || event.detail === menuId) return;
+      const menu = menuRef.current;
+      if (!menu?.open) return;
+      menu.open = false;
+      setPosition(null);
+      setPortalTarget(null);
+    }
+
     document.addEventListener("pointerdown", closeWhenClickingOutside);
     document.addEventListener("keydown", closeWithEscape);
+    document.addEventListener(DROPDOWN_OPEN_EVENT, closeWhenAnotherMenuOpens);
     window.addEventListener("resize", closeWhenViewportMoves);
     window.addEventListener("scroll", closeWhenViewportMoves, true);
     return () => {
       document.removeEventListener("pointerdown", closeWhenClickingOutside);
       document.removeEventListener("keydown", closeWithEscape);
+      document.removeEventListener(DROPDOWN_OPEN_EVENT, closeWhenAnotherMenuOpens);
       window.removeEventListener("resize", closeWhenViewportMoves);
       window.removeEventListener("scroll", closeWhenViewportMoves, true);
     };
-  }, []);
+  }, [menuId]);
 
   useEffect(() => {
     if (menuRef.current?.open) positionMenu();
@@ -120,8 +136,16 @@ export function DropdownMenu({
         ref={menuRef}
         className={cn("relative", className)}
         onToggle={(event) => {
-          if (event.currentTarget.open) positionMenu();
-          else setPosition(null);
+          if (event.currentTarget.open) {
+            document.dispatchEvent(
+              new CustomEvent(DROPDOWN_OPEN_EVENT, { detail: menuId }),
+            );
+            positionMenu();
+          }
+          else {
+            setPosition(null);
+            setPortalTarget(null);
+          }
           onToggle?.(event);
         }}
         {...props}
@@ -135,7 +159,7 @@ export function DropdownMenu({
           {label}
         </summary>
       </details>
-      {position && typeof document !== "undefined"
+      {position && portalTarget
         ? createPortal(
             <div
               ref={captureContent}
@@ -150,7 +174,7 @@ export function DropdownMenu({
             >
               {children}
             </div>,
-            document.body,
+            portalTarget,
           )
         : null}
     </>

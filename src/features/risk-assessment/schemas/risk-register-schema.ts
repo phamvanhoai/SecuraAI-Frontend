@@ -31,6 +31,11 @@ export const riskRegisterQuerySchema = z
 const person = z
   .object({ id: z.uuid(), fullName: z.string(), inactive: z.boolean() })
   .nullable();
+const auditActor = z.object({
+  id: z.uuid(),
+  fullName: z.string(),
+  email: z.email(),
+});
 const asset = z.object({
   id: z.uuid(),
   code: z.string(),
@@ -122,14 +127,27 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       vulnerabilities: z
         .array(z.object({ id: z.uuid(), name: z.string() }))
         .default([]),
+      createdAt: z.iso.datetime({ offset: true }),
+      updatedAt: z.iso.datetime({ offset: true }),
     }),
   ),
+  contextHistory: z.array(z.object({
+    id: z.uuid(),
+    type: z.enum(["threat", "vulnerability"]),
+    event: z.enum(["created", "updated"]),
+    entityId: z.uuid().nullable(),
+    occurredAt: z.iso.datetime({ offset: true }),
+    actor: auditActor.nullable(),
+    before: z.unknown().nullable(),
+    after: z.unknown().nullable(),
+  })).default([]),
   vulnerabilities: z.array(
     z.object({
       id: z.uuid(),
       name: z.string(),
       description: z.string().nullable(),
       createdAt: z.iso.datetime({ offset: true }).optional(),
+      updatedAt: z.iso.datetime({ offset: true }),
       controls: z
         .array(z.object({ id: z.uuid(), code: z.string(), name: z.string() }))
         .default([]),
@@ -149,6 +167,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
   treatmentPlans: z.array(
     z.object({
       id: z.uuid(),
+      riskId: z.uuid(),
       title: z.string(),
       strategy: z.string(),
       status: z.string(),
@@ -157,6 +176,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       actionCount: z.number().int(),
       progress: z.number().int().min(0).max(100),
       updatedAt: z.iso.datetime({ offset: true }),
+      controls: z.array(z.object({ id: z.uuid(), code: z.string(), name: z.string() })).default([]),
       actions: z.array(
         z.object({
           id: z.uuid(),
