@@ -16,7 +16,7 @@ import {
   ShieldX,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +99,19 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
 
   // Revoke confirm dialog state
   const [keyToRevoke, setKeyToRevoke] = useState<IntegrationApiKey | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const revokeDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = revokeDialogRef.current;
+    if (!dialog) return;
+    if (keyToRevoke && !dialog.open) {
+      dialog.showModal();
+    }
+    if (!keyToRevoke && dialog.open) {
+      dialog.close();
+    }
+  }, [keyToRevoke]);
 
   // View detail modal state
   const [detailKey, setDetailKey] = useState<IntegrationApiKey | null>(null);
@@ -152,9 +165,11 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
       await revokeMutation.mutateAsync({
         integrationId: keyToRevoke.integrationId || effectiveIntegrationId,
         keyId: keyToRevoke.id,
+        reason: revokeReason.trim() || undefined,
       });
       toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
       setKeyToRevoke(null);
+      setRevokeReason("");
     } catch {
       toast.error("Failed to revoke API key");
     }
@@ -546,51 +561,83 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
       />
 
       {/* Revoke Confirmation Dialog */}
-      {keyToRevoke ? (
-        <dialog
-          aria-labelledby="revoke-confirm-title"
-          className="border-border bg-surface text-foreground m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 backdrop:bg-[#07110f]/55"
-          open
-        >
-          <div className="border-border bg-surface border-b p-5">
-            <div className="flex items-center gap-2.5">
-              <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
-                <ShieldAlert className="size-4" />
+      <dialog
+        aria-labelledby="revoke-confirm-title"
+        className="border-border bg-surface text-foreground m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 shadow-2xl backdrop:bg-[#07110f]/55"
+        onCancel={(e) => {
+          e.preventDefault();
+          setKeyToRevoke(null);
+          setRevokeReason("");
+        }}
+        ref={revokeDialogRef}
+      >
+        {keyToRevoke ? (
+          <>
+            <div className="border-border bg-surface border-b p-5">
+              <div className="flex items-center gap-2.5">
+                <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
+                  <ShieldAlert className="size-4" />
+                </div>
+                <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
+                  Confirm API Key Revocation
+                </h3>
               </div>
-              <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
-                Confirm API Key Revocation
-              </h3>
             </div>
-          </div>
 
-          <div className="space-y-4 p-5 text-xs">
-            <p className="text-muted leading-relaxed">
-              Are you sure you want to revoke the key{" "}
-              <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
-              This key will be marked as <strong>Revoked</strong> and any incoming requests using this secret token will be rejected (401 Unauthorized).
-            </p>
+            <div className="space-y-4 p-5 text-xs">
+              <p className="text-muted leading-relaxed">
+                Are you sure you want to revoke the key{" "}
+                <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
+                This key will be marked as <strong>Revoked</strong> and any incoming requests using this secret token will be rejected.
+              </p>
 
-            <div className="border-border flex justify-end gap-2 border-t pt-4">
-              <Button
-                className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-                disabled={revokeMutation.isPending}
-                onClick={() => setKeyToRevoke(null)}
-                type="button"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="min-h-8 px-4 text-xs bg-danger hover:bg-danger/90 text-white"
-                disabled={revokeMutation.isPending}
-                onClick={handleConfirmRevoke}
-                type="button"
-              >
-                {revokeMutation.isPending ? "Revoking..." : "Confirm Revocation"}
-              </Button>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="revoke-reason"
+                  className="text-[11px] font-medium text-foreground block"
+                >
+                  Revocation Reason <span className="text-muted font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  id="revoke-reason"
+                  rows={2}
+                  maxLength={500}
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  placeholder="Please enter a reason for revoking this API key..."
+                  className="border-border bg-neutral-soft text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/20 w-full rounded-lg border p-2.5 text-xs outline-none transition focus:ring-2 resize-none"
+                  disabled={revokeMutation.isPending}
+                />
+                <div className="flex justify-end text-[10px] text-muted">
+                  {revokeReason.length}/500
+                </div>
+              </div>
+
+              <div className="border-border flex justify-end gap-2 border-t pt-4">
+                <Button
+                  className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                  disabled={revokeMutation.isPending}
+                  onClick={() => {
+                    setKeyToRevoke(null);
+                    setRevokeReason("");
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="min-h-8 px-4 text-xs bg-danger hover:bg-danger/90 text-white"
+                  disabled={revokeMutation.isPending}
+                  onClick={handleConfirmRevoke}
+                  type="button"
+                >
+                  {revokeMutation.isPending ? "Revoking..." : "Confirm Revocation"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </dialog>
-      ) : null}
+          </>
+        ) : null}
+      </dialog>
     </div>
   );
 }

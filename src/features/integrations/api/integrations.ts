@@ -428,12 +428,15 @@ export function rotateApiKey(
 export function revokeApiKey(
   integrationId: string,
   keyId: string,
+  reason?: string,
 ): Promise<IntegrationApiKey> {
   return integrationRequest(
     `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/revoke`,
     integrationApiKeySchema,
     {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
     },
   );
 }
