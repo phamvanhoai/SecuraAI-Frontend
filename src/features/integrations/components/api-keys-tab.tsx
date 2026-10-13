@@ -15,8 +15,9 @@ import {
   ShieldCheck,
   ShieldX,
   User,
+  X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,111 +192,112 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
   }
 
   const rawKeys = apiKeysQuery.data ?? [];
-  const keys = rawKeys.filter((k) => {
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      const matchName = k.keyName.toLowerCase().includes(term);
-      const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
-      const matchPrefix = k.keyPrefix?.toLowerCase().includes(term) ?? false;
-      const matchScope = k.scopes?.some((s) => s.toLowerCase().includes(term)) ?? false;
-      const matchCreator =
-        k.creator?.fullName?.toLowerCase().includes(term) ||
-        k.creator?.email?.toLowerCase().includes(term) ||
-        false;
-      if (!matchName && !matchFp && !matchPrefix && !matchScope && !matchCreator) {
-        return false;
+
+  const keys = useMemo(() => {
+    return rawKeys.filter((k) => {
+      // 1. Keyword search (Name, Key prefix, Fingerprint, Scopes, Creator)
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        const matchName = k.keyName.toLowerCase().includes(term);
+        const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
+        const matchPrefix = k.keyPrefix?.toLowerCase().includes(term) ?? false;
+        const matchScope = k.scopes?.some((s) => s.toLowerCase().includes(term)) ?? false;
+        const matchCreator =
+          k.creator?.fullName?.toLowerCase().includes(term) ||
+          k.creator?.email?.toLowerCase().includes(term) ||
+          k.creator?.username?.toLowerCase().includes(term) ||
+          false;
+        if (!matchName && !matchFp && !matchPrefix && !matchScope && !matchCreator) {
+          return false;
+        }
       }
-    }
-    if (statusFilter === "active") return k.status === "ACTIVE";
-    if (statusFilter === "inactive") return k.status === "INACTIVE";
-    if (statusFilter === "expired") return k.status === "EXPIRED";
-    if (statusFilter === "revoked") return k.status === "REVOKED";
-    if (statusFilter === "rotated") return k.status === "ROTATED";
-    return true;
-  });
+
+      // 2. Status filter
+      if (statusFilter !== "all") {
+        if (statusFilter === "active" && k.status !== "ACTIVE") return false;
+        if (statusFilter === "inactive" && k.status !== "INACTIVE") return false;
+        if (statusFilter === "expired" && k.status !== "EXPIRED") return false;
+        if (statusFilter === "revoked" && k.status !== "REVOKED") return false;
+        if (statusFilter === "rotated" && k.status !== "ROTATED") return false;
+      }
+
+      return true;
+    });
+  }, [rawKeys, searchTerm, statusFilter]);
+
+  const isFilteringActive = searchTerm.trim().length > 0 || statusFilter !== "all";
 
   return (
     <div className="space-y-4">
       {/* Action Header & Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
-            <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-            <Input
-              className="h-8 pl-8 text-xs"
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by key name, scope, or creator..."
-              value={searchTerm}
-            />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
+              <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 pointer-events-none" />
+              <Input
+                aria-label="Search API keys"
+                className="h-8 pl-8 pr-7 text-xs"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by key name, scope, or creator..."
+                value={searchTerm}
+              />
+              {searchTerm ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+                  aria-label="Clear search"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+
+            {/* Status Pills */}
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
+              {(
+                [
+                  { id: "all", label: "All" },
+                  { id: "active", label: "Active" },
+                  { id: "inactive", label: "Inactive" },
+                  { id: "expired", label: "Expired" },
+                  { id: "revoked", label: "Revoked" },
+                  { id: "rotated", label: "Rotated" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                    statusFilter === tab.id
+                      ? "bg-surface text-foreground shadow-xs"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                  onClick={() => setStatusFilter(tab.id)}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "all"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("all")}
-              type="button"
-            >
-              All
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "active"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("active")}
-              type="button"
-            >
-              Active
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "inactive"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("inactive")}
-              type="button"
-            >
-              Inactive
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "expired"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("expired")}
-              type="button"
-            >
-              Expired
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "revoked"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("revoked")}
-              type="button"
-            >
-              Revoked
-            </button>
-          </div>
+          <Button
+            className="min-h-8 shrink-0 px-3 text-xs"
+            onClick={handleOpenCreate}
+            type="button"
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            Generate API Key
+          </Button>
         </div>
 
-        <Button
-          className="min-h-8 shrink-0 px-3 text-xs"
-          onClick={handleOpenCreate}
-          type="button"
-        >
-          <Plus className="mr-1.5 size-3.5" />
-          Generate API Key
-        </Button>
+        {/* Results Counter */}
+        <div className="text-[11px] text-muted px-0.5">
+          Showing <strong className="text-foreground font-medium">{keys.length}</strong> of{" "}
+          {rawKeys.length} API keys
+        </div>
       </div>
 
       {/* Content State */}
@@ -326,21 +328,23 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
             <Key className="size-5" />
           </div>
           <h4 className="mt-3 text-xs font-semibold text-foreground">
-            No API Keys Found
+            {isFilteringActive ? "No Matching API Keys Found" : "No API Keys Found"}
           </h4>
           <p className="text-muted mt-1 max-w-sm text-[11px]">
-            {searchTerm || statusFilter !== "all"
-              ? "No integration API keys match your active filter criteria."
+            {isFilteringActive
+              ? "No integration API keys match your active filter criteria. Try adjusting keywords or status."
               : "Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders."}
           </p>
-          <Button
-            className="mt-4 min-h-8 px-3 text-xs"
-            onClick={handleOpenCreate}
-            type="button"
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Generate First API Key
-          </Button>
+          {!isFilteringActive ? (
+            <Button
+              className="mt-4 min-h-8 px-3 text-xs"
+              onClick={handleOpenCreate}
+              type="button"
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Generate First API Key
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="border-border overflow-hidden rounded-lg border">
