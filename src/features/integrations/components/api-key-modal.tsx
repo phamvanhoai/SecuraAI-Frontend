@@ -85,6 +85,27 @@ export function ApiKeyModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      if (mode === "edit" && apiKey) {
+        setKeyName(apiKey.keyName || apiKey.name || "");
+        setScopes(
+          apiKey.scopes && apiKey.scopes.length > 0
+            ? apiKey.scopes
+            : ["events:ingest"],
+        );
+        setExpiresAt(apiKey.expiresAt ? apiKey.expiresAt.slice(0, 16) : "");
+      } else if (mode === "rotate" && apiKey) {
+        setKeyName(apiKey.keyName || apiKey.name || "");
+      } else if (mode === "create") {
+        setKeyName("");
+        setScopes(["events:ingest"]);
+        setExpiresAt("");
+      }
+      setFormError(null);
+    }
+  }, [open, apiKey, mode]);
+
   function handleToggleScope(scopeCode: string) {
     setScopes((prev) => {
       if (prev.includes(scopeCode)) {
@@ -154,16 +175,26 @@ export function ApiKeyModal({
           return;
         }
 
+        if (scopes.length === 0) {
+          setFormError("At least one authorized scope must be selected.");
+          return;
+        }
+
         await updateMutation.mutateAsync({
           integrationId,
           keyId: apiKey.id,
           input: {
+            name: keyName.trim(),
             keyName: keyName.trim(),
+            scopes,
             expiresAt: formattedExpiresAt,
           },
         });
 
-        toast.success("API key updated successfully");
+        toast.success(
+          "API key updated successfully",
+          "Authorized scopes and expiration settings have been updated.",
+        );
         onOpenChange(false);
       } else if (mode === "rotate" && apiKey) {
         const result = await rotateMutation.mutateAsync({
@@ -222,7 +253,7 @@ export function ApiKeyModal({
                   ? `Generate a new secret token for "${apiKey?.keyName}"`
                   : mode === "create"
                     ? "Configure name, authorized scopes, and expiration settings for integration access"
-                    : "Configure authentication credentials for this integration endpoint"}
+                    : "Update key name, authorized scopes, and expiration settings"}
               </p>
             </div>
           </div>
@@ -279,8 +310,8 @@ export function ApiKeyModal({
           </div>
         ) : null}
 
-        {/* Authorized Scopes selector in Create mode */}
-        {mode === "create" ? (
+        {/* Authorized Scopes selector in Create and Edit modes */}
+        {mode !== "rotate" ? (
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium flex items-center gap-1.5">
@@ -398,7 +429,10 @@ export function ApiKeyModal({
           </Button>
           <Button
             className="min-h-8 px-4 text-xs font-medium"
-            disabled={isPending || (mode !== "rotate" && !keyName.trim()) || (mode === "create" && scopes.length === 0)}
+            disabled={
+              isPending ||
+              (mode !== "rotate" && (!keyName.trim() || scopes.length === 0))
+            }
             type="submit"
           >
             {isPending
