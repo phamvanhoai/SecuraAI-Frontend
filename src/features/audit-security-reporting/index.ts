@@ -4,4 +4,7 @@ export * from "./hooks/use-audit-logs";
 export * from "./components/audit-logs-manager";
 export * from "./components/audit-log-detail-dialog";
 export * from "./components/audit-log-changes-dialog";
-
+export * from "./schemas/security-dashboard-schema";
+export * from "./api/security-dashboard";
+export * from "./hooks/use-security-dashboard";
+export * from "./components/security-dashboard-view";
