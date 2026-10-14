@@ -476,7 +476,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                           aria-label={`Edit API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenEdit(key)}
-                          title="Edit key name and expiration"
+                          title="Edit key name, scopes and expiration"
                           type="button"
                         >
                           <Edit2 className="size-3" />

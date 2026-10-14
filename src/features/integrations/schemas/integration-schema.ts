@@ -415,6 +415,16 @@ export const updateApiKeyFormSchema = z.object({
     .min(1, "Key name is required")
     .max(100, "Key name must not exceed 100 characters")
     .optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Key name is required")
+    .max(100, "Key name must not exceed 100 characters")
+    .optional(),
+  scopes: z
+    .array(z.string())
+    .min(1, "At least one scope must be selected")
+    .optional(),
   expiresAt: z
     .string()
     .nullable()
