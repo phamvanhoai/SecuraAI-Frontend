@@ -111,6 +111,18 @@ export const riskRegisterResponseSchema = z.object({
   }),
 });
 export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
+  targetHistory: z
+    .array(
+      z.object({
+        assessmentId: z.string(),
+        treatmentPlanId: z.string().nullable(),
+        treatmentPlanTitle: z.string().nullable(),
+        residualAssessmentId: z.string().nullable(),
+        residualAssessedAt: z.string().nullable(),
+        residualRating: z.string().nullable(),
+      }),
+    )
+    .default([]),
   vulnerabilityWorkflow: z
     .object({
       canIdentify: z.boolean(),
@@ -132,16 +144,20 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       updatedAt: z.iso.datetime({ offset: true }),
     }),
   ),
-  contextHistory: z.array(z.object({
-    id: z.uuid(),
-    type: z.enum(["threat", "vulnerability"]),
-    event: z.enum(["created", "updated"]),
-    entityId: z.uuid().nullable(),
-    occurredAt: z.iso.datetime({ offset: true }),
-    actor: auditActor.nullable(),
-    before: z.unknown().nullable(),
-    after: z.unknown().nullable(),
-  })).default([]),
+  contextHistory: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        type: z.enum(["threat", "vulnerability"]),
+        event: z.enum(["created", "updated"]),
+        entityId: z.uuid().nullable(),
+        occurredAt: z.iso.datetime({ offset: true }),
+        actor: auditActor.nullable(),
+        before: z.unknown().nullable(),
+        after: z.unknown().nullable(),
+      }),
+    )
+    .default([]),
   vulnerabilities: z.array(
     z.object({
       id: z.uuid(),
@@ -177,7 +193,9 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       actionCount: z.number().int(),
       progress: z.number().int().min(0).max(100),
       updatedAt: z.iso.datetime({ offset: true }),
-      controls: z.array(z.object({ id: z.uuid(), code: z.string(), name: z.string() })).default([]),
+      controls: z
+        .array(z.object({ id: z.uuid(), code: z.string(), name: z.string() }))
+        .default([]),
       actions: z.array(
         z.object({
           id: z.uuid(),
