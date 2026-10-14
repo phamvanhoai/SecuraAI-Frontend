@@ -111,6 +111,13 @@ export const riskRegisterResponseSchema = z.object({
   }),
 });
 export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
+  acceptanceWorkflow: z
+    .object({
+      canSubmit: z.boolean(),
+      blockedReason: z.string().nullable(),
+      canOpenReview: z.boolean(),
+    })
+    .optional(),
   targetHistory: z
     .array(
       z.object({
@@ -227,6 +234,12 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       requestedBy: z.uuid(),
       decidedBy: z.uuid().nullable(),
       decidedAt: z.iso.datetime({ offset: true }).nullable(),
+      requestReason: z.string().nullable().optional(),
+      decisionReason: z.string().nullable().optional(),
+      expired: z.boolean().default(false),
+      canDecide: z.boolean().default(false),
+      approvalBlockedReason: z.string().nullable().optional(),
+      historical: z.boolean().optional(),
     }),
   ),
 });
