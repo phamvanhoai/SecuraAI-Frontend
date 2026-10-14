@@ -348,10 +348,12 @@ export function useRevokeApiKey() {
     mutationFn: ({
       integrationId,
       keyId,
+      reason,
     }: {
       integrationId: string;
       keyId: string;
-    }) => revokeApiKey(integrationId, keyId),
+      reason?: string | undefined;
+    }) => revokeApiKey(integrationId, keyId, reason),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: integrationKeys.apiKeys(variables.integrationId),
