@@ -93,6 +93,7 @@ beforeEach(() => {
       },
     ],
     contextHistory: [],
+    targetHistory: [],
   };
 });
 const open = () =>
