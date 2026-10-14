@@ -43,6 +43,10 @@ export function UpdateRiskTreatmentPlanDialog({
       ),
     });
   const submit = async () => {
+    if (draft.status === 'completed' && draft.strategy !== 'accept' && !draft.actions.some((item) => item.status === 'completed')) {
+      setError('A plan with every action cancelled must be cancelled, not completed.');
+      return;
+    }
     const parsed = updateRiskTreatmentPlanSchema.safeParse({
       title: draft.title,
       strategy: draft.strategy,
@@ -120,7 +124,15 @@ export function UpdateRiskTreatmentPlanDialog({
               onChange={(e) => setDraft({ ...draft, status: e.target.value })}
             >
               {["draft", "active", "completed", "cancelled"].map((value) => (
-                <option key={value}>{value}</option>
+                <option
+                  key={value}
+                  disabled={
+                    (plan.status === "active" && value === "draft") ||
+                    (plan.status === "draft" && value === "completed")
+                  }
+                >
+                  {value}
+                </option>
               ))}
             </Select>
           </label>
@@ -156,7 +168,7 @@ export function UpdateRiskTreatmentPlanDialog({
               <option value="">Select owner</option>
               {options.data?.users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.fullName}
+                  {u.fullName} — {u.email}
                 </option>
               ))}
             </Select>
@@ -177,14 +189,66 @@ export function UpdateRiskTreatmentPlanDialog({
           </label>
         </div>
         <fieldset className="space-y-2">
-          <legend className="text-sm font-medium">Controls addressed by this plan</legend>
-          <p className="text-muted text-xs">Only Controls already linked to this Risk are available. Existing selections cannot be removed after the plan is active.</p>
+          <legend className="text-sm font-medium">
+            Controls addressed by this plan
+          </legend>
+          <p className="text-muted text-xs">
+            Only Controls already linked to this Risk are available. Existing
+            selections cannot be removed after the plan is active.
+          </p>
           <div className="border-border grid max-h-40 gap-2 overflow-y-auto rounded-lg border p-3 md:grid-cols-2">
-            {options.data?.controls.length ? options.data.controls.map((control) => {
-              const checked = draft.controls.some((item) => item.id === control.id);
-              const locked = plan.status === "active" && plan.controls.some((item) => item.id === control.id);
-              return <label key={control.id} className="flex min-h-10 items-start gap-2 text-sm"><input className="mt-0.5 size-4" type="checkbox" checked={checked} disabled={locked} onChange={(event) => setDraft({ ...draft, controls: event.target.checked ? [...draft.controls, { id: control.id, code: control.code, name: control.name }] : draft.controls.filter((item) => item.id !== control.id) })} /><span>{control.code} — {control.name}{locked ? <span className="text-muted block text-xs">Locked while plan is active</span> : null}</span></label>;
-            }) : <p className="text-muted text-sm md:col-span-2">No eligible Controls are linked to this Risk.</p>}
+            {options.data?.controls.length ? (
+              options.data.controls.map((control) => {
+                const checked = draft.controls.some(
+                  (item) => item.id === control.id,
+                );
+                const locked =
+                  plan.status === "active" &&
+                  plan.controls.some((item) => item.id === control.id);
+                return (
+                  <label
+                    key={control.id}
+                    className="flex min-h-10 items-start gap-2 text-sm"
+                  >
+                    <input
+                      className="mt-0.5 size-4"
+                      type="checkbox"
+                      checked={checked}
+                      disabled={locked}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          controls: event.target.checked
+                            ? [
+                                ...draft.controls,
+                                {
+                                  id: control.id,
+                                  code: control.code,
+                                  name: control.name,
+                                },
+                              ]
+                            : draft.controls.filter(
+                                (item) => item.id !== control.id,
+                              ),
+                        })
+                      }
+                    />
+                    <span>
+                      {control.code} — {control.name}
+                      {locked ? (
+                        <span className="text-muted block text-xs">
+                          Locked while plan is active
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                );
+              })
+            ) : (
+              <p className="text-muted text-sm md:col-span-2">
+                No eligible Controls are linked to this Risk.
+              </p>
+            )}
           </div>
         </fieldset>
         <section className="space-y-3">
@@ -223,11 +287,19 @@ export function UpdateRiskTreatmentPlanDialog({
               className="border-border grid gap-3 rounded-lg border p-3 md:grid-cols-[1fr_1fr_10rem_10rem_auto]"
             >
               <Input
+                disabled={["completed", "cancelled"].includes(
+                  plan.actions.find((saved) => saved.id === action.id)
+                    ?.status ?? "",
+                )}
                 aria-label={`Action ${index + 1} title`}
                 value={action.title}
                 onChange={(e) => changeAction(index, { title: e.target.value })}
               />
               <Select
+                disabled={["completed", "cancelled"].includes(
+                  plan.actions.find((saved) => saved.id === action.id)
+                    ?.status ?? "",
+                )}
                 aria-label={`Action ${index + 1} owner`}
                 value={action.assignedToUserId ?? ""}
                 onChange={(e) =>
@@ -237,11 +309,15 @@ export function UpdateRiskTreatmentPlanDialog({
                 <option value="">Assign owner</option>
                 {options.data?.users.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.fullName}
+                    {u.fullName} — {u.email}
                   </option>
                 ))}
               </Select>
               <Input
+                disabled={["completed", "cancelled"].includes(
+                  plan.actions.find((saved) => saved.id === action.id)
+                    ?.status ?? "",
+                )}
                 aria-label={`Action ${index + 1} due date`}
                 type="date"
                 value={action.dueDate?.slice(0, 10) ?? ""}
@@ -252,6 +328,10 @@ export function UpdateRiskTreatmentPlanDialog({
                 }
               />
               <Select
+                disabled={["completed", "cancelled"].includes(
+                  plan.actions.find((saved) => saved.id === action.id)
+                    ?.status ?? "",
+                )}
                 aria-label={`Action ${index + 1} progress`}
                 value={action.status}
                 onChange={(e) =>
@@ -260,7 +340,15 @@ export function UpdateRiskTreatmentPlanDialog({
                   })
                 }
               >
-                <option value="pending">0% Pending</option>
+                <option
+                  value="pending"
+                  disabled={
+                    plan.actions.find((saved) => saved.id === action.id)
+                      ?.status === "in_progress"
+                  }
+                >
+                  0% Pending
+                </option>
                 <option value="in_progress">50% In progress</option>
                 <option value="completed">100% Completed</option>
                 <option value="cancelled">Cancelled</option>
