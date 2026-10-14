@@ -4,8 +4,6 @@ import {
   Bell,
   Building2,
   KeyRound,
-  Link2,
-  Plus,
   Save,
   ShieldCheck,
 } from "lucide-react";
@@ -20,19 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
-import {
-  ApiKeysTab,
-  IntegrationManagementView,
-  useIntegrations,
-} from "@/features/integrations";
+import { ApiKeysTab } from "@/features/integrations";
 
-type SettingsTab =
-  "organization" | "security" | "notifications" | "integrations" | "api";
+type SettingsTab = "organization" | "security" | "notifications" | "api";
 const tabs: readonly { id: SettingsTab; label: string; icon: ReactNode }[] = [
   { id: "organization", label: "Tổ chức", icon: <Building2 /> },
   { id: "security", label: "Bảo mật", icon: <ShieldCheck /> },
   { id: "notifications", label: "Thông báo", icon: <Bell /> },
-  { id: "integrations", label: "Tích hợp", icon: <Link2 /> },
   { id: "api", label: "API và khóa", icon: <KeyRound /> },
 ];
 
@@ -42,7 +34,7 @@ export default function SettingsPage() {
     <>
       <ProductPageHeader
         title="Cài đặt hệ thống"
-        description="Cấu hình thông tin tổ chức, chính sách bảo mật, thông báo và tích hợp."
+        description="Cấu hình thông tin tổ chức, chính sách bảo mật, thông báo và khóa API."
       />
       <div className="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
         <nav
@@ -66,12 +58,7 @@ export default function SettingsPage() {
           {activeTab === "organization" && <OrganizationSettings />}
           {activeTab === "security" && <SecuritySettings />}
           {activeTab === "notifications" && <NotificationSettings />}
-          {activeTab === "integrations" && <IntegrationManagementView />}
-          {activeTab === "api" && (
-            <ApiKeySettings
-              onNavigateToIntegrations={() => setActiveTab("integrations")}
-            />
-          )}
+          {activeTab === "api" && <ApiKeySettings />}
         </div>
       </div>
     </>
@@ -183,112 +170,14 @@ function NotificationSettings() {
   );
 }
 
-function ApiKeySettings({
-  onNavigateToIntegrations,
-}: {
-  onNavigateToIntegrations?: () => void;
-}) {
-  const { data, isLoading, isError, refetch } = useIntegrations();
-  const integrations = data?.items ?? [];
-  const [selectedIntegrationId, setSelectedIntegrationId] = useState<string>("");
-
-  const effectiveIntegrationId =
-    selectedIntegrationId || (integrations.length > 0 ? (integrations[0]?.id ?? "") : "");
-
-  const activeIntegration = integrations.find(
-    (i) => i.id === effectiveIntegrationId,
-  );
-
+function ApiKeySettings() {
   return (
     <ProductPanel
-      title="Khóa API"
-      description="Quản lý và cấp phát API Key / Secret Token xác thực cho các hệ thống SIEM & Firewall tích hợp."
+      title="Khóa API tích hợp"
+      description="Quản lý và xem danh sách các Integration API Key xác thực cho các dịch vụ và hệ thống kết nối vào SecuraAI."
     >
       <div className="space-y-6 p-5">
-        {isLoading ? (
-          <div className="space-y-3">
-            <div className="h-9 w-64 animate-pulse rounded bg-neutral-soft/60" />
-            <div className="h-40 animate-pulse rounded bg-neutral-soft/40" />
-          </div>
-        ) : isError ? (
-          <div className="border-danger/30 bg-danger/10 text-danger flex items-center justify-between rounded-lg border p-4 text-xs">
-            <span>Đã xảy ra lỗi khi tải danh sách tích hợp.</span>
-            <button
-              className="bg-surface ring-border hover:bg-neutral-soft rounded px-2.5 py-1 text-xs font-semibold ring-1"
-              onClick={() => refetch()}
-              type="button"
-            >
-              Thử lại
-            </button>
-          </div>
-        ) : integrations.length === 0 ? (
-          <div className="border-border flex flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center">
-            <div className="text-muted flex size-10 items-center justify-center rounded-lg bg-neutral-soft">
-              <Link2 className="size-5" />
-            </div>
-            <h4 className="text-foreground mt-3 text-sm font-semibold">
-              Chưa có kết nối SIEM / Firewall nào
-            </h4>
-            <p className="text-muted mt-1 max-w-md text-xs">
-              Khóa API được quản lý theo từng hệ thống tích hợp bên ngoài. Vui lòng thiết lập cấu hình tích hợp (Wazuh, Splunk, FortiGate...) trước khi quản lý khóa API.
-            </p>
-            {onNavigateToIntegrations ? (
-              <button
-                className="bg-brand text-brand-contrast hover:bg-brand-strong mt-4 inline-flex min-h-8 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors"
-                onClick={onNavigateToIntegrations}
-                type="button"
-              >
-                <Plus className="size-3.5" />
-                Đến cấu hình Tích hợp
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {/* Integration Selector */}
-            <div className="border-border bg-neutral-soft/30 flex flex-col gap-3 rounded-lg border p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <Label className="text-foreground text-xs font-medium">
-                  Chọn hệ thống tích hợp
-                </Label>
-                <p className="text-muted text-[11px]">
-                  Xem và quản lý các API Key thuộc hệ thống tích hợp được chọn
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Select
-                  className="h-8 min-w-[14rem] text-xs"
-                  onChange={(e) => setSelectedIntegrationId(e.target.value)}
-                  value={effectiveIntegrationId}
-                >
-                  {integrations.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.integrationType})
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            {/* Active Integration API Keys Component */}
-            {effectiveIntegrationId ? (
-              <div className="border-border bg-surface rounded-lg border p-4">
-                <div className="border-border mb-4 flex items-center justify-between border-b pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-foreground text-xs font-semibold">
-                      Khóa API cho {activeIntegration?.name}
-                    </span>
-                    <span className="text-muted text-[11px]">
-                      ({activeIntegration?.integrationType} · {activeIntegration?.baseUrl})
-                    </span>
-                  </div>
-                </div>
-                <ApiKeysTab integrationId={effectiveIntegrationId} />
-              </div>
-            ) : null}
-          </div>
-        )}
+        <ApiKeysTab />
       </div>
     </ProductPanel>
   );

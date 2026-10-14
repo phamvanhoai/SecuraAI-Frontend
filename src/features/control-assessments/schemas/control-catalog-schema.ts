@@ -23,15 +23,6 @@ const fields = {
 };
 export const createControlSchema = z
   .object({
-    controlCode: z
-      .string()
-      .trim()
-      .min(3)
-      .max(100)
-      .regex(
-        /^[A-Za-z0-9][A-Za-z0-9._-]*$/,
-        "Use letters, numbers, dots, underscores or hyphens",
-      ),
     ...fields,
   })
   .strict();
@@ -53,7 +44,7 @@ export const catalogControlSchema = z.object({
   name: z.string(),
   description: z.string().nullable(),
   owner: z
-    .object({ id: z.uuid(), fullName: z.string(), status: z.string() })
+    .object({ id: z.uuid(), fullName: z.string(), email: z.email(), status: z.string() })
     .nullable(),
   applicability: applicabilitySchema,
   implementationStatus: implementationSchema,
@@ -63,7 +54,9 @@ export const catalogControlSchema = z.object({
   revision: z.string().regex(/^[a-f0-9]{64}$/),
 });
 export const controlOwnersSchema = z.object({
-  items: z.array(z.object({ id: z.uuid(), fullName: z.string() })).max(10),
+  items: z
+    .array(z.object({ id: z.uuid(), fullName: z.string(), email: z.email() }))
+    .max(10),
 });
 export type CatalogControl = z.infer<typeof catalogControlSchema>;
 export type CreateControl = z.infer<typeof createControlSchema>;

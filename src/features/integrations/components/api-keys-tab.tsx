@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Copy,
   Edit2,
+  Eye,
   Key,
   PauseCircle,
   Plus,
@@ -13,8 +14,10 @@ import {
   ShieldAlert,
   ShieldCheck,
   ShieldX,
+  User,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,11 +32,12 @@ import type {
 } from "../schemas/integration-schema";
 import { ApiKeyModal, type ApiKeyModalMode } from "./api-key-modal";
 import { OneTimeSecretDialog } from "./one-time-secret-dialog";
+import { ApiKeyDetailModal } from "./api-key-detail-modal";
 
 export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   if (status === "ACTIVE") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
         <ShieldCheck className="size-3" />
         Active
       </span>
@@ -41,7 +45,7 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   }
   if (status === "EXPIRED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-400 border border-amber-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400 border border-amber-500/20">
         <ShieldAlert className="size-3" />
         Expired
       </span>
@@ -49,9 +53,17 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   }
   if (status === "REVOKED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-400 border border-rose-500/20">
+      <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] font-medium text-rose-600 dark:text-rose-400 border border-rose-500/20">
         <ShieldX className="size-3" />
         Revoked
+      </span>
+    );
+  }
+  if (status === "ROTATED") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600 dark:text-purple-400 border border-purple-500/20">
+        <RefreshCw className="size-3" />
+        Rotated
       </span>
     );
   }
@@ -63,13 +75,14 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
   );
 }
 
-export function ApiKeysTab({ integrationId }: { integrationId: string }) {
+export function ApiKeysTab({ integrationId }: { integrationId?: string | undefined }) {
   const toast = useToast();
+  const effectiveIntegrationId = integrationId?.trim() || "all";
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const apiKeysQuery = useApiKeys({
-    integrationId,
+    integrationId: effectiveIntegrationId,
   });
 
   const revokeMutation = useRevokeApiKey();
@@ -87,6 +100,28 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
 
   // Revoke confirm dialog state
   const [keyToRevoke, setKeyToRevoke] = useState<IntegrationApiKey | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const revokeDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = revokeDialogRef.current;
+    if (!dialog) return;
+    if (keyToRevoke && !dialog.open) {
+      dialog.showModal();
+    }
+    if (!keyToRevoke && dialog.open) {
+      dialog.close();
+    }
+  }, [keyToRevoke]);
+
+  // View detail modal state
+  const [detailKey, setDetailKey] = useState<IntegrationApiKey | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  function handleOpenDetail(key: IntegrationApiKey) {
+    setDetailKey(key);
+    setDetailModalOpen(true);
+  }
 
   function handleOpenCreate() {
     setSelectedKey(null);
@@ -129,11 +164,13 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
     if (!keyToRevoke) return;
     try {
       await revokeMutation.mutateAsync({
-        integrationId,
+        integrationId: keyToRevoke.integrationId || effectiveIntegrationId,
         keyId: keyToRevoke.id,
+        reason: revokeReason.trim() || undefined,
       });
       toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
       setKeyToRevoke(null);
+      setRevokeReason("");
     } catch {
       toast.error("Failed to revoke API key");
     }
@@ -142,7 +179,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
   async function handleReactivate(key: IntegrationApiKey) {
     try {
       await updateMutation.mutateAsync({
-        integrationId,
+        integrationId: key.integrationId || effectiveIntegrationId,
         keyId: key.id,
         input: {
           isActive: true,
@@ -155,91 +192,112 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
   }
 
   const rawKeys = apiKeysQuery.data ?? [];
-  const keys = rawKeys.filter((k) => {
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      const matchName = k.keyName.toLowerCase().includes(term);
-      const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
-      if (!matchName && !matchFp) return false;
-    }
-    if (statusFilter === "active") return k.status === "ACTIVE";
-    if (statusFilter === "inactive") return k.status === "INACTIVE";
-    if (statusFilter === "expired") return k.status === "EXPIRED";
-    if (statusFilter === "revoked") return k.status === "REVOKED";
-    return true;
-  });
+
+  const keys = useMemo(() => {
+    return rawKeys.filter((k) => {
+      // 1. Keyword search (Name, Key prefix, Fingerprint, Scopes, Creator)
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        const matchName = k.keyName.toLowerCase().includes(term);
+        const matchFp = k.keyFingerprint?.toLowerCase().includes(term) ?? false;
+        const matchPrefix = k.keyPrefix?.toLowerCase().includes(term) ?? false;
+        const matchScope = k.scopes?.some((s) => s.toLowerCase().includes(term)) ?? false;
+        const matchCreator =
+          k.creator?.fullName?.toLowerCase().includes(term) ||
+          k.creator?.email?.toLowerCase().includes(term) ||
+          k.creator?.username?.toLowerCase().includes(term) ||
+          false;
+        if (!matchName && !matchFp && !matchPrefix && !matchScope && !matchCreator) {
+          return false;
+        }
+      }
+
+      // 2. Status filter
+      if (statusFilter !== "all") {
+        if (statusFilter === "active" && k.status !== "ACTIVE") return false;
+        if (statusFilter === "inactive" && k.status !== "INACTIVE") return false;
+        if (statusFilter === "expired" && k.status !== "EXPIRED") return false;
+        if (statusFilter === "revoked" && k.status !== "REVOKED") return false;
+        if (statusFilter === "rotated" && k.status !== "ROTATED") return false;
+      }
+
+      return true;
+    });
+  }, [rawKeys, searchTerm, statusFilter]);
+
+  const isFilteringActive = searchTerm.trim().length > 0 || statusFilter !== "all";
 
   return (
     <div className="space-y-4">
       {/* Action Header & Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
-            <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
-            <Input
-              className="h-8 pl-8 text-xs"
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by key name or fingerprint..."
-              value={searchTerm}
-            />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
+              <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 pointer-events-none" />
+              <Input
+                aria-label="Search API keys"
+                className="h-8 pl-8 pr-7 text-xs"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by key name, scope, or creator..."
+                value={searchTerm}
+              />
+              {searchTerm ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+                  aria-label="Clear search"
+                >
+                  <X className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+
+            {/* Status Pills */}
+            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
+              {(
+                [
+                  { id: "all", label: "All" },
+                  { id: "active", label: "Active" },
+                  { id: "inactive", label: "Inactive" },
+                  { id: "expired", label: "Expired" },
+                  { id: "revoked", label: "Revoked" },
+                  { id: "rotated", label: "Rotated" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                    statusFilter === tab.id
+                      ? "bg-surface text-foreground shadow-xs"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                  onClick={() => setStatusFilter(tab.id)}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "all"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("all")}
-              type="button"
-            >
-              All
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "active"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("active")}
-              type="button"
-            >
-              Active
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "inactive"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("inactive")}
-              type="button"
-            >
-              Inactive
-            </button>
-            <button
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                statusFilter === "expired"
-                  ? "bg-surface text-foreground shadow-xs"
-                  : "text-muted hover:text-foreground"
-              }`}
-              onClick={() => setStatusFilter("expired")}
-              type="button"
-            >
-              Expired
-            </button>
-          </div>
+          <Button
+            className="min-h-8 shrink-0 px-3 text-xs"
+            onClick={handleOpenCreate}
+            type="button"
+          >
+            <Plus className="mr-1.5 size-3.5" />
+            Generate API Key
+          </Button>
         </div>
 
-        <Button
-          className="min-h-8 shrink-0 px-3 text-xs"
-          onClick={handleOpenCreate}
-          type="button"
-        >
-          <Plus className="mr-1.5 size-3.5" />
-          Generate API Key
-        </Button>
+        {/* Results Counter */}
+        <div className="text-[11px] text-muted px-0.5">
+          Showing <strong className="text-foreground font-medium">{keys.length}</strong> of{" "}
+          {rawKeys.length} API keys
+        </div>
       </div>
 
       {/* Content State */}
@@ -251,7 +309,11 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
         </div>
       ) : apiKeysQuery.isError ? (
         <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-danger text-xs flex items-center justify-between">
-          <span>Failed to connect to the server. Please try again later.</span>
+          <span>
+            {apiKeysQuery.error instanceof Error
+              ? apiKeysQuery.error.message
+              : "Failed to connect to the server. Please try again later."}
+          </span>
           <Button
             className="min-h-7 px-2.5 text-xs"
             onClick={() => apiKeysQuery.refetch()}
@@ -266,19 +328,23 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
             <Key className="size-5" />
           </div>
           <h4 className="mt-3 text-xs font-semibold text-foreground">
-            No API Keys Generated
+            {isFilteringActive ? "No Matching API Keys Found" : "No API Keys Found"}
           </h4>
           <p className="text-muted mt-1 max-w-sm text-[11px]">
-            Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders.
+            {isFilteringActive
+              ? "No integration API keys match your active filter criteria. Try adjusting keywords or status."
+              : "Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders."}
           </p>
-          <Button
-            className="mt-4 min-h-8 px-3 text-xs"
-            onClick={handleOpenCreate}
-            type="button"
-          >
-            <Plus className="mr-1.5 size-3.5" />
-            Generate First API Key
-          </Button>
+          {!isFilteringActive ? (
+            <Button
+              className="mt-4 min-h-8 px-3 text-xs"
+              onClick={handleOpenCreate}
+              type="button"
+            >
+              <Plus className="mr-1.5 size-3.5" />
+              Generate First API Key
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="border-border overflow-hidden rounded-lg border">
@@ -288,7 +354,9 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                 <tr>
                   <th className="px-4 py-2.5">Key Identifier</th>
                   <th className="px-4 py-2.5">Key Fingerprint</th>
+                  <th className="px-4 py-2.5">Assigned Scopes</th>
                   <th className="px-4 py-2.5">Status</th>
+                  <th className="px-4 py-2.5">Creator</th>
                   <th className="px-4 py-2.5">Expires At</th>
                   <th className="px-4 py-2.5">Created At</th>
                   <th className="px-4 py-2.5 text-right">Actions</th>
@@ -303,22 +371,36 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Key className="text-muted size-3.5 shrink-0" />
-                        <span className="font-semibold text-foreground">
-                          {key.keyName}
-                        </span>
+                        <div>
+                          <button
+                            className="font-semibold text-foreground hover:text-brand transition-colors block text-left"
+                            onClick={() => handleOpenDetail(key)}
+                            title={`View metadata for ${key.keyName}`}
+                            type="button"
+                          >
+                            {key.keyName}
+                          </button>
+                          {key.eventSource?.name ? (
+                            <span className="text-[10px] text-muted">
+                              {key.eventSource.name}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </td>
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <span className="border-border bg-neutral-soft/80 font-mono text-[11px] rounded border px-2 py-0.5 text-foreground select-all">
-                          {key.keyFingerprint || "—"}
+                          {key.keyFingerprint || key.keyPrefix ? `${key.keyPrefix || key.keyFingerprint}...****` : "—"}
                         </span>
-                        {key.keyFingerprint ? (
+                        {key.keyFingerprint || key.keyPrefix ? (
                           <button
                             aria-label="Copy Key Fingerprint"
                             className="text-muted hover:text-foreground p-1"
-                            onClick={() => handleCopyFingerprint(key.keyFingerprint)}
+                            onClick={() =>
+                              handleCopyFingerprint(key.keyFingerprint || key.keyPrefix)
+                            }
                             title="Copy Key Fingerprint"
                             type="button"
                           >
@@ -329,7 +411,40 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                     </td>
 
                     <td className="px-4 py-3">
+                      {key.scopes && key.scopes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 max-w-xs">
+                          {key.scopes.map((scope) => (
+                            <span
+                              className="inline-flex items-center rounded bg-neutral-soft/90 px-1.5 py-0.5 text-[10px] font-mono text-foreground border border-border"
+                              key={scope}
+                            >
+                              {scope}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted text-[11px] italic">No scopes</span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
                       <ApiKeyStatusBadge status={key.status} />
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <User className="size-3 text-muted shrink-0" />
+                        <div className="flex flex-col text-[11px]">
+                          <span className="font-medium text-foreground">
+                            {key.creator?.fullName || "Administrator"}
+                          </span>
+                          {key.creator?.email ? (
+                            <span className="text-muted text-[10px]">
+                              {key.creator.email}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     </td>
 
                     <td className="text-muted px-4 py-3 text-[11px]">
@@ -355,6 +470,17 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
+                          aria-label={`View API key details for ${key.keyName}`}
+                          className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                          onClick={() => handleOpenDetail(key)}
+                          title="View key metadata & usage details"
+                          type="button"
+                        >
+                          <Eye className="mr-1 size-3 text-muted" />
+                          View
+                        </Button>
+
+                        <Button
                           aria-label={`Rotate API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenRotate(key)}
@@ -369,7 +495,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
                           aria-label={`Edit API key ${key.keyName}`}
                           className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenEdit(key)}
-                          title="Edit key name and expiration"
+                          title="Edit key name, scopes and expiration"
                           type="button"
                         >
                           <Edit2 className="size-3" />
@@ -410,7 +536,7 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
       {/* ApiKey Modal (Create / Edit / Rotate) */}
       <ApiKeyModal
         apiKey={selectedKey}
-        integrationId={integrationId}
+        integrationId={selectedKey?.integrationId || effectiveIntegrationId}
         key={`${modalMode}-${selectedKey?.id ?? "new"}-${modalOpen}`}
         mode={modalMode}
         onOpenChange={setModalOpen}
@@ -426,52 +552,96 @@ export function ApiKeysTab({ integrationId }: { integrationId: string }) {
         secret={secretDialogPlaintext}
       />
 
+      {/* View Detail Modal */}
+      <ApiKeyDetailModal
+        initialData={detailKey}
+        integrationId={detailKey?.integrationId || effectiveIntegrationId}
+        keyId={detailKey?.id ?? null}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setDetailKey(null);
+        }}
+        open={detailModalOpen}
+      />
+
       {/* Revoke Confirmation Dialog */}
-      {keyToRevoke ? (
-        <dialog
-          aria-labelledby="revoke-confirm-title"
-          className="border-border bg-surface text-foreground m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 backdrop:bg-[#07110f]/55"
-          open
-        >
-          <div className="border-border bg-surface border-b p-5">
-            <div className="flex items-center gap-2.5">
-              <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
-                <ShieldAlert className="size-4" />
+      <dialog
+        aria-labelledby="revoke-confirm-title"
+        className="border-border bg-surface text-foreground m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 shadow-2xl backdrop:bg-[#07110f]/55"
+        onCancel={(e) => {
+          e.preventDefault();
+          setKeyToRevoke(null);
+          setRevokeReason("");
+        }}
+        ref={revokeDialogRef}
+      >
+        {keyToRevoke ? (
+          <>
+            <div className="border-border bg-surface border-b p-5">
+              <div className="flex items-center gap-2.5">
+                <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
+                  <ShieldAlert className="size-4" />
+                </div>
+                <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
+                  Confirm API Key Revocation
+                </h3>
               </div>
-              <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
-                Confirm API Key Revocation
-              </h3>
             </div>
-          </div>
 
-          <div className="space-y-4 p-5 text-xs">
-            <p className="text-muted leading-relaxed">
-              Are you sure you want to revoke the key{" "}
-              <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
-              This key will be marked as <strong>Revoked</strong> and any incoming requests using this secret token will be rejected (401 Unauthorized).
-            </p>
+            <div className="space-y-4 p-5 text-xs">
+              <p className="text-muted leading-relaxed">
+                Are you sure you want to revoke the key{" "}
+                <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
+                This key will be marked as <strong>Revoked</strong> and any incoming requests using this secret token will be rejected.
+              </p>
 
-            <div className="border-border flex justify-end gap-2 border-t pt-4">
-              <Button
-                className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-                disabled={revokeMutation.isPending}
-                onClick={() => setKeyToRevoke(null)}
-                type="button"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="min-h-8 px-4 text-xs bg-danger hover:bg-danger/90 text-white"
-                disabled={revokeMutation.isPending}
-                onClick={handleConfirmRevoke}
-                type="button"
-              >
-                {revokeMutation.isPending ? "Revoking..." : "Confirm Revocation"}
-              </Button>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="revoke-reason"
+                  className="text-[11px] font-medium text-foreground block"
+                >
+                  Revocation Reason <span className="text-muted font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  id="revoke-reason"
+                  rows={2}
+                  maxLength={500}
+                  value={revokeReason}
+                  onChange={(e) => setRevokeReason(e.target.value)}
+                  placeholder="Please enter a reason for revoking this API key..."
+                  className="border-border bg-neutral-soft text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/20 w-full rounded-lg border p-2.5 text-xs outline-none transition focus:ring-2 resize-none"
+                  disabled={revokeMutation.isPending}
+                />
+                <div className="flex justify-end text-[10px] text-muted">
+                  {revokeReason.length}/500
+                </div>
+              </div>
+
+              <div className="border-border flex justify-end gap-2 border-t pt-4">
+                <Button
+                  className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                  disabled={revokeMutation.isPending}
+                  onClick={() => {
+                    setKeyToRevoke(null);
+                    setRevokeReason("");
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="min-h-8 px-4 text-xs bg-danger hover:bg-danger/90 text-white"
+                  disabled={revokeMutation.isPending}
+                  onClick={handleConfirmRevoke}
+                  type="button"
+                >
+                  {revokeMutation.isPending ? "Revoking..." : "Confirm Revocation"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </dialog>
-      ) : null}
+          </>
+        ) : null}
+      </dialog>
     </div>
   );
 }

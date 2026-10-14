@@ -107,13 +107,13 @@ describe("EditEventGovernancePolicyDialog", () => {
       />,
     );
 
-    const retentionInput = screen.getByLabelText(/Retention Period/i);
+    const retentionInput = screen.getByLabelText(/Active Retention Period/i);
     fireEvent.change(retentionInput, { target: { value: "180" } });
 
-    const archiveInput = screen.getByLabelText(/Cold Archival Threshold/i);
+    const archiveInput = screen.getByLabelText(/Cold Storage Archival After/i);
     fireEvent.change(archiveInput, { target: { value: "60" } });
 
-    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
+    const saveButton = screen.getByRole("button", { name: /Save Policy Changes/i });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -141,13 +141,13 @@ describe("EditEventGovernancePolicyDialog", () => {
       />,
     );
 
-    const retentionInput = screen.getByLabelText(/Retention Period/i);
+    const retentionInput = screen.getByLabelText(/Active Retention Period/i);
     fireEvent.change(retentionInput, { target: { value: "90" } });
 
-    const archiveInput = screen.getByLabelText(/Cold Archival Threshold/i);
+    const archiveInput = screen.getByLabelText(/Cold Storage Archival After/i);
     fireEvent.change(archiveInput, { target: { value: "120" } });
 
-    const saveButton = screen.getByRole("button", { name: /Save Changes/i });
+    const saveButton = screen.getByRole("button", { name: /Save Policy Changes/i });
     fireEvent.click(saveButton);
 
     expect(

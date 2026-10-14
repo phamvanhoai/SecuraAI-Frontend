@@ -129,16 +129,19 @@ describe("integration-schema", () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     const valid = createApiKeyFormSchema.parse({
       keyName: "New Production Key",
+      scopes: ["events:ingest", "alerts:read"],
       expiresAt: futureDate,
       isActive: true,
     });
     expect(valid.keyName).toBe("New Production Key");
+    expect(valid.scopes).toEqual(["events:ingest", "alerts:read"]);
     expect(valid.isActive).toBe(true);
 
-    const defaultInactive = createApiKeyFormSchema.parse({
-      keyName: "Default Inactive Key",
+    const defaultKey = createApiKeyFormSchema.parse({
+      keyName: "Default Key",
     });
-    expect(defaultInactive.isActive).toBe(false);
+    expect(defaultKey.isActive).toBe(true);
+    expect(defaultKey.scopes).toEqual(["events:ingest"]);
 
     const pastDate = new Date(Date.now() - 3600000).toISOString();
     expect(() =>

@@ -18,6 +18,7 @@ export const identifiedThreatSchema = z.object({
   description: z.string().nullable(),
   vulnerabilities: z.array(z.object({ id: z.uuid(), name: z.string() })),
   createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
 });
 export type IdentifyThreatInput = z.infer<typeof identifyThreatSchema>;
 export type IdentifiedThreat = z.infer<typeof identifiedThreatSchema>;

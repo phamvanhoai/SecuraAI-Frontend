@@ -5,9 +5,11 @@ export async function GET(
   context: { params: Promise<{ id: string; keyId: string }> },
 ): Promise<Response> {
   const { id, keyId } = await context.params;
-  return proxyAuthenticatedRequest(
-    `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}`,
-  );
+  const targetPath =
+    id === "all" || !id
+      ? `/integrations/api-keys/${encodeURIComponent(keyId)}`
+      : `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}`;
+  return proxyAuthenticatedRequest(targetPath);
 }
 
 export async function PATCH(
@@ -15,12 +17,13 @@ export async function PATCH(
   context: { params: Promise<{ id: string; keyId: string }> },
 ): Promise<Response> {
   const { id, keyId } = await context.params;
-  return proxyAuthenticatedRequest(
-    `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: await request.text(),
-    },
-  );
+  const targetPath =
+    id === "all" || !id
+      ? `/integrations/api-keys/${encodeURIComponent(keyId)}`
+      : `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}`;
+  return proxyAuthenticatedRequest(targetPath, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: await request.text(),
+  });
 }

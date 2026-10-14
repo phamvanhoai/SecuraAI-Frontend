@@ -18,10 +18,11 @@ export const integrationStatusEnum = z.enum([
 export type IntegrationStatus = z.infer<typeof integrationStatusEnum>;
 
 export const paginationSchema = z.object({
-  total: z.coerce.number(),
-  page: z.coerce.number(),
-  limit: z.coerce.number(),
-  totalPages: z.coerce.number(),
+  total: z.coerce.number().optional(),
+  totalItems: z.coerce.number().optional(),
+  page: z.coerce.number().default(1),
+  limit: z.coerce.number().default(20),
+  totalPages: z.coerce.number().default(0),
 });
 
 export const integrationSchema = z.object({
@@ -193,7 +194,7 @@ export const integrationLogListSchema = z.object({
 });
 export type IntegrationLogList = z.infer<typeof integrationLogListSchema>;
 
-export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED"]);
+export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED", "ROTATED"]);
 export type ApiKeyStatus = z.infer<typeof apiKeyStatusEnum>;
 
 export function deriveApiKeyStatus(
@@ -212,48 +213,199 @@ export function deriveApiKeyStatus(
   return "ACTIVE";
 }
 
-export const integrationApiKeySchema = z.object({
+export const baseIntegrationApiKeySchema = z.object({
   id: z.string().uuid(),
-  integrationId: z.string().uuid(),
-  keyName: z.string(),
+  integrationId: z.string().nullable().optional(),
+  eventSourceId: z.string().nullable().optional(),
+  keyName: z.string().optional().default(""),
+  name: z.string().optional().default(""),
+  keyPrefix: z.string().optional().default(""),
   keyFingerprint: z.string().nullable().optional(),
+  maskedKey: z.string().optional().default(""),
+  scopes: z.array(z.string()).default([]).optional(),
   expiresAt: z.string().nullable().optional(),
-  isActive: z.boolean(),
+  isActive: z.boolean().default(true),
   status: apiKeyStatusEnum,
+  creator: z
+    .object({
+      id: z.string().optional(),
+      fullName: z.string().optional(),
+      email: z.string().optional(),
+      username: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+  createdBy: z.string().optional(),
   createdAt: z.string(),
+  lastUsedAt: z.string().nullable().optional(),
+  lastUsedIp: z.string().nullable().optional(),
+  rotatedAt: z.string().nullable().optional(),
+  revokedAt: z.string().nullable().optional(),
+  eventSource: z
+    .object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      sourceType: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
 });
+
+export const integrationApiKeySchema = baseIntegrationApiKeySchema.transform(
+  (item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+  }),
+);
 export type IntegrationApiKey = z.infer<typeof integrationApiKeySchema>;
 
-export const integrationApiKeyListSchema = z.array(integrationApiKeySchema);
+export const integrationApiKeyListSchema = z.union([
+  z.array(integrationApiKeySchema),
+  z
+    .object({
+      items: z.array(integrationApiKeySchema),
+      pagination: paginationSchema.optional(),
+    })
+    .transform((val) => val.items),
+]);
 export type IntegrationApiKeyList = z.infer<typeof integrationApiKeyListSchema>;
 
-export const createdApiKeyResponseSchema = integrationApiKeySchema.extend({
-  secret: z.string(),
-});
+export const standardApiKeyScopes = [
+  "events:ingest",
+  "events:read",
+  "alerts:read",
+  "assets:read",
+  "compliance:read",
+] as const;
+
+export type StandardApiKeyScope = (typeof standardApiKeyScopes)[number];
+
+export const apiKeyScopeDetails: Record<
+  StandardApiKeyScope,
+  { label: string; description: string }
+> = {
+  "events:ingest": {
+    label: "Ingest Log Events",
+    description: "Submit raw security events and logs to the ingestion pipeline",
+  },
+  "events:read": {
+    label: "Read Normalized Events",
+    description: "Query and retrieve normalized security events and audit records",
+  },
+  "alerts:read": {
+    label: "Read AI Anomaly Alerts",
+    description: "Access real-time anomaly alerts and XAI explanation data",
+  },
+  "assets:read": {
+    label: "Read IT Assets",
+    description: "View IT infrastructure inventory and asset classifications",
+  },
+  "compliance:read": {
+    label: "Read Compliance Policies",
+    description: "Access ISMS policy guidelines and compliance control definitions",
+  },
+};
+
+export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema
+  .extend({
+    secret: z.string(),
+  })
+  .transform((item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+  }));
 export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;
 
-export const createApiKeyFormSchema = z.object({
-  keyName: z
-    .string()
-    .trim()
-    .min(1, "Key name is required")
-    .max(100, "Key name must not exceed 100 characters"),
-  secret: z
-    .string()
-    .trim()
-    .max(1000, "Secret must not exceed 1000 characters")
-    .optional()
-    .or(z.literal("")),
-  expiresAt: z
-    .string()
-    .nullable()
-    .optional()
-    .refine(
-      (val) => !val || new Date(val).getTime() > Date.now(),
-      { message: "Expiration date must be in the future" },
-    ),
-  isActive: z.boolean().default(false),
+export const apiKeyUsageSchema = z.object({
+  lastUsedAt: z.string().nullable().optional(),
+  lastUsedIp: z.string().nullable().optional(),
+  totalAuditEvents: z.number().int().min(0).default(0),
+  isUsed: z.boolean().default(false),
 });
+export type ApiKeyUsage = z.infer<typeof apiKeyUsageSchema>;
+
+export const apiKeyDetailSchema = baseIntegrationApiKeySchema
+  .extend({
+    revokedBy: z.string().nullable().optional(),
+    revoker: z
+      .object({
+        id: z.string().optional(),
+        fullName: z.string().optional(),
+        email: z.string().optional(),
+        username: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    replacementKeyId: z.string().nullable().optional(),
+    replacementKey: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        keyPrefix: z.string().optional(),
+        status: z.string().optional(),
+      })
+      .nullable()
+      .optional(),
+    usage: apiKeyUsageSchema.optional(),
+  })
+  .transform((item) => ({
+    ...item,
+    name: item.name || item.keyName || "API Key",
+    keyName: item.keyName || item.name || "API Key",
+    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+    usage: item.usage ?? {
+      lastUsedAt: item.lastUsedAt ?? null,
+      lastUsedIp: item.lastUsedIp ?? null,
+      totalAuditEvents: 0,
+      isUsed: Boolean(item.lastUsedAt),
+    },
+  }));
+export type ApiKeyDetail = z.infer<typeof apiKeyDetailSchema>;
+
+export const createApiKeyFormSchema = z
+  .object({
+    keyName: z
+      .string()
+      .trim()
+      .min(1, "Key name is required")
+      .max(255, "Key name must not exceed 255 characters")
+      .optional(),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Key name is required")
+      .max(255, "Key name must not exceed 255 characters")
+      .optional(),
+    scopes: z
+      .array(z.string())
+      .min(1, "At least one scope must be selected")
+      .default(["events:ingest"]),
+    expiresAt: z
+      .string()
+      .nullable()
+      .optional()
+      .refine(
+        (val) => !val || new Date(val).getTime() > Date.now(),
+        { message: "Expiration date must be in the future" },
+      ),
+    isActive: z.boolean().default(true),
+    eventSourceId: z.string().uuid().nullable().optional(),
+    integrationId: z.string().uuid().nullable().optional(),
+  })
+  .refine(
+    (data) => Boolean(data.keyName?.trim() || data.name?.trim()),
+    {
+      message: "Key name is required",
+      path: ["keyName"],
+    },
+  );
 export type CreateApiKeyInput = z.infer<typeof createApiKeyFormSchema>;
 
 export const updateApiKeyFormSchema = z.object({
@@ -262,6 +414,16 @@ export const updateApiKeyFormSchema = z.object({
     .trim()
     .min(1, "Key name is required")
     .max(100, "Key name must not exceed 100 characters")
+    .optional(),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Key name is required")
+    .max(100, "Key name must not exceed 100 characters")
+    .optional(),
+  scopes: z
+    .array(z.string())
+    .min(1, "At least one scope must be selected")
     .optional(),
   expiresAt: z
     .string()

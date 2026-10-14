@@ -11,6 +11,7 @@ import {
   integrationApiKeySchema,
   integrationApiKeyListSchema,
   createdApiKeyResponseSchema,
+  apiKeyDetailSchema,
   connectionStatusSummarySchema,
   batchConnectionCheckResultSchema,
   integrationConnectionStatusSchema,
@@ -35,6 +36,7 @@ import {
   type IntegrationApiKey,
   type IntegrationApiKeyList,
   type CreatedApiKeyResponse,
+  type ApiKeyDetail,
   type ConnectionStatusSummary,
   type BatchConnectionCheckResult,
   type IntegrationConnectionStatus,
@@ -306,7 +308,7 @@ export function listIntegrationLogs(
 // Integration API Keys API Client
 // -------------------------------------------------------------
 export type ListApiKeysInput = {
-  integrationId: string;
+  integrationId?: string | undefined;
   isActive?: boolean | undefined;
   search?: string | undefined;
   signal?: AbortSignal | undefined;
@@ -320,7 +322,8 @@ export function listApiKeys(
   if (input.search) query.set("search", input.search);
 
   const qs = query.toString();
-  const path = `/api/integrations/${encodeURIComponent(input.integrationId)}/api-keys${qs ? `?${qs}` : ""}`;
+  const targetId = input.integrationId?.trim() || "all";
+  const path = `/api/integrations/${encodeURIComponent(targetId)}/api-keys${qs ? `?${qs}` : ""}`;
 
   return integrationRequest(
     path,
@@ -358,6 +361,19 @@ export function getApiKeyById(
   return integrationRequest(
     `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}`,
     integrationApiKeySchema,
+    signal ? { signal } : undefined,
+  );
+}
+
+export function getApiKeyDetail(
+  keyId: string,
+  integrationId?: string,
+  signal?: AbortSignal,
+): Promise<ApiKeyDetail> {
+  const targetId = integrationId?.trim() || "all";
+  return integrationRequest(
+    `/api/integrations/${encodeURIComponent(targetId)}/api-keys/${encodeURIComponent(keyId)}`,
+    apiKeyDetailSchema,
     signal ? { signal } : undefined,
   );
 }
@@ -412,12 +428,15 @@ export function rotateApiKey(
 export function revokeApiKey(
   integrationId: string,
   keyId: string,
+  reason?: string,
 ): Promise<IntegrationApiKey> {
   return integrationRequest(
     `/api/integrations/${encodeURIComponent(integrationId)}/api-keys/${encodeURIComponent(keyId)}/revoke`,
     integrationApiKeySchema,
     {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(reason?.trim() ? { reason: reason.trim() } : {}),
     },
   );
 }

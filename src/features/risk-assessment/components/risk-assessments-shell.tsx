@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { useRiskRegister } from "../hooks/use-risk-register";
 import {
   riskRegisterQuerySchema,
+  type RiskRegisterDetail,
   type RiskRegisterItem,
   type RiskRegisterQuery,
 } from "../schemas/risk-register-schema";
@@ -51,6 +52,8 @@ import { DefineTargetRiskDialog } from "./define-target-risk-dialog";
 import { CreateRiskTreatmentPlanDialog } from "./create-risk-treatment-plan-dialog";
 import { RiskReassessmentReviewPanel } from "./risk-reassessment-review-panel";
 import { UpdateActiveTreatmentPlanDialog } from "./update-active-treatment-plan-dialog";
+import { EditVulnerabilityDialog } from "./edit-vulnerability-dialog";
+import { EditThreatDialog } from "./edit-threat-dialog";
 
 const labels = {
   open: "Open",
@@ -98,6 +101,16 @@ export function RiskAssessmentsShell() {
   const [view, setView] = useState<"register" | "requests">("register");
   const risks = useRiskRegister(query, canRead && view === "register");
   const [draft, setDraft] = useState(query.q ?? "");
+  const [editingVulnerability, setEditingVulnerability] = useState<{
+    riskId: string;
+    riskLabel: string;
+    vulnerability: RiskRegisterDetail["vulnerabilities"][number];
+  } | null>(null);
+  const [editingThreat, setEditingThreat] = useState<{
+    riskId: string;
+    riskLabel: string;
+    threat: RiskRegisterDetail["threats"][number];
+  } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [threatRisk, setThreatRisk] = useState<RiskRegisterItem | null>(null);
   const [vulnerabilityRisk, setVulnerabilityRisk] =
@@ -226,7 +239,6 @@ export function RiskAssessmentsShell() {
             <RiskAction
               icon={Bug}
               label="Identify vulnerability"
-              disabled={!["open", "under_treatment"].includes(item.status)}
               onClick={() => setVulnerabilityRisk(item)}
             />
           ) : null}
@@ -497,7 +509,49 @@ export function RiskAssessmentsShell() {
       <RiskAssessmentDetailDialog
         id={selectedId}
         onClose={() => setSelectedId(null)}
+        onEditVulnerability={(risk, vulnerability) => {
+          setSelectedId(null);
+          setEditingVulnerability({
+            riskId: risk.id,
+            riskLabel: `${risk.riskCode} — ${risk.title}`,
+            vulnerability,
+          });
+        }}
+        onEditThreat={(risk, threat) => {
+          setSelectedId(null);
+          setEditingThreat({
+            riskId: risk.id,
+            riskLabel: `${risk.riskCode} — ${risk.title}`,
+            threat,
+          });
+        }}
       />
+      {editingVulnerability ? (
+        <EditVulnerabilityDialog
+          key={`${editingVulnerability.vulnerability.id}:${editingVulnerability.vulnerability.updatedAt}`}
+          riskId={editingVulnerability.riskId}
+          riskLabel={editingVulnerability.riskLabel}
+          vulnerability={editingVulnerability.vulnerability}
+          onClose={() => {
+            const riskId = editingVulnerability.riskId;
+            setEditingVulnerability(null);
+            setSelectedId(riskId);
+          }}
+        />
+      ) : null}
+      {editingThreat ? (
+        <EditThreatDialog
+          key={`${editingThreat.threat.id}:${editingThreat.threat.updatedAt}`}
+          riskId={editingThreat.riskId}
+          riskLabel={editingThreat.riskLabel}
+          threat={editingThreat.threat}
+          onClose={() => {
+            const riskId = editingThreat.riskId;
+            setEditingThreat(null);
+            setSelectedId(riskId);
+          }}
+        />
+      ) : null}
       <IdentifyThreatDialog
         riskId={threatRisk?.id ?? null}
         riskLabel={

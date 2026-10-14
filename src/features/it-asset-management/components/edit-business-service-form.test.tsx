@@ -31,7 +31,12 @@ const service = {
   name: "Support",
   description: "Purpose",
   status: "active" as const,
-  owner: { id, fullName: "Former owner", inactive: true },
+  owner: {
+    id,
+    fullName: "Former owner",
+    email: "former.owner@example.test",
+    inactive: true,
+  },
   linkedAssetsCount: 3,
   createdAt: "2026-10-01T00:00:00Z",
   updatedAt: "2026-10-07T00:00:00.000Z",

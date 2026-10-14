@@ -10,6 +10,8 @@ export const assessInherentRiskSchema = z.object({
 });
 export const inherentRiskResultSchema = z.object({
   assessmentId: z.uuid(),
+  assessmentType: z.enum(["initial", "periodic_review"]),
+  methodologyVersion: z.string(),
   riskId: z.uuid(),
   riskCode: z.string(),
   title: z.string(),

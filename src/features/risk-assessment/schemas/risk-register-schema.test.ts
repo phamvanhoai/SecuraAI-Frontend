@@ -83,4 +83,41 @@ describe("risk register contracts", () => {
       }).success,
     ).toBe(true);
   });
+  it("accepts risk context history actors returned by the audit contract", () => {
+    const result = riskRegisterDetailSchema.safeParse({
+      ...item,
+      createdBy: null,
+      assessments: [],
+      threats: [],
+      contextHistory: [
+        {
+          id: "00000000-0000-4000-8000-000000000010",
+          type: "threat",
+          event: "created",
+          entityId: "00000000-0000-4000-8000-000000000011",
+          occurredAt: now,
+          actor: {
+            id: "00000000-0000-4000-8000-000000000012",
+            fullName: "Security Officer",
+            email: "securityofficer@gmail.com",
+          },
+          before: null,
+          after: { name: "Credential theft" },
+        },
+      ],
+      vulnerabilities: [],
+      controls: [],
+      treatmentPlans: [],
+      incidents: [],
+      acceptances: [],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.contextHistory).toHaveLength(1);
+      expect(result.data.contextHistory[0]?.actor?.email).toBe(
+        "securityofficer@gmail.com",
+      );
+    }
+  });
 });

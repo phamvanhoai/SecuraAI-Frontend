@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { createAssetSchema, createAssetRequestSchema } from "./create-asset-schema";
-const identity = { assetCode: " ast-002 ", name: " Server ", assetType: " server " };
+const identity = { name: " Server ", assetType: " server " };
 describe("createAssetSchema", () => {
   it("normalizes identity without assigning classification or service", () => {
     expect(createAssetSchema.parse(identity)).toEqual({
-      assetCode: "AST-002", name: "Server", assetType: "server",
+      name: "Server", assetType: "server",
       dependencyIds: [], eventSourceIds: [],
     });
+  });
+  it("rejects a caller-supplied asset code", () => {
+    expect(createAssetRequestSchema.safeParse({
+      ...identity,
+      assetCode: "AST-MANUAL",
+      dependencies: [],
+      eventSourceIds: [],
+    }).success).toBe(false);
   });
   it.each(["criticality", "dataClassification", "businessServiceId"])("rejects deferred field %s in form and request", (field) => {
     expect(createAssetSchema.safeParse({ ...identity, [field]: "medium" }).success).toBe(false);

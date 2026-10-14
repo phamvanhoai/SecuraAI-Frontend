@@ -16,10 +16,11 @@ import {
   vi,
 } from "vitest";
 import { ApiError } from "@/lib/api/api-error";
-const { query, add, link, success } = vi.hoisted(() => ({
+const { query, add, link, upload, success } = vi.hoisted(() => ({
   query: vi.fn(),
   add: vi.fn(),
   link: vi.fn(),
+  upload: vi.fn(),
   success: vi.fn(),
 }));
 vi.mock("../hooks/use-control-evidence", () => ({
@@ -27,6 +28,7 @@ vi.mock("../hooks/use-control-evidence", () => ({
   useEvidenceMutations: () => ({
     add: { mutateAsync: add, isPending: false },
     link: { mutateAsync: link, isPending: false },
+    upload: { mutateAsync: upload, isPending: false },
   }),
 }));
 vi.mock("@/components/feedback/toast", () => ({
@@ -40,6 +42,8 @@ const item = {
   source: "Authentication test",
   description: "Ten administrative accounts were tested",
   documentUrl: "https://docs.example.test/mfa",
+  evidenceType: "external_url",
+  file: null,
   status: "active",
   usable: true,
   collectedAt: "2020-01-01T00:00:00Z",
@@ -78,6 +82,21 @@ beforeEach(() => {
   });
   add.mockResolvedValue({ evidence: item, created: true });
   link.mockResolvedValue({ evidence: item, linked: true });
+  upload.mockResolvedValue({
+    evidence: {
+      ...item,
+      documentUrl: null,
+      evidenceType: "uploaded_file",
+      file: {
+        name: "mfa-report.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 18,
+        sha256: "a".repeat(64),
+        downloadUrl: `/api/v1/compliance/evidence/${id}/download`,
+      },
+    },
+    created: true,
+  });
 });
 async function completeAdd() {
   await userEvent.click(screen.getByRole("button", { name: "Add evidence" }));
@@ -99,7 +118,7 @@ describe("Control Evidence dialog", () => {
   it("explains external permission/review boundaries and linked empty state", () => {
     render(<ControlEvidenceDialog controlId={id} onClose={vi.fn()} />);
     expect(
-      screen.getByText(/does not upload, verify or grant access/),
+      screen.getByText(/stored privately and integrity-checked/),
     ).toBeVisible();
     expect(screen.getByText("No evidence linked")).toBeVisible();
     expect(query).toHaveBeenCalledWith(id, {
@@ -147,6 +166,44 @@ describe("Control Evidence dialog", () => {
     );
     expect(success).toHaveBeenCalled();
     expect(link).not.toHaveBeenCalled();
+  });
+  it("uploads one approved file with metadata without changing an assessment", async () => {
+    render(<ControlEvidenceDialog controlId={id} onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Add evidence" }));
+    await userEvent.click(screen.getByRole("radio", { name: /Upload file/ }));
+    await userEvent.type(screen.getByLabelText("Evidence name *"), item.name);
+    await userEvent.type(screen.getByLabelText("Source *"), item.source);
+    await userEvent.type(
+      screen.getByLabelText("Results, scope and supporting context *"),
+      item.description,
+    );
+    fireEvent.change(screen.getByLabelText("Collected at (UTC+7) *"), {
+      target: { value: "2020-01-01T10:20" },
+    });
+    const file = new File(["%PDF-1.7 demo file"], "mfa-report.pdf", {
+      type: "application/pdf",
+    });
+    await userEvent.upload(screen.getByLabelText("Evidence file *"), file);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Upload and link evidence" }),
+    );
+    expect(upload).toHaveBeenCalledWith({
+      controlId: id,
+      body: {
+        requestId: expect.stringMatching(/^[a-f0-9-]{36}$/),
+        name: item.name,
+        source: item.source,
+        description: item.description,
+        collectedAt: "2020-01-01T03:20:00.000Z",
+        validUntil: null,
+      },
+      file,
+    });
+    expect(add).not.toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith(
+      "Evidence file uploaded",
+      expect.stringContaining("Risk ratings are unchanged"),
+    );
   });
   it("rejects unsafe URLs and future collection before calling BE", async () => {
     render(<ControlEvidenceDialog controlId={id} onClose={vi.fn()} />);

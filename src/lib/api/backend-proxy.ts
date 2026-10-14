@@ -69,6 +69,12 @@ export async function proxyAuthenticatedRequest(
     if (contentDigest) responseHeaders.set("Content-Digest", contentDigest);
     const contentSha256 = backendResponse.headers.get("x-content-sha256");
     if (contentSha256) responseHeaders.set("X-Content-SHA256", contentSha256);
+    const contentLength = backendResponse.headers.get("content-length");
+    if (contentLength) responseHeaders.set("Content-Length", contentLength);
+    const noSniff = backendResponse.headers.get("x-content-type-options");
+    if (noSniff) responseHeaders.set("X-Content-Type-Options", noSniff);
+    const cacheControl = backendResponse.headers.get("cache-control");
+    if (cacheControl) responseHeaders.set("Cache-Control", cacheControl);
     const response = new NextResponse(backendResponse.body, {
       status: backendResponse.status,
       headers: responseHeaders,

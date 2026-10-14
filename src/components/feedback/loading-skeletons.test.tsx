@@ -15,7 +15,7 @@ describe.each([
     const view = render(<LoadingSkeleton />);
 
     expect(
-      within(view.container).getByRole("status", { name: "Đang tải nội dung" }),
+      within(view.container).getAllByRole("status", { name: "Đang tải nội dung" })[0],
     ).toHaveAttribute("aria-busy", "true");
 
     view.unmount();

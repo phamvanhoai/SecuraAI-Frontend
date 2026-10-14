@@ -14,7 +14,6 @@ import {
   Shield,
   Trash2,
   User,
-  X,
   XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";

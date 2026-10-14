@@ -36,7 +36,12 @@ const data = {
       id,
       name: "Customer Support",
       status: "inactive",
-      owner: { fullName: "Service Owner", inactive: true },
+      owner: {
+        id,
+        fullName: "Service Owner",
+        email: "service.owner@example.test",
+        inactive: true,
+      },
       linkedAssetsCount: 4,
     },
   ],

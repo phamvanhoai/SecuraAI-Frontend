@@ -1,10 +1,17 @@
 "use client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/api-error";
 import {
   addControlEvidence,
   linkControlEvidence,
+  unlinkControlEvidence,
   listControlEvidence,
+  uploadControlEvidence,
 } from "../api/control-evidence";
 import type { ControlEvidenceQuery } from "../schemas/control-evidence-schema";
 export function useControlEvidence(
@@ -15,7 +22,10 @@ export function useControlEvidence(
     queryKey: ["compliance", "control-evidence", controlId, query],
     queryFn: ({ signal }) => listControlEvidence(controlId, query, signal),
     retry: false,
-    staleTime: 0,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 export function useEvidenceMutations() {
@@ -47,5 +57,17 @@ export function useEvidenceMutations() {
     onSuccess: refresh,
     onError,
   });
-  return { add, link };
+  const upload = useMutation({
+    mutationFn: uploadControlEvidence,
+    retry: false,
+    onSuccess: refresh,
+    onError,
+  });
+  const unlink = useMutation({
+    mutationFn: unlinkControlEvidence,
+    retry: false,
+    onSuccess: refresh,
+    onError,
+  });
+  return { add, link, unlink, upload };
 }
