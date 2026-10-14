@@ -26,7 +26,6 @@ async function setup(
             fullName: "History Reviewer",
             status: "active",
             mustChangePassword: false,
-            mfaEnabled: false,
             roles: [{ code: role, name: role }],
             permissions: permission ? ["login-history.read", "users.read"] : [],
           },

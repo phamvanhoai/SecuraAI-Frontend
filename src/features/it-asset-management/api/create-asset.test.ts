@@ -10,15 +10,13 @@ describe("createAsset", () => {
       assetCode: "AST-002",
       name: "Server",
       assetType: "server",
-      criticality: "medium",
+      criticality: null,
       status: "active",
       location: null,
       department: null,
       owner: null,
       updatedAt: "2026-09-10T00:00:00.000Z",
       description: null,
-      hostname: null,
-      ipAddress: null,
       createdAt: "2026-09-10T00:00:00.000Z",
     };
     const fetchMock = vi.fn().mockResolvedValue(
@@ -30,12 +28,10 @@ describe("createAsset", () => {
 
     await expect(
       createAsset({
-        assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        description: undefined,
-        hostname: undefined,
-        location: undefined,
+        dependencies: [],
+        eventSourceIds: [],
       }),
     ).resolves.toEqual(created);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -43,9 +39,10 @@ describe("createAsset", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          assetCode: "AST-002",
           name: "Server",
           assetType: "server",
+          dependencies: [],
+          eventSourceIds: [],
         }),
       }),
     );
@@ -59,8 +56,8 @@ describe("createAsset", () => {
           JSON.stringify({
             success: false,
             error: {
-              code: "ASSET_CODE_EXISTS",
-              message: "Asset code already exists",
+              code: "INVALID_ASSET_OWNER",
+              message: "Selected asset owner is unavailable",
             },
           }),
           { status: 409 },
@@ -69,17 +66,15 @@ describe("createAsset", () => {
     );
     await expect(
       createAsset({
-        assetCode: "AST-002",
         name: "Server",
         assetType: "server",
-        description: undefined,
-        hostname: undefined,
-        location: undefined,
+        dependencies: [],
+        eventSourceIds: [],
       }),
     ).rejects.toMatchObject({
       status: 409,
       code: "CONFLICT",
-      message: "Asset code already exists",
+      message: "Selected asset owner is unavailable",
     });
   });
 });

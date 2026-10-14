@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ApiError } from "@/lib/api/api-error";
 import {
   confirmPasswordReset,
   requestPasswordReset,
@@ -21,6 +22,17 @@ import {
 } from "../schemas/password-reset-schema";
 
 type Step = "email" | "otp" | "password" | "success";
+
+function passwordResetError(error: unknown, fallback: string): string {
+  if (!(error instanceof ApiError)) return fallback;
+  if (error.status === 429)
+    return "Too many attempts. Wait a few minutes before trying again.";
+  if (error.status === 503)
+    return "The password reset service is temporarily unavailable. Please try again later.";
+  if (error.status === 400)
+    return "The reset code is invalid, expired, or already used. Request a new code and try again.";
+  return error.message;
+}
 
 export function RecoveryCard({ step }: { step: Step }) {
   const router = useRouter();
@@ -66,9 +78,7 @@ export function RecoveryCard({ step }: { step: Step }) {
       router.push(`/otp?email=${encodeURIComponent(values.email)}`);
     } catch (error: unknown) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to request a password reset.",
+        passwordResetError(error, "Unable to request a password reset."),
       );
     } finally {
       setPending(false);
@@ -94,11 +104,7 @@ export function RecoveryCard({ step }: { step: Step }) {
       await confirmPasswordReset(values);
       router.push("/reset-password-success");
     } catch (error: unknown) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to reset the password.",
-      );
+      setMessage(passwordResetError(error, "Unable to reset the password."));
     } finally {
       setPending(false);
     }
@@ -184,12 +190,19 @@ function EmailForm({
         Email
         <Input
           className="mt-2"
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "recovery-email-error" : undefined}
           type="email"
           autoComplete="email"
+          inputMode="email"
           {...register("email")}
         />
         {errors.email ? (
-          <span className="text-danger mt-1 block text-sm">
+          <span
+            id="recovery-email-error"
+            className="text-danger mt-1 block text-sm"
+            role="alert"
+          >
             {errors.email.message}
           </span>
         ) : null}
@@ -229,6 +242,18 @@ function OtpForm({
       inputRefs.current[index - 1]?.focus();
   }
 
+  function handlePaste(event: React.ClipboardEvent<HTMLInputElement>): void {
+    const digits = event.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+    if (!digits) return;
+    event.preventDefault();
+    const next = Array.from({ length: 6 }, (_, index) => digits[index] ?? "");
+    setOtp(next);
+    inputRefs.current[Math.min(digits.length, 6) - 1]?.focus();
+  }
+
   return (
     <form className="mx-auto mt-8 max-w-xl" onSubmit={onSubmit}>
       <div className="grid grid-cols-6 gap-3">
@@ -241,10 +266,12 @@ function OtpForm({
             aria-label={`OTP digit ${index + 1}`}
             className="border-border focus:border-brand focus:ring-brand/15 h-14 min-w-0 rounded-lg border px-1 text-center text-xl outline-none focus:ring-3"
             inputMode="numeric"
+            autoComplete={index === 0 ? "one-time-code" : "off"}
             maxLength={1}
             value={value.trim()}
             onChange={(event) => updateDigit(index, event.target.value)}
             onKeyDown={(event) => handleKeyDown(index, event)}
+            onPaste={handlePaste}
           />
         ))}
       </div>
@@ -284,6 +311,11 @@ function PasswordForm({
       onSubmit={handleSubmit(onSubmit)}
     >
       <input type="hidden" {...register("token")} />
+      {errors.token ? (
+        <Alert className="border-danger/25 bg-danger-soft text-danger">
+          {errors.token.message} Request a new code to continue.
+        </Alert>
+      ) : null}
       <div>
         <label className="block text-sm font-medium" htmlFor="new-password">
           New password
@@ -294,6 +326,8 @@ function PasswordForm({
             className="pr-12"
             type={showPassword ? "text" : "password"}
             autoComplete="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
             aria-invalid={Boolean(errors.newPassword)}
             aria-describedby={
               errors.newPassword ? "new-password-error" : "new-password-help"
@@ -344,6 +378,8 @@ function PasswordForm({
             className="pr-12"
             type={showConfirmation ? "text" : "password"}
             autoComplete="off"
+            data-1p-ignore="true"
+            data-lpignore="true"
             aria-invalid={Boolean(errors.confirmPassword)}
             aria-describedby={
               errors.confirmPassword ? "confirm-password-error" : undefined

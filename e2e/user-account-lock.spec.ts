@@ -27,7 +27,6 @@ async function setup(
             fullName: "Preview Administrator",
             status: "active",
             mustChangePassword: false,
-            mfaEnabled: false,
             roles: [{ code: options.role ?? "ADMIN", name: "Administrator" }],
             permissions: options.permissions ?? [
               "users.read",

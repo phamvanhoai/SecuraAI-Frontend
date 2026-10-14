@@ -1,8 +1,18 @@
 import { z } from "zod";
 
-export const requestPasswordResetSchema = z.object({
-  email: z.email("Enter a valid email address."),
-});
+export const requestPasswordResetSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(
+        z
+          .email("Enter a valid email address.")
+          .max(255, "Email must not exceed 255 characters."),
+      ),
+  })
+  .strict();
 
 export const confirmPasswordResetSchema = z
   .object({
@@ -19,6 +29,7 @@ export const confirmPasswordResetSchema = z
       ),
     confirmPassword: z.string().min(1, "Confirm your new password."),
   })
+  .strict()
   .refine((value) => value.newPassword === value.confirmPassword, {
     path: ["confirmPassword"],
     message: "Passwords do not match.",

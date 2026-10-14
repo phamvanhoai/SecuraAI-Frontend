@@ -21,7 +21,7 @@ const explanationState = vi.hoisted(() => ({
 vi.mock("../hooks/use-ai-alerts", () => ({
   useAiAlertExplanation: () => explanationState.current,
 }));
-import { AiAlertDetailDialog } from "./ai-alert-detail-dialog";
+import { AiAlertDetailDialog, statusTone } from "./ai-alert-detail-dialog";
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -53,6 +53,17 @@ const alert = {
   createdAt: "2026-09-11T03:00:01.000Z",
 };
 
+describe("statusTone", () => {
+  it("uses workflow colors instead of risk severity colors", () => {
+    expect(statusTone("new")).toBe("info");
+    expect(statusTone("reviewing")).toBe("warning");
+    expect(statusTone("confirmed")).toBe("success");
+    expect(statusTone("resolved")).toBe("success");
+    expect(statusTone("false_positive")).toBe("neutral");
+    expect(statusTone("dismissed")).toBe("neutral");
+  });
+});
+
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
     configurable: true,
@@ -80,7 +91,14 @@ describe("AiAlertDetailDialog", () => {
   it("shows the stored explanation and influencing factors", () => {
     explanationState.current.data = {
       explanationText: "Five failed sign-ins exceeded the baseline.",
-      featureContributions: { failedSignIns: 5 },
+      featureContributions: [
+        {
+          featureName: "failedSignIns",
+          featureValue: "5",
+          contributionScore: 0.4,
+          rank: 1,
+        },
+      ],
       baselineData: { normalFailedSignIns: 1 },
     };
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
@@ -88,8 +106,11 @@ describe("AiAlertDetailDialog", () => {
     expect(
       screen.getByText("Five failed sign-ins exceeded the baseline."),
     ).toBeInTheDocument();
-    expect(screen.getByText(/"failedSignIns": 5/)).toBeInTheDocument();
-    expect(screen.getByText(/"normalFailedSignIns": 1/)).toBeInTheDocument();
+    expect(screen.getByText("Failed Sign Ins")).toBeInTheDocument();
+    expect(screen.getByText("Influence rank 1")).toBeInTheDocument();
+    expect(screen.getByText("+0.4")).toBeInTheDocument();
+    expect(screen.getByText("Raises score")).toBeInTheDocument();
+    expect(screen.getByText("Normal Failed Sign Ins")).toBeInTheDocument();
   });
 
   it("explains when no stored explanation exists", () => {

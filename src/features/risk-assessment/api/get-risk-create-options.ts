@@ -5,28 +5,15 @@ import {
   type RiskCreateOptions,
 } from "../schemas/create-risk-assessment-schema";
 export async function getRiskCreateOptions(
-  query: {
-    type: "assets" | "businessProcesses" | "threats" | "vulnerabilities";
-    q?: string;
-    page: number;
-    limit: number;
-  },
   signal?: AbortSignal,
+  q = "",
 ): Promise<RiskCreateOptions> {
-  const params = new URLSearchParams({
-    type: query.type,
-    page: String(query.page),
-    limit: String(query.limit),
+  const query = new URLSearchParams({ q: q.trim().slice(0, 100), limit: "10" });
+  const data = await apiRequest<unknown>(`/api/risks/create-options?${query}`, {
+    method: "GET",
+    target: "same-origin",
+    ...(signal ? { signal } : {}),
   });
-  if (query.q) params.set("q", query.q);
-  const data = await apiRequest<unknown>(
-    `/api/risks/create-options?${params}`,
-    {
-      method: "GET",
-      target: "same-origin",
-      ...(signal ? { signal } : {}),
-    },
-  );
   const parsed = riskCreateOptionsSchema.safeParse(data);
   if (!parsed.success)
     throw new ApiError(

@@ -21,6 +21,11 @@ vi.mock("../hooks/use-ai-alerts", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => ({
+    data: { fullName: "Security Analyst", email: "analyst@secura.test" },
+  }),
+}));
 
 const alert = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -30,7 +35,7 @@ const alert = {
   riskLevel: null,
   title: "Unusual authentication activity",
   description: "Multiple failed sign-ins were detected.",
-  status: "new" as const,
+  status: "reviewing" as const,
   detectedAt: "2026-09-11T03:00:00.000Z",
   asset: null,
   logSource: {
@@ -82,13 +87,14 @@ describe("MarkFalsePositiveDialog", () => {
     expect(
       screen.getByText(/does not retrain the AI model/i),
     ).toBeInTheDocument();
+    expect(screen.getByText("Automatically on submit")).toBeInTheDocument();
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
     await user.type(
-      screen.getByLabelText("Reason (optional)"),
+      screen.getByLabelText("Feedback reason (optional)"),
       "  Expected scanner traffic  ",
     );
     await user.click(
-      screen.getByRole("button", { name: "Mark false positive" }),
+      screen.getByRole("button", { name: "Dismiss as false positive" }),
     );
     await waitFor(() =>
       expect(mocks.mutateAsync).toHaveBeenCalledWith({
@@ -110,7 +116,7 @@ describe("MarkFalsePositiveDialog", () => {
     render(<MarkFalsePositiveDialog alert={alert} onClose={onClose} />);
     await userEvent
       .setup()
-      .click(screen.getByRole("button", { name: "Mark false positive" }));
+      .click(screen.getByRole("button", { name: "Dismiss as false positive" }));
     expect(
       await screen.findByText(
         "Alert cannot be marked false positive in its current status",

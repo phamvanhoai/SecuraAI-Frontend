@@ -1,7 +1,6 @@
 "use client";
 
-import { Mail, ShieldCheck, UserRound } from "lucide-react";
-import Link from "next/link";
+import { Mail, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   ProductPageHeader,
@@ -30,15 +29,6 @@ export default function ProfilePage() {
         title="Hồ sơ cá nhân"
         description="Xem thông tin của tài khoản đang đăng nhập."
         showSampleNotice={false}
-        additionalActions={
-          <Link
-            href="/authenticator-mfa"
-            className="bg-brand text-brand-contrast hover:bg-brand-strong focus-visible:outline-brand inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
-          >
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            Authenticator MFA
-          </Link>
-        }
       />
       <div className="grid gap-5 xl:grid-cols-[19rem_minmax(0,1fr)]">
         <ProductPanel title="Thông tin tài khoản">
