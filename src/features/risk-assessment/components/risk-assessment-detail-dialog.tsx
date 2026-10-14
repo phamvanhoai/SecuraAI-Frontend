@@ -19,6 +19,7 @@ import { useSessionUser } from "@/features/authentication-account";
 import {
   DecideRiskAcceptanceDialog,
   SubmitRiskAcceptanceDialog,
+  OpenRiskReviewDialog,
 } from "./risk-acceptance-dialogs";
 
 const format = (value: string | null) =>
@@ -53,6 +54,7 @@ export function RiskAssessmentDetailDialog({
   const detail = useRiskRecord(id);
   const session = useSessionUser();
   const [accepting, setAccepting] = useState(false);
+  const [openingReview, setOpeningReview] = useState(false);
   const [decidingAcceptance, setDecidingAcceptance] = useState<string | null>(
     null,
   );
@@ -103,17 +105,19 @@ export function RiskAssessmentDetailDialog({
     risk?.treatmentPlans.filter((plan) =>
       ["draft", "active", "completed"].includes(plan.status),
     ) ?? [];
-  const acceptanceBlocked = terminalRisk
-    ? "Closed or archived risks cannot submit acceptance."
-    : risk?.status === "accepted"
-      ? "This risk is accepted. Review is required before a new acceptance request."
-      : risk?.vulnerabilityWorkflow?.assessmentReviewRequired
-        ? "New vulnerabilities require an up-to-date inherent and residual assessment before submitting acceptance."
-        : !risk?.latestAssessment?.residualRating
-          ? "Assess residual risk before submitting acceptance."
-          : !eligiblePlans.length
-            ? "Create an eligible treatment plan before submitting acceptance."
-            : null;
+  const acceptanceBlocked =
+    risk?.acceptanceWorkflow?.blockedReason ??
+    (terminalRisk
+      ? "Closed or archived risks cannot submit acceptance."
+      : risk?.status === "accepted"
+        ? "This risk is accepted. Review is required before a new acceptance request."
+        : risk?.vulnerabilityWorkflow?.assessmentReviewRequired
+          ? "New vulnerabilities require an up-to-date inherent and residual assessment before submitting acceptance."
+          : !risk?.latestAssessment?.residualRating
+            ? "Assess residual risk before submitting acceptance."
+            : !eligiblePlans.length
+              ? "Create an eligible treatment plan before submitting acceptance."
+              : null);
   const userLabel = (userId: string | null) => {
     if (!userId) return "Not recorded";
     const known = [
@@ -487,26 +491,35 @@ export function RiskAssessmentDetailDialog({
                   className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
                 >
                   <div>
-                    <strong className="capitalize">{item.decision}</strong>
+                    <strong className="capitalize">
+                      {item.decision}
+                      {item.expired ? " — Expired" : ""}
+                      {item.historical ? " — Historical" : ""}
+                    </strong>
                     <p className="text-muted text-sm">
                       Requested {format(item.requestedAt)} · valid until{" "}
                       {format(item.validUntil)}
                     </p>
                     <p className="text-sm break-words whitespace-pre-wrap">
-                      Recorded reason: {item.reason ?? "Not recorded"}
+                      Request justification:{" "}
+                      {item.requestReason ??
+                        (item.decision === "pending"
+                          ? item.reason
+                          : "Not separately recorded for this historical request")}
                     </p>
+                    {item.decision !== "pending" ? (
+                      <p className="text-sm break-words whitespace-pre-wrap">
+                        Decision rationale:{" "}
+                        {item.decisionReason ?? item.reason ?? "Not recorded"}
+                      </p>
+                    ) : null}
                     <p className="text-muted text-xs break-words">
                       Requested by: {userLabel(item.requestedBy)} · Decided by:{" "}
                       {userLabel(item.decidedBy)} · Decided at:{" "}
                       {format(item.decidedAt)}
                     </p>
                   </div>
-                  {item.decision === "pending" &&
-                  item.requestedBy !== session.data?.id &&
-                  !terminalRisk &&
-                  session.data?.roles.some((role) =>
-                    ["SECURITY_OFFICER", "EXECUTIVE"].includes(role.code),
-                  ) ? (
+                  {item.canDecide ? (
                     <Button onClick={() => setDecidingAcceptance(item.id)}>
                       <ClipboardCheck aria-hidden="true" className="size-4" />
                       Review decision
@@ -515,6 +528,20 @@ export function RiskAssessmentDetailDialog({
                 </div>
               ))}
             </div>
+            {risk.acceptanceWorkflow?.canOpenReview ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-muted text-sm">
+                  Review the same Risk when acceptance expires or circumstances
+                  change. Previous decisions remain historical.
+                </p>
+                <Button
+                  variant="secondary"
+                  onClick={() => setOpeningReview(true)}
+                >
+                  Open risk review
+                </Button>
+              </div>
+            ) : null}
             {isOwner &&
             !risk.acceptances.some((item) => item.decision === "pending") ? (
               <div>
@@ -524,7 +551,10 @@ export function RiskAssessmentDetailDialog({
                 <Button
                   className="mt-3"
                   onClick={() => setAccepting(true)}
-                  disabled={Boolean(acceptanceBlocked)}
+                  disabled={
+                    Boolean(acceptanceBlocked) ||
+                    !risk.acceptanceWorkflow?.canSubmit
+                  }
                 >
                   <Send aria-hidden="true" className="size-4" />
                   Review and submit acceptance
@@ -724,7 +754,21 @@ export function RiskAssessmentDetailDialog({
       {decidingAcceptance ? (
         <DecideRiskAcceptanceDialog
           acceptanceId={decidingAcceptance}
+          expired={
+            risk?.acceptances.find((item) => item.id === decidingAcceptance)
+              ?.expired ?? false
+          }
+          approvalBlockedReason={
+            risk?.acceptances.find((item) => item.id === decidingAcceptance)
+              ?.approvalBlockedReason ?? null
+          }
           onClose={() => setDecidingAcceptance(null)}
+        />
+      ) : null}
+      {openingReview && risk ? (
+        <OpenRiskReviewDialog
+          risk={risk}
+          onClose={() => setOpeningReview(false)}
         />
       ) : null}
     </Dialog>

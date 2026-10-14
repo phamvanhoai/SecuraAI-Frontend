@@ -13,7 +13,7 @@ for (const width of [375, 1440]) {
       latestAssessment: null, assets: [], activeTreatmentPlan: null, linkedCounts: { controls: 0, treatmentPlans: 1, incidents: 0 },
       createdBy: owner, assessments: [], controls: [], incidents: [], threats: [], vulnerabilities: [], acceptances: [],
       vulnerabilityWorkflow: { canIdentify: false, blockedReason: "Security Officer role required.", assessmentReviewRequired: true },
-      treatmentPlans: [{ id: ownerId, title: "Completed security plan", strategy: "mitigate", status: "completed", owner, targetCompletionDate: "2026-10-11T00:00:00Z", actionCount: 0, progress: 0, updatedAt: "2026-10-02T00:00:00Z", actions: [] }],
+      treatmentPlans: [{ id: ownerId, riskId: id, title: "Completed security plan", strategy: "mitigate", status: "completed", owner, targetCompletionDate: "2026-10-11T00:00:00Z", actionCount: 0, progress: 0, updatedAt: "2026-10-02T00:00:00Z", actions: [] }],
     };
     await page.route("**/api/auth/session", (route) => route.fulfill({ json: { success: true, data: { user: { id: ownerId, email: "owner@example.test", fullName: "Risk Owner", status: "active", mustChangePassword: false, roles: [{ code: "EMPLOYEE", name: "Employee" }], permissions: ["risks.read"] } } } }));
     await page.route("**/api/risks?*", (route) => route.fulfill({ json: { success: true, data: { items: [risk], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } } }));
