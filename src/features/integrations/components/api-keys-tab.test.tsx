@@ -149,13 +149,9 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("Staging Test Key")).toBeInTheDocument();
       expect(screen.getByText("Old Firewall Key")).toBeInTheDocument();
 
-      expect(screen.getByText("sec_a1b2...9z0...****")).toBeInTheDocument();
-      expect(screen.getByText("sec_c3d4...8y1...****")).toBeInTheDocument();
-      expect(screen.getByText("sec_e5f6...7x2...****")).toBeInTheDocument();
-
-      // Verify scopes
-      expect(screen.getAllByText("events:ingest").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByText("audit:read")).toBeInTheDocument();
+      // Verify hidden columns are not in table
+      expect(screen.queryByText("Key Fingerprint")).not.toBeInTheDocument();
+      expect(screen.queryByText("Assigned Scopes")).not.toBeInTheDocument();
 
       // Verify creator
       expect(screen.getByText("Security Administrator")).toBeInTheDocument();
@@ -164,6 +160,14 @@ describe("ApiKeysTab", () => {
       expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Inactive").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Expired").length).toBeGreaterThanOrEqual(1);
+
+      // Verify action icon buttons exist with aria-labels
+      expect(
+        screen.getByRole("button", { name: "View API key details for Production Ingestion Key" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Rotate API key Production Ingestion Key" }),
+      ).toBeInTheDocument();
     });
   });
 
