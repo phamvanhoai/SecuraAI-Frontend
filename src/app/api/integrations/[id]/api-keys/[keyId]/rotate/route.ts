@@ -5,12 +5,13 @@ export async function POST(
   context: { params: Promise<{ id: string; keyId: string }> },
 ): Promise<Response> {
   const { id, keyId } = await context.params;
-  return proxyAuthenticatedRequest(
-    `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}/rotate`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: await request.text(),
-    },
-  );
+  const targetPath =
+    id === "all" || !id
+      ? `/integrations/api-keys/${encodeURIComponent(keyId)}/rotate`
+      : `/integrations/${encodeURIComponent(id)}/api-keys/${encodeURIComponent(keyId)}/rotate`;
+  return proxyAuthenticatedRequest(targetPath, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: await request.text(),
+  });
 }
