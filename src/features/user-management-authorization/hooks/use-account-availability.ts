@@ -13,7 +13,8 @@ export function useAccountAvailability() {
     onSuccess: () => client.invalidateQueries({ queryKey: userKeys.all }),
     onError: (error) => {
       if (error instanceof ApiError) {
-        if (error.status === 401) void client.invalidateQueries({ queryKey: ["auth", "session"] });
+        if (error.status === 401)
+          void client.invalidateQueries({ queryKey: ["auth", "session"] });
         if ([404, 409, 502].includes(error.status))
           void client.invalidateQueries({ queryKey: userKeys.all });
       }

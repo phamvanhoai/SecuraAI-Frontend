@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useSessionUser } from "@/features/authentication-account";
 import { useConfirmAiAlertAsIncident } from "../hooks/use-ai-alerts";
 import {
   confirmAiAlertSchema,
@@ -16,6 +17,7 @@ import {
   type ConfirmAiAlertInput,
   type ConfirmAiAlertRequest,
 } from "../schemas/ai-alert-schema";
+import { FeedbackRecordContext } from "./feedback-record-context";
 
 export function ConfirmAlertIncidentDialog({
   alert,
@@ -27,6 +29,7 @@ export function ConfirmAlertIncidentDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string>();
   const mutation = useConfirmAiAlertAsIncident(alert?.id ?? null);
+  const session = useSessionUser();
   const toast = useToast();
   const {
     register,
@@ -61,10 +64,12 @@ export function ConfirmAlertIncidentDialog({
       const result = await mutation.mutateAsync(values);
       resetAndClose();
       toast.success(
-        result.incident.created
-          ? "Incident draft created"
-          : "Linked incident already exists",
-        `${result.incident.code} is linked to ${alert.alertCode}.`,
+        result.finding.created
+          ? "True positive confirmed"
+          : "Alert already confirmed",
+        result.finding.created
+          ? `A security finding was created for ${alert.alertCode}. You can create an incident from Incident Management.`
+          : `The security finding for ${alert.alertCode} already exists.`,
       );
     } catch (error: unknown) {
       setMessage(
@@ -80,7 +85,7 @@ export function ConfirmAlertIncidentDialog({
       className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
-      title="Confirm alert as incident"
+      title="Confirm alert as true positive"
     >
       {alert ? (
         <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
@@ -89,17 +94,19 @@ export function ConfirmAlertIncidentDialog({
             <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
           </div>
           <p className="text-muted text-sm leading-6">
-            This confirms the alert, records your review, and automatically
-            creates a linked incident draft for investigation.
+            This records the alert as a true positive, completes your triage,
+            and creates a security finding. Creating an incident is a separate
+            action in Incident Management.
           </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {message}
             </Alert>
           ) : null}
+          <FeedbackRecordContext alert={alert} analyst={session.data} />
           <FormField
             id="confirm-incident-comment"
-            label="Review comment (optional)"
+            label="Feedback reason (optional)"
             error={errors.comment?.message}
           >
             <Textarea
@@ -129,7 +136,7 @@ export function ConfirmAlertIncidentDialog({
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Confirming…" : "Confirm incident"}
+              {mutation.isPending ? "Confirming…" : "Confirm true positive"}
             </Button>
           </div>
         </form>

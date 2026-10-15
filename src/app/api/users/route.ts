@@ -9,11 +9,11 @@ import { requestTokenPair } from "@/lib/auth/backend-auth";
 import { env } from "@/lib/env";
 
 export async function GET(request: Request): Promise<Response> {
-  return forwardUsersRequest(request, "admin/users", { method: "GET" });
+  return forwardUsersRequest(request, "users", { method: "GET" });
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return forwardUsersRequest(request, "admin/users", {
+  return forwardUsersRequest(request, "users", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: await request.text(),

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   usePolicyDrafts: vi.fn(),
   usePolicyDraft: vi.fn(),
   useSubmitPolicyForReview: vi.fn(),
+  useRejectedPolicies: vi.fn(),
   submitPolicyForReview: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
@@ -24,6 +25,9 @@ vi.mock("../hooks/use-policy-drafts", () => ({
   usePolicyDrafts: mocks.usePolicyDrafts,
   usePolicyDraft: mocks.usePolicyDraft,
   useSubmitPolicyForReview: mocks.useSubmitPolicyForReview,
+}));
+vi.mock("../hooks/use-policy-publication", () => ({
+  useRejectedPolicies: mocks.useRejectedPolicies,
 }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.toastSuccess, error: mocks.toastError }),
@@ -82,6 +86,33 @@ describe("PolicyDraftsManager", () => {
       isError: false,
       refetch: vi.fn(),
     });
+    mocks.useRejectedPolicies.mockReturnValue({
+      data: {
+        items: [
+          {
+            policyId: "00000000-0000-4000-8000-000000000030",
+            policyCode: "POL-SEC-REJECTED",
+            title: "Rejected security policy",
+            version: {
+              id: "00000000-0000-4000-8000-000000000040",
+              versionNumber: "1.0",
+              status: "rejected",
+            },
+            rejection: {
+              reason: "Clarify the incident response responsibilities.",
+              rejectedByUserId: "00000000-0000-4000-8000-000000000050",
+              rejectedByName: "Admin Reviewer",
+              rejectedAt: "2026-09-27T00:00:00.000Z",
+            },
+            updatedAt: "2026-09-27T00:00:00.000Z",
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+      isPending: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
   });
 
   it("renders backend drafts and available actions for an authorized user", () => {
@@ -104,6 +135,31 @@ describe("PolicyDraftsManager", () => {
     expect(
       screen.getByRole("button", { name: "Create draft" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Drafts/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("shows rejected policies owned by the Security Officer in a tab", async () => {
+    const user = userEvent.setup();
+    mocks.useSessionUser.mockReturnValue({
+      data: { permissions: ["policies.create"] },
+      isPending: false,
+    });
+
+    render(<PolicyDraftsManager />);
+
+    await user.click(screen.getByRole("tab", { name: /Rejected/ }));
+
+    expect(screen.getByText("POL-SEC-REJECTED")).toBeInTheDocument();
+    expect(
+      screen.getByText("Clarify the incident response responsibilities."),
+    ).toBeInTheDocument();
+    expect(mocks.useRejectedPolicies).toHaveBeenCalledWith(
+      { page: 1, limit: 20, sortOrder: "desc" },
+      true,
+    );
   });
 
   it("opens the new-version workflow for a user with update permission", async () => {

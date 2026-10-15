@@ -78,4 +78,28 @@ describe("DropdownMenu", () => {
     expect(trigger).toHaveFocus();
     expect(menu).not.toHaveAttribute("open");
   });
+
+  it("keeps only one action menu open at a time", async () => {
+    const { container } = render(
+      <div>
+        <DropdownMenu label="First actions">
+          <button type="button">Edit first</button>
+        </DropdownMenu>
+        <DropdownMenu label="Second actions">
+          <button type="button">Edit second</button>
+        </DropdownMenu>
+      </div>,
+    );
+    const menus = container.querySelectorAll("details");
+
+    fireEvent.click(screen.getByRole("button", { name: "First actions" }));
+    expect(await screen.findByRole("button", { name: "Edit first" })).toBeInTheDocument();
+    expect(menus[0]).toHaveAttribute("open");
+
+    fireEvent.click(screen.getByRole("button", { name: "Second actions" }));
+    expect(await screen.findByRole("button", { name: "Edit second" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit first" })).not.toBeInTheDocument();
+    expect(menus[0]).not.toHaveAttribute("open");
+    expect(menus[1]).toHaveAttribute("open");
+  });
 });

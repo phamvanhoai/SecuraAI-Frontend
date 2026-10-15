@@ -129,19 +129,19 @@ export function SecurityDashboardView() {
   const metricsData = [
     {
       label: "Total IT Assets",
-      value: securityIndicators.totalAssets.toLocaleString(),
+      value: securityIndicators.totalAssets.toLocaleString("en-US"),
       detail: `${securityIndicators.criticalAssets} critical / high priority`,
       tone: "brand" as const,
     },
     {
       label: "Open Risks",
-      value: riskMetrics.openRisks.toLocaleString(),
+      value: riskMetrics.openRisks.toLocaleString("en-US"),
       detail: `${riskMetrics.criticalRisks} critical risk items`,
       tone: riskMetrics.criticalRisks > 0 ? ("danger" as const) : ("neutral" as const),
     },
     {
       label: "Active Incidents",
-      value: incidentStatistics.openIncidents.toLocaleString(),
+      value: incidentStatistics.openIncidents.toLocaleString("en-US"),
       detail: `${incidentStatistics.criticalIncidents} critical incidents`,
       tone:
         incidentStatistics.criticalIncidents > 0
@@ -152,13 +152,13 @@ export function SecurityDashboardView() {
     },
     {
       label: "24h AI Alerts",
-      value: aiAlertMetrics.totalAlerts24h.toLocaleString(),
+      value: aiAlertMetrics.totalAlerts24h.toLocaleString("en-US"),
       detail: `${aiAlertMetrics.confirmedIncidents24h} confirmed incidents`,
       tone: "brand" as const,
     },
     {
       label: "Security Controls",
-      value: securityIndicators.totalSecurityControls.toLocaleString(),
+      value: securityIndicators.totalSecurityControls.toLocaleString("en-US"),
       detail: `${securityIndicators.activeEventSources} active log sources`,
       tone: "neutral" as const,
     },
@@ -377,7 +377,7 @@ export function SecurityDashboardView() {
                   24h Ingested Events:
                 </span>
                 <strong className="text-foreground font-semibold">
-                  {aiAlertMetrics.totalEvents24h.toLocaleString()}
+                  {aiAlertMetrics.totalEvents24h.toLocaleString("en-US")}
                 </strong>
               </div>
               <div className="flex items-center justify-between text-[11px]">

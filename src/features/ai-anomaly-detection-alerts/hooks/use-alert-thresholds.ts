@@ -23,17 +23,17 @@ export function useDetectionThreshold(enabled: boolean) {
   });
 }
 
-export function useAlertThresholds(page: number, enabled: boolean) {
+export function useAlertThresholds(page: number, q: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["ai-alerts", "asset-thresholds", page],
-    queryFn: ({ signal }) => listAlertThresholds(page, signal),
+    queryKey: ["ai-alerts", "asset-thresholds", page, q],
+    queryFn: ({ signal }) => listAlertThresholds(page, q || undefined, signal),
     enabled,
   });
 }
-export function useAlertThresholdAssetOptions(enabled: boolean) {
+export function useAlertThresholdAssetOptions(q: string, enabled: boolean) {
   return useQuery({
-    queryKey: ["ai-alerts", "asset-threshold-options"],
-    queryFn: ({ signal }) => listAlertThresholdAssetOptions(signal),
+    queryKey: ["ai-alerts", "asset-threshold-options", q],
+    queryFn: ({ signal }) => listAlertThresholdAssetOptions(q || undefined, signal),
     enabled,
   });
 }

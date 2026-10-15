@@ -1,12 +1,27 @@
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  approvedPolicySchema,
   policyReviewDetailSchema,
+  policyRevisionRequestSchema,
+  rejectedPolicySchema,
+  rejectedPolicyListSchema,
+  reviewedPolicySchema,
+  publishedPolicyVersionSchema,
   publishablePolicyListSchema,
-  publishedPolicySchema,
+  type ApprovedPolicy,
   type PolicyReviewDetail,
+  type PolicyRevisionRequest,
   type PublishablePolicyList,
   type PublishablePolicyQuery,
-  type PublishedPolicy,
+  type RejectedPolicy,
+  type RejectedPolicyList,
+  type RejectedPolicyQuery,
+  type ReviewedPolicy,
+  type PublishedPolicyVersion,
+} from "../schemas/policy-publication-schema";
+import type {
+  RejectPolicyInput,
+  RequestPolicyRevisionInput,
 } from "../schemas/policy-publication-schema";
 
 export async function listPublishablePolicies(
@@ -32,18 +47,74 @@ export async function getPolicyReview(
   return policyReviewDetailSchema.parse(data);
 }
 
-export async function publishPolicyVersion(input: {
+export async function approvePolicyForPublication(input: {
   policyId: string;
   versionId: string;
-  effectiveDate?: string;
-}): Promise<PublishedPolicy> {
+}): Promise<ApprovedPolicy> {
   const data = await apiRequest<unknown>(
-    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/publish`,
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/approve`,
     {
       target: "same-origin",
       method: "POST",
-      body: input.effectiveDate ? { effectiveDate: input.effectiveDate } : {},
     },
   );
-  return publishedPolicySchema.parse(data);
+  return approvedPolicySchema.parse(data);
+}
+
+export async function requestPolicyRevision(input: {
+  policyId: string;
+  versionId: string;
+  body: RequestPolicyRevisionInput;
+}): Promise<PolicyRevisionRequest> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/revision-requests`,
+    { target: "same-origin", method: "POST", body: input.body },
+  );
+  return policyRevisionRequestSchema.parse(data);
+}
+
+export async function reviewPolicy(input: {
+  policyId: string;
+  versionId: string;
+}): Promise<ReviewedPolicy> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/review`,
+    { target: "same-origin", method: "POST" },
+  );
+  return reviewedPolicySchema.parse(data);
+}
+
+export async function publishPolicyVersion(input: {
+  policyId: string;
+  versionId: string;
+}): Promise<PublishedPolicyVersion> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/publish`,
+    { target: "same-origin", method: "POST" },
+  );
+  return publishedPolicyVersionSchema.parse(data);
+}
+
+export async function rejectPolicy(input: {
+  policyId: string;
+  versionId: string;
+  body: RejectPolicyInput;
+}): Promise<RejectedPolicy> {
+  const data = await apiRequest<unknown>(
+    `/api/compliance/policies/${encodeURIComponent(input.policyId)}/versions/${encodeURIComponent(input.versionId)}/reject`,
+    { target: "same-origin", method: "POST", body: input.body },
+  );
+  return rejectedPolicySchema.parse(data);
+}
+
+export async function listRejectedPolicies(
+  query: RejectedPolicyQuery,
+  signal?: AbortSignal,
+): Promise<RejectedPolicyList> {
+  const data = await apiRequest<unknown>("/api/compliance/policies/rejected", {
+    target: "same-origin",
+    query,
+    ...(signal ? { signal } : {}),
+  });
+  return rejectedPolicyListSchema.parse(data);
 }

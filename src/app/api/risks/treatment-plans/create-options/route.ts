@@ -1,8 +1,10 @@
-import { treatmentPlanCreateOptionsQuerySchema } from "@/features/risk-assessment";
+import { z } from "zod";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
+const querySchema = z.object({ riskId: z.uuid().optional(), q: z.string().trim().max(100).optional(), page: z.coerce.number().int().min(1).optional(), limit: z.coerce.number().int().min(1).max(100).default(10) });
+
 export async function GET(request: Request): Promise<Response> {
-  const parsed = treatmentPlanCreateOptionsQuerySchema.safeParse(
+  const parsed = querySchema.safeParse(
     Object.fromEntries(new URL(request.url).searchParams.entries()),
   );
   if (!parsed.success)

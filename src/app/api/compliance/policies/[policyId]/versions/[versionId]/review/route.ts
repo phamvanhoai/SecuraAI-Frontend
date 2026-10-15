@@ -9,3 +9,14 @@ export async function GET(
     `/compliance/policies/${encodeURIComponent(policyId)}/versions/${encodeURIComponent(versionId)}/review`,
   );
 }
+
+export async function POST(
+  _request: Request,
+  context: { params: Promise<{ policyId: string; versionId: string }> },
+): Promise<Response> {
+  const { policyId, versionId } = await context.params;
+  return proxyAuthenticatedRequest(
+    `/compliance/policies/${encodeURIComponent(policyId)}/versions/${encodeURIComponent(versionId)}/review`,
+    { method: "POST" },
+  );
+}

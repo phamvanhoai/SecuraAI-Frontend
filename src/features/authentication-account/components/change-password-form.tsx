@@ -11,6 +11,7 @@ import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { defaultPanelPath } from "@/config/navigation";
 import { ApiError } from "@/lib/api/api-error";
 import { useChangePassword } from "../hooks/use-change-password";
 import { useSessionUser } from "../hooks/use-session-user";
@@ -60,9 +61,11 @@ export function ChangePasswordForm({
       await mutation.mutateAsync(values);
       toast.success(
         "Password changed successfully",
-        "Please sign out and sign in again with your new password.",
+        "Your password has been updated.",
       );
-      router.replace("/dashboard");
+      router.replace(
+        defaultPanelPath(session.data?.roles.map((role) => role.code) ?? []),
+      );
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         const code = backendErrorCode(error);
@@ -103,39 +106,40 @@ export function ChangePasswordForm({
 
   return (
     <form
-      className="space-y-5 p-5 sm:p-6"
       autoComplete="off"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
-      {isRequired ? (
-        <Alert className="border-warning/25 bg-warning-soft text-warning">
-          You must change the temporary password before continuing to SecuraAI.
-        </Alert>
-      ) : null}
-      {message ? (
-        <Alert className="border-danger/25 bg-danger-soft text-danger">
-          {message}
-        </Alert>
-      ) : null}
+      <div className="grid gap-5 p-5 md:grid-cols-2">
+        {isRequired ? (
+          <Alert className="border-warning/25 bg-warning-soft text-warning md:col-span-2">
+            You must change the temporary password before continuing to SecuraAI.
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert className="border-danger/25 bg-danger-soft text-danger md:col-span-2">
+            {message}
+          </Alert>
+        ) : null}
 
-      <FormField
-        id="current-password"
-        label="Current password"
-        error={errors.currentPassword?.message}
-      >
-        <PasswordInput
-          id="current-password"
-          autoComplete="current-password"
-          error={Boolean(errors.currentPassword)}
-          describedBy={
-            errors.currentPassword ? "current-password-error" : undefined
-          }
-          registration={register("currentPassword")}
-        />
-      </FormField>
+        <div className="md:col-span-2">
+          <FormField
+            id="current-password"
+            label="Current password"
+            error={errors.currentPassword?.message}
+          >
+            <PasswordInput
+              id="current-password"
+              autoComplete="current-password"
+              error={Boolean(errors.currentPassword)}
+              describedBy={
+                errors.currentPassword ? "current-password-error" : undefined
+              }
+              registration={register("currentPassword")}
+            />
+          </FormField>
+        </div>
 
-      <div className="pt-5">
         <FormField
           id="new-password"
           label="New password"
@@ -157,25 +161,25 @@ export function ChangePasswordForm({
             special character.
           </p>
         </FormField>
+
+        <FormField
+          id="confirm-password"
+          label="Confirm new password"
+          error={errors.confirmPassword?.message}
+        >
+          <PasswordInput
+            id="confirm-password"
+            autoComplete="off"
+            error={Boolean(errors.confirmPassword)}
+            describedBy={
+              errors.confirmPassword ? "confirm-password-error" : undefined
+            }
+            registration={register("confirmPassword")}
+          />
+        </FormField>
       </div>
 
-      <FormField
-        id="confirm-password"
-        label="Confirm new password"
-        error={errors.confirmPassword?.message}
-      >
-        <PasswordInput
-          id="confirm-password"
-          autoComplete="off"
-          error={Boolean(errors.confirmPassword)}
-          describedBy={
-            errors.confirmPassword ? "confirm-password-error" : undefined
-          }
-          registration={register("confirmPassword")}
-        />
-      </FormField>
-
-      <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+      <div className="border-border flex flex-col-reverse gap-3 border-t px-5 py-4 sm:flex-row sm:justify-end">
         {isRequired ? (
           <Button
             variant="secondary"

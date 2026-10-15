@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { clearAuthCookies } from "@/lib/auth/auth-cookies";
 import { env } from "@/lib/env";
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -7,20 +8,32 @@ export async function POST(request: Request): Promise<NextResponse> {
       `${env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "")}/auth/password-reset/confirm`,
       {
         method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
         body: await request.text(),
         cache: "no-store",
       },
     );
-    return new NextResponse(await response.text(), {
+    const nextResponse = new NextResponse(await response.text(), {
       status: response.status,
       headers: {
-        "content-type": response.headers.get("content-type") ?? "application/json",
+        "content-type":
+          response.headers.get("content-type") ?? "application/json",
       },
     });
+    if (response.ok) clearAuthCookies(nextResponse);
+    return nextResponse;
   } catch {
     return NextResponse.json(
-      { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "Unable to connect to the password reset service." } },
+      {
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Unable to connect to the password reset service.",
+        },
+      },
       { status: 503 },
     );
   }

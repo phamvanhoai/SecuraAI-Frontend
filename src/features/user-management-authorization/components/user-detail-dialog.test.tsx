@@ -39,31 +39,13 @@ describe("UserDetailDialog", () => {
       data: {
         id: "00000000-0000-4000-8000-000000000010",
         email: "analyst@example.com",
+        username: "analyst",
         fullName: "Security Analyst",
-        phone: "0901234567",
-        employeeCode: "SEC-010",
-        avatarUrl: null,
+        role: { code: "SECURITY_OFFICER", name: "Security Officer" },
         status: "active",
-        mustChangePassword: false,
-        emailVerifiedAt: "2026-09-01T00:00:00.000Z",
+        googleConnected: true,
         lastLoginAt: "2026-09-19T01:00:00.000Z",
-        lastLockedAt: null,
-        disabledAt: null,
-        mfaEnabled: true,
-        department: {
-          id: "00000000-0000-4000-8000-000000000020",
-          code: "SEC",
-          name: "Security",
-        },
-        roles: [
-          {
-            id: "00000000-0000-4000-8000-000000000030",
-            code: "SECURITY_OFFICER",
-            name: "Security Officer",
-            description: null,
-            assignedAt: "2026-08-01T00:00:00.000Z",
-          },
-        ],
+        passwordChangedAt: "2026-09-01T00:00:00.000Z",
         createdAt: "2026-08-01T00:00:00.000Z",
         updatedAt: "2026-09-19T00:00:00.000Z",
       },
@@ -80,10 +62,9 @@ describe("UserDetailDialog", () => {
     expect(screen.getByText("Full name")).toBeInTheDocument();
     expect(screen.getAllByText("Security Analyst")).toHaveLength(2);
     expect(screen.getByText("Security Officer")).toBeInTheDocument();
-    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.queryByText("Google account")).not.toBeInTheDocument();
+    expect(screen.getByText("analyst")).toBeInTheDocument();
     expect(screen.getByText("Phone")).toBeInTheDocument();
-    expect(screen.getByText("0901234567")).toBeInTheDocument();
-    expect(screen.queryByText("MFA")).not.toBeInTheDocument();
   });
 
   it("closes through the secondary action", async () => {

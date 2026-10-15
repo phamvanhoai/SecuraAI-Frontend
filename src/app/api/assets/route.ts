@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { assetListQuerySchema, createAssetSchema } from "@/features/it-asset-management";
+import { assetListQuerySchema, createAssetRequestSchema } from "@/features/it-asset-management";
 import {
   authCookieNames,
   clearAuthCookies,
@@ -115,7 +115,7 @@ export async function POST(request: Request): Promise<Response> {
       { status: 422 },
     );
   }
-  const parsed = createAssetSchema.safeParse(body);
+  const parsed = createAssetRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       {
