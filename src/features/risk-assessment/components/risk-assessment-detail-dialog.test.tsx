@@ -35,6 +35,7 @@ vi.mock("./update-risk-treatment-plan-dialog", () => ({
 vi.mock("./risk-acceptance-dialogs", () => ({
   SubmitRiskAcceptanceDialog: () => null,
   DecideRiskAcceptanceDialog: () => null,
+  OpenRiskReviewDialog: () => null,
 }));
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -93,6 +94,7 @@ beforeEach(() => {
       },
     ],
     contextHistory: [],
+    targetHistory: [],
   };
 });
 const open = () =>
@@ -192,6 +194,8 @@ describe("Risk detail workflow", () => {
       requestedAt: "2026-10-02T00:00:00Z",
       validUntil: "2026-11-01T00:00:00Z",
       requestedBy: "officer",
+      expired: false,
+      canDecide: false,
       decidedBy: null,
       decidedAt: null,
     });
@@ -208,6 +212,8 @@ describe("Risk detail workflow", () => {
       requestedAt: "2026-10-02T00:00:00Z",
       validUntil: "2026-11-01T00:00:00Z",
       requestedBy: "owner",
+      expired: false,
+      canDecide: true,
       decidedBy: null,
       decidedAt: null,
     });
@@ -231,17 +237,21 @@ describe("Risk detail workflow", () => {
         blockedReason: null,
         assessmentReviewRequired: false,
       };
-      state.risk.vulnerabilities = [{
-        id: "00000000-0000-4000-8000-000000000001",
-        name: "Missing MFA",
-        description: "Administrator accounts do not require MFA.",
-        createdAt: "2026-10-01T00:00:00.000Z",
-        updatedAt: "2026-10-01T00:00:00.000Z",
-        controls: [],
-      }];
+      state.risk.vulnerabilities = [
+        {
+          id: "00000000-0000-4000-8000-000000000001",
+          name: "Missing MFA",
+          description: "Administrator accounts do not require MFA.",
+          createdAt: "2026-10-01T00:00:00.000Z",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+          controls: [],
+        },
+      ];
     }
     open();
-    fireEvent.click(screen.getByRole("button", { name: "Actions for Missing MFA" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for Missing MFA" }),
+    );
     const editAction = await screen.findByRole("menuitem", {
       name: "Edit vulnerability",
     });
@@ -302,17 +312,25 @@ describe("Risk detail workflow", () => {
         blockedReason: null,
         assessmentReviewRequired: false,
       };
-      state.risk.threats = [{
-        id: "00000000-0000-4000-8000-000000000010",
-        name: "Credential theft",
-        description: "Phishing captures privileged credentials.",
-        vulnerabilities: [{ id: "00000000-0000-4000-8000-000000000001", name: "Missing MFA" }],
-        createdAt: "2026-10-01T00:00:00.000Z",
-        updatedAt: "2026-10-01T00:00:00.000Z",
-      }];
+      state.risk.threats = [
+        {
+          id: "00000000-0000-4000-8000-000000000010",
+          name: "Credential theft",
+          description: "Phishing captures privileged credentials.",
+          vulnerabilities: [
+            { id: "00000000-0000-4000-8000-000000000001", name: "Missing MFA" },
+          ],
+          createdAt: "2026-10-01T00:00:00.000Z",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+        },
+      ];
     }
     open();
-    fireEvent.click(screen.getByRole("button", { name: "Actions for threat Credential theft" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Actions for threat Credential theft",
+      }),
+    );
     const action = screen.getByRole("menuitem", { name: "Edit threat" });
     fireEvent.click(action);
     expect(state.editThreat).toHaveBeenCalledWith(

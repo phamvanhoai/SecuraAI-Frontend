@@ -12,10 +12,12 @@ import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
 import {
   decideRiskAcceptanceSchema,
   submitRiskAcceptanceSchema,
+  openRiskReviewSchema,
 } from "../schemas/risk-acceptance-schema";
 import {
   useDecideRiskAcceptance,
   useSubmitRiskAcceptance,
+  useOpenRiskAcceptanceReview,
 } from "../hooks/use-risk-acceptance";
 type Risk = RiskRegisterDetail;
 const acceptanceExpired = (value: string) =>
@@ -30,6 +32,10 @@ export function SubmitRiskAcceptanceDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
   const mutation = useSubmitRiskAcceptance(risk.id);
+  const residual = risk.assessments.find(
+    (item) => item.type !== "target_definition" && item.residualRating,
+  );
+  const target = risk.assessments.find((item) => item.targetRisk)?.targetRisk;
   const eligiblePlans = risk.treatmentPlans.filter((plan) =>
     ["draft", "active", "completed"].includes(plan.status),
   );
@@ -38,15 +44,12 @@ export function SubmitRiskAcceptanceDialog({
       (plan) => plan.status === "active" || plan.status === "draft",
     ) ?? eligiblePlans[0];
   const [likelihood, setLikelihood] = useState(
-    String(risk.latestAssessment?.residualLikelihood ?? ""),
+    String(residual?.residualLikelihood ?? ""),
   );
-  const [impact, setImpact] = useState(
-    String(risk.latestAssessment?.residualImpact ?? ""),
-  );
+  const [impact, setImpact] = useState(String(residual?.residualImpact ?? ""));
   const [assessmentReason, setAssessmentReason] = useState("");
   const [planId, setPlanId] = useState(preferredPlan?.id ?? "");
   const selectedPlan = eligiblePlans.find((plan) => plan.id === planId);
-  const planStatus = selectedPlan?.status ?? "";
   const [validUntil, setValidUntil] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
@@ -56,7 +59,8 @@ export function SubmitRiskAcceptanceDialog({
       ["accepted", "closed", "archived"].includes(risk.status) ||
       risk.vulnerabilityWorkflow?.assessmentReviewRequired ||
       risk.acceptances.some((item) => item.decision === "pending") ||
-      !risk.latestAssessment?.residualRating ||
+      !residual?.residualRating ||
+      !risk.acceptanceWorkflow?.canSubmit ||
       !selectedPlan
     )
       return setError(
@@ -69,7 +73,6 @@ export function SubmitRiskAcceptanceDialog({
       residualImpact: impact,
       assessmentReason,
       treatmentPlanId: planId,
-      treatmentPlanStatus: planStatus,
       validUntil,
       acceptanceReason: reason,
     });
@@ -94,6 +97,28 @@ export function SubmitRiskAcceptanceDialog({
       setError(e instanceof Error ? e.message : "Unable to submit acceptance.");
     }
   };
+  const score = Number(likelihood) * Number(impact);
+  const validScore =
+    Number(likelihood) >= 1 &&
+    Number(likelihood) <= 5 &&
+    Number(impact) >= 1 &&
+    Number(impact) <= 5;
+  const rating =
+    score <= 4
+      ? "low"
+      : score <= 9
+        ? "medium"
+        : score <= 16
+          ? "high"
+          : "critical";
+  const ranks = { low: 1, medium: 2, high: 3, critical: 4 } as const;
+  const outsideThreshold =
+    validScore &&
+    Boolean(
+      (residual?.riskTolerance &&
+        ranks[rating] > ranks[residual.riskTolerance]) ||
+      (residual?.riskAppetite && ranks[rating] > ranks[residual.riskAppetite]),
+    );
   return (
     <Dialog
       title="Review, Reassess and Accept Risk"
@@ -114,12 +139,35 @@ export function SubmitRiskAcceptanceDialog({
           cannot approve their own request.
         </p>
         <p className="text-sm">
-          Current residual:{" "}
-          {risk.latestAssessment?.residualRating ?? "Not assessed"} · Target:{" "}
-          {risk.latestAssessment?.targetRisk ?? "Not defined"} · Appetite:{" "}
-          {risk.latestAssessment?.riskAppetite ?? "Not defined"} · Tolerance:{" "}
-          {risk.latestAssessment?.riskTolerance ?? "Not defined"}
+          Current residual: {residual?.residualRating ?? "Not assessed"} ·
+          Target: {target ?? "Not defined"} · Appetite:{" "}
+          {residual?.riskAppetite ?? "Not defined"} · Tolerance:{" "}
+          {residual?.riskTolerance ?? "Not defined"}
         </p>
+        {!risk.acceptanceWorkflow?.canSubmit ? (
+          <Alert>
+            {risk.acceptanceWorkflow?.blockedReason ??
+              "Refresh the Risk to check acceptance eligibility."}
+          </Alert>
+        ) : null}
+        {validScore ? (
+          <p className="text-sm">
+            Proposed residual: {score} — {rating}
+          </p>
+        ) : null}
+        {outsideThreshold ? (
+          <Alert className="border-warning/30 bg-warning-soft text-warning">
+            The proposed residual exceeds appetite or tolerance. Explain the
+            exception in your justification; an authorized approver must review
+            it.
+          </Alert>
+        ) : null}
+        {!residual?.riskAppetite || !residual?.riskTolerance ? (
+          <p className="text-muted text-sm">
+            One or more thresholds are not defined; compliance with
+            appetite/tolerance cannot be confirmed.
+          </p>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-medium">
             Residual likelihood (1–5)
@@ -178,7 +226,7 @@ export function SubmitRiskAcceptanceDialog({
             </p>
           </div>
           <label className="text-sm font-medium">
-            Acceptance valid until
+            Acceptance valid until (UTC date)
             <Input
               className="mt-1"
               type="date"
@@ -203,6 +251,7 @@ export function SubmitRiskAcceptanceDialog({
             type="submit"
             disabled={
               mutation.isPending ||
+              !risk.acceptanceWorkflow?.canSubmit ||
               risk.vulnerabilityWorkflow?.assessmentReviewRequired ||
               ["accepted", "closed", "archived"].includes(risk.status)
             }
@@ -217,14 +266,21 @@ export function SubmitRiskAcceptanceDialog({
 export function DecideRiskAcceptanceDialog({
   acceptanceId,
   onClose,
+  expired = false,
+  approvalBlockedReason = null,
 }: {
   acceptanceId: string;
   onClose: () => void;
+  expired?: boolean;
+  approvalBlockedReason?: string | null;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
   const mutation = useDecideRiskAcceptance(acceptanceId);
-  const [decision, setDecision] = useState("approved");
+  const approvalBlocked = expired || Boolean(approvalBlockedReason);
+  const [decision, setDecision] = useState(
+    approvalBlocked ? "rejected" : "approved",
+  );
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   useEffect(() => ref.current?.showModal(), []);
@@ -265,6 +321,12 @@ export function DecideRiskAcceptanceDialog({
         }}
       >
         {error ? <Alert className="text-danger">{error}</Alert> : null}
+        {approvalBlocked ? (
+          <Alert>
+            {approvalBlockedReason ??
+              "This request has expired. Approval is unavailable; reject it so the Owner can reassess and submit a new request."}
+          </Alert>
+        ) : null}
         <label className="block text-sm font-medium">
           Decision
           <Select
@@ -272,7 +334,9 @@ export function DecideRiskAcceptanceDialog({
             value={decision}
             onChange={(e) => setDecision(e.target.value)}
           >
-            <option value="approved">Approve</option>
+            <option value="approved" disabled={approvalBlocked}>
+              Approve
+            </option>
             <option value="rejected">Reject</option>
           </Select>
         </label>
@@ -288,8 +352,93 @@ export function DecideRiskAcceptanceDialog({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            disabled={
+              mutation.isPending || (approvalBlocked && decision === "approved")
+            }
+          >
             Record decision
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+export function OpenRiskReviewDialog({
+  risk,
+  onClose,
+}: {
+  risk: Risk;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const mutation = useOpenRiskAcceptanceReview(risk.id);
+  const toast = useToast();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => ref.current?.showModal(), []);
+  const submit = async () => {
+    const parsed = openRiskReviewSchema.safeParse({
+      reason,
+      expectedUpdatedAt: risk.updatedAt,
+    });
+    if (!parsed.success) {
+      setError(
+        parsed.error.issues[0]?.message ?? "Explain why review is needed.",
+      );
+      return;
+    }
+    try {
+      await mutation.mutateAsync(parsed.data);
+      toast.success(
+        "Risk review opened",
+        "Reassess residual risk before submitting a new acceptance. Previous decisions remain in history.",
+      );
+      onClose();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to open review. Refresh the Risk and try again.",
+      );
+    }
+  };
+  return (
+    <Dialog title="Open Risk Review" dialogRef={ref} onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <p className="text-muted text-sm">
+          This reopens the same Risk for assessment. It does not extend or
+          delete previous acceptance decisions.
+        </p>
+        {error ? <Alert className="text-danger">{error}</Alert> : null}
+        <label className="block text-sm font-medium">
+          Review rationale
+          <Textarea
+            className="mt-1"
+            value={reason}
+            maxLength={2000}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </label>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={
+              mutation.isPending || !risk.acceptanceWorkflow?.canOpenReview
+            }
+          >
+            {mutation.isPending ? "Opening…" : "Open review"}
           </Button>
         </div>
       </form>

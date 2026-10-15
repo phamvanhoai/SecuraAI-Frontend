@@ -29,4 +29,4 @@ export { updateTreatmentActionProgressRequestSchema } from "./schemas/update-tre
 export { performResidualRiskAssessmentRequestSchema } from "./schemas/perform-residual-risk-assessment-schema";
 export { createRiskTreatmentPlanSchema } from "./schemas/create-risk-treatment-plan-schema";
 export { updateRiskTreatmentPlanSchema } from "./schemas/update-risk-treatment-plan-schema";
-export { submitRiskAcceptanceSchema, decideRiskAcceptanceSchema } from "./schemas/risk-acceptance-schema";
+export { submitRiskAcceptanceSchema, decideRiskAcceptanceSchema, openRiskReviewSchema } from "./schemas/risk-acceptance-schema";
