@@ -73,11 +73,16 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
   const [exportScope, setExportScope] = useState<"SELECTED" | "FILTERED">(
     "SELECTED",
   );
-  const [exportFormat, setExportFormat] = useState<"CSV" | "JSON" | "XLSX" | "PDF">(
-    "PDF",
-  );
+  const [exportFormat, setExportFormat] = useState<
+    "CSV" | "JSON" | "XLSX" | "PDF"
+  >("PDF");
   const [exportReason, setExportReason] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [exportErrors, setExportErrors] = useState({
+    scope: "",
+    reason: "",
+    request: "",
+  });
   const toast = useToast();
   const dialog = useRef<HTMLDialogElement>(null);
   const exportDialog = useRef<HTMLDialogElement>(null);
@@ -301,7 +306,10 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                   type="button"
                   variant="secondary"
                   disabled={!pagination?.total}
-                  onClick={() => exportDialog.current?.showModal()}
+                  onClick={() => {
+                    setExportErrors({ scope: "", reason: "", request: "" });
+                    exportDialog.current?.showModal();
+                  }}
                 >
                   <Download aria-hidden="true" className="size-4" />
                   Export logs
@@ -463,18 +471,30 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
           className="space-y-5"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (exportScope === "SELECTED" && selectedIds.length === 0) {
-              toast.warning(
-                "Select logs to export",
-                "Select at least one log from the table.",
-              );
-              return;
-            }
-            if (exportReason.trim().length < 10) {
-              toast.warning(
-                "Investigation purpose required",
-                "Enter at least 10 characters.",
-              );
+            const scopeError =
+              exportScope === "SELECTED" && selectedIds.length === 0
+                ? "Select at least one log from the table or choose All matching results."
+                : "";
+            const reasonError =
+              exportReason.trim().length < 10
+                ? "Enter an investigation purpose of at least 10 characters."
+                : "";
+            setExportErrors({
+              scope: scopeError,
+              reason: reasonError,
+              request: "",
+            });
+            if (scopeError || reasonError) {
+              if (scopeError)
+                exportDialog.current
+                  ?.querySelector<HTMLInputElement>(
+                    'input[name="export-scope"]',
+                  )
+                  ?.focus();
+              else
+                exportDialog.current
+                  ?.querySelector<HTMLTextAreaElement>("#export-reason")
+                  ?.focus();
               return;
             }
             setExporting(true);
@@ -504,23 +524,39 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                   : `${exported.filename} downloaded.`,
               );
             } catch (error) {
-              toast.error(
-                "Export failed",
-                error instanceof Error ? error.message : "Try again.",
-              );
+              setExportErrors((current) => ({
+                ...current,
+                request:
+                  error instanceof Error
+                    ? error.message
+                    : "Export failed. Please try again.",
+              }));
             } finally {
               setExporting(false);
             }
           }}
         >
-          <fieldset className="space-y-3">
+          {exportErrors.request ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              {exportErrors.request}
+            </Alert>
+          ) : null}
+          <fieldset
+            className="space-y-3"
+            aria-describedby={
+              exportErrors.scope ? "export-scope-error" : undefined
+            }
+          >
             <legend className="text-sm font-semibold">Export scope</legend>
             <label className="border-border flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
               <input
                 checked={exportScope === "SELECTED"}
                 name="export-scope"
                 type="radio"
-                onChange={() => setExportScope("SELECTED")}
+                onChange={() => {
+                  setExportScope("SELECTED");
+                  setExportErrors((current) => ({ ...current, scope: "" }));
+                }}
               />
               <span>
                 <span className="block text-sm font-medium">Selected logs</span>
@@ -534,7 +570,10 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 checked={exportScope === "FILTERED"}
                 name="export-scope"
                 type="radio"
-                onChange={() => setExportScope("FILTERED")}
+                onChange={() => {
+                  setExportScope("FILTERED");
+                  setExportErrors((current) => ({ ...current, scope: "" }));
+                }}
               />
               <span>
                 <span className="block text-sm font-medium">
@@ -545,6 +584,15 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
                 </span>
               </span>
             </label>
+            {exportErrors.scope ? (
+              <p
+                id="export-scope-error"
+                role="alert"
+                className="text-danger text-sm"
+              >
+                {exportErrors.scope}
+              </p>
+            ) : null}
           </fieldset>
           <Label className="space-y-1" htmlFor="export-format">
             <span className="text-sm font-medium">File format</span>
@@ -552,7 +600,9 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
               id="export-format"
               value={exportFormat}
               onChange={(event) =>
-                setExportFormat(event.target.value as "CSV" | "JSON" | "XLSX" | "PDF")
+                setExportFormat(
+                  event.target.value as "CSV" | "JSON" | "XLSX" | "PDF",
+                )
               }
             >
               <option value="CSV">CSV</option>
@@ -562,17 +612,42 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             </Select>
           </Label>
           <Label className="space-y-1" htmlFor="export-reason">
-            <span className="text-sm font-medium">Investigation purpose</span>
+            <span id="export-reason-label" className="text-sm font-medium">
+              Investigation purpose
+            </span>
             <Textarea
               id="export-reason"
+              aria-labelledby="export-reason-label"
+              aria-invalid={Boolean(exportErrors.reason)}
+              aria-describedby={
+                exportErrors.reason
+                  ? "export-reason-help export-reason-error"
+                  : "export-reason-help"
+              }
               maxLength={500}
               value={exportReason}
-              onChange={(event) => setExportReason(event.target.value)}
+              onChange={(event) => {
+                setExportReason(event.target.value);
+                setExportErrors((current) => ({
+                  ...current,
+                  reason: "",
+                  request: "",
+                }));
+              }}
               placeholder="Explain why these logs are required"
             />
-            <span className="text-muted block text-xs">
+            <span id="export-reason-help" className="text-muted block text-xs">
               Required · 10–500 characters
             </span>
+            {exportErrors.reason ? (
+              <span
+                id="export-reason-error"
+                role="alert"
+                className="text-danger block text-sm"
+              >
+                {exportErrors.reason}
+              </span>
+            ) : null}
           </Label>
           <div className="flex justify-end gap-2">
             <Button

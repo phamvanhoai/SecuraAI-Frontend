@@ -14,8 +14,10 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 export type ToastTone = "success" | "error" | "warning" | "info";
@@ -87,6 +89,7 @@ function ToastMessage({
         ) : null}
       </div>
       <button
+        type="button"
         aria-label="Đóng thông báo"
         className="text-muted hover:bg-neutral-soft hover:text-foreground focus-visible:outline-brand -mt-1 -mr-1 rounded-md p-1.5 transition-colors focus-visible:outline-2"
         onClick={() => dismiss(item.id)}
@@ -135,14 +138,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div
-        aria-label="Thông báo hệ thống"
-        className="pointer-events-none fixed inset-x-4 top-4 z-[100] flex flex-col items-end gap-3 sm:left-auto sm:w-[380px]"
-      >
+      <ToastViewport>
         {items.map((item) => (
           <ToastMessage dismiss={dismiss} item={item} key={item.id} />
         ))}
-      </div>
+      </ToastViewport>
     </ToastContext.Provider>
   );
 }
@@ -152,4 +152,54 @@ export function useToast(): ToastApi {
   if (!context)
     throw new Error("useToast phải được sử dụng bên trong ToastProvider.");
   return context;
+}
+
+function activeToastDialog(): HTMLDialogElement | null {
+  const focusedDialog = document.activeElement?.closest("dialog[open]");
+  if (focusedDialog instanceof HTMLDialogElement) return focusedDialog;
+  const dialogs = document.querySelectorAll<HTMLDialogElement>("dialog[open]");
+  return dialogs.item(dialogs.length - 1);
+}
+function subscribeToDialogs(onChange: () => void): () => void {
+  let current = activeToastDialog();
+  const update = () => {
+    if (typeof document === "undefined") return;
+    const next = activeToastDialog();
+    if (next !== current) {
+      current = next;
+      onChange();
+    }
+  };
+  const observer = new MutationObserver(update);
+  observer.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["open"],
+  });
+  document.addEventListener("focusin", update);
+  document.addEventListener("close", update, true);
+  return () => {
+    observer.disconnect();
+    document.removeEventListener("focusin", update);
+    document.removeEventListener("close", update, true);
+  };
+}
+function ToastViewport({ children }: { children: ReactNode }) {
+  const dialog = useSyncExternalStore(
+    subscribeToDialogs,
+    activeToastDialog,
+    () => null,
+  );
+  const viewport = (
+    <div
+      aria-label="Thông báo hệ thống"
+      className="pointer-events-none fixed inset-x-4 top-4 z-[100] flex flex-col items-end gap-3 sm:left-auto sm:w-[380px]"
+    >
+      {children}
+    </div>
+  );
+  // Modal dialogs live above every document z-index. Keep feedback inside the
+  // active dialog so it remains visible and operable above its backdrop.
+  return dialog ? createPortal(viewport, dialog) : viewport;
 }

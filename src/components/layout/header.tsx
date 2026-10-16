@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bell,
   ChevronDown,
   LayoutDashboard,
   KeyRound,
@@ -13,6 +12,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useSessionUser } from "@/features/authentication-account";
+import { NotificationBell } from "@/features/notification-system-logs";
 import { ThemeToggle } from "./theme-toggle";
 import {
   allowedPanels,
@@ -34,13 +34,7 @@ export function Header() {
 
   return (
     <header className="border-border bg-surface/95 sticky top-0 z-30 flex h-14 items-center justify-end gap-1 border-b px-4 shadow-[0_1px_10px_rgba(20,43,83,0.035)] backdrop-blur md:px-5">
-      <Link
-        href="/notifications"
-        aria-label="Notifications"
-        className="text-muted hover:bg-neutral-soft hover:text-foreground focus-visible:outline-brand rounded-lg p-2.5 transition-colors focus-visible:outline-2"
-      >
-        <Bell className="size-5" strokeWidth={1.8} />
-      </Link>
+      <NotificationBell userId={user?.id} />
       <ThemeToggle />
       <span
         className="bg-border mx-2 hidden h-7 w-px sm:block"

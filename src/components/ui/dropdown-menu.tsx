@@ -23,10 +23,16 @@ export function DropdownMenu({
   children,
   className,
   onToggle,
+  triggerLabel,
+  contentClassName,
+  menuWidth = MENU_WIDTH,
   ...props
 }: DetailsHTMLAttributes<HTMLDetailsElement> & {
   label: ReactNode;
   children: ReactNode;
+  triggerLabel?: string;
+  contentClassName?: string;
+  menuWidth?: number;
 }) {
   const menuId = useId();
   const menuRef = useRef<HTMLDetailsElement>(null);
@@ -40,25 +46,30 @@ export function DropdownMenu({
     if (!trigger) return;
     setPortalTarget(trigger.closest("dialog") ?? document.body);
     const bounds = trigger.getBoundingClientRect();
-    const spaceBelow = Math.max(0, window.innerHeight - bounds.bottom - VIEWPORT_GAP * 2);
+    const spaceBelow = Math.max(
+      0,
+      window.innerHeight - bounds.bottom - VIEWPORT_GAP * 2,
+    );
     const spaceAbove = Math.max(0, bounds.top - VIEWPORT_GAP * 2);
     const menuHeight = measuredHeightRef.current;
     const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
     const maxHeight = Math.min(360, openAbove ? spaceAbove : spaceBelow);
+    const width = Math.min(menuWidth, window.innerWidth - VIEWPORT_GAP * 2);
     const right = Math.min(
       Math.max(VIEWPORT_GAP, window.innerWidth - bounds.right),
-      window.innerWidth - MENU_WIDTH - VIEWPORT_GAP,
+      window.innerWidth - width - VIEWPORT_GAP,
     );
     setPosition(
       openAbove
         ? {
             right,
+            width,
             maxHeight,
             bottom: window.innerHeight - bounds.top + VIEWPORT_GAP,
           }
-        : { right, top: bounds.bottom + VIEWPORT_GAP, maxHeight },
+        : { right, top: bounds.bottom + VIEWPORT_GAP, maxHeight, width },
     );
-  }, []);
+  }, [menuWidth]);
 
   const captureContent = useCallback(
     (node: HTMLDivElement | null): void => {
@@ -96,7 +107,11 @@ export function DropdownMenu({
     }
 
     function closeWhenViewportMoves(event: Event): void {
-      if (event.target instanceof Node && contentRef.current?.contains(event.target)) return;
+      if (
+        event.target instanceof Node &&
+        contentRef.current?.contains(event.target)
+      )
+        return;
       const menu = menuRef.current;
       if (!menu?.open) return;
       menu.open = false;
@@ -120,7 +135,10 @@ export function DropdownMenu({
     return () => {
       document.removeEventListener("pointerdown", closeWhenClickingOutside);
       document.removeEventListener("keydown", closeWithEscape);
-      document.removeEventListener(DROPDOWN_OPEN_EVENT, closeWhenAnotherMenuOpens);
+      document.removeEventListener(
+        DROPDOWN_OPEN_EVENT,
+        closeWhenAnotherMenuOpens,
+      );
       window.removeEventListener("resize", closeWhenViewportMoves);
       window.removeEventListener("scroll", closeWhenViewportMoves, true);
     };
@@ -141,8 +159,7 @@ export function DropdownMenu({
               new CustomEvent(DROPDOWN_OPEN_EVENT, { detail: menuId }),
             );
             positionMenu();
-          }
-          else {
+          } else {
             setPosition(null);
             setPortalTarget(null);
           }
@@ -151,6 +168,7 @@ export function DropdownMenu({
         {...props}
       >
         <summary
+          aria-label={triggerLabel}
           aria-expanded={Boolean(position)}
           aria-haspopup="menu"
           className="focus-visible:outline-brand cursor-pointer list-none rounded-lg p-2 focus-visible:outline-2"
@@ -163,10 +181,13 @@ export function DropdownMenu({
         ? createPortal(
             <div
               ref={captureContent}
-              className="border-border bg-surface fixed z-50 min-w-48 overflow-y-auto overscroll-contain rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]"
+              className={cn(
+                "border-border bg-surface fixed z-50 min-w-48 overflow-y-auto overscroll-contain rounded-xl border p-2 shadow-[0_16px_40px_rgba(18,35,32,.12)]",
+                contentClassName,
+              )}
               onClick={(event) => {
                 if (!(event.target instanceof Element)) return;
-                if (!event.target.closest("button")) return;
+                if (!event.target.closest("button, a")) return;
                 if (menuRef.current) menuRef.current.open = false;
                 setPosition(null);
               }}

@@ -8,8 +8,8 @@ import {
   Mail,
   Settings2,
 } from "lucide-react";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api/api-client";
 import {
   ProductPageHeader,
@@ -23,24 +23,25 @@ import {
   PersonalNotificationChannelManager,
   SendEmailNotificationManager,
   SendInSystemNotificationManager,
+  useNotificationInbox,
+  useReadNotifications,
 } from "@/features/notification-system-logs";
 import { cn } from "@/lib/utils";
 
 type NotificationView =
   "inbox" | "history" | "preferences" | "in-system" | "email" | "reminders";
-type InboxItem = {
-  id: string;
-  title: string;
-  message: string;
-  priority: string;
-  sender: string;
-  createdAt: string;
-  readAt: string | null;
-};
-
 export default function NotificationsPage() {
   const [activeView, setActiveView] = useState<NotificationView>("inbox");
   const session = useSessionUser();
+  useEffect(() => {
+    const showLinkedNotification = () => {
+      if (window.location.hash.startsWith("#notification-"))
+        setActiveView("inbox");
+    };
+    window.addEventListener("hashchange", showLinkedNotification);
+    return () =>
+      window.removeEventListener("hashchange", showLinkedNotification);
+  }, []);
   const permissions = session.data?.permissions ?? [];
   const accountEmail = session.data?.email ?? "your account email";
   const isAdmin =
@@ -147,32 +148,41 @@ export default function NotificationsPage() {
 }
 
 function NotificationInbox() {
-  const client = useQueryClient();
-  const inbox = useQuery({
-    queryKey: ["notifications", "inbox"],
-    queryFn: () =>
-      apiRequest<{ items: InboxItem[]; unreadCount: number }>(
-        "/api/notifications/inbox",
-        { target: "same-origin", query: { page: 1, limit: 50 } },
-      ),
-  });
-  const read = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`/api/notifications/inbox/${id}/read`, { method: "PATCH" }),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["notifications", "inbox"] }),
-  });
-  const markAll = useMutation({
-    mutationFn: () => fetch("/api/notifications/inbox", { method: "PATCH" }),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["notifications", "inbox"] }),
-  });
+  const session = useSessionUser();
+  const inbox = useNotificationInbox(session.data?.id);
+  const { read, markAll } = useReadNotifications(session.data?.id);
+  const readError = read.error ?? markAll.error;
+  const focusedNotification = useRef("");
+  useEffect(() => {
+    const focusNotification = (event?: Event) => {
+      const hash = window.location.hash;
+      if (
+        !hash.startsWith("#notification-") ||
+        (!event && hash === focusedNotification.current)
+      )
+        return;
+      const target = document.getElementById(hash.slice(1));
+      if (!target) return;
+      target.scrollIntoView({ block: "center" });
+      target.focus({ preventScroll: true });
+      focusedNotification.current = hash;
+    };
+    focusNotification();
+    window.addEventListener("hashchange", focusNotification);
+    return () => window.removeEventListener("hashchange", focusNotification);
+  }, [inbox.data]);
   const items = inbox.data?.items ?? [];
   return (
     <ProductPanel
       title="My Notifications"
       description={`${inbox.data?.unreadCount ?? 0} unread notifications`}
     >
+      {inbox.isError ? (
+        <Alert>Unable to load notifications. Please try again.</Alert>
+      ) : null}
+      {readError ? (
+        <Alert>Unable to mark notifications as read. Please try again.</Alert>
+      ) : null}
       <div className="border-border flex items-center justify-between border-b px-5 py-3">
         <p className="text-muted text-sm">Your latest in-system updates</p>
         <Button
@@ -200,7 +210,9 @@ function NotificationInbox() {
           items.map((item) => (
             <article
               key={item.id}
-              className={`flex gap-3 px-5 py-4 ${item.readAt ? "bg-surface" : "bg-info-soft/45"}`}
+              id={`notification-${item.id}`}
+              tabIndex={-1}
+              className={`target:ring-brand/40 flex scroll-mt-24 gap-3 px-5 py-4 target:ring-2 ${item.readAt ? "bg-surface" : "bg-info-soft/45"}`}
             >
               <div className="pt-1">
                 {item.readAt ? (
