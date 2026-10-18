@@ -163,8 +163,9 @@ describe("Search & Filter Integration API Keys Workflow", () => {
       expect(screen.getByText("Expired Audit Reader")).toBeInTheDocument();
     });
 
-    // Check fingerprints are displayed with masked format
-    expect(screen.getByText("sec_live_wazuh01...****")).toBeInTheDocument();
+    // Verify Key Fingerprint and Assigned Scopes columns are hidden from table
+    expect(screen.queryByText("Key Fingerprint")).not.toBeInTheDocument();
+    expect(screen.queryByText("Assigned Scopes")).not.toBeInTheDocument();
 
     // Verify secret token plaintext is NEVER exposed
     expect(screen.queryByText(/sec_live_[a-z0-9]{32}/i)).not.toBeInTheDocument();

@@ -1,6 +1,6 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "./toast";
 
 function Trigger() {
@@ -13,6 +13,8 @@ function Trigger() {
     </button>
   );
 }
+
+afterEach(cleanup);
 
 describe("ToastProvider", () => {
   it("shows and dismisses a reusable toast", async () => {
@@ -51,4 +53,39 @@ describe("ToastProvider", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     vi.useRealTimers();
   });
+});
+
+it("keeps errors inside the open dialog and moves feedback back after closing", async () => {
+  const user = userEvent.setup();
+  function ModalTrigger() {
+    const toast = useToast();
+    return (
+      <dialog open aria-label="Example form">
+        <button
+          onClick={() => toast.error("Request failed", "Please try again.")}
+        >
+          Fail request
+        </button>
+      </dialog>
+    );
+  }
+  render(
+    <ToastProvider>
+      <ModalTrigger />
+    </ToastProvider>,
+  );
+  const dialog = screen.getByRole("dialog", { name: "Example form" });
+  await user.click(screen.getByText("Fail request"));
+  await waitFor(() =>
+    expect(screen.getByRole("alert").closest("dialog")).toBe(dialog),
+  );
+  act(() => {
+    dialog.removeAttribute("open");
+    dialog.dispatchEvent(new Event("close"));
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("alert").closest("dialog")).toBeNull(),
+  );
+  await user.click(screen.getByRole("button", { name: "Đóng thông báo" }));
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
