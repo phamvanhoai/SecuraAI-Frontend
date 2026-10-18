@@ -111,3 +111,10 @@ Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có th
 Các trang nghiệp vụ chưa tích hợp API thật vẫn là prototype giao diện với dữ liệu mẫu; không được xem là chức năng production. Những trang đó chưa có domain CRUD hoặc KPI lấy từ backend; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. UC7 trong danh sách người dùng gọi API backend thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
 
 Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
+
+
+Notification feedback: The shared header bell reads the current account's unread count from the existing inbox API, polls every 10 seconds while the tab is active, and refreshes on window focus. Inbox read actions refresh both the list and bell only after successful responses. Query keys are scoped by account. No backend API/schema changes or push transport were added.
+
+Modal feedback: Shared toasts render inside the active native dialog so other forms' feedback stays above the modal backdrop and remains operable. Investigation log exports keep selection, purpose and request errors inside the form, preserve entered values and focus the first invalid control.
+
+The notification bell opens a responsive preview of the latest ten notifications without navigating or marking them read. Selecting an item opens `/notifications#notification-<recipient-id>`, focuses the matching inbox entry and marks only that item read. The current inbox API has no business-resource destination URL, so arbitrary asset/policy links are not inferred. Escape/outside-click closes the shared dropdown.
