@@ -3,7 +3,6 @@
 import {
   Ban,
   CheckCircle2,
-  Copy,
   Edit2,
   Eye,
   Key,
@@ -145,19 +144,6 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
     setSecretDialogKeyName(name);
     setSecretDialogPlaintext(secret);
     setSecretDialogOpen(true);
-  }
-
-  async function handleCopyFingerprint(fingerprint: string | null | undefined) {
-    if (!fingerprint) return;
-    try {
-      await navigator.clipboard.writeText(fingerprint);
-      toast.info(
-        "Copied Key Fingerprint",
-        "Note: This is a public key fingerprint, not the secret token.",
-      );
-    } catch {
-      toast.error("Failed to copy fingerprint");
-    }
   }
 
   async function handleConfirmRevoke() {
@@ -353,13 +339,11 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
               <thead className="border-border bg-neutral-soft/50 text-muted border-b font-medium">
                 <tr>
                   <th className="px-4 py-2.5">Key Identifier</th>
-                  <th className="px-4 py-2.5">Key Fingerprint</th>
-                  <th className="px-4 py-2.5">Assigned Scopes</th>
                   <th className="px-4 py-2.5">Status</th>
                   <th className="px-4 py-2.5">Creator</th>
                   <th className="px-4 py-2.5">Expires At</th>
                   <th className="px-4 py-2.5">Created At</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
+                  <th className="px-4 py-2.5 text-center w-40">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-border divide-y">
@@ -387,44 +371,6 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                           ) : null}
                         </div>
                       </div>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className="border-border bg-neutral-soft/80 font-mono text-[11px] rounded border px-2 py-0.5 text-foreground select-all">
-                          {key.keyFingerprint || key.keyPrefix ? `${key.keyPrefix || key.keyFingerprint}...****` : "—"}
-                        </span>
-                        {key.keyFingerprint || key.keyPrefix ? (
-                          <button
-                            aria-label="Copy Key Fingerprint"
-                            className="text-muted hover:text-foreground p-1"
-                            onClick={() =>
-                              handleCopyFingerprint(key.keyFingerprint || key.keyPrefix)
-                            }
-                            title="Copy Key Fingerprint"
-                            type="button"
-                          >
-                            <Copy className="size-3" />
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3">
-                      {key.scopes && key.scopes.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {key.scopes.map((scope) => (
-                            <span
-                              className="inline-flex items-center rounded bg-neutral-soft/90 px-1.5 py-0.5 text-[10px] font-mono text-foreground border border-border"
-                              key={scope}
-                            >
-                              {scope}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted text-[11px] italic">No scopes</span>
-                      )}
                     </td>
 
                     <td className="px-4 py-3">
@@ -467,33 +413,31 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                       })}
                     </td>
 
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="px-4 py-3 text-center w-40">
+                      <div className="flex items-center justify-center gap-1">
                         <Button
                           aria-label={`View API key details for ${key.keyName}`}
-                          className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenDetail(key)}
                           title="View key metadata & usage details"
                           type="button"
                         >
-                          <Eye className="mr-1 size-3 text-muted" />
-                          View
+                          <Eye className="size-3 text-muted" />
                         </Button>
 
                         <Button
                           aria-label={`Rotate API key ${key.keyName}`}
-                          className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenRotate(key)}
                           title="Rotate secret token"
                           type="button"
                         >
-                          <RefreshCw className="mr-1 size-3" />
-                          Rotate
+                          <RefreshCw className="size-3" />
                         </Button>
 
                         <Button
                           aria-label={`Edit API key ${key.keyName}`}
-                          className="h-7 px-2 text-[11px] bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                           onClick={() => handleOpenEdit(key)}
                           title="Edit key name, scopes and expiration"
                           type="button"
@@ -504,7 +448,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                         {key.isActive ? (
                           <Button
                             aria-label={`Revoke API key ${key.keyName}`}
-                            className="h-7 px-2 text-[11px] text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
+                            className="size-7 p-0 text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
                             onClick={() => setKeyToRevoke(key)}
                             title="Revoke this API key"
                             type="button"
@@ -514,7 +458,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                         ) : (
                           <Button
                             aria-label={`Reactivate API key ${key.keyName}`}
-                            className="h-7 px-2 text-[11px] text-emerald-400 ring-emerald-500/30 hover:bg-emerald-500/10 ring-1 bg-surface"
+                            className="size-7 p-0 text-emerald-400 ring-emerald-500/30 hover:bg-emerald-500/10 ring-1 bg-surface"
                             disabled={updateMutation.isPending}
                             onClick={() => handleReactivate(key)}
                             title="Reactivate this API key"

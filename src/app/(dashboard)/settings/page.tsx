@@ -25,7 +25,7 @@ const tabs: readonly { id: SettingsTab; label: string; icon: ReactNode }[] = [
   { id: "organization", label: "Tổ chức", icon: <Building2 /> },
   { id: "security", label: "Bảo mật", icon: <ShieldCheck /> },
   { id: "notifications", label: "Thông báo", icon: <Bell /> },
-  { id: "api", label: "API và khóa", icon: <KeyRound /> },
+  { id: "api", label: "Integration API Keys", icon: <KeyRound /> },
 ];
 
 export default function SettingsPage() {
@@ -173,8 +173,8 @@ function NotificationSettings() {
 function ApiKeySettings() {
   return (
     <ProductPanel
-      title="Khóa API tích hợp"
-      description="Quản lý và xem danh sách các Integration API Key xác thực cho các dịch vụ và hệ thống kết nối vào SecuraAI."
+      title="Integration API Keys"
+      description="Manage and inspect integration API keys authenticating external services, pipelines, and log forwarders into SecuraAI."
     >
       <div className="space-y-6 p-5">
         <ApiKeysTab />
