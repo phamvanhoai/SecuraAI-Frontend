@@ -1,3 +1,4 @@
+export { PoliciesManager } from "./components/policies-manager";
 export { PolicyDraftsManager } from "./components/policy-drafts-manager";
 export { EmployeePolicyAcknowledgementManager } from "./components/employee-policy-acknowledgement-manager";
 export { PolicyDepartmentAssignmentManager } from "./components/policy-department-assignment-manager";
