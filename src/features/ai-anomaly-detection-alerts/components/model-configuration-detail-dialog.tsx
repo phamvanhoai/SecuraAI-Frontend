@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BarChart3, Bot, Database } from "lucide-react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -30,80 +31,113 @@ export function ModelConfigurationDetailDialog({
     >
       {configuration ? (
         <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="border-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h3 className="text-xl font-semibold">
-                {configuration.modelName} {configuration.version}
-              </h3>
-              <p className="text-muted mt-1 text-sm [overflow-wrap:anywhere]">
+              <div className="flex items-start gap-3">
+                <div className="bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-lg">
+                  <Bot
+                    aria-hidden="true"
+                    className="size-5"
+                    strokeWidth={1.8}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xl font-semibold [overflow-wrap:anywhere]">
+                    {configuration.modelName} {configuration.version}
+                  </h3>
+                  <p className="text-muted mt-1 text-sm">
+                    {formatModelType(configuration.modelType)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-muted mt-3 font-mono text-xs [overflow-wrap:anywhere]">
                 {configuration.id}
               </p>
             </div>
-            <StatusBadge
-              tone={configuration.status === "deployed" ? "success" : "neutral"}
-            >
-              {configuration.status}
+            <StatusBadge tone={statusTone(configuration.status)}>
+              {formatStatus(configuration.status)}
             </StatusBadge>
           </div>
-          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Detail label="Model type" value={configuration.modelType} />
-            <Detail
-              label="Dataset"
-              value={
-                configuration.dataset
-                  ? `${configuration.dataset.name} ${configuration.dataset.version}`
-                  : "Not linked"
-              }
+
+          <section
+            aria-labelledby="model-context-heading"
+            className="space-y-4"
+          >
+            <SectionHeading
+              icon={Database}
+              id="model-context-heading"
+              title="Model context"
             />
-            <Detail
-              label="Created"
-              value={formatDate(configuration.createdAt)}
+            <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2">
+              <Metric
+                label="Dataset"
+                value={
+                  configuration.dataset
+                    ? `${configuration.dataset.name} ${configuration.dataset.version}`
+                    : "Not linked"
+                }
+              />
+              <Metric
+                label="Created"
+                value={formatDate(configuration.createdAt)}
+              />
+              <Metric
+                label="Deployed"
+                value={
+                  configuration.deployedAt
+                    ? formatDate(configuration.deployedAt)
+                    : "Not deployed"
+                }
+              />
+              <Metric
+                label="Retired"
+                value={
+                  configuration.retiredAt
+                    ? formatDate(configuration.retiredAt)
+                    : "Not retired"
+                }
+              />
+            </dl>
+          </section>
+
+          <section aria-labelledby="evaluation-heading" className="space-y-4">
+            <SectionHeading
+              icon={BarChart3}
+              id="evaluation-heading"
+              title="Latest evaluation"
             />
-            <Detail
-              label="Deployed"
-              value={
-                configuration.deployedAt
-                  ? formatDate(configuration.deployedAt)
-                  : "Not deployed"
-              }
-            />
-          </dl>
-          <section aria-labelledby="evaluation-heading">
-            <h3 className="font-semibold" id="evaluation-heading">
-              Latest evaluation
-            </h3>
             <p className="text-muted mt-1 text-sm">
               The most recently recorded evaluation for this immutable model
               version.
             </p>
             {evaluation ? (
               <>
-                <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <Detail
+                <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
+                  <Metric
                     label="Precision"
                     value={formatRatio(evaluation.precision)}
                   />
-                  <Detail
+                  <Metric
                     label="Recall"
                     value={formatRatio(evaluation.recall)}
                   />
-                  <Detail
+                  <Metric
                     label="F1 score"
                     value={formatRatio(evaluation.f1Score)}
                   />
-                  <Detail
+                  <Metric
                     label="PR-AUC"
                     value={formatRatio(evaluation.prAuc)}
                   />
-                  <Detail
+                  <Metric
                     label="False-positive rate"
                     value={formatRatio(evaluation.falsePositiveRate)}
                   />
-                  <Detail
+                  <Metric
                     label="Alerts / day"
                     value={formatNumber(evaluation.alertsPerDay)}
                   />
-                  <Detail
+                  <Metric
                     label="Detection latency"
                     value={
                       evaluation.detectionLatencyMs === null
@@ -111,13 +145,13 @@ export function ModelConfigurationDetailDialog({
                         : `${formatNumber(evaluation.detectionLatencyMs)} ms`
                     }
                   />
-                  <Detail
+                  <Metric
                     label="Evaluated"
                     value={formatDate(evaluation.evaluatedAt)}
                   />
                 </dl>
                 {evaluation.notes ? (
-                  <div className="border-border bg-neutral-soft mt-4 rounded-xl border p-4">
+                  <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
                     <p className="text-muted text-xs font-medium tracking-wide uppercase">
                       Evaluation notes
                     </p>
@@ -126,14 +160,20 @@ export function ModelConfigurationDetailDialog({
                 ) : null}
               </>
             ) : (
-              <p className="border-border text-muted mt-4 rounded-xl border p-4 text-sm">
-                No evaluation metrics have been recorded for this version.
-              </p>
+              <div className="border-border py-8 text-center">
+                <BarChart3 className="text-muted mx-auto size-8 stroke-1" />
+                <p className="mt-2 font-medium">No evaluation recorded</p>
+                <p className="text-muted mt-1 text-sm">
+                  Evaluation metrics have not been recorded for this model
+                  version.
+                </p>
+              </div>
             )}
           </section>
-          <div className="flex justify-end">
+          <div className="border-border flex justify-end border-t pt-4">
             <Button
               onClick={() => dialogRef.current?.close()}
+              type="button"
               variant="secondary"
             >
               Close
@@ -144,15 +184,35 @@ export function ModelConfigurationDetailDialog({
     </Dialog>
   );
 }
-function Detail({ label, value }: { label: string; value: string }) {
+function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm font-medium [overflow-wrap:anywhere] tabular-nums">
+    <div className="bg-surface min-w-0 p-3.5">
+      <dt className="text-muted text-xs font-medium">{label}</dt>
+      <dd className="mt-1.5 text-sm font-semibold [overflow-wrap:anywhere] tabular-nums">
         {value}
       </dd>
+    </div>
+  );
+}
+function SectionHeading({
+  icon: Icon,
+  id,
+  title,
+}: {
+  icon: typeof Database;
+  id: string;
+  title: string;
+}) {
+  return (
+    <div className="border-border flex items-center gap-2 border-b pb-2.5">
+      <Icon
+        aria-hidden="true"
+        className="text-brand size-4"
+        strokeWidth={1.8}
+      />
+      <h3 className="text-sm font-semibold" id={id}>
+        {title}
+      </h3>
     </div>
   );
 }
@@ -171,4 +231,18 @@ function formatNumber(value: number | null): string {
     : new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
         value,
       );
+}
+function formatModelType(value: string): string {
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (character) => character.toUpperCase());
+}
+function formatStatus(value: ModelConfiguration["status"]): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+function statusTone(value: ModelConfiguration["status"]) {
+  if (value === "deployed") return "success" as const;
+  if (value === "validated") return "info" as const;
+  if (value === "development") return "warning" as const;
+  return "neutral" as const;
 }

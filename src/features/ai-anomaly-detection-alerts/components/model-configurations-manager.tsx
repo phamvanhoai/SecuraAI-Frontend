@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Search, SlidersHorizontal } from "lucide-react";
+import { Bot, Eye, Search, SlidersHorizontal, X } from "lucide-react";
 import { useState } from "react";
 import {
   DataTable,
@@ -48,30 +48,55 @@ export function ModelConfigurationsManager() {
   const averageF1 = average(
     evaluated.map((item) => item.latestEvaluation?.f1Score ?? null),
   );
+  const isFiltered = Boolean(modelName || status !== "all");
+
+  const clearFilters = (): void => {
+    setDraft("");
+    setModelName("");
+    setStatus("all");
+    setPage(1);
+  };
 
   const columns: readonly DataTableColumn<ModelConfiguration>[] = [
     {
       key: "model",
       header: "Model",
       cell: (item) => (
-        <span>
-          <strong className="block">{item.modelName}</strong>
-          <span className="text-muted text-xs">{item.modelType}</span>
-        </span>
+        <div className="py-0.5">
+          <strong className="text-foreground block font-medium [overflow-wrap:anywhere]">
+            {item.modelName}
+          </strong>
+          <span className="text-muted mt-0.5 block text-xs">
+            {formatModelType(item.modelType)}
+          </span>
+        </div>
       ),
     },
     {
       key: "version",
       header: "Version",
-      cell: (item) => <span className="tabular-nums">{item.version}</span>,
+      cell: (item) => (
+        <span className="border-border bg-neutral-soft/80 inline-flex rounded px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums">
+          v{item.version}
+        </span>
+      ),
     },
     {
       key: "dataset",
       header: "Dataset",
       cell: (item) =>
-        item.dataset
-          ? `${item.dataset.name} ${item.dataset.version}`
-          : "Not linked",
+        item.dataset ? (
+          <span className="block min-w-36">
+            <strong className="block text-sm font-medium">
+              {item.dataset.name}
+            </strong>
+            <span className="text-muted block text-xs tabular-nums">
+              v{item.dataset.version}
+            </span>
+          </span>
+        ) : (
+          <span className="text-muted text-sm">Not linked</span>
+        ),
     },
     {
       key: "f1",
@@ -102,12 +127,13 @@ export function ModelConfigurationsManager() {
       header: "Actions",
       cell: (item) => (
         <Button
-          className="min-h-10 px-3"
+          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
           onClick={() => setViewing(item)}
+          type="button"
           variant="secondary"
         >
-          <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
-          View metrics
+          <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+          Details
         </Button>
       ),
     },
@@ -158,7 +184,11 @@ export function ModelConfigurationsManager() {
           },
           {
             label: "Average F1",
-            value: averageF1 === null ? "—" : formatRatio(averageF1),
+            value: models.data
+              ? averageF1 === null
+                ? "Not evaluated"
+                : formatRatio(averageF1)
+              : "—",
             detail: "Latest evaluations on page",
             tone: "neutral",
             loading: models.isPending,
@@ -168,20 +198,22 @@ export function ModelConfigurationsManager() {
       <ProductPanel
         title="Model versions"
         description={
-          models.data
-            ? `${models.data.pagination.total} versions found`
-            : "V2 model registry"
+          models.isPlaceholderData && models.isFetching
+            ? "Updating model versions…"
+            : models.data
+              ? `${models.data.pagination.total} versions found`
+              : "V2 model registry"
         }
       >
         <form
-          className="border-border flex flex-wrap gap-2 border-b p-4"
+          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
           onSubmit={(event) => {
             event.preventDefault();
             setPage(1);
             setModelName(draft.trim());
           }}
         >
-          <label className="relative block w-full max-w-md">
+          <label className="relative block max-w-md min-w-[220px] flex-1">
             <span className="sr-only">Search model versions</span>
             <Search
               className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -196,7 +228,7 @@ export function ModelConfigurationsManager() {
             />
           </label>
           <Select
-            className="w-44"
+            className="min-h-10 w-full sm:w-44"
             aria-label="Filter by model status"
             value={status}
             onChange={(event) => {
@@ -213,9 +245,21 @@ export function ModelConfigurationsManager() {
           <Button className="min-h-10" type="submit">
             Search
           </Button>
+          {isFiltered ? (
+            <Button
+              className="min-h-10 gap-1.5"
+              onClick={clearFilters}
+              type="button"
+              variant="secondary"
+            >
+              <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Clear
+            </Button>
+          ) : null}
         </form>
         <div className="p-4">
-          {models.isPending ? (
+          {models.isPending ||
+          (models.isPlaceholderData && models.isFetching) ? (
             <TableSkeleton
               headers={[
                 "Model",
@@ -236,11 +280,27 @@ export function ModelConfigurationsManager() {
               session and backend connection.
             </Alert>
           ) : items.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="font-medium">No model versions found</p>
+            <div className="py-12 text-center">
+              <Bot className="text-muted mx-auto size-10 stroke-1" />
+              <h3 className="mt-2 text-base font-semibold">
+                No model versions found
+              </h3>
               <p className="text-muted mt-1 text-sm">
-                Adjust the search or status filter.
+                {isFiltered
+                  ? "No model versions match the current search and status filters."
+                  : "No anomaly detection model versions have been registered yet."}
               </p>
+              {isFiltered ? (
+                <Button
+                  className="mt-4 min-h-9 gap-1.5 text-xs"
+                  onClick={clearFilters}
+                  type="button"
+                  variant="secondary"
+                >
+                  <X aria-hidden="true" className="size-3.5" />
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
           ) : (
             <DataTable
@@ -250,7 +310,9 @@ export function ModelConfigurationsManager() {
             />
           )}
         </div>
-        {models.data ? (
+        {models.data &&
+        models.data.items.length > 0 &&
+        !models.isPlaceholderData ? (
           <div className="border-border border-t p-4">
             <Pagination
               page={models.data.pagination.page}
@@ -283,6 +345,11 @@ function formatRatio(value: number | null): string {
 }
 function formatStatus(value: ModelStatus): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+function formatModelType(value: string): string {
+  return value
+    .replaceAll("_", " ")
+    .replace(/^./, (character) => character.toUpperCase());
 }
 function statusTone(value: ModelStatus) {
   if (value === "deployed") return "success" as const;

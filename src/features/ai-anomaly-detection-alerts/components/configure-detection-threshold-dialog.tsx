@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Bot, Gauge, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
@@ -40,7 +41,11 @@ export function ConfigureDetectionThresholdDialog({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<DetectionThresholdFormInput, unknown, DetectionThresholdFormValues>({
+  } = useForm<
+    DetectionThresholdFormInput,
+    unknown,
+    DetectionThresholdFormValues
+  >({
     resolver: zodResolver(detectionThresholdFormSchema),
     defaultValues: defaults,
   });
@@ -66,7 +71,9 @@ export function ConfigureDetectionThresholdDialog({
     onClose();
   };
 
-  const submit = async (values: DetectionThresholdFormValues): Promise<void> => {
+  const submit = async (
+    values: DetectionThresholdFormValues,
+  ): Promise<void> => {
     setMessage(undefined);
     try {
       const result = await mutation.mutateAsync({
@@ -88,7 +95,7 @@ export function ConfigureDetectionThresholdDialog({
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
       title="Configure Detection Threshold"
@@ -107,23 +114,54 @@ export function ConfigureDetectionThresholdDialog({
         <Alert>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>Unable to load the deployed model threshold.</span>
-            <Button onClick={() => void threshold.refetch()} variant="secondary">
+            <Button
+              onClick={() => void threshold.refetch()}
+              variant="secondary"
+            >
               Try again
             </Button>
           </div>
         </Alert>
       ) : threshold.data ? (
         <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
-          <div className="border-border bg-neutral-soft rounded-lg border p-3">
-            <span className="text-muted block text-xs font-medium tracking-wide uppercase">
-              Deployed model
-            </span>
-            <strong className="mt-1 block [overflow-wrap:anywhere]">
-              {threshold.data.modelName} {threshold.data.version}
-            </strong>
-            <span className="text-muted mt-1 block text-sm">
-              Current threshold: {Math.round(threshold.data.threshold * 100)}%
-            </span>
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
+            <div className="flex items-start gap-3">
+              <div className="bg-brand/10 text-brand flex size-10 shrink-0 items-center justify-center rounded-lg">
+                <Bot aria-hidden="true" className="size-5" strokeWidth={1.8} />
+              </div>
+              <div className="min-w-0">
+                <span className="text-muted block text-xs font-medium">
+                  Deployed model
+                </span>
+                <strong className="mt-1 block [overflow-wrap:anywhere]">
+                  {threshold.data.modelName} {threshold.data.version}
+                </strong>
+              </div>
+            </div>
+            <dl className="border-border mt-4 grid gap-3 border-t pt-3 sm:grid-cols-2">
+              <div>
+                <span className="sr-only">
+                  Current threshold:{" "}
+                  {Math.round(threshold.data.threshold * 100)}%
+                </span>
+                <dt className="text-muted text-xs font-medium">
+                  Current threshold
+                </dt>
+                <dd className="mt-1 text-base font-semibold tabular-nums">
+                  {Math.round(threshold.data.threshold * 100)}%
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted text-xs font-medium">
+                  Proposed threshold
+                </dt>
+                <dd className="mt-1 text-base font-semibold tabular-nums">
+                  {Number.isFinite(thresholdPercent)
+                    ? `${thresholdPercent}%`
+                    : "Not set"}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           <FormField
@@ -132,6 +170,7 @@ export function ConfigureDetectionThresholdDialog({
             label="Anomaly score threshold (%)"
           >
             <Input
+              aria-invalid={Boolean(errors.thresholdPercent)}
               id="detection-threshold-percent"
               max={100}
               min={50}
@@ -139,16 +178,31 @@ export function ConfigureDetectionThresholdDialog({
               type="number"
               {...register("thresholdPercent")}
             />
+            <p className="text-muted text-xs">
+              Enter a value from 50% to 100%.
+            </p>
           </FormField>
 
-          <div className="border-border rounded-lg border p-3 text-sm leading-6">
-            This is the default for every asset without an enabled override. {" "}
-            Events scoring
-            <strong className="mx-1 tabular-nums">
-              {Number.isFinite(thresholdPercent) ? `${thresholdPercent}%` : "—"}
-            </strong>
-            or higher will create alerts. A lower value increases sensitivity
-            and may produce more alerts.
+          <div className="border-border flex items-start gap-3 rounded-lg border p-4">
+            <Gauge
+              aria-hidden="true"
+              className="text-brand mt-0.5 size-5 shrink-0"
+              strokeWidth={1.8}
+            />
+            <div>
+              <h3 className="text-sm font-semibold">Detection behavior</h3>
+              <p className="text-muted mt-1 text-sm leading-6">
+                This default applies to assets without an enabled override.
+                Events scoring
+                <strong className="mx-1 tabular-nums">
+                  {Number.isFinite(thresholdPercent)
+                    ? `${thresholdPercent}%`
+                    : "—"}
+                </strong>
+                or higher create alerts. Lower values increase sensitivity and
+                may produce more alerts.
+              </p>
+            </div>
           </div>
 
           {message ? (
@@ -157,12 +211,27 @@ export function ConfigureDetectionThresholdDialog({
             </Alert>
           ) : null}
 
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button onClick={close} type="button" variant="secondary">
+          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+            <Button
+              disabled={mutation.isPending}
+              onClick={close}
+              type="button"
+              variant="secondary"
+            >
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Saving…" : "Save threshold"}
+              {mutation.isPending ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                  Saving…
+                </>
+              ) : (
+                "Save threshold"
+              )}
             </Button>
           </div>
         </form>
