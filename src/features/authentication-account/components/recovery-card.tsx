@@ -43,6 +43,8 @@ function passwordResetError(error: unknown, fallback: string): string {
   return error.message;
 }
 
+const STEPS: Step[] = ["email", "otp", "password", "success"];
+
 export function RecoveryCard({ step }: { step: Step }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +54,7 @@ export function RecoveryCard({ step }: { step: Step }) {
   );
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
+  const currentStepIndex = STEPS.indexOf(step);
   const content = {
     email: [
       "Forgot password",
@@ -121,56 +124,92 @@ export function RecoveryCard({ step }: { step: Step }) {
 
   return (
     <section className="w-full max-w-[30rem]">
+      {/* Back link */}
       <Link
         href={step === "email" ? "/login" : "/forgot-password"}
-        className="text-brand focus-visible:outline-brand mb-4 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="text-muted hover:text-foreground focus-visible:outline-brand mb-5 inline-flex min-h-10 items-center gap-1.5 rounded-lg text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
-        Back
+        {step === "email" ? "Back to sign in" : "Back"}
       </Link>
-      <div className="border-border bg-surface rounded-xl border p-6 sm:p-8">
-        <div className="border-border border-b pb-6 text-center">
-          <span className="bg-brand-soft text-brand mx-auto grid size-12 place-items-center rounded-lg">
-            <Icon aria-hidden="true" className="size-6" strokeWidth={1.8} />
-          </span>
-          <h1 className="mt-4 text-2xl font-semibold tracking-[-0.025em]">
-            {content[step][0]}
-          </h1>
-          <p className="text-muted mx-auto mt-2 max-w-lg text-sm leading-6">
-            {content[step][1]}
-          </p>
-        </div>
-        {message ? (
-          <Alert className="border-danger/25 bg-danger-soft text-danger mt-6">
-            {message}
-          </Alert>
-        ) : null}
-        {step === "email" ? (
-          <EmailForm pending={pending} onSubmit={submitEmail} />
-        ) : null}
-        {step === "otp" ? (
-          <OtpForm otp={otp} setOtp={setOtp} onSubmit={submitOtp} />
-        ) : null}
-        {step === "password" ? (
-          <PasswordForm
-            token={tokenFromUrl}
-            pending={pending}
-            onSubmit={submitPassword}
-          />
-        ) : null}
-        {step === "success" ? (
-          <div className="mt-6">
-            <div className="bg-success-soft text-success rounded-lg p-4 text-center text-sm">
-              Your account is now secure.
+
+      <div className="border-border bg-surface overflow-hidden rounded-xl border">
+        {/* Top accent bar */}
+        <div
+          className={`h-1 w-full ${step === "success" ? "bg-success" : "bg-brand"}`}
+          aria-hidden="true"
+        />
+
+        <div className="p-6 sm:p-8">
+          {/* Step progress */}
+          {step !== "success" ? (
+            <div className="mb-6 flex items-center gap-1.5" aria-hidden="true">
+              {STEPS.slice(0, 3).map((s, i) => (
+                <div
+                  key={s}
+                  className={`h-1 flex-1 rounded-full transition-colors ${
+                    i <= currentStepIndex ? "bg-brand" : "bg-neutral-soft"
+                  }`}
+                />
+              ))}
             </div>
-            <Link
-              href="/login"
-              className="bg-brand text-brand-contrast focus-visible:outline-brand mt-5 grid min-h-11 place-items-center rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+          ) : null}
+
+          {/* Header */}
+          <div className="mb-6 text-center">
+            <span
+              className={`mx-auto mb-4 grid size-14 place-items-center rounded-2xl border ${
+                step === "success"
+                  ? "bg-success-soft border-success/15 text-success"
+                  : "bg-brand-soft border-brand/12 text-brand"
+              }`}
             >
-              Sign in
-            </Link>
+              <Icon aria-hidden="true" className="size-7" strokeWidth={1.6} />
+            </span>
+            <h1 className="text-[1.375rem] font-semibold tracking-[-0.03em]">
+              {content[step][0]}
+            </h1>
+            <p className="text-muted mx-auto mt-1.5 max-w-xs text-sm leading-6">
+              {content[step][1]}
+            </p>
           </div>
-        ) : null}
+
+          {/* Error alert */}
+          {message ? (
+            <Alert className="border-danger/25 bg-danger-soft text-danger mt-5">
+              {message}
+            </Alert>
+          ) : null}
+
+          {/* Step content */}
+          {step === "email" ? (
+            <EmailForm pending={pending} onSubmit={submitEmail} />
+          ) : null}
+          {step === "otp" ? (
+            <OtpForm otp={otp} setOtp={setOtp} onSubmit={submitOtp} />
+          ) : null}
+          {step === "password" ? (
+            <PasswordForm
+              token={tokenFromUrl}
+              pending={pending}
+              onSubmit={submitPassword}
+            />
+          ) : null}
+          {step === "success" ? (
+            <div className="space-y-4">
+              <div className="bg-success-soft text-success rounded-lg p-4 text-center text-sm">
+                Your account is now secure. You can sign in with your new
+                password.
+              </div>
+              <Link
+                href="/login"
+                className="bg-brand text-brand-contrast focus-visible:outline-brand grid min-h-11 place-items-center rounded-lg text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Sign in
+              </Link>
+            </div>
+          ) : null}
+        </div>
       </div>
     </section>
   );
@@ -275,8 +314,8 @@ function OtpForm({
   }
 
   return (
-    <form className="mt-6" onSubmit={onSubmit}>
-      <div className="grid grid-cols-6 gap-3">
+    <form className="mt-5" onSubmit={onSubmit}>
+      <div className="grid grid-cols-6 gap-2 sm:gap-3">
         {otp.map((value, index) => (
           <input
             key={index}
@@ -284,7 +323,11 @@ function OtpForm({
               inputRefs.current[index] = element;
             }}
             aria-label={`OTP digit ${index + 1}`}
-            className="border-border focus:border-brand focus:ring-brand/15 h-14 min-w-0 rounded-lg border px-1 text-center text-xl outline-none focus:ring-3"
+            className={`border-border focus:border-brand focus:ring-brand/15 h-13 min-w-0 rounded-lg border text-center text-xl font-semibold transition-colors outline-none focus:ring-3 ${
+              value.trim()
+                ? "bg-brand-soft text-brand border-brand/30"
+                : "bg-surface"
+            }`}
             inputMode="numeric"
             autoComplete={index === 0 ? "one-time-code" : "off"}
             maxLength={1}
@@ -295,7 +338,7 @@ function OtpForm({
           />
         ))}
       </div>
-      <Button className="mt-6 w-full" type="submit">
+      <Button className="mt-5 w-full" type="submit">
         Verify and continue
       </Button>
     </form>
