@@ -57,7 +57,9 @@ describe("V2 role navigation", () => {
     expect(paths).toContain("/audits");
     expect(paths).toContain("/settings");
     expect(paths).toContain("/login-history");
-    expect(paths).not.toContain("/roles");
+    expect(getPanelNavigation("admin").map((item) => item.href)).not.toContain(
+      "/roles",
+    );
     expect(paths).not.toContain("/reports");
   });
 

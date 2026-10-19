@@ -15,7 +15,6 @@ import NotificationsPage from "../notifications/page";
 import PoliciesPage from "../policies/page";
 import ReportsPage from "../reports/page";
 import RisksPage from "../risks/page";
-import RolesPage from "../roles/page";
 import SettingsPage from "../settings/page";
 import SystemLogsPage from "../system-logs/page";
 import UsersPage from "../users/page";
@@ -37,7 +36,6 @@ const modulePages = {
   policies: PoliciesPage,
   reports: ReportsPage,
   risks: RisksPage,
-  roles: RolesPage,
   settings: SettingsPage,
   "system-logs": SystemLogsPage,
   users: UsersPage,

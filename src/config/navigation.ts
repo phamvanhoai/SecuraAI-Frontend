@@ -9,7 +9,6 @@ import {
   Gauge,
   GitBranch,
   History,
-  KeyRound,
   LayoutDashboard,
   Library,
   ScrollText,
@@ -47,13 +46,6 @@ const modules = {
     icon: Users,
     section: "Management",
     requiredAnyPermission: ["users.read"],
-  },
-  roles: {
-    title: "Roles & Permissions",
-    slug: "roles",
-    icon: KeyRound,
-    section: "Management",
-    requiredAnyPermission: ["roles.read"],
   },
   assets: {
     title: "Assets",
@@ -198,7 +190,6 @@ export const panelModules = {
   dashboard: [
     modules.alerts,
     modules.users,
-    modules.roles,
     modules.assets,
     modules.risks,
     modules.incidents,
@@ -220,7 +211,6 @@ export const panelModules = {
   admin: [
     modules.alerts,
     modules.users,
-    modules.roles,
     modules.assets,
     modules.risks,
     modules.incidents,
