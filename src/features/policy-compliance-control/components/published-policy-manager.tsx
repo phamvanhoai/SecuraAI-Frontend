@@ -24,9 +24,11 @@ function formatDate(value: string | null | undefined): string {
 export function PublishedPolicyManager({
   onViewDrafts,
   onViewHistory,
+  hideHeader = false,
 }: {
   onViewDrafts?: () => void;
   onViewHistory?: () => void;
+  hideHeader?: boolean;
 }) {
   const session = useSessionUser();
   const allowed = session.data?.permissions.includes("policies.update") ?? false;
@@ -69,20 +71,22 @@ export function PublishedPolicyManager({
   if (!allowed) return <Alert>Insufficient permissions</Alert>;
   return (
     <>
-      <ProductPageHeader
-        title="Published policies"
-        description="View the current official versions of policies you own."
-        showSampleNotice={false}
-        additionalActions={
-          onViewHistory ? (
-            <Button variant="secondary" onClick={onViewHistory}>
-              <History aria-hidden="true" className="size-4" strokeWidth={1.8} />
-              Version history
-            </Button>
-          ) : undefined
-        }
-      />
-      {onViewDrafts ? (
+      {!hideHeader && (
+        <ProductPageHeader
+          title="Published policies"
+          description="View the current official versions of policies you own."
+          showSampleNotice={false}
+          additionalActions={
+            onViewHistory ? (
+              <Button variant="secondary" onClick={onViewHistory}>
+                <History aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                Version history
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+      {!hideHeader && onViewDrafts ? (
         <div className="mb-5">
           <PolicyViewTabs
             activeId="published"

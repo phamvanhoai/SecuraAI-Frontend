@@ -28,8 +28,10 @@ import type { PolicyDepartmentAssignment } from "../schemas/policy-department-as
 
 export function PolicyDepartmentAssignmentManager({
   onBack,
+  hideHeader = false,
 }: {
   onBack?: () => void;
+  hideHeader?: boolean;
 }) {
   const session = useSessionUser();
   const canAssign =
@@ -151,14 +153,16 @@ export function PolicyDepartmentAssignmentManager({
 
   return (
     <>
-      <ProductPageHeader
-        description="Assign published information security policies to the departments where they apply."
-        showSampleNotice={false}
-        title="Assign policies to departments"
-        {...(onBack
-          ? { secondaryAction: "Back to drafts", onSecondaryAction: onBack }
-          : {})}
-      />
+      {!hideHeader && (
+        <ProductPageHeader
+          description="Assign published information security policies to the departments where they apply."
+          showSampleNotice={false}
+          title="Assign policies to departments"
+          {...(onBack
+            ? { secondaryAction: "Back to drafts", onSecondaryAction: onBack }
+            : {})}
+        />
+      )}
       <ProductPanel
         description="Only published policies and active departments are available."
         title="Published policies"

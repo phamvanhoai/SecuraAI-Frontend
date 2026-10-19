@@ -8,9 +8,10 @@ import {
   Files,
   History,
   Link2,
-  SendHorizonal,
+  Send,
 } from "lucide-react";
 import { useState } from "react";
+import type React from "react";
 import {
   MetricStrip,
   ProductPageHeader,
@@ -35,13 +36,17 @@ type TabId =
   | "drafts"
   | "review"
   | "published"
+  | "new-version"
   | "acknowledge"
   | "departments"
   | "controls"
-  | "history"
-  | "new-version";
+  | "history";
 
-const overviewQuery = { page: 1, limit: 100, sortOrder: "desc" as const };
+const overviewDraftQuery = {
+  page: 1,
+  limit: 100,
+  sortOrder: "desc" as const,
+};
 const publishableQuery = {
   page: 1,
   limit: 100,
@@ -57,14 +62,11 @@ export function PoliciesManager() {
   const canCreateDrafts = permissions.includes("policies.create");
   const canPublish = permissions.includes("policies.publish");
   const canUpdate = permissions.includes("policies.update");
-  const canAssignDepartments = permissions.includes(
-    "policies.assign-department",
-  );
+  const canAssignDepartments = permissions.includes("policies.assign-department");
   const canMapControls = permissions.includes("compliance.map-controls");
   const canAcknowledge = permissions.includes("policies.acknowledge");
   const canViewHistory = canCreateDrafts || canPublish;
 
-  // Determine first available tab
   const firstTab: TabId = canCreateDrafts
     ? "drafts"
     : canPublish
@@ -81,14 +83,11 @@ export function PoliciesManager() {
 
   const [activeTab, setActiveTab] = useState<TabId>(firstTab);
 
-  // Metrics data — only fetch when permitted
-  const draftMetrics = usePolicyDrafts(overviewQuery, canCreateDrafts);
+  // Metric data — fetched only when the user has the relevant permission
+  const draftMetrics = usePolicyDrafts(overviewDraftQuery, canCreateDrafts);
   const publishableMetrics = usePublishablePolicies(publishableQuery);
   const publishedMetrics = usePublishedPoliciesForNewVersion(canUpdate);
-  const acknowledgeMetrics = useEmployeePolicies(
-    acknowledgeQuery,
-    canAcknowledge,
-  );
+  const acknowledgeMetrics = useEmployeePolicies(acknowledgeQuery, canAcknowledge);
 
   if (session.isPending)
     return (
@@ -109,13 +108,40 @@ export function PoliciesManager() {
   if (!hasAnyPermission)
     return <Alert>Insufficient permissions to access policies.</Alert>;
 
-  // Tab definitions — only include tabs the user has permission to see
+  // ── Derived metric values ──────────────────────────────────────────────────
+  const draftTotal = draftMetrics.data?.pagination.total ?? 0;
+  const draftItems = draftMetrics.data?.items ?? [];
+  const draftDescribed = draftItems.filter((d) => d.description).length;
+  const draftWithChanges = draftItems.filter(
+    (d) => d.version.changeSummary,
+  ).length;
+
+  const publishableTotal = publishableMetrics.data?.pagination.total ?? 0;
+  const publishableItems = publishableMetrics.data?.items ?? [];
+  const publishableDescribed = publishableItems.filter(
+    (p) => p.description,
+  ).length;
+  const publishableOwners = new Set(
+    publishableItems.flatMap((p) => (p.ownerUserId ? [p.ownerUserId] : [])),
+  ).size;
+
+  const publishedCount = publishedMetrics.data?.length ?? 0;
+
+  const acknowledgeItems = acknowledgeMetrics.data?.items ?? [];
+  const acknowledgeTotal = acknowledgeMetrics.data?.pagination.total ?? 0;
+  const acknowledgedCount = acknowledgeItems.filter(
+    (p) => p.acknowledgedAt,
+  ).length;
+  const pendingAcknowledge = acknowledgeTotal - acknowledgedCount;
+
+  // ── Tab definitions (permission-gated) ────────────────────────────────────
   type TabDef = {
     id: TabId;
     label: string;
     icon: React.ReactNode;
     count?: number | null;
   };
+
   const tabs: TabDef[] = [
     ...(canCreateDrafts
       ? [
@@ -132,7 +158,7 @@ export function PoliciesManager() {
                 strokeWidth={2}
               />
             ),
-            count: draftMetrics.data?.pagination.total ?? null,
+            count: draftMetrics.data ? draftTotal : null,
           },
         ]
       : []),
@@ -142,7 +168,7 @@ export function PoliciesManager() {
             id: "review" as const,
             label: "Review & publish",
             icon: (
-              <SendHorizonal
+              <Send
                 aria-hidden="true"
                 className={cn(
                   "size-4",
@@ -151,7 +177,7 @@ export function PoliciesManager() {
                 strokeWidth={2}
               />
             ),
-            count: publishableMetrics.data?.pagination.total ?? null,
+            count: publishableMetrics.data ? publishableTotal : null,
           },
         ]
       : []),
@@ -159,7 +185,7 @@ export function PoliciesManager() {
       ? [
           {
             id: "published" as const,
-            label: "Published policies",
+            label: "Published",
             icon: (
               <BookOpenCheck
                 aria-hidden="true"
@@ -172,12 +198,8 @@ export function PoliciesManager() {
                 strokeWidth={2}
               />
             ),
-            count: publishedMetrics.data?.length ?? null,
+            count: publishedMetrics.data ? publishedCount : null,
           },
-        ]
-      : []),
-    ...(canUpdate
-      ? [
           {
             id: "new-version" as const,
             label: "New version",
@@ -213,7 +235,7 @@ export function PoliciesManager() {
                 strokeWidth={2}
               />
             ),
-            count: acknowledgeMetrics.data?.pagination.total ?? null,
+            count: acknowledgeMetrics.data ? acknowledgeTotal : null,
           },
         ]
       : []),
@@ -279,7 +301,7 @@ export function PoliciesManager() {
       : []),
   ];
 
-  // Header config per tab
+  // ── Header config per tab ──────────────────────────────────────────────────
   const headerConfig: Record<TabId, { title: string; description: string }> = {
     drafts: {
       title: "Information Security Policy Drafts",
@@ -324,35 +346,8 @@ export function PoliciesManager() {
 
   const current = headerConfig[activeTab];
 
-  // Metrics per tab
-  const draftItems = draftMetrics.data?.items ?? [];
-  const draftTotal = draftMetrics.data?.pagination.total ?? 0;
-  const draftDescribed = draftItems.filter((d) => d.description).length;
-  const draftWithChangeSummary = draftItems.filter(
-    (d) => d.version.changeSummary,
-  ).length;
-
-  const publishableItems = publishableMetrics.data?.items ?? [];
-  const publishableTotal = publishableMetrics.data?.pagination.total ?? 0;
-  const publishableWithDescription = publishableItems.filter(
-    (p) => p.description,
-  ).length;
-  const publishableOwners = new Set(
-    publishableItems.flatMap((p) => (p.ownerUserId ? [p.ownerUserId] : [])),
-  ).size;
-
-  const publishedCount = publishedMetrics.data?.length ?? 0;
-
-  const acknowledgeItems = acknowledgeMetrics.data?.items ?? [];
-  const acknowledgeTotal = acknowledgeMetrics.data?.pagination.total ?? 0;
-  const acknowledgedCount = acknowledgeItems.filter(
-    (p) => p.acknowledgedAt,
-  ).length;
-  const pendingAcknowledge = acknowledgeItems.filter(
-    (p) => !p.acknowledgedAt,
-  ).length;
-
-  type MetricEntry = {
+  // ── Metrics per tab ────────────────────────────────────────────────────────
+  type MetricDef = {
     label: string;
     value: string;
     detail: string;
@@ -360,7 +355,7 @@ export function PoliciesManager() {
     loading?: boolean;
   };
 
-  const metricsMap: Record<TabId, MetricEntry[]> = {
+  const metricsMap: Record<TabId, MetricDef[]> = {
     drafts: [
       {
         label: "Total drafts",
@@ -370,9 +365,9 @@ export function PoliciesManager() {
         loading: draftMetrics.isPending,
       },
       {
-        label: "On this page",
+        label: "On overview",
         value: draftMetrics.data ? String(draftItems.length) : "—",
-        detail: `Up to ${overviewQuery.limit} unfiltered drafts`,
+        detail: `Up to ${overviewDraftQuery.limit} unfiltered`,
         tone: "neutral",
         loading: draftMetrics.isPending,
       },
@@ -385,7 +380,7 @@ export function PoliciesManager() {
       },
       {
         label: "With change summary",
-        value: draftMetrics.data ? String(draftWithChangeSummary) : "—",
+        value: draftMetrics.data ? String(draftWithChanges) : "—",
         detail: "On the unfiltered overview",
         tone: "neutral",
         loading: draftMetrics.isPending,
@@ -395,20 +390,20 @@ export function PoliciesManager() {
       {
         label: "Open workflow",
         value: String(publishableTotal),
-        detail: "Review, approval, or publication pending",
+        detail: "Review, approval or publication pending",
         tone: "warning",
         loading: publishableMetrics.isPending,
       },
       {
-        label: "On this page",
+        label: "On overview",
         value: String(publishableItems.length),
-        detail: `Up to ${publishableQuery.limit} unfiltered policy drafts`,
+        detail: `Up to ${publishableQuery.limit} unfiltered`,
         tone: "neutral",
         loading: publishableMetrics.isPending,
       },
       {
         label: "With description",
-        value: String(publishableWithDescription),
+        value: String(publishableDescribed),
         detail: "On the unfiltered overview",
         tone: "neutral",
         loading: publishableMetrics.isPending,
@@ -416,7 +411,7 @@ export function PoliciesManager() {
       {
         label: "Draft owners",
         value: String(publishableOwners),
-        detail: "Unique owners in the unfiltered overview",
+        detail: "Unique owners in overview",
         tone: "neutral",
         loading: publishableMetrics.isPending,
       },
@@ -430,41 +425,34 @@ export function PoliciesManager() {
         loading: publishedMetrics.isPending,
       },
       {
-        label: "Status",
-        value: publishedMetrics.data ? "Live" : "—",
-        detail: "All shown policies are active",
-        tone: "neutral",
-        loading: publishedMetrics.isPending,
-      },
-      {
-        label: "Source",
-        value: "Backend",
-        detail: "Live data, not cached",
-        tone: "neutral",
-        loading: publishedMetrics.isPending,
-      },
-      {
         label: "Lifecycle",
         value: "Published",
         detail: "Versioned and auditable",
         tone: "neutral",
         loading: publishedMetrics.isPending,
       },
-    ],
-    "new-version": [
       {
-        label: "Published policies",
-        value: publishedMetrics.data ? String(publishedCount) : "—",
-        detail: "Eligible for new version",
-        tone: "brand",
+        label: "Source",
+        value: "Live",
+        detail: "Fetched from the backend",
+        tone: "neutral",
         loading: publishedMetrics.isPending,
       },
       {
-        label: "Action",
-        value: "Draft",
-        detail: "Creates a draft for review",
+        label: "Actions",
+        value: "New version",
+        detail: "Start a new draft from any",
         tone: "neutral",
-        loading: false,
+        loading: publishedMetrics.isPending,
+      },
+    ],
+    "new-version": [
+      {
+        label: "Eligible policies",
+        value: publishedMetrics.data ? String(publishedCount) : "—",
+        detail: "Published — can create new version",
+        tone: "brand",
+        loading: publishedMetrics.isPending,
       },
       {
         label: "Workflow",
@@ -476,14 +464,21 @@ export function PoliciesManager() {
       {
         label: "Audit",
         value: "Versioned",
-        detail: "Full version history preserved",
+        detail: "Full history preserved",
+        tone: "neutral",
+        loading: false,
+      },
+      {
+        label: "Action",
+        value: "Creates a draft",
+        detail: "Draft goes through review",
         tone: "neutral",
         loading: false,
       },
     ],
     acknowledge: [
       {
-        label: "Assigned policies",
+        label: "Assigned to you",
         value: acknowledgeMetrics.data ? String(acknowledgeTotal) : "—",
         detail: "Policies assigned to your department",
         tone: "brand",
@@ -500,11 +495,7 @@ export function PoliciesManager() {
         label: "Pending reading",
         value: acknowledgeMetrics.data ? String(pendingAcknowledge) : "—",
         detail: "Reading confirmation required",
-        tone:
-          (acknowledgeMetrics.data?.items.filter((p) => !p.acknowledgedAt)
-            .length ?? 0) > 0
-            ? "warning"
-            : "neutral",
+        tone: pendingAcknowledge > 0 ? "warning" : "neutral",
         loading: acknowledgeMetrics.isPending,
       },
       {
@@ -526,7 +517,7 @@ export function PoliciesManager() {
       {
         label: "Scope",
         value: "Organization",
-        detail: "Applies across all business units",
+        detail: "Applies across business units",
         tone: "neutral",
         loading: false,
       },
@@ -579,7 +570,7 @@ export function PoliciesManager() {
       {
         label: "Module",
         value: "History",
-        detail: "Full audit trail of policy versions",
+        detail: "Full audit trail of versions",
         tone: "brand",
         loading: false,
       },
@@ -609,16 +600,20 @@ export function PoliciesManager() {
 
   return (
     <>
+      {/* Shared page header — title & description switch per tab */}
       <ProductPageHeader
         description={current.description}
         showSampleNotice={false}
         title={current.title}
       />
+
+      {/* Shared metric strip — switches per tab */}
       <MetricStrip
         ariaLabel={`${current.title} metrics`}
         metrics={metricsMap[activeTab]}
       />
 
+      {/* Tab pill switcher — identical pattern to LogSourcesManager */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs">
           {tabs.map((tab) => (
@@ -627,7 +622,7 @@ export function PoliciesManager() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-all",
+                "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
                 activeTab === tab.id
                   ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground",
@@ -640,7 +635,7 @@ export function PoliciesManager() {
                   className={cn(
                     "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
                     activeTab === tab.id
-                      ? "text-brand-contrast bg-white/20"
+                      ? "bg-white/20 text-brand-contrast"
                       : "border-border bg-neutral-soft text-muted border",
                   )}
                 >
@@ -652,15 +647,16 @@ export function PoliciesManager() {
         </div>
       </div>
 
+      {/* Tab content — each manager gets hideHeader=true to suppress its own header */}
       {activeTab === "drafts" && canCreateDrafts ? (
         <PolicyDraftsManager
+          hideHeader
           {...(canAssignDepartments
             ? { onAssignDepartments: () => setActiveTab("departments") }
             : {})}
           {...(canUpdate
             ? {
                 onCreateNewVersion: () => setActiveTab("new-version"),
-                onViewPublished: () => setActiveTab("published"),
               }
             : {})}
           {...(canMapControls
@@ -670,29 +666,40 @@ export function PoliciesManager() {
         />
       ) : activeTab === "review" && canPublish ? (
         <PolicyPublicationManager
+          hideHeader
           onViewHistory={() => setActiveTab("history")}
         />
       ) : activeTab === "published" && canUpdate ? (
         <PublishedPolicyManager
+          hideHeader
           onViewDrafts={() => setActiveTab("drafts")}
           onViewHistory={() => setActiveTab("history")}
         />
       ) : activeTab === "new-version" && canUpdate ? (
         <UpdatePolicyVersionManager
+          hideHeader
           {...(canCreateDrafts ? { onBack: () => setActiveTab("drafts") } : {})}
         />
       ) : activeTab === "acknowledge" && canAcknowledge ? (
         <EmployeePolicyAcknowledgementManager
-          onViewHistory={() => setActiveTab("history")}
+          hideHeader
+          {...(canViewHistory ? { onViewHistory: () => setActiveTab("history") } : {})}
         />
       ) : activeTab === "departments" && canAssignDepartments ? (
         <PolicyDepartmentAssignmentManager
-          {...(canCreateDrafts ? { onBack: () => setActiveTab("drafts") } : {})}
+          hideHeader
+          {...(canCreateDrafts
+            ? { onBack: () => setActiveTab("drafts") }
+            : {})}
         />
       ) : activeTab === "controls" && canMapControls ? (
-        <PolicyControlMappingManager onBack={() => setActiveTab("drafts")} />
+        <PolicyControlMappingManager
+          hideHeader
+          onBack={() => setActiveTab("drafts")}
+        />
       ) : activeTab === "history" && canViewHistory ? (
         <PolicyVersionHistoryManager
+          hideHeader
           backLabel={canPublish && !canCreateDrafts ? "Approvals" : "Drafts"}
           onBack={() => setActiveTab(canCreateDrafts ? "drafts" : "review")}
         />

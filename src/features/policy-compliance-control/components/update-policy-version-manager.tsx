@@ -43,6 +43,7 @@ import {
 
 type UpdatePolicyVersionManagerProps = {
   onBack?: () => void;
+  hideHeader?: boolean;
 };
 
 const defaultValues: UpdatePolicyVersionFormInput = {
@@ -72,6 +73,7 @@ function getErrorMessage(error: unknown): string {
 
 export function UpdatePolicyVersionManager({
   onBack,
+  hideHeader = false,
 }: UpdatePolicyVersionManagerProps) {
   const session = useSessionUser();
   const mutation = useUpdatePolicyVersion();
@@ -208,24 +210,26 @@ export function UpdatePolicyVersionManager({
 
   return (
     <>
-      <ProductPageHeader
-        description="Update a published information security policy and create its next draft version for review."
-        showSampleNotice={false}
-        title="Update policy and create new version"
-        {...(onBack
-          ? {
-              onSecondaryAction: leaveWorkflow,
-              secondaryAction: "Back to drafts",
-              secondaryActionIcon: (
-                <ArrowLeft
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-              ),
-            }
-          : {})}
-      />
+      {!hideHeader && (
+        <ProductPageHeader
+          description="Update a published information security policy and create its next draft version for review."
+          showSampleNotice={false}
+          title="Update policy and create new version"
+          {...(onBack
+            ? {
+                onSecondaryAction: leaveWorkflow,
+                secondaryAction: "Back to drafts",
+                secondaryActionIcon: (
+                  <ArrowLeft
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={1.8}
+                  />
+                ),
+              }
+            : {})}
+        />
+      )}
 
       {session.isPending ? (
         <ProductPanel title="Checking access">

@@ -132,12 +132,14 @@ export function PolicyDraftsManager({
   onMapControls,
   onViewPublished,
   onViewHistory,
+  hideHeader = false,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
   onMapControls?: () => void;
   onViewPublished?: () => void;
   onViewHistory?: () => void;
+  hideHeader?: boolean;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -337,108 +339,112 @@ export function PolicyDraftsManager({
 
   return (
     <>
-      <ProductPageHeader
-        {...(onAssignDepartments || onMapControls || onViewHistory
-          ? {
-              additionalActions: (
-                <>
-                  {onMapControls ? (
-                    <Button
-                      className="min-h-10 px-3.5 font-medium"
-                      onClick={onMapControls}
-                      variant="secondary"
-                    >
-                      <Link2
-                        aria-hidden="true"
-                        className="size-4"
-                        strokeWidth={1.8}
-                      />
-                      Map controls
-                    </Button>
-                  ) : null}
-                  {onAssignDepartments ? (
-                    <Button
-                      className="min-h-10 px-3.5 font-medium"
-                      onClick={onAssignDepartments}
-                      variant="secondary"
-                    >
-                      <Building2
-                        aria-hidden="true"
-                        className="size-4"
-                        strokeWidth={1.8}
-                      />
-                      Assign departments
-                    </Button>
-                  ) : null}
-                  {onViewHistory ? (
-                    <Button
-                      className="min-h-10 px-3.5 font-medium"
-                      onClick={onViewHistory}
-                      variant="secondary"
-                    >
-                      <History
-                        aria-hidden="true"
-                        className="size-4"
-                        strokeWidth={1.8}
-                      />
-                      Version history
-                    </Button>
-                  ) : null}
-                </>
-              ),
-            }
-          : {})}
-        description="Create and update the policies you own before they are submitted for publication."
-        onPrimaryAction={() => setCreateOpen(true)}
-        primaryAction="Create draft"
-        showSampleNotice={false}
-        title="Information Security Policy Drafts"
-        {...(onCreateNewVersion
-          ? {
-              onSecondaryAction: onCreateNewVersion,
-              secondaryAction: "Create new version",
-              secondaryActionIcon: (
-                <FilePenLine
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-              ),
-            }
-          : {})}
-      />
-      <MetricStrip
-        ariaLabel="Policy draft metrics"
-        metrics={[
-          {
-            label: "Total drafts",
-            value: metricDrafts.data
-              ? String(metricDrafts.data.pagination.total)
-              : "—",
-            detail: "Returned by the backend",
-            tone: "brand",
-          },
-          {
-            label: "On this page",
-            value: metricDrafts.data ? String(metricItems.length) : "—",
-            detail: `Up to ${overviewQuery.limit} unfiltered drafts`,
-            tone: "neutral",
-          },
-          {
-            label: "With description",
-            value: metricDrafts.data ? String(describedCount) : "—",
-            detail: "On the unfiltered overview",
-            tone: "neutral",
-          },
-          {
-            label: "With change summary",
-            value: metricDrafts.data ? String(documentedChangesCount) : "—",
-            detail: "On the unfiltered overview",
-            tone: "neutral",
-          },
-        ]}
-      />
-      {onViewPublished ? (
+      {!hideHeader && (
+        <>
+          <ProductPageHeader
+            {...(onAssignDepartments || onMapControls || onViewHistory
+              ? {
+                  additionalActions: (
+                    <>
+                      {onMapControls ? (
+                        <Button
+                          className="min-h-10 px-3.5 font-medium"
+                          onClick={onMapControls}
+                          variant="secondary"
+                        >
+                          <Link2
+                            aria-hidden="true"
+                            className="size-4"
+                            strokeWidth={1.8}
+                          />
+                          Map controls
+                        </Button>
+                      ) : null}
+                      {onAssignDepartments ? (
+                        <Button
+                          className="min-h-10 px-3.5 font-medium"
+                          onClick={onAssignDepartments}
+                          variant="secondary"
+                        >
+                          <Building2
+                            aria-hidden="true"
+                            className="size-4"
+                            strokeWidth={1.8}
+                          />
+                          Assign departments
+                        </Button>
+                      ) : null}
+                      {onViewHistory ? (
+                        <Button
+                          className="min-h-10 px-3.5 font-medium"
+                          onClick={onViewHistory}
+                          variant="secondary"
+                        >
+                          <History
+                            aria-hidden="true"
+                            className="size-4"
+                            strokeWidth={1.8}
+                          />
+                          Version history
+                        </Button>
+                      ) : null}
+                    </>
+                  ),
+                }
+              : {})}
+            description="Create and update the policies you own before they are submitted for publication."
+            onPrimaryAction={() => setCreateOpen(true)}
+            primaryAction="Create draft"
+            showSampleNotice={false}
+            title="Information Security Policy Drafts"
+            {...(onCreateNewVersion
+              ? {
+                  onSecondaryAction: onCreateNewVersion,
+                  secondaryAction: "Create new version",
+                  secondaryActionIcon: (
+                    <FilePenLine
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                  ),
+                }
+              : {})}
+          />
+          <MetricStrip
+            ariaLabel="Policy draft metrics"
+            metrics={[
+              {
+                label: "Total drafts",
+                value: metricDrafts.data
+                  ? String(metricDrafts.data.pagination.total)
+                  : "—",
+                detail: "Returned by the backend",
+                tone: "brand",
+              },
+              {
+                label: "On this page",
+                value: metricDrafts.data ? String(metricItems.length) : "—",
+                detail: `Up to ${overviewQuery.limit} unfiltered drafts`,
+                tone: "neutral",
+              },
+              {
+                label: "With description",
+                value: metricDrafts.data ? String(describedCount) : "—",
+                detail: "On the unfiltered overview",
+                tone: "neutral",
+              },
+              {
+                label: "With change summary",
+                value: metricDrafts.data ? String(documentedChangesCount) : "—",
+                detail: "On the unfiltered overview",
+                tone: "neutral",
+              },
+            ]}
+          />
+        </>
+      )}
+      {!hideHeader && onViewPublished ? (
         <div className="mb-5">
           <PolicyViewTabs
             activeId="draft-workspace"

@@ -41,9 +41,11 @@ const tone = (status: string): "success" | "neutral" =>
 export function PolicyVersionHistoryManager({
   onBack,
   backLabel = "Drafts",
+  hideHeader = false,
 }: {
   onBack?: () => void;
   backLabel?: string;
+  hideHeader?: boolean;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [search, setSearch] = useState("");
@@ -104,18 +106,20 @@ export function PolicyVersionHistoryManager({
   }
   return (
     <>
-      <ProductPageHeader
-        title="Policy version history"
-        description="Review every recorded version of information security policies."
-        showSampleNotice={false}
-        additionalActions={
-          onBack && backLabel !== "Published" ? (
-            <Button variant="secondary" onClick={onBack}>
-              Back to policy workspace
-            </Button>
-          ) : undefined
-        }
-      />
+      {!hideHeader && (
+        <ProductPageHeader
+          title="Policy version history"
+          description="Review every recorded version of information security policies."
+          showSampleNotice={false}
+          additionalActions={
+            onBack && backLabel !== "Published" ? (
+              <Button variant="secondary" onClick={onBack}>
+                Back to policy workspace
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
       {onBack && backLabel === "Published" ? (
         <div className="mb-5">
           <PolicyViewTabs
