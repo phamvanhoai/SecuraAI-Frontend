@@ -1,13 +1,19 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  Lock,
+  Mail,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,27 +162,60 @@ export function LoginForm({
         </Alert>
       ) : null}
       {message ? <Alert>{message}</Alert> : null}
-      <FormField id="email" label="Email" error={errors.email?.message}>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          placeholder="name@company.com"
-          aria-invalid={Boolean(errors.email)}
-          aria-describedby={errors.email ? "email-error" : undefined}
-          {...register("email")}
-        />
-      </FormField>
-      <FormField
-        id="password"
-        label="Password"
-        error={errors.password?.message}
-      >
+
+      {/* Email field */}
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-sm font-medium">
+          Email
+        </label>
         <div className="relative">
+          <Mail
+            aria-hidden="true"
+            className="text-muted pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+            strokeWidth={1.8}
+          />
+          <Input
+            id="email"
+            className="pl-10"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="name@company.com"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "email-error" : undefined}
+            {...register("email")}
+          />
+        </div>
+        {errors.email ? (
+          <p id="email-error" className="text-danger text-sm">
+            {errors.email.message}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Password field */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="block text-sm font-medium">
+            Password
+          </label>
+          <Link
+            className="text-brand text-xs font-medium underline-offset-4 hover:underline"
+            href="/forgot-password"
+            tabIndex={0}
+          >
+            Forgot password?
+          </Link>
+        </div>
+        <div className="relative">
+          <Lock
+            aria-hidden="true"
+            className="text-muted pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2"
+            strokeWidth={1.8}
+          />
           <Input
             id="password"
-            className="pr-12"
+            className="px-10"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             aria-invalid={Boolean(errors.password)}
@@ -186,27 +225,26 @@ export function LoginForm({
           <button
             type="button"
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="text-muted hover:text-foreground focus-visible:outline-brand absolute top-1/2 right-3 -translate-y-1/2 rounded-md p-1 focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="text-muted hover:text-foreground focus-visible:outline-brand absolute top-1/2 right-1 grid size-9 -translate-y-1/2 place-items-center rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
             onClick={() => setShowPassword((value) => !value)}
           >
             {showPassword ? (
-              <EyeOff className="size-5" aria-hidden="true" />
+              <EyeOff className="size-4" aria-hidden="true" />
             ) : (
-              <Eye className="size-5" aria-hidden="true" />
+              <Eye className="size-4" aria-hidden="true" />
             )}
           </button>
         </div>
-      </FormField>
-      <div className="flex justify-end">
-        <Link
-          className="text-brand text-sm font-medium underline-offset-4 hover:underline"
-          href="/forgot-password"
-        >
-          Forgot password?
-        </Link>
+        {errors.password ? (
+          <p id="password-error" className="text-danger text-sm">
+            {errors.password.message}
+          </p>
+        ) : null}
       </div>
+
+      {/* CTA */}
       <Button
-        className="w-full"
+        className="mt-2 w-full"
         disabled={isSubmitting || googlePending}
         type="submit"
       >
@@ -219,9 +257,13 @@ export function LoginForm({
             Signing in…
           </>
         ) : (
-          "Sign in"
+          <>
+            Sign in
+            <ArrowRight aria-hidden="true" className="size-4" strokeWidth={2} />
+          </>
         )}
       </Button>
+
       {env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
         <>
           <Script
@@ -229,6 +271,15 @@ export function LoginForm({
             strategy="afterInteractive"
             onLoad={() => setGoogleReady(true)}
           />
+          <div
+            role="separator"
+            aria-hidden="true"
+            className="flex items-center gap-3"
+          >
+            <div className="border-border h-px flex-1 border-t" />
+            <span className="text-muted text-xs">Or continue with</span>
+            <div className="border-border h-px flex-1 border-t" />
+          </div>
           <div
             ref={googleButton}
             className="min-h-11 w-full overflow-hidden [&>div]:mx-auto"
