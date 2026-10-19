@@ -9,9 +9,11 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetDetail } from "../hooks/use-asset-detail";
 import { useUpdateAsset } from "../hooks/use-update-asset";
+import { assetTypes, assetTypeLabels } from "../schemas/asset-type-schema";
 import { updateAssetSchema, type UpdateAssetInput, type UpdateAssetRequest } from "../schemas/update-asset-schema";
 
 export function EditAssetDialog({ assetId, onClose }: { assetId: string | null; onClose: () => void }) {
@@ -31,7 +33,13 @@ export function EditAssetDialog({ assetId, onClose }: { assetId: string | null; 
       <p className="text-muted text-sm">Asset code: <strong className="text-foreground">{detail.data.assetCode}</strong></p>
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="edit-name" label="Asset name" error={errors.name?.message}><Input id="edit-name" maxLength={255} {...register("name")} /></FormField>
-        <FormField id="edit-type" label="Asset type" error={errors.assetType?.message}><Input id="edit-type" maxLength={100} {...register("assetType")} /></FormField>
+        <FormField id="edit-type" label="Asset type" error={errors.assetType?.message}>
+          <Select id="edit-type" aria-required="true" aria-invalid={Boolean(errors.assetType)} aria-describedby={errors.assetType ? "edit-type-error" : undefined} {...register("assetType")}>
+            <option value="" disabled>Select asset type</option>
+            {!assetTypes.some((value) => value === detail.data.assetType) ? <option value={detail.data.assetType} disabled>{detail.data.assetType} (legacy — select a supported type)</option> : null}
+            {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
+          </Select>
+        </FormField>
       </div>
       <FormField id="edit-description" label="Description" error={errors.description?.message}><Textarea id="edit-description" maxLength={10_000} rows={4} {...register("description")} /></FormField>
       <p className="text-muted text-xs leading-5">Use Assign owner, Classify asset, and Manage links for ownership, classification, and relationship changes.</p>
