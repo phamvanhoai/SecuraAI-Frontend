@@ -33,8 +33,10 @@ import { PolicyViewTabs } from "./policy-view-tabs";
 const initial: EmployeePolicyQuery = { page: 1, limit: 20, status: "all" };
 export function EmployeePolicyAcknowledgementManager({
   onViewHistory,
+  hideHeader = false,
 }: {
   onViewHistory?: () => void;
+  hideHeader?: boolean;
 }) {
   const session = useSessionUser();
   const allowed =
@@ -135,11 +137,13 @@ export function EmployeePolicyAcknowledgementManager({
   if (!allowed) return <Alert>Insufficient permissions</Alert>;
   return (
     <>
-      <ProductPageHeader
-        title="Policies requiring acknowledgement"
-        description="Read policies applicable to your department and confirm your understanding."
-        showSampleNotice={false}
-      />
+      {!hideHeader && (
+        <ProductPageHeader
+          title="Policies requiring acknowledgement"
+          description="Read policies applicable to your department and confirm your understanding."
+          showSampleNotice={false}
+        />
+      )}
       {onViewHistory ? (
         <div className="mb-5">
           <PolicyViewTabs

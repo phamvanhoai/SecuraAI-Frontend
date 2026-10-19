@@ -119,8 +119,10 @@ const rejectedColumns: readonly DataTableColumn<RejectedPolicyListItem>[] = [
 
 export function PolicyPublicationManager({
   onViewHistory,
+  hideHeader = false,
 }: {
   onViewHistory?: () => void;
+  hideHeader?: boolean;
 }) {
   const toast = useToast();
   const [query, setQuery] = useState(initialQuery);
@@ -365,52 +367,56 @@ export function PolicyPublicationManager({
   ).size;
   return (
     <>
-      <ProductPageHeader
-        additionalActions={
-          onViewHistory ? (
-            <Button variant="secondary" onClick={onViewHistory}>
-              <History aria-hidden="true" className="size-4" />
-              View version history
-            </Button>
-          ) : undefined
-        }
-        description="Review submitted policy content and approve eligible versions for publication."
-        showSampleNotice={false}
-        title="Approve policy versions"
-      />
-      <MetricStrip
-        ariaLabel="Policy publication metrics"
-        metrics={[
-          {
-            label: "Open workflow",
-            value: String(total),
-            detail: "Review, approval, or publication pending",
-            tone: "warning",
-            loading: metricPolicies.isPending,
-          },
-          {
-            label: "On this page",
-            value: String(metricItems.length),
-            detail: `Up to ${initialQuery.limit} unfiltered policy drafts`,
-            tone: "neutral",
-            loading: metricPolicies.isPending,
-          },
-          {
-            label: "With description",
-            value: String(describedCount),
-            detail: "On the unfiltered overview",
-            tone: "neutral",
-            loading: metricPolicies.isPending,
-          },
-          {
-            label: "Draft owners",
-            value: String(ownerCount),
-            detail: "Unique owners in the unfiltered overview",
-            tone: "neutral",
-            loading: metricPolicies.isPending,
-          },
-        ]}
-      />
+      {!hideHeader && (
+        <>
+          <ProductPageHeader
+            additionalActions={
+              onViewHistory ? (
+                <Button variant="secondary" onClick={onViewHistory}>
+                  <History aria-hidden="true" className="size-4" />
+                  View version history
+                </Button>
+              ) : undefined
+            }
+            description="Review submitted policy content and approve eligible versions for publication."
+            showSampleNotice={false}
+            title="Approve policy versions"
+          />
+          <MetricStrip
+            ariaLabel="Policy publication metrics"
+            metrics={[
+              {
+                label: "Open workflow",
+                value: String(total),
+                detail: "Review, approval, or publication pending",
+                tone: "warning",
+                loading: metricPolicies.isPending,
+              },
+              {
+                label: "On this page",
+                value: String(metricItems.length),
+                detail: `Up to ${initialQuery.limit} unfiltered policy drafts`,
+                tone: "neutral",
+                loading: metricPolicies.isPending,
+              },
+              {
+                label: "With description",
+                value: String(describedCount),
+                detail: "On the unfiltered overview",
+                tone: "neutral",
+                loading: metricPolicies.isPending,
+              },
+              {
+                label: "Draft owners",
+                value: String(ownerCount),
+                detail: "Unique owners in the unfiltered overview",
+                tone: "neutral",
+                loading: metricPolicies.isPending,
+              },
+            ]}
+          />
+        </>
+      )}
       <ProductPanel
         description={
           activeTab === "pending"
