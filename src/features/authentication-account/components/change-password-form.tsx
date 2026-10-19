@@ -1,7 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, KeyRound, LogOut } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -105,15 +112,26 @@ export function ChangePasswordForm({
   }
 
   return (
-    <form
-      autoComplete="off"
-      noValidate
-      onSubmit={handleSubmit(onSubmit)}
-    >
+    <form autoComplete="off" noValidate onSubmit={handleSubmit(onSubmit)}>
       <div className="grid gap-5 p-5 md:grid-cols-2">
+        <div className="border-border bg-neutral-soft/30 flex items-start gap-3 rounded-lg border p-4 md:col-span-2">
+          <ShieldCheck
+            aria-hidden="true"
+            className="text-brand mt-0.5 size-5 shrink-0"
+            strokeWidth={1.8}
+          />
+          <div>
+            <h3 className="text-sm font-semibold">Password requirements</h3>
+            <p className="text-muted mt-1 text-sm leading-6">
+              Choose a password different from your current one, with 8–128
+              characters, an uppercase letter, and a special character.
+            </p>
+          </div>
+        </div>
         {isRequired ? (
           <Alert className="border-warning/25 bg-warning-soft text-warning md:col-span-2">
-            You must change the temporary password before continuing to SecuraAI.
+            You must change the temporary password before continuing to
+            SecuraAI.
           </Alert>
         ) : null}
         {message ? (
@@ -198,8 +216,15 @@ export function ChangePasswordForm({
           </Link>
         )}
         <Button disabled={mutation.isPending} type="submit">
-          <KeyRound className="size-4" aria-hidden="true" />
-          {mutation.isPending ? "Changing password..." : "Change password"}
+          {mutation.isPending ? (
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+          ) : (
+            <KeyRound className="size-4" aria-hidden="true" />
+          )}
+          {mutation.isPending ? "Changing password…" : "Change password"}
         </Button>
       </div>
     </form>

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
@@ -31,7 +31,10 @@ declare global {
             client_id: string;
             callback: (response: GoogleCredentialResponse) => void;
           }): void;
-          renderButton(parent: HTMLElement, options: Record<string, string | number>): void;
+          renderButton(
+            parent: HTMLElement,
+            options: Record<string, string | number>,
+          ): void;
         };
       };
     };
@@ -125,7 +128,11 @@ export function LoginForm({
             await finishLogin();
           })
           .catch((error: unknown) => {
-            setMessage(error instanceof Error ? error.message : "Unable to sign in with Google.");
+            setMessage(
+              error instanceof Error
+                ? error.message
+                : "Unable to sign in with Google.",
+            );
           })
           .finally(() => setGooglePending(false));
       },
@@ -198,8 +205,22 @@ export function LoginForm({
           Forgot password?
         </Link>
       </div>
-      <Button className="w-full" disabled={isSubmitting} type="submit">
-        {isSubmitting ? "Signing in..." : "Sign in"}
+      <Button
+        className="w-full"
+        disabled={isSubmitting || googlePending}
+        type="submit"
+      >
+        {isSubmitting ? (
+          <>
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin motion-reduce:animate-none"
+            />
+            Signing in…
+          </>
+        ) : (
+          "Sign in"
+        )}
       </Button>
       {env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
         <>
