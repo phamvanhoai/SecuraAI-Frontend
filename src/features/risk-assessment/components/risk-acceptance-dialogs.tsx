@@ -1,4 +1,6 @@
 "use client";
+import { AcceptanceCostSummary } from "./acceptance-cost-fields";
+import type { AcceptanceCost } from "../schemas/acceptance-cost-schema";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
 import { ApiError } from "@/lib/api/api-error";
@@ -61,7 +63,7 @@ export function SubmitRiskAcceptanceDialog({
       risk.acceptances.some((item) => item.decision === "pending") ||
       !residual?.residualRating ||
       !risk.acceptanceWorkflow?.canSubmit ||
-      !selectedPlan
+      !selectedPlan || (selectedPlan.strategy === "accept" && !selectedPlan.acceptanceCost)
     )
       return setError(
         "Refresh the risk and complete the residual assessment and eligible plan before submitting.",
@@ -225,6 +227,7 @@ export function SubmitRiskAcceptanceDialog({
               Read-only here. Update the treatment plan separately.
             </p>
           </div>
+          {selectedPlan?.strategy === "accept" ? <div className="sm:col-span-2"><AcceptanceCostSummary value={selectedPlan.acceptanceCost} /></div> : null}
           <label className="text-sm font-medium">
             Acceptance valid until (UTC date)
             <Input
@@ -252,6 +255,7 @@ export function SubmitRiskAcceptanceDialog({
             disabled={
               mutation.isPending ||
               !risk.acceptanceWorkflow?.canSubmit ||
+              (selectedPlan?.strategy === "accept" && !selectedPlan.acceptanceCost) ||
               risk.vulnerabilityWorkflow?.assessmentReviewRequired ||
               ["accepted", "closed", "archived"].includes(risk.status)
             }
@@ -268,11 +272,13 @@ export function DecideRiskAcceptanceDialog({
   onClose,
   expired = false,
   approvalBlockedReason = null,
+  acceptanceCost,
 }: {
   acceptanceId: string;
   onClose: () => void;
   expired?: boolean;
   approvalBlockedReason?: string | null;
+  acceptanceCost?: AcceptanceCost | null | undefined;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const toast = useToast();
@@ -321,6 +327,7 @@ export function DecideRiskAcceptanceDialog({
         }}
       >
         {error ? <Alert className="text-danger">{error}</Alert> : null}
+        {acceptanceCost ? <AcceptanceCostSummary value={acceptanceCost} /> : null}
         {approvalBlocked ? (
           <Alert>
             {approvalBlockedReason ??

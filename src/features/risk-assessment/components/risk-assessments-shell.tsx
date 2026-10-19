@@ -268,12 +268,14 @@ export function RiskAssessmentsShell() {
               <RiskAction
                 icon={Pencil}
                 label="Update treatment plan"
+                disabled={["accepted", "closed", "archived"].includes(item.status)}
                 onClick={() => setPlanUpdateRisk(item)}
               />
             ) : (
               <RiskAction
                 icon={ClipboardList}
                 label="Create treatment plan"
+                disabled={["accepted", "closed", "archived"].includes(item.status)}
                 onClick={() => setPlanRisk(item)}
               />
             )

@@ -41,6 +41,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 const id = "11111111-1111-4111-8111-111111111111";
+it("shows submitted financial justification to the approver without auto-approving", () => {
+  render(<DecideRiskAcceptanceDialog acceptanceId={id} onClose={vi.fn()} acceptanceCost={{ costToFix: "100000000", expectedLoss: "5000000", currency: "VND", periodMonths: 12, basis: "Synthetic submitted estimate for twelve months." }} />);
+  expect(screen.getByText("100,000,000 VND")).toBeInTheDocument();
+  expect(screen.getByText("5,000,000 VND")).toBeInTheDocument();
+  expect(screen.getByText(/Comparison period: 12 months/)).toBeInTheDocument();
+  expect(mutations.decide).not.toHaveBeenCalled();
+});
 const date = "2026-10-14T00:00:00Z";
 const assessment = {
   id,

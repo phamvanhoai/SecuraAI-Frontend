@@ -32,6 +32,7 @@ export function IdentifyThreatDialog({
   const [tab, setTab] = useState<"identify" | "history">("identify");
   const risk = useRiskRecord(riskId);
   const mutation = useIdentifyThreat(riskId);
+  const canIdentify = risk.data?.vulnerabilityWorkflow?.canIdentify === true;
   const toast = useToast();
   const {
     register,
@@ -55,6 +56,7 @@ export function IdentifyThreatDialog({
     onClose();
   };
   const submit = async (input: IdentifyThreatInput) => {
+    if (!canIdentify) return;
     try {
       const created = await mutation.mutateAsync(input);
       close();
@@ -134,6 +136,8 @@ export function IdentifyThreatDialog({
           {risk.isError ? (
             <Alert>Unable to load vulnerabilities for this risk.</Alert>
           ) : null}
+          {risk.data && !canIdentify ? <Alert>{risk.data.vulnerabilityWorkflow?.blockedReason ?? "Threat creation is unavailable. Open Risk Review for an Accepted Risk first. History remains available."}</Alert> : null}
+          <fieldset disabled={!canIdentify || mutation.isPending} className="space-y-5">
           <FormField
             id="threatName"
             label="Threat name"
@@ -153,6 +157,8 @@ export function IdentifyThreatDialog({
           >
             <Textarea
               id="threatDescription"
+              disabled={!canIdentify || mutation.isPending}
+              className="disabled:cursor-not-allowed disabled:bg-neutral-soft disabled:text-muted disabled:opacity-60 disabled:resize-none"
               rows={4}
               maxLength={3000}
               {...register("description")}
@@ -206,6 +212,7 @@ export function IdentifyThreatDialog({
               </p>
             ) : null}
           </fieldset>
+          </fieldset>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={close}>
               Cancel
@@ -214,6 +221,7 @@ export function IdentifyThreatDialog({
               type="submit"
               disabled={
                 mutation.isPending ||
+                !canIdentify ||
                 risk.isPending ||
                 !risk.data?.vulnerabilities.length
               }
