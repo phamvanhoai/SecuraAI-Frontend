@@ -14,6 +14,12 @@ export const requestPasswordResetSchema = z
   })
   .strict();
 
+export const verifyPasswordResetSchema = z
+  .object({
+    token: z.string().regex(/^\d{6}$/, "Enter the 6-digit verification code."),
+  })
+  .strict();
+
 export const confirmPasswordResetSchema = z
   .object({
     token: z.string().regex(/^\d{6}$/, "Enter the 6-digit verification code."),
@@ -37,6 +43,9 @@ export const confirmPasswordResetSchema = z
 
 export type RequestPasswordResetInput = z.infer<
   typeof requestPasswordResetSchema
+>;
+export type VerifyPasswordResetInput = z.infer<
+  typeof verifyPasswordResetSchema
 >;
 export type ConfirmPasswordResetInput = z.infer<
   typeof confirmPasswordResetSchema

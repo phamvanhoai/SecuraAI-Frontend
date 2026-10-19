@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/api-error";
 import type {
   ConfirmPasswordResetInput,
   RequestPasswordResetInput,
+  VerifyPasswordResetInput,
 } from "../schemas/password-reset-schema";
 
 type PasswordResetResult = { message: string };
@@ -39,6 +40,17 @@ export async function confirmPasswordReset(
   input: ConfirmPasswordResetInput,
 ): Promise<PasswordResetResult> {
   const data = await apiRequest<unknown>("/api/auth/password-reset/confirm", {
+    method: "POST",
+    target: "same-origin",
+    body: input,
+  });
+  return parsePasswordResetResult(data);
+}
+
+export async function verifyPasswordResetCode(
+  input: VerifyPasswordResetInput,
+): Promise<PasswordResetResult> {
+  const data = await apiRequest<unknown>("/api/auth/password-reset/verify", {
     method: "POST",
     target: "same-origin",
     body: input,
