@@ -11,12 +11,15 @@ export { loginSchema, type LoginInput } from "./schemas/login-schema";
 export {
   confirmPasswordReset,
   requestPasswordReset,
+  verifyPasswordResetCode,
 } from "./api/password-reset";
 export {
   confirmPasswordResetSchema,
   requestPasswordResetSchema,
+  verifyPasswordResetSchema,
   type ConfirmPasswordResetInput,
   type RequestPasswordResetInput,
+  type VerifyPasswordResetInput,
 } from "./schemas/password-reset-schema";
 export { sessionUserSchema, type AuthSessionUser } from "./types/session-user";
 export { getSessionUser } from "./api/get-session-user";

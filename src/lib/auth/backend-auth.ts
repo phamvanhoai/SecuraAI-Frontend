@@ -52,10 +52,7 @@ export async function requestLogin(
 }
 
 export async function requestTokenPair(
-  path:
-    | "/auth/login"
-    | "/auth/google"
-    | "/auth/refresh",
+  path: "/auth/login" | "/auth/google" | "/auth/refresh",
   body: unknown,
   request: Request,
 ): Promise<{ response: Response; tokens?: AuthTokenPair }> {
@@ -97,12 +94,15 @@ export function publicAuthError(status: number): {
   if (status === 429)
     return {
       code: "RATE_LIMITED",
-      message: "Quá nhiều lần thử. Vui lòng thử lại sau.",
+      message: "Too many attempts. Please try again later.",
     };
   if (status === 403)
-    return { code: "ACCESS_DENIED", message: "Tài khoản không thể đăng nhập." };
+    return {
+      code: "ACCESS_DENIED",
+      message: "This account cannot sign in.",
+    };
   return {
     code: "INVALID_CREDENTIALS",
-    message: "Email hoặc mật khẩu không đúng.",
+    message: "Email or password is incorrect.",
   };
 }

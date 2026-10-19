@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@/lib/api/api-error";
-import { confirmPasswordReset, requestPasswordReset } from "./password-reset";
+import {
+  confirmPasswordReset,
+  requestPasswordReset,
+  verifyPasswordResetCode,
+} from "./password-reset";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -51,6 +55,26 @@ describe("password reset API", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/auth/password-reset/confirm",
       expect.objectContaining({ body: JSON.stringify(input) }),
+    );
+  });
+
+  it("verifies a reset code through the same-origin BFF", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        success: true,
+        data: { message: "Password reset code is valid." },
+      }),
+    );
+
+    await expect(verifyPasswordResetCode({ token: "123456" })).resolves.toEqual(
+      { message: "Password reset code is valid." },
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/password-reset/verify",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ token: "123456" }),
+      }),
     );
   });
 
