@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FileSearch, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
@@ -18,6 +19,7 @@ import {
   type MarkFurtherInvestigationRequest,
 } from "../schemas/ai-alert-schema";
 import { FeedbackRecordContext } from "./feedback-record-context";
+import { AlertDecisionContext } from "./alert-decision-context";
 
 export function MarkFurtherInvestigationDialog({
   alert,
@@ -86,21 +88,28 @@ export function MarkFurtherInvestigationDialog({
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
       title="Mark as needing further investigation"
     >
       {alert ? (
-        <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-          <div>
-            <p className="font-medium">{alert.title}</p>
-            <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
+        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+          <AlertDecisionContext alert={alert} />
+          <div className="border-warning/25 bg-warning-soft/40 flex items-start gap-3 rounded-lg border p-4">
+            <FileSearch
+              aria-hidden="true"
+              className="text-warning mt-0.5 size-5 shrink-0"
+              strokeWidth={1.8}
+            />
+            <div>
+              <h3 className="text-sm font-semibold">Investigation outcome</h3>
+              <p className="text-muted mt-1 text-sm leading-6">
+                Keep this alert assigned and open while more evidence is
+                collected. It can still be confirmed or dismissed later.
+              </p>
+            </div>
           </div>
-          <p className="text-muted text-sm leading-6">
-            Keep this alert open and assigned to you while more evidence is
-            collected. You can still confirm or dismiss it after investigation.
-          </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {message}
@@ -113,6 +122,7 @@ export function MarkFurtherInvestigationDialog({
             label="Feedback reason"
           >
             <Textarea
+              aria-invalid={Boolean(errors.reason)}
               aria-describedby={
                 errors.reason
                   ? "further-investigation-reason-error"
@@ -130,7 +140,7 @@ export function MarkFurtherInvestigationDialog({
               State what evidence, correlation, or validation is still needed.
             </p>
           </FormField>
-          <div className="flex justify-end gap-2">
+          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
             <Button
               disabled={mutation.isPending}
               onClick={close}
@@ -140,7 +150,17 @@ export function MarkFurtherInvestigationDialog({
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Updating…" : "Need further investigation"}
+              {mutation.isPending ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                  Updating…
+                </>
+              ) : (
+                "Need further investigation"
+              )}
             </Button>
           </div>
         </form>
