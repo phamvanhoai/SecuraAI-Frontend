@@ -1,5 +1,6 @@
 "use client";
 
+import { AcceptanceCostSummary } from "./acceptance-cost-fields";
 import { useEffect, useRef, useState } from "react";
 import {
   ClipboardCheck,
@@ -372,13 +373,14 @@ export function RiskAssessmentDetailDialog({
                         </h4>
                         <p className="text-muted text-sm">
                           {title(plan.strategy)} · {title(plan.status)} ·{" "}
-                          {plan.progress}% complete · Due{" "}
+                          {plan.strategy === "accept" ? "No additional treatment actions" : `${plan.progress}% complete`} · Due{" "}
                           {format(plan.targetCompletionDate)}
                         </p>
                         <p className="text-sm">
                           Responsible owner:{" "}
                           {plan.owner?.fullName ?? "Unassigned"}
                         </p>
+                        {plan.strategy === "accept" ? <AcceptanceCostSummary value={plan.acceptanceCost} /> : null}
                         <details>
                           <summary className="cursor-pointer text-sm font-medium">
                             Treatment actions ({plan.actionCount})
@@ -478,6 +480,7 @@ export function RiskAssessmentDetailDialog({
                             ? item.reason
                             : "Not separately recorded for this historical request")}
                       </p>
+                      {item.acceptanceCost ? <AcceptanceCostSummary value={item.acceptanceCost} /> : null}
                       {item.decision !== "pending" ? (
                         <p className="text-sm break-words whitespace-pre-wrap">
                           Decision rationale:{" "}
@@ -825,6 +828,7 @@ export function RiskAssessmentDetailDialog({
       {decidingAcceptance ? (
         <DecideRiskAcceptanceDialog
           acceptanceId={decidingAcceptance}
+          acceptanceCost={risk?.acceptances.find((item) => item.id === decidingAcceptance)?.acceptanceCost}
           expired={
             risk?.acceptances.find((item) => item.id === decidingAcceptance)
               ?.expired ?? false

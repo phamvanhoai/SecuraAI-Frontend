@@ -1,4 +1,6 @@
 "use client";
+import { AcceptanceCostFields } from "./acceptance-cost-fields";
+import { emptyAcceptanceCost } from "../schemas/acceptance-cost-schema";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
@@ -46,6 +48,7 @@ export function CreateRiskTreatmentPlanDialog({
   const rank = { low: 1, medium: 2, high: 3, critical: 4 } as const;
   const [title, setTitle] = useState("");
   const [strategy, setStrategy] = useState("mitigate");
+  const [acceptanceCost, setAcceptanceCost] = useState({ ...emptyAcceptanceCost });
   const [owner, setOwner] = useState("");
   const [targetDate, setTargetDate] = useState("");
   const [targetRisk, setTargetRisk] = useState("low");
@@ -64,6 +67,7 @@ export function CreateRiskTreatmentPlanDialog({
     setError("");
     setTitle("");
     setStrategy("mitigate");
+    setAcceptanceCost({ ...emptyAcceptanceCost });
     setOwner("");
     setTargetDate("");
     setTargetRisk("low");
@@ -81,7 +85,8 @@ export function CreateRiskTreatmentPlanDialog({
       targetDate,
       targetRisk,
       controlIds: controls,
-      actions: actions.map(({ title, assignedToUserId, dueDate }) => ({
+      acceptanceCost: strategy === "accept" ? acceptanceCost : null,
+      actions: (strategy === "accept" ? [] : actions).map(({ title, assignedToUserId, dueDate }) => ({
         title,
         assignedToUserId,
         dueDate,
@@ -254,12 +259,12 @@ export function CreateRiskTreatmentPlanDialog({
             )}
           </div>
         </fieldset>
-        <section className="space-y-3">
+        {strategy === "accept" ? <AcceptanceCostFields value={acceptanceCost} onChange={setAcceptanceCost} /> : <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold">Required actions</h3>
               <p className="text-muted text-sm">
-                Acceptance plans may have no action.
+                Record the work needed to carry out the selected treatment.
               </p>
             </div>
             <Button
@@ -335,7 +340,7 @@ export function CreateRiskTreatmentPlanDialog({
               </Button>
             </div>
           ))}
-        </section>
+        </section>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={close}>
             Cancel

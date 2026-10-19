@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { acceptanceCostSchema, validateAcceptanceCost } from "./acceptance-cost-schema";
 
 export const createRiskTreatmentPlanSchema = z
   .object({
     riskId: z.string().uuid(),
     title: z.string().trim().min(3).max(255),
     strategy: z.enum(["avoid", "mitigate", "transfer", "accept"]),
+    acceptanceCost: acceptanceCostSchema.nullish(),
     ownerUserId: z.string().uuid(),
     targetDate: z.iso.date(),
     targetRisk: z.enum(["low", "medium", "high", "critical"]),
@@ -21,6 +23,7 @@ export const createRiskTreatmentPlanSchema = z
       .max(100),
   })
   .superRefine((value, context) => {
+    validateAcceptanceCost(value, context);
     if (value.strategy === "mitigate" && !value.controlIds.length)
       context.addIssue({
         code: "custom",

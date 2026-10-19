@@ -1,4 +1,6 @@
 "use client";
+import { AcceptanceCostFields, AcceptanceCostSummary } from "./acceptance-cost-fields";
+import { emptyAcceptanceCost } from "../schemas/acceptance-cost-schema";
 import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { ApiError } from "@/lib/api/api-error";
@@ -54,6 +56,7 @@ export function UpdateRiskTreatmentPlanDialog({
       targetDate: draft.targetCompletionDate?.slice(0, 10) ?? "",
       status: draft.status,
       expectedUpdatedAt: draft.updatedAt,
+      acceptanceCost: draft.strategy === "accept" ? draft.acceptanceCost ?? null : null,
       controlIds: draft.controls.map((item) => item.id),
       actions: draft.actions.map((item) => ({
         ...item,
@@ -251,17 +254,19 @@ export function UpdateRiskTreatmentPlanDialog({
             )}
           </div>
         </fieldset>
-        <section className="space-y-3">
+        {draft.strategy === "accept" ? draft.status === "cancelled" ? <AcceptanceCostSummary value={draft.acceptanceCost} /> : <AcceptanceCostFields value={draft.acceptanceCost ?? emptyAcceptanceCost} onChange={(acceptanceCost) => setDraft({ ...draft, acceptanceCost })} /> : null}
+        {draft.strategy !== "accept" || draft.actions.length > 0 ? <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold">Treatment actions</h3>
               <p className="text-muted text-sm">
-                Pending = 0%, in progress = 50%, completed = 100%.
+                {draft.strategy === "accept" ? "Cancel existing actions explicitly before changing to Accept. Completed actions remain immutable; use a separate plan if needed." : "Pending = 0%, in progress = 50%, completed = 100%."}
               </p>
             </div>
             <Button
               type="button"
               variant="secondary"
+              disabled={draft.strategy === "accept"}
               onClick={() =>
                 setDraft({
                   ...draft,
@@ -375,7 +380,7 @@ export function UpdateRiskTreatmentPlanDialog({
               </Button>
             </div>
           ))}
-        </section>
+        </section> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
