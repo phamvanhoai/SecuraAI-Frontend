@@ -9,7 +9,7 @@ describe("createAsset", () => {
       id: "00000000-0000-4000-8000-000000000001",
       assetCode: "AST-002",
       name: "Server",
-      assetType: "server",
+      assetType: "SERVER",
       criticality: null,
       status: "active",
       location: null,
@@ -29,7 +29,7 @@ describe("createAsset", () => {
     await expect(
       createAsset({
         name: "Server",
-        assetType: "server",
+        assetType: "SERVER",
         dependencies: [],
         eventSourceIds: [],
       }),
@@ -40,7 +40,7 @@ describe("createAsset", () => {
         method: "POST",
         body: JSON.stringify({
           name: "Server",
-          assetType: "server",
+          assetType: "SERVER",
           dependencies: [],
           eventSourceIds: [],
         }),
@@ -67,7 +67,7 @@ describe("createAsset", () => {
     await expect(
       createAsset({
         name: "Server",
-        assetType: "server",
+        assetType: "SERVER",
         dependencies: [],
         eventSourceIds: [],
       }),

@@ -21,6 +21,7 @@ import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import { useAssets } from "../hooks/use-assets";
+import { assetTypes, assetTypeLabels, assetTypeLabel, assetTypeSchema } from "../schemas/asset-type-schema";
 import {
   assetCriticalities,
   assetListQuerySchema,
@@ -51,7 +52,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
       </span>
     ),
   },
-  { key: "type", header: "Type", cell: (item) => item.assetType },
+  { key: "type", header: "Type", cell: (item) => assetTypeLabel(item.assetType) },
   {
     key: "criticality",
     header: "Criticality",
@@ -175,7 +176,7 @@ export function AssetsShell() {
     navigate({
       page: 1,
       q: search.trim() || undefined,
-      assetType: type.trim() || undefined,
+      assetType: assetTypeSchema.safeParse(type).data,
       criticality: criticality
         ? (criticality as AssetListQuery["criticality"])
         : undefined,
@@ -219,12 +220,14 @@ export function AssetsShell() {
           </label>
           <label className="text-sm font-medium">
             Asset type
-            <Input
+            <Select
               className="mt-1"
               value={type}
               onChange={(e) => setType(e.target.value)}
-              placeholder="Server, endpoint…"
-            />
+            >
+              <option value="">All types</option>
+              {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
+            </Select>
           </label>
           <label className="text-sm font-medium">
             Criticality

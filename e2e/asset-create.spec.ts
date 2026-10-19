@@ -21,7 +21,7 @@ for (const width of [375, 768, 1440]) {
     for (const label of ["Criticality", "Data classification", "Business service"]) await expect(dialog.getByLabel(label, { exact: true })).toHaveCount(0);
     await expect(dialog.getByLabel("Asset code")).toHaveCount(0);
     await dialog.getByLabel("Asset name").fill("New server");
-    await dialog.getByLabel("Asset type").fill("SERVER");
+    await dialog.getByLabel("Asset type").selectOption("SERVER");
     expect((await dialog.boundingBox())?.width).toBeLessThanOrEqual(width);
     await dialog.getByRole("button", { name: "Create asset", exact: true }).click();
     await expect(dialog).not.toBeVisible();
