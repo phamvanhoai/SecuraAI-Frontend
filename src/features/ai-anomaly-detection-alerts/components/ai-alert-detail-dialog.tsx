@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Box, BrainCircuit, Database, Radar } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -34,24 +36,47 @@ export function AiAlertDetailDialog({
     >
       {alert ? (
         <div className="space-y-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="border-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h3 className="text-xl font-semibold">{alert.title}</h3>
-              <p className="text-muted mt-1 text-sm [overflow-wrap:anywhere]">
+              <p className="text-muted mt-1 font-mono text-xs [overflow-wrap:anywhere]">
                 {alert.alertCode}
               </p>
             </div>
-            <StatusBadge tone={statusTone(alert.status)}>
-              {formatStatus(alert.status)}
-            </StatusBadge>
+            <div className="flex flex-wrap items-center gap-2">
+              {alert.riskLevel ? (
+                <StatusBadge tone={riskLevelTone(alert.riskLevel)}>
+                  {formatRiskLevel(alert.riskLevel)} risk
+                </StatusBadge>
+              ) : null}
+              <StatusBadge tone={statusTone(alert.status)}>
+                {formatStatus(alert.status)}
+              </StatusBadge>
+            </div>
           </div>
-          <p className="text-muted text-sm leading-6">{alert.description}</p>
-          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Detail
+
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
+            <div className="flex items-start gap-3">
+              <Radar
+                aria-hidden="true"
+                className="text-brand mt-0.5 size-5 shrink-0"
+                strokeWidth={1.8}
+              />
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold">Detection summary</h4>
+                <p className="text-muted mt-1 text-sm leading-6">
+                  {alert.description}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
+            <SummaryMetric
               label="Anomaly score"
               value={formatScore(alert.anomalyScore)}
             />
-            <Detail
+            <SummaryMetric
               label="AI-suggested risk level"
               value={
                 alert.riskLevel
@@ -59,7 +84,7 @@ export function AiAlertDetailDialog({
                   : "Not available"
               }
             />
-            <Detail
+            <SummaryMetric
               label="AI risk score"
               value={
                 alert.riskScore === null
@@ -67,34 +92,56 @@ export function AiAlertDetailDialog({
                   : String(alert.riskScore)
               }
             />
-            <Detail label="Detected" value={formatDate(alert.detectedAt)} />
-            <Detail label="Event type" value={alert.event.eventType} />
-            <Detail
-              label="Event time"
-              value={formatDate(alert.event.eventTime)}
+            <SummaryMetric
+              label="Detected"
+              value={formatDate(alert.detectedAt)}
             />
-            <Detail label="Log source" value={alert.logSource.name} />
-            <Detail label="Source type" value={alert.logSource.sourceType} />
-            <Detail label="Asset" value={alert.asset?.name ?? "Not linked"} />
-            <Detail
-              label="Asset code"
-              value={alert.asset?.assetCode ?? "Not available"}
-            />
-            <Detail
-              label="Model"
-              value={`${alert.model.name} ${alert.model.version}`}
-            />
-            <Detail label="Provider" value={alert.model.provider} />
-            <Detail label="Alert ID" value={alert.id} />
-            <Detail label="Event ID" value={alert.event.id} />
           </dl>
+
+          <DetailSection
+            icon={Database}
+            id="alert-detection-context"
+            title="Detection context"
+          >
+            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <Detail label="Event type" value={alert.event.eventType} />
+              <Detail
+                label="Event time"
+                value={formatDate(alert.event.eventTime)}
+              />
+              <Detail label="Log source" value={alert.logSource.name} />
+              <Detail label="Source type" value={alert.logSource.sourceType} />
+            </dl>
+          </DetailSection>
+
+          <DetailSection
+            icon={Box}
+            id="alert-asset-model-context"
+            title="Asset & model context"
+          >
+            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <Detail label="Asset" value={alert.asset?.name ?? "Not linked"} />
+              <Detail
+                label="Asset code"
+                value={alert.asset?.assetCode ?? "Not available"}
+              />
+              <Detail
+                label="Model"
+                value={`${alert.model.name} ${alert.model.version}`}
+              />
+              <Detail label="Provider" value={alert.model.provider} />
+            </dl>
+          </DetailSection>
+
           <section
             aria-labelledby="ai-decision-explanation"
-            className="border-border space-y-3 border-t pt-5"
+            className="space-y-4"
           >
-            <h4 className="font-semibold" id="ai-decision-explanation">
-              AI decision explanation
-            </h4>
+            <SectionHeading
+              icon={BrainCircuit}
+              id="ai-decision-explanation"
+              title="AI decision explanation"
+            />
             {explanation.isPending ? (
               <div
                 aria-label="Loading AI explanation"
@@ -137,9 +184,18 @@ export function AiAlertDetailDialog({
               </div>
             ) : null}
           </section>
-          <div className="flex justify-end">
+
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3">
+            <dl className="grid gap-3 text-xs sm:grid-cols-2">
+              <Detail label="Alert ID" value={alert.id} mono />
+              <Detail label="Event ID" value={alert.event.id} mono />
+            </dl>
+          </div>
+
+          <div className="border-border flex justify-end border-t pt-4">
             <Button
               onClick={() => dialogRef.current?.close()}
+              type="button"
               variant="secondary"
             >
               Close
@@ -156,6 +212,59 @@ type ExplanationDataProps = {
   value: unknown;
   variant?: "metrics" | "contributions";
 };
+
+function DetailSection({
+  icon,
+  id,
+  title,
+  children,
+}: {
+  icon: LucideIcon;
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="space-y-4">
+      <SectionHeading icon={icon} id={id} title={title} />
+      {children}
+    </section>
+  );
+}
+
+function SectionHeading({
+  icon: Icon,
+  id,
+  title,
+}: {
+  icon: LucideIcon;
+  id: string;
+  title: string;
+}) {
+  return (
+    <div className="border-border flex items-center gap-2 border-b pb-2.5">
+      <Icon
+        aria-hidden="true"
+        className="text-brand size-4"
+        strokeWidth={1.8}
+      />
+      <h4 className="text-sm font-semibold" id={id}>
+        {title}
+      </h4>
+    </div>
+  );
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-surface min-w-0 p-3.5">
+      <dt className="text-muted text-xs font-medium">{label}</dt>
+      <dd className="mt-1.5 text-base font-semibold [overflow-wrap:anywhere] tabular-nums">
+        {value}
+      </dd>
+    </div>
+  );
+}
 
 function ExplanationData({
   label,
@@ -229,13 +338,13 @@ function ExplanationData({
           </p>
         )
       ) : isRecord(value) ? (
-        <dl className="border-border grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
+        <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2">
           {Object.entries(value).map(([key, entry]) => (
             <div className="bg-surface min-w-0 p-3" key={key}>
               <dt className="text-muted text-xs font-medium">
                 {formatLabel(key)}
               </dt>
-              <dd className="mt-1 text-sm font-semibold tabular-nums [overflow-wrap:anywhere]">
+              <dd className="mt-1 text-sm font-semibold [overflow-wrap:anywhere] tabular-nums">
                 {formatMetric(entry)}
               </dd>
             </div>
@@ -261,12 +370,18 @@ function parseContributions(value: unknown): Contribution[] | null {
   if (!Array.isArray(value)) return null;
   return value.flatMap((entry) => {
     if (!isRecord(entry) || typeof entry.featureName !== "string") return [];
-    return [{
-      name: entry.featureName,
-      value: typeof entry.featureValue === "string" ? entry.featureValue : null,
-      score: typeof entry.contributionScore === "number" ? entry.contributionScore : null,
-      rank: typeof entry.rank === "number" ? entry.rank : null,
-    }];
+    return [
+      {
+        name: entry.featureName,
+        value:
+          typeof entry.featureValue === "string" ? entry.featureValue : null,
+        score:
+          typeof entry.contributionScore === "number"
+            ? entry.contributionScore
+            : null,
+        rank: typeof entry.rank === "number" ? entry.rank : null,
+      },
+    ];
   });
 }
 
@@ -295,19 +410,31 @@ function formatMetric(value: unknown): string {
   if (value === null) return "Not available";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "number") {
-    return new Intl.NumberFormat("en", { maximumFractionDigits: 4 }).format(value);
+    return new Intl.NumberFormat("en", { maximumFractionDigits: 4 }).format(
+      value,
+    );
   }
   if (typeof value === "string") return formatLabel(value);
   return JSON.stringify(value);
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
   return (
     <div className="min-w-0">
       <dt className="text-muted text-xs font-medium tracking-wide uppercase">
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-medium [overflow-wrap:anywhere]">
+      <dd
+        className={`mt-1 text-sm font-medium [overflow-wrap:anywhere] ${mono ? "font-mono text-xs" : ""}`}
+      >
         {value}
       </dd>
     </div>
@@ -318,6 +445,15 @@ function formatRiskLevel(level: string): string {
   return level
     .replaceAll("_", " ")
     .replace(/^./, (value) => value.toUpperCase());
+}
+
+function riskLevelTone(level: string) {
+  const normalized = level.toLowerCase();
+  if (normalized === "critical" || normalized === "high")
+    return "danger" as const;
+  if (normalized === "medium") return "warning" as const;
+  if (normalized === "low") return "success" as const;
+  return "neutral" as const;
 }
 
 export function formatStatus(status: AiAlert["status"]): string {

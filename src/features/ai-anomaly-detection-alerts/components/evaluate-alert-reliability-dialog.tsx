@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { History, MessageSquareText } from "lucide-react";
+import { History, LoaderCircle, MessageSquareText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm, type DefaultValues } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
@@ -23,6 +23,7 @@ import {
   type EvaluateAiAlertReliabilityRequest,
 } from "../schemas/ai-alert-schema";
 import { AlertFeedbackHistoryPanel } from "./alert-feedback-history-panel";
+import { AlertDecisionContext } from "./alert-decision-context";
 
 const defaults: DefaultValues<EvaluateAiAlertReliabilityInput> = {
   comment: "",
@@ -105,17 +106,14 @@ export function EvaluateAlertReliabilityDialog({
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100%-2rem))] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
       title="Alert feedback"
     >
       {alert ? (
         <div className="space-y-5">
-          <div className="border-border bg-neutral-soft rounded-lg border p-4">
-            <p className="font-medium">{alert.title}</p>
-            <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
-          </div>
+          <AlertDecisionContext alert={alert} />
           <div
             aria-label="Alert reliability views"
             className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
@@ -127,6 +125,7 @@ export function EvaluateAlertReliabilityDialog({
               return (
                 <button
                   aria-selected={selected}
+                  aria-controls={`alert-feedback-panel-${item.id}`}
                   className={cn(
                     "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none",
                     selected
@@ -134,6 +133,7 @@ export function EvaluateAlertReliabilityDialog({
                       : "text-muted hover:bg-neutral-soft hover:text-foreground",
                   )}
                   key={item.id}
+                  id={`alert-feedback-tab-${item.id}`}
                   onClick={() => setTab(item.id)}
                   role="tab"
                   type="button"
@@ -148,10 +148,12 @@ export function EvaluateAlertReliabilityDialog({
               );
             })}
           </div>
-          <div className="h-[26rem] overflow-y-auto pr-1 sm:h-[30rem]">
+          <div className="min-h-[26rem]">
             {tab === "evaluate" ? (
               <form
                 className="space-y-4"
+                aria-labelledby="alert-feedback-tab-evaluate"
+                id="alert-feedback-panel-evaluate"
                 noValidate
                 onSubmit={handleSubmit(submit)}
                 role="tabpanel"
@@ -171,6 +173,7 @@ export function EvaluateAlertReliabilityDialog({
                   label="Assessment"
                 >
                   <Select
+                    aria-invalid={Boolean(errors.feedbackLabel)}
                     aria-describedby={
                       errors.feedbackLabel ? "feedback-label-error" : undefined
                     }
@@ -191,6 +194,7 @@ export function EvaluateAlertReliabilityDialog({
                   label="Feedback reason (optional)"
                 >
                   <Textarea
+                    aria-invalid={Boolean(errors.comment)}
                     aria-describedby={
                       errors.comment
                         ? "feedback-comment-error"
@@ -205,17 +209,36 @@ export function EvaluateAlertReliabilityDialog({
                     Add evidence or context that may help future analysis.
                   </p>
                 </FormField>
-                <div className="flex justify-end gap-2">
-                  <Button onClick={close} variant="secondary">
+                <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+                  <Button
+                    disabled={mutation.isPending}
+                    onClick={close}
+                    type="button"
+                    variant="secondary"
+                  >
                     Cancel
                   </Button>
                   <Button disabled={mutation.isPending} type="submit">
-                    {mutation.isPending ? "Submitting…" : "Submit feedback"}
+                    {mutation.isPending ? (
+                      <>
+                        <LoaderCircle
+                          aria-hidden="true"
+                          className="size-4 animate-spin motion-reduce:animate-none"
+                        />
+                        Submitting…
+                      </>
+                    ) : (
+                      "Submit feedback"
+                    )}
                   </Button>
                 </div>
               </form>
             ) : (
-              <div role="tabpanel">
+              <div
+                aria-labelledby="alert-feedback-tab-history"
+                id="alert-feedback-panel-history"
+                role="tabpanel"
+              >
                 <AlertFeedbackHistoryPanel alertId={alert.id} />
               </div>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoaderCircle, ShieldX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
@@ -18,6 +19,7 @@ import {
   type MarkFalsePositiveRequest,
 } from "../schemas/ai-alert-schema";
 import { FeedbackRecordContext } from "./feedback-record-context";
+import { AlertDecisionContext } from "./alert-decision-context";
 
 export function MarkFalsePositiveDialog({
   alert,
@@ -80,19 +82,28 @@ export function MarkFalsePositiveDialog({
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
       title="Dismiss alert as false positive"
     >
       {alert ? (
-        <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-          <p className="font-medium">{alert.title}</p>
-          <p className="text-muted text-sm">{alert.alertCode}</p>
-          <p className="text-muted text-sm leading-6">
-            This completes your triage, dismisses the alert as a false positive,
-            and records your reason. It does not retrain the AI model.
-          </p>
+        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+          <AlertDecisionContext alert={alert} />
+          <div className="border-danger/25 bg-danger-soft/40 flex items-start gap-3 rounded-lg border p-4">
+            <ShieldX
+              aria-hidden="true"
+              className="text-danger mt-0.5 size-5 shrink-0"
+              strokeWidth={1.8}
+            />
+            <div>
+              <h3 className="text-sm font-semibold">False-positive outcome</h3>
+              <p className="text-muted mt-1 text-sm leading-6">
+                This completes triage, dismisses the alert, and records the
+                reason. It does not retrain the AI model automatically.
+              </p>
+            </div>
+          </div>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {message}
@@ -105,6 +116,7 @@ export function MarkFalsePositiveDialog({
             error={errors.comment?.message}
           >
             <Textarea
+              aria-invalid={Boolean(errors.comment)}
               id="false-positive-comment"
               rows={4}
               maxLength={2000}
@@ -119,10 +131,11 @@ export function MarkFalsePositiveDialog({
               Explain why this alert is incorrect to help future analysis.
             </p>
           </FormField>
-          <div className="flex justify-end gap-2">
+          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
             <Button
               disabled={mutation.isPending}
               onClick={close}
+              type="button"
               variant="secondary"
             >
               Cancel
@@ -132,7 +145,17 @@ export function MarkFalsePositiveDialog({
               type="submit"
               variant="danger"
             >
-              {mutation.isPending ? "Dismissing…" : "Dismiss as false positive"}
+              {mutation.isPending ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                  Dismissing…
+                </>
+              ) : (
+                "Dismiss as false positive"
+              )}
             </Button>
           </div>
         </form>
