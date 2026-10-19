@@ -21,9 +21,7 @@ export function accountLockAction(
       : user.status === "locked"
         ? "unlock"
         : null;
-  return action && actor.permissions.includes(`users.${action}`)
-    ? action
-    : null;
+  return action;
 }
 
 export function accountLockError(error: unknown): string {

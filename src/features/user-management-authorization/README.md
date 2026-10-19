@@ -46,11 +46,10 @@ browser response.
 
 ## Lock and unlock user accounts (UC7)
 
-The user list exposes a Lock/Unlock button on each eligible account. Both the
-ADMIN role and the corresponding backend permission (`users.lock` or
-`users.unlock`) are required. Self-management and inactive/disabled accounts
-have no action. Backend authorization remains authoritative, including protection
-of the last active administrator with both account-management permissions.
+The user list exposes a Lock/Unlock button on each eligible account. The ADMIN
+role is required. Self-management and inactive/disabled accounts have no action.
+Backend authorization remains authoritative, including protection of the last
+active administrator.
 
 Both actions require a NFKC-normalized, trimmed reason of 10–1,000 characters.
 The confirmation contains the target account, reason and action buttons.
@@ -72,9 +71,8 @@ cancel and Escape to prevent accidental duplicate actions or dismissal.
 
 The implementation is verified against the sibling backend's
 `src/modules/users/README.md`, routes, DTO, service and
-`src/docs/account-lock.openapi.ts`. The backend must deploy UC7 and grant the
-permissions before actions appear; an administrator with an older session may
-need to sign in again.
+`src/docs/account-lock.openapi.ts`. The backend must deploy UC7 before the
+actions appear.
 
 Browser fixtures in `e2e/user-account-lock.spec.ts` exercise the flow without
 changing real accounts and capture preview screenshots under `test-results/`.
