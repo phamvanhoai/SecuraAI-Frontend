@@ -1,7 +1,16 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
@@ -111,19 +120,20 @@ export function RecoveryCard({ step }: { step: Step }) {
   }
 
   return (
-    <section className="w-full max-w-[46rem]">
+    <section className="w-full max-w-[30rem]">
       <Link
         href={step === "email" ? "/login" : "/forgot-password"}
-        className="text-brand mb-5 inline-flex text-sm font-medium"
+        className="text-brand focus-visible:outline-brand mb-4 inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
+        <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.8} />
         Back
       </Link>
-      <div className="border-border bg-surface rounded-[12px] border p-7 shadow-[0_20px_55px_rgba(28,55,100,0.08)] sm:p-10">
-        <div className="text-center">
-          <span className="bg-brand-soft text-brand mx-auto grid size-16 place-items-center rounded-full">
-            <Icon className="size-8" />
+      <div className="border-border bg-surface rounded-xl border p-6 sm:p-8">
+        <div className="border-border border-b pb-6 text-center">
+          <span className="bg-brand-soft text-brand mx-auto grid size-12 place-items-center rounded-lg">
+            <Icon aria-hidden="true" className="size-6" strokeWidth={1.8} />
           </span>
-          <h1 className="mt-5 text-3xl font-semibold tracking-[-0.03em]">
+          <h1 className="mt-4 text-2xl font-semibold tracking-[-0.025em]">
             {content[step][0]}
           </h1>
           <p className="text-muted mx-auto mt-2 max-w-lg text-sm leading-6">
@@ -149,13 +159,13 @@ export function RecoveryCard({ step }: { step: Step }) {
           />
         ) : null}
         {step === "success" ? (
-          <div className="mx-auto mt-8 max-w-xl">
+          <div className="mt-6">
             <div className="bg-success-soft text-success rounded-lg p-4 text-center text-sm">
               Your account is now secure.
             </div>
             <Link
               href="/login"
-              className="bg-brand mt-6 grid min-h-12 place-items-center rounded-lg font-semibold text-white"
+              className="bg-brand text-brand-contrast focus-visible:outline-brand mt-5 grid min-h-11 place-items-center rounded-lg font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               Sign in
             </Link>
@@ -182,7 +192,7 @@ function EmailForm({
   });
   return (
     <form
-      className="mx-auto mt-8 max-w-xl space-y-4"
+      className="mt-6 space-y-4"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
@@ -208,7 +218,17 @@ function EmailForm({
         ) : null}
       </label>
       <Button className="mt-2 w-full" disabled={pending} type="submit">
-        {pending ? "Sending..." : "Send reset code"}
+        {pending ? (
+          <>
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin motion-reduce:animate-none"
+            />
+            Sending…
+          </>
+        ) : (
+          "Send reset code"
+        )}
       </Button>
     </form>
   );
@@ -255,7 +275,7 @@ function OtpForm({
   }
 
   return (
-    <form className="mx-auto mt-8 max-w-xl" onSubmit={onSubmit}>
+    <form className="mt-6" onSubmit={onSubmit}>
       <div className="grid grid-cols-6 gap-3">
         {otp.map((value, index) => (
           <input
@@ -306,7 +326,7 @@ function PasswordForm({
   return (
     <form
       autoComplete="off"
-      className="mx-auto mt-8 max-w-xl space-y-4"
+      className="mt-6 space-y-4"
       noValidate
       onSubmit={handleSubmit(onSubmit)}
     >
@@ -415,7 +435,17 @@ function PasswordForm({
         ) : null}
       </div>
       <Button className="mt-2 w-full" disabled={pending} type="submit">
-        {pending ? "Resetting..." : "Reset password"}
+        {pending ? (
+          <>
+            <LoaderCircle
+              aria-hidden="true"
+              className="size-4 animate-spin motion-reduce:animate-none"
+            />
+            Resetting…
+          </>
+        ) : (
+          "Reset password"
+        )}
       </Button>
     </form>
   );

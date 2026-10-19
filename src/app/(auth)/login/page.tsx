@@ -17,13 +17,13 @@ export default async function LoginPage({
   const passwordChanged = params.passwordChanged === "1";
   return (
     <section
-      className="border-border bg-surface w-full max-w-[30rem] rounded-[12px] border p-7 shadow-[0_20px_55px_rgba(28,55,100,0.08)] sm:p-10"
+      className="border-border bg-surface w-full max-w-[30rem] rounded-xl border p-6 sm:p-8"
       aria-labelledby="login-title"
     >
-      <div className="mb-8 text-center">
+      <div className="border-border mb-6 border-b pb-6 text-center">
         <h2
           id="login-title"
-          className="text-3xl font-semibold tracking-[-0.035em]"
+          className="text-2xl font-semibold tracking-[-0.025em]"
         >
           Sign in
         </h2>
