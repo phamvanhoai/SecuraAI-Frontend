@@ -101,7 +101,7 @@ export function ComplianceRemindersManager() {
         <div className="flex items-center gap-2">
           <Link
             className="text-brand rounded-lg px-2 py-2 font-medium hover:underline focus-visible:outline-2"
-            href="/compliance"
+            href="/controls"
           >
             Open
           </Link>

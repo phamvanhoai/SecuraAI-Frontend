@@ -11,13 +11,10 @@ const routeGroups = {
   ],
   "(dashboard)": [
     "ai-models",
-    "alerts",
     "anomaly-monitoring",
     "assets",
     "audits",
-    "compliance",
     "controls",
-    "custom-dashboard",
     "dashboard",
     "admin",
     "employee",
