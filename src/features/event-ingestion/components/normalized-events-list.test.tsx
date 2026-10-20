@@ -3,6 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseNormalizedEvents = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-normalized-events", () => ({
   useNormalizedEvents: (params?: unknown) => mockUseNormalizedEvents(params),

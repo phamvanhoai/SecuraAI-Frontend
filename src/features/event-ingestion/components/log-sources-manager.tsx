@@ -13,6 +13,7 @@ import {
 import { useEventSources } from "../hooks/use-event-sources";
 import { useNormalizedEventMetrics } from "../hooks/use-normalized-events";
 import { useEventGovernanceSummary } from "../hooks/use-event-governance";
+import { useSessionUser } from "@/features/authentication-account";
 import { EventSourcesList } from "./event-sources-list";
 import { EventGovernancePoliciesList } from "./event-governance-policies-list";
 import { NormalizedEventsList } from "./normalized-events-list";
@@ -20,13 +21,19 @@ import { RegisterEventSourceForm } from "./register-event-source-form";
 import { cn } from "@/lib/utils";
 
 export function LogSourcesManager() {
-  const [activeTab, setActiveTab] = useState<
+  const session = useSessionUser();
+  const canViewEvents =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false;
+
+  const [selectedTab, setSelectedTab] = useState<
     "events" | "event-sources" | "governance"
   >("events");
   const [registerEventSourceOpen, setRegisterEventSourceOpen] = useState(false);
 
+  const activeTab = !canViewEvents && selectedTab === "events" ? "event-sources" : selectedTab;
+
   const eventSourcesOverview = useEventSources({ limit: 100 });
-  const eventMetrics = useNormalizedEventMetrics();
+  const eventMetrics = useNormalizedEventMetrics({ enabled: canViewEvents });
   const governanceSummary = useEventGovernanceSummary();
 
   const totalEventSources = eventSourcesOverview.data?.pagination.total ?? 0;
@@ -187,43 +194,45 @@ export function LogSourcesManager() {
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs">
-          <button
-            type="button"
-            onClick={() => setActiveTab("events")}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
-              activeTab === "events"
-                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
-                : "text-muted hover:bg-neutral-soft hover:text-foreground",
-            )}
-          >
-            <Layers
-              aria-hidden="true"
+          {canViewEvents ? (
+            <button
+              type="button"
+              onClick={() => setSelectedTab("events")}
               className={cn(
-                "size-4",
+                "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
                 activeTab === "events"
-                  ? "text-brand-contrast"
-                  : "text-muted",
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
               )}
-              strokeWidth={2}
-            />
-            <span>Security events</span>
-            {eventMetrics.data ? (
-              <span
+            >
+              <Layers
+                aria-hidden="true"
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  "size-4",
                   activeTab === "events"
-                    ? "bg-white/20 text-brand-contrast"
-                    : "border-border bg-neutral-soft text-muted border",
+                    ? "text-brand-contrast"
+                    : "text-muted",
                 )}
-              >
-                {eventMetrics.data.totalEvents}
-              </span>
-            ) : null}
-          </button>
+                strokeWidth={2}
+              />
+              <span>Security events</span>
+              {eventMetrics.data ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                    activeTab === "events"
+                      ? "bg-white/20 text-brand-contrast"
+                      : "border-border bg-neutral-soft text-muted border",
+                  )}
+                >
+                  {eventMetrics.data.totalEvents}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => setActiveTab("event-sources")}
+            onClick={() => setSelectedTab("event-sources")}
             className={cn(
               "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
               activeTab === "event-sources"
@@ -257,7 +266,7 @@ export function LogSourcesManager() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("governance")}
+            onClick={() => setSelectedTab("governance")}
             className={cn(
               "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
               activeTab === "governance"
@@ -301,7 +310,7 @@ export function LogSourcesManager() {
         </div>
       ) : null}
 
-      {activeTab === "events" ? (
+      {activeTab === "events" && canViewEvents ? (
         <NormalizedEventsList />
       ) : activeTab === "event-sources" ? (
         <EventSourcesList
