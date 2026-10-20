@@ -1,5 +1,5 @@
-import { SecurityDashboardView } from "@/features/audit-security-reporting";
+import { DashboardRoleRouter } from "@/features/reports";
 
 export default function DashboardPage() {
-  return <SecurityDashboardView />;
+  return <DashboardRoleRouter />;
 }
