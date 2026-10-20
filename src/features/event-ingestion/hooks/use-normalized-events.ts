@@ -23,10 +23,11 @@ export function useNormalizedEvents(params?: Partial<ListNormalizedEventsQuery>)
   });
 }
 
-export function useNormalizedEventMetrics() {
+export function useNormalizedEventMetrics(options?: { enabled?: boolean }) {
   return useQuery<NormalizedEventMetrics, Error>({
     queryKey: ["normalized-events", "metrics"],
     queryFn: () => getNormalizedEventMetrics(),
+    enabled: options?.enabled ?? true,
   });
 }
 

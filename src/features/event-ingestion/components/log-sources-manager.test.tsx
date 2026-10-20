@@ -1,10 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createMock, updateMock } = vi.hoisted(() => ({
+const { createMock, updateMock, mockSessionUser } = vi.hoisted(() => ({
   createMock: vi.fn(),
   updateMock: vi.fn(),
+  mockSessionUser: vi.fn(() => ({
+    data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+    isPending: false,
+  })),
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
 }));
 
 vi.mock("../hooks/use-log-sources", () => ({
@@ -118,7 +126,14 @@ vi.mock("@/components/feedback/toast", () => ({
 import { LogSourcesManager } from "./log-sources-manager";
 
 describe("LogSourcesManager", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] } as any,
+      isPending: false,
+    } as any);
+  });
+  afterEach(cleanup);
 
   it("renders the 3 active V2 tabs and switches between them", async () => {
     const user = userEvent.setup();
@@ -152,6 +167,25 @@ describe("LogSourcesManager", () => {
     );
     expect(
       screen.getByText("Total policies"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides Security events tab and defaults to Normalized event sources when user is ADMIN", () => {
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "ADMIN", name: "Administrator" }] } as any,
+      isPending: false,
+    } as any);
+
+    render(<LogSourcesManager />);
+
+    expect(
+      screen.queryByRole("button", { name: /Security events/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Normalized event sources/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Event source metrics" }),
     ).toBeInTheDocument();
   });
 });
