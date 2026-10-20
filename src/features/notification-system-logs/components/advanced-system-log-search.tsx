@@ -26,6 +26,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
 import { exportInvestigationLogs } from "../api/export-investigation-logs";
@@ -318,7 +319,7 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             </div>
           </div>
           {advanced ? (
-            <div className="border-border bg-neutral-soft/40 grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="border-border bg-neutral-soft/20 grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-5">
               <FilterInput
                 id="log-event"
                 label="Event type"
@@ -365,9 +366,18 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
         </div>
         <div className="p-4">
           {logs.isPending ? (
-            <div
-              aria-label="Loading system logs"
-              className="bg-neutral-soft h-64 animate-pulse rounded-lg"
+            <TableSkeleton
+              headers={[
+                ...(canExport ? ["Select"] : []),
+                "Timestamp",
+                "Event type",
+                "Source",
+                "Actor",
+                "Processing status",
+                "Actions",
+              ]}
+              rows={6}
+              label="Loading system logs"
             />
           ) : logs.isError ? (
             <Alert>
@@ -395,19 +405,24 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             <div className="py-12 text-center">
               <Search
                 aria-hidden="true"
-                className="text-muted mx-auto size-7"
+                className="text-muted mx-auto mb-3 size-10"
               />
-              <p className="mt-3 font-medium">
+              <h3 className="text-foreground text-base font-semibold">
                 No logs match the current criteria
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                Try adjusting the search terms, status, or advanced filters.
               </p>
-              <Button
-                className="mt-3"
-                type="button"
-                variant="secondary"
-                onClick={reset}
-              >
-                Clear filters
-              </Button>
+              {activeCount ? (
+                <Button
+                  className="mt-4"
+                  type="button"
+                  variant="secondary"
+                  onClick={reset}
+                >
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
           )}
         </div>
