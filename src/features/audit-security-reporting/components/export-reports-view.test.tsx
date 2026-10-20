@@ -4,11 +4,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { ExportReportsView } from "./export-reports-view";
 
+let mockSessionUser = {
+  data: {
+    id: "user-1",
+    roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
+  },
+  isPending: false,
+};
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser,
+}));
+
 describe("ExportReportsView", () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
+    mockSessionUser = {
+      data: {
+        id: "user-1",
+        roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
+      },
+      isPending: false,
+    };
   });
 
   afterEach(() => {
@@ -210,5 +229,23 @@ describe("ExportReportsView", () => {
     // Verify Separation of Duties: Investigation Logs is NOT an option in the filter
     expect(screen.queryByText(/Investigation Logs/i)).not.toBeInTheDocument();
     expect(screen.getByText("All Security Reports")).toBeInTheDocument();
+  });
+
+  it("renders access alert when user role is not SECURITY_OFFICER or EXECUTIVE", async () => {
+    mockSessionUser = {
+      data: {
+        id: "admin-1",
+        roles: [{ code: "ADMIN", name: "Administrator" }],
+      },
+      isPending: false,
+    };
+
+    renderView();
+
+    expect(
+      await screen.findByText(
+        "This reporting module is available to Security Officers and Executives only.",
+      ),
+    ).toBeInTheDocument();
   });
 });

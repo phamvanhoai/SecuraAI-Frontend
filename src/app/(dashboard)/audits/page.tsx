@@ -20,6 +20,12 @@ export default function AuditsPage() {
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+  const isSecurityOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false;
+  const canAccessAudits = isAdmin || isSecurityOfficer;
+
+  const currentView = !isAdmin && activeView !== "all" ? "all" : activeView;
+
   return (
     <div className="space-y-5">
       <ProductPageHeader
@@ -34,8 +40,8 @@ export default function AuditsPage() {
         />
       ) : session.isError ? (
         <Alert>Unable to verify your audit-log access.</Alert>
-      ) : !isAdmin ? (
-        <Alert>This audit log is available to administrators only.</Alert>
+      ) : !canAccessAudits ? (
+        <Alert>This audit log is available to administrators and security officers only.</Alert>
       ) : (
         <div className="space-y-5">
           <div
@@ -44,39 +50,45 @@ export default function AuditsPage() {
             role="tablist"
           >
             <AuditTab
-              active={activeView === "all"}
+              active={currentView === "all"}
               icon={List}
               label="All Audit Records"
               onClick={() => setActiveView("all")}
             />
-            <AuditTab
-              active={activeView === "user-activity"}
-              icon={UserRound}
-              label="User Activity"
-              onClick={() => setActiveView("user-activity")}
-            />
-            <AuditTab
-              active={activeView === "data-governance"}
-              icon={Database}
-              label="Data Governance"
-              onClick={() => setActiveView("data-governance")}
-            />
-            <AuditTab
-              active={activeView === "api-keys"}
-              icon={KeyRound}
-              label="Integration API Keys"
-              onClick={() => setActiveView("api-keys")}
-            />
+            {isAdmin ? (
+              <>
+                <AuditTab
+                  active={currentView === "user-activity"}
+                  icon={UserRound}
+                  label="User Activity"
+                  onClick={() => setActiveView("user-activity")}
+                />
+                <AuditTab
+                  active={currentView === "data-governance"}
+                  icon={Database}
+                  label="Data Governance"
+                  onClick={() => setActiveView("data-governance")}
+                />
+                <AuditTab
+                  active={currentView === "api-keys"}
+                  icon={KeyRound}
+                  label="Integration API Keys"
+                  onClick={() => setActiveView("api-keys")}
+                />
+              </>
+            ) : null}
           </div>
           <div role="tabpanel">
-            {activeView === "all" ? <AuditLogsManager /> : null}
-            {activeView === "user-activity" ? (
+            {currentView === "all" ? <AuditLogsManager /> : null}
+            {isAdmin && currentView === "user-activity" ? (
               <UserActivityAuditLogManager />
             ) : null}
-            {activeView === "data-governance" ? (
+            {isAdmin && currentView === "data-governance" ? (
               <EventDataGovernancePolicy />
             ) : null}
-            {activeView === "api-keys" ? <IntegrationApiKeyList /> : null}
+            {isAdmin && currentView === "api-keys" ? (
+              <IntegrationApiKeyList />
+            ) : null}
           </div>
         </div>
       )}

@@ -4,6 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboardView } from "./security-dashboard-view";
 import type { SecurityDashboardResponse } from "../schemas/security-dashboard-schema";
 
+let mockSessionUser = {
+  data: {
+    id: "user-1",
+    roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
+  },
+  isPending: false,
+};
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser,
+}));
+
 describe("SecurityDashboardView Component", () => {
   const fetchMock = vi.fn();
 
@@ -124,6 +136,13 @@ describe("SecurityDashboardView Component", () => {
 
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
+    mockSessionUser = {
+      data: {
+        id: "user-1",
+        roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
+      },
+      isPending: false,
+    };
   });
 
   afterEach(() => {
@@ -243,5 +262,23 @@ describe("SecurityDashboardView Component", () => {
 
     // Operational details section should NOT be present for Executive
     expect(screen.queryByTestId("operational-details-section")).not.toBeInTheDocument();
+  });
+
+  it("renders access restriction alert when user role is not SECURITY_OFFICER or EXECUTIVE", async () => {
+    mockSessionUser = {
+      data: {
+        id: "admin-1",
+        roles: [{ code: "ADMIN", name: "Administrator" }],
+      },
+      isPending: false,
+    };
+
+    renderDashboard();
+
+    expect(
+      await screen.findByText(
+        "This security dashboard is available to Security Officers and Executives only.",
+      ),
+    ).toBeInTheDocument();
   });
 });
