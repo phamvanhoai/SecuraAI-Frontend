@@ -46,13 +46,11 @@ export default function NotificationsPage() {
   const accountEmail = session.data?.email ?? "your account email";
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
-  const canViewCompliance = permissions.some((permission) =>
-    [
-      "compliance.assess-controls",
-      "compliance.evidence.upload",
-      "policies.acknowledge",
-    ].includes(permission),
-  );
+  const isSecurityOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ??
+    false;
+  const canViewCompliance =
+    isSecurityOfficer || permissions.includes("policies.acknowledge");
   return (
     <div className="space-y-5">
       <ProductPageHeader
