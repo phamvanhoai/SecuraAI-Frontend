@@ -5,7 +5,7 @@ const user: AuthSessionUser = {
   id: "user",
   email: "user@example.test",
   fullName: "Test User",
-  status: "active",
+  status: "ACTIVE",
   mustChangePassword: false,
   roles: [],
   permissions: ["login-history.read"],
@@ -43,5 +43,15 @@ describe("login history access", () => {
         status: "locked",
       }),
     ).toBe(false);
+  });
+
+  it("accepts the legacy lowercase active status", () => {
+    expect(
+      canViewLoginHistory({
+        ...user,
+        status: "active",
+        roles: [{ code: "ADMIN", name: "Admin" }],
+      }),
+    ).toBe(true);
   });
 });
