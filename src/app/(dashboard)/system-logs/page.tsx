@@ -20,6 +20,8 @@ export default function SystemLogsPage() {
     session.data?.permissions.includes("system-logs.search") ?? false;
   const canExport =
     session.data?.permissions.includes("system-logs.export") ?? false;
+  const isAdmin =
+    session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
   return (
     <div className="space-y-5">
       <ProductPageHeader
@@ -42,7 +44,7 @@ export default function SystemLogsPage() {
       ) : (
         <div className="space-y-5">
           <div
-            className="border-border bg-surface inline-flex w-full gap-1 rounded-xl border p-1 sm:w-auto"
+            className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs"
             role="tablist"
             aria-label="System log functions"
           >
@@ -52,7 +54,7 @@ export default function SystemLogsPage() {
               label="Log Search"
               onClick={() => setActiveView("search")}
             />
-            {canExport ? (
+            {isAdmin ? (
               <ViewTab
                 active={activeView === "configuration-history"}
                 icon={History}
@@ -61,8 +63,8 @@ export default function SystemLogsPage() {
               />
             ) : null}
           </div>
-          <div role="tabpanel">
-            {activeView === "configuration-history" && canExport ? (
+          <div aria-live="polite" role="tabpanel">
+            {activeView === "configuration-history" && isAdmin ? (
               <SystemConfigurationHistory />
             ) : (
               <AdvancedSystemLogSearch canExport={canExport} />
@@ -89,7 +91,7 @@ function ViewTab({
     <button
       aria-selected={active}
       className={cn(
-        "focus-visible:outline-brand flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 sm:flex-none",
+        "focus-visible:outline-brand inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2",
         active
           ? "bg-brand text-white shadow-sm"
           : "text-muted hover:bg-neutral-soft hover:text-foreground",

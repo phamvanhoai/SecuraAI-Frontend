@@ -95,6 +95,7 @@ describe("LoginHistoryShell", () => {
     const user = userEvent.setup();
     mount();
     await screen.findByText("Other User");
+    await user.click(screen.getByRole("button", { name: /Advanced/i }));
     await user.type(screen.getByLabelText("IP address"), "hostname");
     expect(
       await screen.findByText("Enter a valid IPv4 or IPv6 address."),
@@ -120,7 +121,7 @@ describe("LoginHistoryShell", () => {
       screen.getByLabelText("Search by name or email"),
       "pending",
     );
-    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
     await user.selectOptions(screen.getByLabelText("Status"), "success");
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(

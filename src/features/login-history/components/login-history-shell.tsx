@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Filter, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -20,6 +20,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import { ApiError } from "@/lib/api/api-error";
 import { useLoginHistory } from "../hooks/use-login-history";
@@ -110,6 +111,7 @@ export function LoginHistoryShell() {
     loginHistoryQuerySchema.parse({}),
   );
   const [filters, setFilters] = useState(initialFilters);
+  const [advanced, setAdvanced] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -192,6 +194,13 @@ export function LoginHistoryShell() {
     { key: "to", label: "To", type: "datetime-local" },
     { key: "ipAddress", label: "IP address", type: "text" },
   ] as const;
+  const activeFilterCount = [
+    filters.search,
+    filters.status,
+    filters.from,
+    filters.to,
+    filters.ipAddress,
+  ].filter(Boolean).length;
 
   return (
     <>
@@ -220,122 +229,170 @@ export function LoginHistoryShell() {
       />
       <ProductPanel
         title="Login history"
-        description="Each row is a login attempt. Times use your device’s time zone."
+        description={
+          history.data
+            ? `${history.data.pagination.total} login attempts found`
+            : "Each row is a login attempt. Times use your device’s time zone."
+        }
       >
-        <div className="border-border space-y-4 border-b p-5">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="md:col-span-2">
+        <div className="border-border space-y-3 border-b p-4">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end">
+            <div className="min-w-[220px] flex-1 lg:max-w-md">
               <FormField
                 id="login-search"
                 label="Search by name or email"
                 error={errors.search}
               >
-                <Input
-                  id="login-search"
-                  value={filters.search}
-                  maxLength={255}
-                  onChange={(event) =>
-                    updateFilter("search", event.target.value)
-                  }
-                />
+                <div className="relative">
+                  <Search
+                    aria-hidden="true"
+                    className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  />
+                  <Input
+                    className="pl-9"
+                    id="login-search"
+                    value={filters.search}
+                    maxLength={255}
+                    placeholder="Name or email address"
+                    onChange={(event) =>
+                      updateFilter("search", event.target.value)
+                    }
+                  />
+                </div>
               </FormField>
             </div>
-            <FormField id="login-status" label="Status">
-              <Select
-                id="login-status"
-                value={filters.status}
-                onChange={(event) => updateFilter("status", event.target.value)}
-              >
-                <option value="">All statuses</option>
-                <option value="success">Success</option>
-                <option value="failed">Failed</option>
-              </Select>
-            </FormField>
-            <FormField id="login-order" label="Sort order">
-              <Select
-                id="login-order"
-                value={filters.sortOrder}
-                onChange={(event) =>
-                  updateFilter("sortOrder", event.target.value)
-                }
-              >
-                <option value="desc">Newest first</option>
-                <option value="asc">Oldest first</option>
-              </Select>
-            </FormField>
-            {fields.map((field) => (
-              <FormField
-                key={field.key}
-                id={`login-${field.key}`}
-                label={field.label}
-                error={errors[field.key]}
-              >
-                <Input
-                  id={`login-${field.key}`}
-                  className={
-                    field.type === "datetime-local"
-                      ? "dark:[color-scheme:dark]"
-                      : undefined
-                  }
-                  type={field.type}
-                  value={filters[field.key]}
-                  aria-invalid={Boolean(errors[field.key])}
-                  aria-describedby={
-                    errors[field.key] ? `login-${field.key}-error` : undefined
-                  }
-                  maxLength={field.type === "text" ? 45 : undefined}
+            <div className="flex flex-wrap items-end gap-2">
+              <FormField id="login-status" label="Status">
+                <Select
+                  className="w-40"
+                  id="login-status"
+                  value={filters.status}
                   onChange={(event) =>
-                    updateFilter(field.key, event.target.value)
+                    updateFilter("status", event.target.value)
                   }
-                />
+                >
+                  <option value="">All statuses</option>
+                  <option value="success">Success</option>
+                  <option value="failed">Failed</option>
+                </Select>
               </FormField>
-            ))}
+              <FormField id="login-order" label="Sort order">
+                <Select
+                  className="w-40"
+                  id="login-order"
+                  value={filters.sortOrder}
+                  onChange={(event) =>
+                    updateFilter("sortOrder", event.target.value)
+                  }
+                >
+                  <option value="desc">Newest first</option>
+                  <option value="asc">Oldest first</option>
+                </Select>
+              </FormField>
+              <Button
+                type="button"
+                variant={advanced ? "primary" : "secondary"}
+                onClick={() => setAdvanced((value) => !value)}
+              >
+                <Filter aria-hidden="true" className="size-4" />
+                Advanced
+                {activeFilterCount ? (
+                  <span className="bg-brand-soft text-brand rounded-full px-1.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </Button>
+              {activeFilterCount ? (
+                <Button variant="secondary" type="button" onClick={reset}>
+                  <RotateCcw aria-hidden="true" className="size-4" />
+                  Reset
+                </Button>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="secondary" type="button" onClick={reset}>
-              Clear filters
-            </Button>
-            <span aria-live="polite" className="text-muted text-sm">
-              {history.data
-                ? `${history.data.pagination.total} login attempts`
-                : ""}
-            </span>
-          </div>
+          {advanced ? (
+            <div className="border-border bg-neutral-soft/20 grid gap-3 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-3">
+              {fields.map((field) => (
+                <FormField
+                  key={field.key}
+                  id={`login-${field.key}`}
+                  label={field.label}
+                  error={errors[field.key]}
+                >
+                  <Input
+                    id={`login-${field.key}`}
+                    className={
+                      field.type === "datetime-local"
+                        ? "dark:[color-scheme:dark]"
+                        : undefined
+                    }
+                    type={field.type}
+                    value={filters[field.key]}
+                    aria-invalid={Boolean(errors[field.key])}
+                    aria-describedby={
+                      errors[field.key] ? `login-${field.key}-error` : undefined
+                    }
+                    maxLength={field.type === "text" ? 45 : undefined}
+                    onChange={(event) =>
+                      updateFilter(field.key, event.target.value)
+                    }
+                  />
+                </FormField>
+              ))}
+            </div>
+          ) : null}
         </div>
-        {history.isPending ? (
-          <div className="p-5">
-            <DashboardLoadingSkeleton variant="table" />
-          </div>
-        ) : history.isError ? (
-          <div className="space-y-3 p-5">
-            <Alert>Unable to load login history. Please try again.</Alert>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void history.refetch()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : history.data.items.length === 0 ? (
-          <div className="p-5">
+        <div className="p-4">
+          {history.isPending ? (
+            <TableSkeleton
+              headers={[
+                "User / Email",
+                "Login time",
+                "Status",
+                "IP address",
+                "Failure reason",
+                "Browser / Device",
+              ]}
+              rows={6}
+              label="Loading login history"
+            />
+          ) : history.isError ? (
+            <div className="space-y-3">
+              <Alert>Unable to load login history. Please try again.</Alert>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void history.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : history.data.items.length === 0 ? (
             <EmptyState
-              title="No matching login history"
-              description="Clear the filters or choose a different date range. Attempts made before history recording started are not available."
+              title={
+                activeFilterCount
+                  ? "No matching login history"
+                  : "No login history recorded"
+              }
+              description={
+                activeFilterCount
+                  ? "Adjust or clear the filters to broaden the results."
+                  : "Login attempts will appear here after authentication activity is recorded."
+              }
             />
-          </div>
-        ) : (
-          <div
-            aria-label="Login history results"
-            className="[&_table]:min-w-[960px]"
-          >
-            <DataTable
-              columns={columns}
-              rows={history.data.items}
-              getRowKey={(item) => item.id}
-            />
-          </div>
-        )}
+          ) : (
+            <div
+              aria-label="Login history results"
+              className="[&_table]:min-w-[960px]"
+            >
+              <DataTable
+                columns={columns}
+                rows={history.data.items}
+                getRowKey={(item) => item.id}
+              />
+            </div>
+          )}
+        </div>
         {history.data && !history.isError ? (
           <div className="border-border border-t p-5">
             <div className="mb-4 max-w-40">
