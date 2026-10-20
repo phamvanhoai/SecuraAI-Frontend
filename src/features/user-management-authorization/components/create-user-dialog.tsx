@@ -15,6 +15,7 @@ import { useCreateUser } from "../hooks/use-create-user";
 import { useUserCreateOptions } from "../hooks/use-user-create-options";
 import {
   createUserSchema,
+  USER_FULL_NAME_MAX_LENGTH,
   type CreateUserInput,
   type CreateUserPayload,
 } from "../schemas/user-schema";
@@ -130,7 +131,7 @@ export function CreateUserDialog({
               <Input
                 id="user-email"
                 autoComplete="email"
-                maxLength={255}
+                maxLength={USER_FULL_NAME_MAX_LENGTH}
                 type="email"
                 aria-invalid={Boolean(errors.email)}
                 aria-describedby={errors.email ? "user-email-error" : undefined}

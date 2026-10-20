@@ -52,13 +52,17 @@ function UserCell({ name, email }: { name: string; email: string }) {
     .toUpperCase();
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 max-w-[22rem] items-center gap-3">
       <span className="bg-brand-soft text-brand grid size-9 shrink-0 place-items-center rounded-lg text-xs font-semibold">
         {initials}
       </span>
-      <span>
-        <span className="block font-medium">{name}</span>
-        <span className="text-muted block text-xs">{email}</span>
+      <span className="min-w-0">
+        <span className="block truncate font-medium" title={name}>
+          {name}
+        </span>
+        <span className="text-muted block truncate text-xs" title={email}>
+          {email}
+        </span>
       </span>
     </div>
   );
