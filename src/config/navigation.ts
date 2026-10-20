@@ -81,11 +81,7 @@ const modules = {
   compliance: {
     title: "Compliance",
     slug: "compliance",
-    requiredAnyPermission: [
-      "compliance.assess-controls",
-      "compliance.map-controls",
-      "compliance.evidence.upload",
-    ],
+    allowedRoleCodes: ["SECURITY_OFFICER", "EMPLOYEE"],
     icon: Library,
     section: "Management",
   },

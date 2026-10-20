@@ -30,13 +30,11 @@ import type {
 export function ComplianceRemindersManager() {
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
-  const enabled = permissions.some((permission) =>
-    [
-      "compliance.assess-controls",
-      "compliance.evidence.upload",
-      "policies.acknowledge",
-    ].includes(permission),
-  );
+  const isSecurityOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ??
+    false;
+  const enabled =
+    isSecurityOfficer || permissions.includes("policies.acknowledge");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ComplianceReminderFilter>("all");
   const [draft, setDraft] = useState("");
