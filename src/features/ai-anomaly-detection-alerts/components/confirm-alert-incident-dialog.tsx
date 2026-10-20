@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
@@ -18,6 +19,7 @@ import {
   type ConfirmAiAlertRequest,
 } from "../schemas/ai-alert-schema";
 import { FeedbackRecordContext } from "./feedback-record-context";
+import { AlertDecisionContext } from "./alert-decision-context";
 
 export function ConfirmAlertIncidentDialog({
   alert,
@@ -82,22 +84,29 @@ export function ConfirmAlertIncidentDialog({
 
   return (
     <Dialog
-      className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={close}
       title="Confirm alert as true positive"
     >
       {alert ? (
-        <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-          <div>
-            <p className="font-medium">{alert.title}</p>
-            <p className="text-muted mt-1 text-sm">{alert.alertCode}</p>
+        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+          <AlertDecisionContext alert={alert} />
+          <div className="border-border flex items-start gap-3 rounded-lg border p-4">
+            <ShieldCheck
+              aria-hidden="true"
+              className="text-success mt-0.5 size-5 shrink-0"
+              strokeWidth={1.8}
+            />
+            <div>
+              <h3 className="text-sm font-semibold">True-positive outcome</h3>
+              <p className="text-muted mt-1 text-sm leading-6">
+                This records the alert as a true positive, completes triage, and
+                creates a security finding. Creating an incident remains a
+                separate action in Incident Management.
+              </p>
+            </div>
           </div>
-          <p className="text-muted text-sm leading-6">
-            This records the alert as a true positive, completes your triage,
-            and creates a security finding. Creating an incident is a separate
-            action in Incident Management.
-          </p>
           {message ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               {message}
@@ -110,6 +119,7 @@ export function ConfirmAlertIncidentDialog({
             error={errors.comment?.message}
           >
             <Textarea
+              aria-invalid={Boolean(errors.comment)}
               id="confirm-incident-comment"
               rows={4}
               maxLength={2000}
@@ -127,16 +137,27 @@ export function ConfirmAlertIncidentDialog({
               Add evidence that supports this decision.
             </p>
           </FormField>
-          <div className="flex justify-end gap-2">
+          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
             <Button
               disabled={mutation.isPending}
               onClick={close}
+              type="button"
               variant="secondary"
             >
               Cancel
             </Button>
             <Button disabled={mutation.isPending} type="submit">
-              {mutation.isPending ? "Confirming…" : "Confirm true positive"}
+              {mutation.isPending ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                  />
+                  Confirming…
+                </>
+              ) : (
+                "Confirm true positive"
+              )}
             </Button>
           </div>
         </form>

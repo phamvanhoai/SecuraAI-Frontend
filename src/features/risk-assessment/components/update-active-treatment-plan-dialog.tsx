@@ -19,14 +19,19 @@ export function UpdateActiveTreatmentPlanDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const detail = useRiskRecord(riskId);
   const plan = detail.data?.treatmentPlans.find((item) => item.id === planId);
+  const blocked = Boolean(detail.data && (
+    ["accepted", "closed", "archived"].includes(detail.data.status) ||
+    detail.data.acceptances.some((item) => item.decision === "pending") ||
+    (plan && !["draft", "active"].includes(plan.status))
+  ));
 
   useEffect(() => {
     const dialog = ref.current;
-    if (riskId && !plan && dialog && !dialog.open) dialog.showModal();
-    if ((!riskId || plan) && dialog?.open) dialog.close();
-  }, [plan, riskId]);
+    if (riskId && (!plan || blocked) && dialog && !dialog.open) dialog.showModal();
+    if ((!riskId || (plan && !blocked)) && dialog?.open) dialog.close();
+  }, [plan, riskId, blocked]);
 
-  if (plan) return <UpdateRiskTreatmentPlanDialog plan={plan} onClose={onClose} />;
+  if (plan && !blocked) return <UpdateRiskTreatmentPlanDialog plan={plan} onClose={onClose} />;
 
   return (
     <Dialog
@@ -35,7 +40,7 @@ export function UpdateActiveTreatmentPlanDialog({
       onClose={onClose}
       className="w-[min(36rem,calc(100%-2rem))]"
     >
-      {detail.isError ? (
+      {blocked ? <Alert>This Risk or plan is read-only, or acceptance is pending. Open Risk Review for an Accepted Risk before updating an eligible plan.</Alert> : detail.isError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           Unable to load the active treatment plan. Close this dialog and try again.
         </Alert>

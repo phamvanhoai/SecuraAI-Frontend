@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { acceptanceCostSchema } from "./acceptance-cost-schema";
 
 export const riskRegisterStatuses = [
   "open",
@@ -197,6 +198,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       status: z.string(),
       owner: person,
       targetCompletionDate: z.iso.datetime({ offset: true }).nullable(),
+      acceptanceCost: acceptanceCostSchema.nullish(),
       actionCount: z.number().int(),
       progress: z.number().int().min(0).max(100),
       updatedAt: z.iso.datetime({ offset: true }),
@@ -234,6 +236,7 @@ export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
       requestedBy: z.uuid(),
       decidedBy: z.uuid().nullable(),
       decidedAt: z.iso.datetime({ offset: true }).nullable(),
+      acceptanceCost: acceptanceCostSchema.nullish(),
       requestReason: z.string().nullable().optional(),
       decisionReason: z.string().nullable().optional(),
       expired: z.boolean().default(false),

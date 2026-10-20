@@ -4,7 +4,7 @@ export function canViewLoginHistory(
   user: AuthSessionUser | null | undefined,
 ): boolean {
   return Boolean(
-    user?.status === "active" &&
+    user?.status.toUpperCase() === "ACTIVE" &&
     user.roles.some(
       (role) => role.code === "ADMIN" || role.code === "SECURITY_OFFICER",
     ) &&

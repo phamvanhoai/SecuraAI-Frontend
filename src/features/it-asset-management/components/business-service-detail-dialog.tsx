@@ -1,4 +1,5 @@
 "use client";
+import { assetTypeLabel } from "../schemas/asset-type-schema";
 import { useEffect, useRef, useState } from "react";
 import {
   DataTable,
@@ -28,7 +29,7 @@ const columns: readonly DataTableColumn<BusinessServiceAsset>[] = [
       </span>
     ),
   },
-  { key: "type", header: "Type", cell: (item) => item.assetType },
+  { key: "type", header: "Type", cell: (item) => assetTypeLabel(item.assetType) },
   {
     key: "status",
     header: "Status",

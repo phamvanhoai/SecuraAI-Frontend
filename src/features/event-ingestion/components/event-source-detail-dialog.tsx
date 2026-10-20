@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useEventSource, useUpdateEventSource } from "../hooks/use-event-sources";
 import {
   eventFamilies,
@@ -134,6 +135,10 @@ export function EventSourceDetailDialog({
     }, 2000);
   }
 
+  const session = useSessionUser();
+  const canToggleStatus =
+    session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+
   const handleClose = () => {
     setIsEditing(false);
     setIsTogglingStatus(false);
@@ -217,24 +222,26 @@ export function EventSourceDetailDialog({
                     {connectionHealth.connected ? `Reachable (${connectionHealth.latencyMs}ms)` : "Connection Failed"}
                   </StatusBadge>
                 ) : null}
-                <Button
-                  className={`min-h-8 gap-1.5 px-2.5 text-xs font-medium ${
-                    source.status === "ACTIVE"
-                      ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
-                      : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-                  }`}
-                  onClick={() => setIsTogglingStatus(true)}
-                  title={
-                    source.status === "ACTIVE"
-                      ? "Pause event ingestion"
-                      : "Resume event ingestion"
-                  }
-                  type="button"
-                  variant="secondary"
-                >
-                  <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-                  <span>{source.status === "ACTIVE" ? "Pause" : "Resume"}</span>
-                </Button>
+                {canToggleStatus ? (
+                  <Button
+                    className={`min-h-8 gap-1.5 px-2.5 text-xs font-medium ${
+                      source.status === "ACTIVE"
+                        ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                        : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                    }`}
+                    onClick={() => setIsTogglingStatus(true)}
+                    title={
+                      source.status === "ACTIVE"
+                        ? "Pause event ingestion"
+                        : "Resume event ingestion"
+                    }
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                    <span>{source.status === "ACTIVE" ? "Pause" : "Resume"}</span>
+                  </Button>
+                ) : null}
                 <Button
                   className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                   onClick={() => setIsEditing(true)}

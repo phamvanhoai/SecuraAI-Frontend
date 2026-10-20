@@ -18,6 +18,7 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useSessionUser } from "@/features/authentication-account";
 import { useNormalizedEventDetail } from "../hooks/use-normalized-events";
 import { EditEntityMappingDialog } from "./edit-entity-mapping-dialog";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,10 @@ export function NormalizedEventDetailDialog({
       toast.error("Copy failed", "Unable to copy payload to clipboard.");
     }
   }
+
+  const session = useSessionUser();
+  const canReviewMapping =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false;
 
   const event = eventQuery.data;
 
@@ -223,15 +228,17 @@ export function NormalizedEventDetailDialog({
                       Correlated internal users, monitored accounts, and IT assets for this telemetry.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className="text-xs px-3 py-1.5 flex items-center gap-1.5 self-start sm:self-auto"
-                    onClick={() => setIsEditMappingOpen(true)}
-                  >
-                    <Edit3 className="size-3.5" />
-                    <span>Review & Correct Mapping</span>
-                  </Button>
+                  {canReviewMapping ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="text-xs px-3 py-1.5 flex items-center gap-1.5 self-start sm:self-auto"
+                      onClick={() => setIsEditMappingOpen(true)}
+                    >
+                      <Edit3 className="size-3.5" />
+                      <span>Review & Correct Mapping</span>
+                    </Button>
+                  ) : null}
                 </div>
 
                 {/* Active Mapping Summary Card */}

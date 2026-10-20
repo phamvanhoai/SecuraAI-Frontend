@@ -30,13 +30,11 @@ import type {
 export function ComplianceRemindersManager() {
   const session = useSessionUser();
   const permissions = session.data?.permissions ?? [];
-  const enabled = permissions.some((permission) =>
-    [
-      "compliance.assess-controls",
-      "compliance.evidence.upload",
-      "policies.acknowledge",
-    ].includes(permission),
-  );
+  const isSecurityOfficer =
+    session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ??
+    false;
+  const enabled =
+    isSecurityOfficer || permissions.includes("policies.acknowledge");
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ComplianceReminderFilter>("all");
   const [draft, setDraft] = useState("");
@@ -103,7 +101,7 @@ export function ComplianceRemindersManager() {
         <div className="flex items-center gap-2">
           <Link
             className="text-brand rounded-lg px-2 py-2 font-medium hover:underline focus-visible:outline-2"
-            href="/compliance"
+            href="/controls"
           >
             Open
           </Link>

@@ -3,6 +3,14 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 const mockUseEventSource = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-event-sources", () => ({
   useEventSources: () => ({

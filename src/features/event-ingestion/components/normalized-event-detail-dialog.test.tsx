@@ -4,6 +4,14 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 const mockUseNormalizedEventDetail = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-normalized-events", () => ({
   useNormalizedEventDetail: (id: string | null) =>

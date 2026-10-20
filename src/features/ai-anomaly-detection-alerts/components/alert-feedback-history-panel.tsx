@@ -72,7 +72,7 @@ export function AlertFeedbackHistoryPanel({ alertId }: { alertId: string }) {
   const [page, setPage] = useState(1);
   const feedback = useAiAlertFeedback(alertId, page, true);
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {feedback.isPending ? (
         <TableSkeleton
           headers={[
@@ -102,11 +102,13 @@ export function AlertFeedbackHistoryPanel({ alertId }: { alertId: string }) {
           </p>
         </div>
       ) : feedback.data ? (
-        <DataTable
-          columns={columns}
-          getRowKey={(item) => item.id}
-          rows={feedback.data.items}
-        />
+        <div className="max-w-full overflow-x-auto">
+          <DataTable
+            columns={columns}
+            getRowKey={(item) => item.id}
+            rows={feedback.data.items}
+          />
+        </div>
       ) : null}
       {feedback.data && feedback.data.pagination.totalPages > 1 ? (
         <Pagination

@@ -14,6 +14,21 @@ beforeAll(() => {
 });
 afterEach(() => { cleanup(); state.status = 'open'; });
 describe('create Risk Treatment Plan', () => {
+  it('shows cost justification instead of fake actions for Accept and preserves other strategies', () => {
+    render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Add action' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Treatment option'), { target: { value: 'accept' } });
+    expect(screen.queryByRole('button', { name: 'Add action' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Cost to fix *')).toHaveValue('');
+    expect(screen.getByLabelText('Expected loss *')).toHaveValue('');
+    expect(screen.getByLabelText('Comparison period (months) *')).toHaveValue(12);
+    fireEvent.change(screen.getByLabelText('Cost to fix *'), { target: { value: '100000000' } });
+    fireEvent.change(screen.getByLabelText('Treatment option'), { target: { value: 'transfer' } });
+    expect(screen.getByRole('button', { name: 'Add action' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Cost to fix *')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Treatment option'), { target: { value: 'accept' } });
+    expect(screen.getByLabelText('Cost to fix *')).toHaveValue('100000000');
+  });
   it('resets entered values after closing before opening a different Risk', () => {
     const props = { riskId: 'risk-1', riskLabel: 'Risk one', onClose: vi.fn() };
     const view = render(<CreateRiskTreatmentPlanDialog {...props} />);

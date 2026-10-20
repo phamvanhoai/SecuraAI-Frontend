@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { assetListItemSchema } from "./asset-list-schema";
+import { assetTypeSchema } from "./asset-type-schema";
 
 const optionalUuid = z
   .union([z.literal(""), z.uuid()])
@@ -16,7 +17,7 @@ const optionalText = (maximum: number) =>
 export const createAssetSchema = z
   .object({
     name: z.string().trim().min(1, "Asset name is required").max(255),
-    assetType: z.string().trim().min(1, "Asset type is required").max(100),
+    assetType: z.string().pipe(assetTypeSchema),
     ownerUserId: optionalUuid,
     description: optionalText(10_000),
     dependencyIds: z.array(z.uuid()).max(50).default([]),
@@ -51,7 +52,7 @@ export const assetCreateOptionsSchema = z.object({
 export const createdAssetSchema = assetListItemSchema;
 export const createAssetRequestSchema = z.object({
   name: z.string().trim().min(1).max(255),
-  assetType: z.string().trim().min(1).max(100),
+  assetType: assetTypeSchema,
   ownerUserId: z.uuid().optional(),
   description: z.string().trim().max(10_000).optional(),
   dependencies: z.array(z.object({ assetId: z.uuid() })).max(50),

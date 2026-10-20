@@ -40,6 +40,9 @@ describe("V2 role navigation", () => {
     expect(adminPaths).toContain("/users");
     expect(adminPaths).toContain("/settings");
     expect(adminPaths).toContain("/login-history");
+    expect(adminPaths).not.toContain("/compliance");
+    expect(adminPaths).not.toContain("/custom-dashboard");
+    expect(adminPaths).not.toContain("/alerts");
   });
 
   it("shows admin management but not ungranted modules", () => {
@@ -57,7 +60,9 @@ describe("V2 role navigation", () => {
     expect(paths).toContain("/audits");
     expect(paths).toContain("/settings");
     expect(paths).toContain("/login-history");
-    expect(paths).not.toContain("/roles");
+    expect(getPanelNavigation("admin").map((item) => item.href)).not.toContain(
+      "/roles",
+    );
     expect(paths).not.toContain("/reports");
   });
 

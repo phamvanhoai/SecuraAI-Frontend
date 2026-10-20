@@ -1,25 +1,31 @@
 "use client";
 import {
   BellRing,
-  CalendarClock,
   CheckCheck,
   Circle,
   History,
   Mail,
+  Send,
   Settings2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api/api-client";
 import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/data-display/data-table";
+import { Pagination } from "@/components/data-display/pagination";
+import {
   ProductPageHeader,
   ProductPanel,
+  StatusBadge,
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import {
-  ComplianceRemindersManager,
   PersonalNotificationChannelManager,
   SendEmailNotificationManager,
   SendInSystemNotificationManager,
@@ -29,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type NotificationView =
-  "inbox" | "history" | "preferences" | "in-system" | "email" | "reminders";
+  "inbox" | "history" | "preferences" | "in-system" | "email";
 export default function NotificationsPage() {
   const [activeView, setActiveView] = useState<NotificationView>("inbox");
   const session = useSessionUser();
@@ -42,25 +48,17 @@ export default function NotificationsPage() {
     return () =>
       window.removeEventListener("hashchange", showLinkedNotification);
   }, []);
-  const permissions = session.data?.permissions ?? [];
   const accountEmail = session.data?.email ?? "your account email";
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
-  const canViewCompliance = permissions.some((permission) =>
-    [
-      "compliance.assess-controls",
-      "compliance.evidence.upload",
-      "policies.acknowledge",
-    ].includes(permission),
-  );
   return (
     <div className="space-y-5">
       <ProductPageHeader
         title="Notifications"
         description={
           isAdmin
-            ? "Send targeted notifications and configure how your own eligible notifications are delivered."
-            : "Configure your notification channels and review reminders assigned to your account."
+            ? "Review notification activity, manage delivery preferences, and send targeted communications."
+            : "Review your notifications and configure your preferred delivery channels."
         }
         showSampleNotice={false}
       />
@@ -75,7 +73,7 @@ export default function NotificationsPage() {
         <div className="space-y-5">
           <div
             aria-label="Notification functions"
-            className="border-border bg-surface flex w-full flex-wrap gap-1 rounded-xl border p-1"
+            className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs"
             role="tablist"
           >
             <ChannelTab
@@ -102,25 +100,17 @@ export default function NotificationsPage() {
               <>
                 <ChannelTab
                   active={activeView === "in-system"}
-                  icon={BellRing}
-                  label="Send In-System Notification"
+                  icon={Send}
+                  label="Send in-system"
                   onClick={() => setActiveView("in-system")}
                 />
                 <ChannelTab
                   active={activeView === "email"}
                   icon={Mail}
-                  label="Send Email Notification"
+                  label="Send email"
                   onClick={() => setActiveView("email")}
                 />
               </>
-            ) : null}
-            {canViewCompliance ? (
-              <ChannelTab
-                active={activeView === "reminders"}
-                icon={CalendarClock}
-                label="My Reminders"
-                onClick={() => setActiveView("reminders")}
-              />
             ) : null}
           </div>
 
@@ -131,8 +121,6 @@ export default function NotificationsPage() {
               <SendInSystemNotificationManager />
             ) : activeView === "email" && isAdmin ? (
               <SendEmailNotificationManager />
-            ) : activeView === "reminders" && canViewCompliance ? (
-              <ComplianceRemindersManager />
             ) : activeView === "inbox" ? (
               <NotificationInbox />
             ) : activeView === "history" && isAdmin ? (
@@ -183,8 +171,11 @@ function NotificationInbox() {
       {readError ? (
         <Alert>Unable to mark notifications as read. Please try again.</Alert>
       ) : null}
-      <div className="border-border flex items-center justify-between border-b px-5 py-3">
-        <p className="text-muted text-sm">Your latest in-system updates</p>
+      <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+        <p className="text-muted text-sm">
+          Showing {items.length} recent in-system notification
+          {items.length === 1 ? "" : "s"}
+        </p>
         <Button
           type="button"
           variant="secondary"
@@ -195,9 +186,9 @@ function NotificationInbox() {
           Mark all as read
         </Button>
       </div>
-      <div className="divide-border divide-y">
+      <div className="p-4">
         {inbox.isPending ? (
-          <div className="space-y-3 p-5">
+          <div className="space-y-3">
             {[1, 2, 3].map((value) => (
               <div
                 aria-hidden="true"
@@ -207,59 +198,72 @@ function NotificationInbox() {
             ))}
           </div>
         ) : items.length ? (
-          items.map((item) => (
-            <article
-              key={item.id}
-              id={`notification-${item.id}`}
-              tabIndex={-1}
-              className={`target:ring-brand/40 flex scroll-mt-24 gap-3 px-5 py-4 target:ring-2 ${item.readAt ? "bg-surface" : "bg-info-soft/45"}`}
-            >
-              <div className="pt-1">
-                {item.readAt ? (
-                  <Circle
-                    aria-hidden="true"
-                    className="text-muted size-3 fill-current"
-                  />
-                ) : (
-                  <Circle
-                    aria-label="Unread"
-                    className="text-brand size-3 fill-current"
-                  />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{item.title}</h3>
-                      <span className="border-border bg-surface text-muted rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase">
-                        {item.priority}
-                      </span>
-                    </div>
-                    <p className="text-muted mt-1 text-xs">
-                      {item.sender} ·{" "}
-                      {new Date(item.createdAt).toLocaleString("en-GB")}
-                    </p>
-                  </div>
-                  {item.readAt ? null : (
-                    <Button
-                      variant="secondary"
-                      type="button"
-                      className="min-h-9 shrink-0 px-2 text-xs"
-                      onClick={() => read.mutate(item.id)}
-                    >
-                      Mark read
-                    </Button>
+          <div className="border-border divide-border divide-y overflow-hidden rounded-xl border">
+            {items.map((item) => (
+              <article
+                key={item.id}
+                id={`notification-${item.id}`}
+                tabIndex={-1}
+                className={`target:ring-brand/40 flex scroll-mt-24 gap-3 px-4 py-4 outline-none target:ring-2 ${item.readAt ? "bg-surface" : "bg-info-soft/45"}`}
+              >
+                <div className="pt-1">
+                  {item.readAt ? (
+                    <Circle
+                      aria-hidden="true"
+                      className="text-muted size-3 fill-current"
+                    />
+                  ) : (
+                    <Circle
+                      aria-label="Unread"
+                      className="text-brand size-3 fill-current"
+                    />
                   )}
                 </div>
-                <p className="text-foreground/85 mt-3 max-w-3xl text-sm leading-6">
-                  {item.message}
-                </p>
-              </div>
-            </article>
-          ))
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold">{item.title}</h3>
+                        <span className="border-border bg-surface text-muted rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase">
+                          {item.priority}
+                        </span>
+                      </div>
+                      <p className="text-muted mt-1 text-xs">
+                        {item.sender} ·{" "}
+                        {new Date(item.createdAt).toLocaleString("en-GB")}
+                      </p>
+                    </div>
+                    {item.readAt ? null : (
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        className="min-h-9 shrink-0 px-2 text-xs"
+                        onClick={() => read.mutate(item.id)}
+                      >
+                        Mark read
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-foreground/85 mt-3 max-w-3xl text-sm leading-6">
+                    {item.message}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
         ) : (
-          <div className="p-10 text-center">No notifications yet.</div>
+          <div className="py-12 text-center">
+            <BellRing
+              aria-hidden="true"
+              className="text-muted mx-auto mb-3 size-10"
+            />
+            <h3 className="text-foreground text-base font-semibold">
+              No notifications yet
+            </h3>
+            <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+              New in-system updates and assigned messages will appear here.
+            </p>
+          </div>
         )}
       </div>
     </ProductPanel>
@@ -267,76 +271,143 @@ function NotificationInbox() {
 }
 
 function NotificationHistory() {
+  const [page, setPage] = useState(1);
   const history = useQuery({
-    queryKey: ["notifications", "history"],
+    queryKey: ["notifications", "history", page],
     queryFn: () =>
-      apiRequest<{
-        items: Array<{
-          id: string;
-          title: string;
-          channel: string[];
-          createdAt: string;
-          recipientCount: number;
-          sentCount: number;
-          failedCount: number;
-        }>;
-      }>("/api/notifications/history", {
+      apiRequest<NotificationHistoryResponse>("/api/notifications/history", {
         target: "same-origin",
-        query: { page: 1, limit: 50 },
+        query: { page, limit: 20 },
       }),
   });
   const items = history.data?.items ?? [];
+  const columns: readonly DataTableColumn<NotificationHistoryItem>[] = [
+    {
+      key: "notification",
+      header: "Notification",
+      cell: (item) => (
+        <div className="max-w-md py-0.5">
+          <strong
+            className="text-foreground block truncate font-medium"
+            title={item.title}
+          >
+            {item.title}
+          </strong>
+          <span className="text-muted mt-1 block text-xs whitespace-nowrap">
+            {new Date(item.createdAt).toLocaleString("en-GB")}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "channel",
+      header: "Channels",
+      cell: (item) => (
+        <div className="flex flex-wrap gap-1.5">
+          {item.channel.map((channel) => (
+            <span
+              className="border-border bg-neutral-soft rounded-md border px-2 py-0.5 text-xs font-medium"
+              key={channel}
+            >
+              {channel.replaceAll("_", " ")}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: "recipients",
+      header: "Recipients",
+      cell: (item) => (
+        <span className="tabular-nums">{item.recipientCount}</span>
+      ),
+    },
+    {
+      key: "delivered",
+      header: "Delivered",
+      cell: (item) => <span className="tabular-nums">{item.sentCount}</span>,
+    },
+    {
+      key: "status",
+      header: "Delivery status",
+      cell: (item) => (
+        <StatusBadge tone={item.failedCount > 0 ? "danger" : "success"}>
+          {item.failedCount > 0 ? `${item.failedCount} failed` : "Completed"}
+        </StatusBadge>
+      ),
+    },
+  ];
   return (
     <ProductPanel
       title="Notification delivery history"
       description="Review recent in-system and email notification deliveries."
     >
-      <div className="divide-border divide-y">
+      <div className="p-4">
         {history.isPending ? (
-          <div className="space-y-3 p-5">
-            {[1, 2, 3].map((value) => (
-              <div
-                className="bg-neutral-soft h-16 animate-pulse rounded-lg"
-                key={value}
-              />
-            ))}
-          </div>
+          <TableSkeleton rows={6} />
+        ) : history.isError ? (
+          <Alert>
+            Unable to load notification delivery history. Check the backend
+            connection and try again.
+          </Alert>
         ) : items.length ? (
-          items.map((item) => (
-            <div
-              className="flex flex-wrap items-center justify-between gap-4 px-5 py-4"
-              key={item.id}
-            >
-              <div>
-                <p className="font-semibold">{item.title}</p>
-                <p className="text-muted mt-1 text-xs">
-                  {item.channel.join(" · ")} ·{" "}
-                  {new Date(item.createdAt).toLocaleString("en-GB")}
-                </p>
-              </div>
-              <div className="text-right text-sm">
-                <p>
-                  {item.sentCount}/{item.recipientCount} delivered
-                </p>
-                <p
-                  className={
-                    item.failedCount
-                      ? "text-danger text-xs"
-                      : "text-muted text-xs"
-                  }
-                >
-                  {item.failedCount} failed
-                </p>
-              </div>
+          <div className="space-y-4">
+            <div className="text-muted text-xs">
+              Showing {items.length} of{" "}
+              {history.data?.pagination.total ?? items.length} sent
+              notifications
             </div>
-          ))
+            <DataTable
+              columns={columns}
+              rows={items}
+              getRowKey={(item) => item.id}
+            />
+            <div className="border-border border-t pt-4">
+              <Pagination
+                page={history.data?.pagination.page ?? page}
+                pageCount={history.data?.pagination.pageCount ?? 1}
+                onPageChange={setPage}
+              />
+            </div>
+          </div>
         ) : (
-          <div className="p-10 text-center">No sent notifications yet.</div>
+          <div className="py-12 text-center">
+            <History
+              aria-hidden="true"
+              className="text-muted mx-auto mb-3 size-10"
+            />
+            <h3 className="text-foreground text-base font-semibold">
+              No delivery history yet
+            </h3>
+            <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+              Notifications sent by administrators will be recorded here.
+            </p>
+          </div>
         )}
       </div>
     </ProductPanel>
   );
 }
+
+type NotificationHistoryItem = {
+  id: string;
+  title: string;
+  channel: string[];
+  createdAt: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+};
+
+type NotificationHistoryResponse = {
+  items: NotificationHistoryItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pageCount: number;
+  };
+};
 
 function ChannelTab({
   active,
@@ -353,7 +424,7 @@ function ChannelTab({
     <button
       aria-selected={active}
       className={cn(
-        "focus-visible:outline-brand flex min-h-11 min-w-fit flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 lg:flex-none",
+        "focus-visible:outline-brand inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2",
         active
           ? "bg-brand text-white shadow-sm"
           : "text-muted hover:bg-neutral-soft hover:text-foreground",

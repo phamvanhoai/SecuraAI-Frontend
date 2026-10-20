@@ -15,6 +15,7 @@ import { useUserCreateOptions } from "../hooks/use-user-create-options";
 import { useUserDetail } from "../hooks/use-user-detail";
 import {
   updateUserSchema,
+  USER_FULL_NAME_MAX_LENGTH,
   type UpdateUserInput,
   type UpdateUserPayload,
 } from "../schemas/user-schema";
@@ -143,7 +144,7 @@ export function EditUserDialog({
             >
               <Input
                 id="edit-user-full-name"
-                maxLength={255}
+                maxLength={USER_FULL_NAME_MAX_LENGTH}
                 {...register("fullName")}
               />
             </FormField>

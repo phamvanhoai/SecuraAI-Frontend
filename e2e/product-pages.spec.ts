@@ -10,18 +10,15 @@ const pages = [
   ["/risks", "Đánh giá rủi ro"],
   ["/incidents", "Quản lý sự cố"],
   ["/controls", "Thư viện kiểm soát"],
-  ["/compliance", "Tuân thủ"],
   ["/audits", "Nhật ký kiểm toán"],
   ["/reports", "Báo cáo"],
   ["/notifications", "Thông báo"],
   ["/files", "Quản lý tệp"],
   ["/settings", "Cài đặt hệ thống"],
-  ["/alerts", "Cảnh báo an toàn thông tin"],
   ["/policies", "Quản lý chính sách"],
   ["/anomaly-monitoring", "Giám sát bất thường"],
   ["/ai-models", "Mô hình AI"],
   ["/event-logs", "Log và sự kiện"],
-  ["/custom-dashboard", "Dashboard tùy chỉnh"],
   ["/profile", "Hồ sơ cá nhân"],
 ] as const;
 

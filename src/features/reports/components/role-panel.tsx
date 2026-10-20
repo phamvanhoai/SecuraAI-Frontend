@@ -79,7 +79,7 @@ const panels: Record<
     actions: [
       ["Đánh giá rủi ro", "/risks"],
       ["Xử lý sự cố", "/incidents"],
-      ["Phân tích cảnh báo", "/alerts"],
+      ["Phân tích cảnh báo", "/anomaly-monitoring"],
       ["Quản lý tài sản", "/assets"],
     ],
     secondaryTitle: "Tiến độ kiểm soát",
@@ -167,9 +167,9 @@ const panels: Record<
     ],
     actions: [
       ["Báo cáo điều hành", "/reports"],
-      ["Tình trạng tuân thủ", "/compliance"],
+      ["Hiệu quả kiểm soát", "/controls"],
       ["Nhật ký kiểm toán", "/audits"],
-      ["Dashboard tùy chỉnh", "/custom-dashboard"],
+      ["Security dashboard", "/dashboard"],
     ],
     secondaryTitle: "Tổng quan quản trị",
     secondaryItems: [

@@ -14,6 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateAsset } from "../hooks/use-create-asset";
 import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
+import { assetTypes, assetTypeLabels } from "../schemas/asset-type-schema";
 import {
   createAssetSchema,
   type CreateAssetInput,
@@ -101,12 +102,16 @@ export function CreateAssetDialog() {
               label="Asset type"
               error={errors.assetType?.message}
             >
-              <Input
+              <Select
                 id="assetType"
-                maxLength={100}
-                placeholder="Server, endpoint, application…"
+                aria-required="true"
+                aria-invalid={Boolean(errors.assetType)}
+                aria-describedby={errors.assetType ? "assetType-error" : undefined}
                 {...register("assetType")}
-              />
+              >
+                <option value="" disabled>Select asset type</option>
+                {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
+              </Select>
             </FormField>
             <FormField
               id="ownerUserId"

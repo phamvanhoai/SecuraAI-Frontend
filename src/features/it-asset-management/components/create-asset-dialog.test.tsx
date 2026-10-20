@@ -72,6 +72,9 @@ describe("CreateAssetDialog", () => {
     expect(optionsMock).toHaveBeenLastCalledWith(false);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
     expect(optionsMock).toHaveBeenLastCalledWith(true);
+    const type = screen.getByRole("combobox", { name: "Asset type" });
+    expect(type).toHaveValue("");
+    expect(type.querySelectorAll("option")).toHaveLength(7);
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     expect(
       await screen.findByText("Asset name is required"),
@@ -88,13 +91,14 @@ describe("CreateAssetDialog", () => {
       screen.getByLabelText("Asset name"),
       " Application Server ",
     );
-    await user.type(screen.getByLabelText("Asset type"), "server");
+    await user.selectOptions(screen.getByLabelText("Asset type"), "SERVER");
     await user.selectOptions(screen.getByLabelText("Asset owner"), ownerUserId);
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     await waitFor(() =>
       expect(mutateAsyncMock).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "Application Server",
+          assetType: "SERVER",
           ownerUserId,
           dependencies: [],
           eventSourceIds: [],

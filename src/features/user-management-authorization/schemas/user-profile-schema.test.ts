@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createUserSchema, updateUserSchema } from "./user-schema";
+import {
+  createUserSchema,
+  updateUserSchema,
+  USER_FULL_NAME_MAX_LENGTH,
+} from "./user-schema";
 
 describe("user profile form validation", () => {
   it("rejects malformed phone numbers and employee codes", () => {
@@ -35,4 +39,21 @@ describe("user profile form validation", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it.each([createUserSchema, updateUserSchema])(
+    "rejects full names longer than the supported limit",
+    (schema) => {
+      const result = schema.safeParse({
+        email: "user@example.com",
+        fullName: "A".repeat(USER_FULL_NAME_MAX_LENGTH + 1),
+        phone: "",
+        employeeCode: "",
+        departmentId: "",
+        role: "EMPLOYEE",
+        status: "active",
+      });
+
+      expect(result.success).toBe(false);
+    },
+  );
 });

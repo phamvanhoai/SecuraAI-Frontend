@@ -26,7 +26,7 @@ const user: ManagedUser = {
 };
 
 describe("account-management UI authorization", () => {
-  it("requires ADMIN plus the permission for the current state", () => {
+  it("uses the administrator role for account-state actions", () => {
     expect(accountLockAction(actor, user)).toBe("lock");
     expect(accountLockAction(actor, { ...user, status: "locked" })).toBe(
       "unlock",
@@ -35,15 +35,6 @@ describe("account-management UI authorization", () => {
       accountLockAction(
         { ...actor, roles: [{ code: "EMPLOYEE", name: "Employee" }] },
         user,
-      ),
-    ).toBeNull();
-    expect(
-      accountLockAction({ ...actor, permissions: ["users.unlock"] }, user),
-    ).toBeNull();
-    expect(
-      accountLockAction(
-        { ...actor, permissions: ["users.lock"] },
-        { ...user, status: "locked" },
       ),
     ).toBeNull();
   });

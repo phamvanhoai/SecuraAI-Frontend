@@ -450,7 +450,7 @@ export function SecurityDashboardView() {
 
             <Link
               className="text-brand hover:underline flex items-center justify-end gap-1 text-xs font-medium pt-1"
-              href="/alerts"
+              href="/anomaly-monitoring"
             >
               View All Alerts <ArrowUpRight className="size-3.5" />
             </Link>

@@ -1,7 +1,14 @@
 "use client";
-import { ClipboardCheck, Ellipsis, Search, Plus, Pencil, Paperclip, History } from "lucide-react";
-import { ControlEvidenceDialog } from "./control-evidence-dialog";
-import { ControlEditor } from "./control-editor";
+import {
+  ClipboardCheck,
+  Ellipsis,
+  History,
+  Library,
+  Paperclip,
+  Pencil,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -24,11 +31,14 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
+import { cn } from "@/lib/utils";
 import {
   useControlAssessments,
   useCreateControlAssessment,
 } from "../hooks/use-control-assessments";
 import type { ControlAssessmentItem } from "../schemas/control-assessment-schema";
+import { ControlEvidenceDialog } from "./control-evidence-dialog";
+import { ControlEditor } from "./control-editor";
 
 const labels = {
   effective: "Effective",
@@ -42,6 +52,7 @@ const tones = {
 } as const;
 export function ControlAssessmentManager() {
   const session = useSessionUser();
+  const [activeTab, setActiveTab] = useState<"assessments" | "catalog">("assessments");
   const [editor, setEditor] = useState<{ controlId?: string }>();
   const [evidenceControl, setEvidenceControl] = useState<string>();
   const canCreate =
@@ -57,6 +68,7 @@ export function ControlAssessmentManager() {
     { page, limit: 10, ...(q ? { q } : {}) },
     enabled,
   );
+
   const mutation = useCreateControlAssessment();
   const toast = useToast();
   const ref = useRef<HTMLDialogElement>(null);
@@ -216,6 +228,7 @@ export function ControlAssessmentManager() {
       ),
     },
   ];
+
   if (session.isPending)
     return (
       <div
@@ -230,79 +243,222 @@ export function ControlAssessmentManager() {
         can view their controls.
       </Alert>
     );
+
   return (
     <>
+      {/* ── Page header — title & primary action switch per tab ── */}
       <ProductPageHeader
-        title="Control Effectiveness"
-        description="Assess whether implemented controls operate effectively using testing results and supporting evidence."
-        additionalActions={
-          canCreate ? (
-            <Button onClick={() => setEditor({})}>
-              <Plus className="size-4" aria-hidden="true" />
-              Create control
-            </Button>
-          ) : undefined
+        title={
+          activeTab === "assessments"
+            ? "Control Effectiveness"
+            : "Control Catalog"
         }
+        description={
+          activeTab === "assessments"
+            ? "Assess whether implemented controls operate effectively using testing results and supporting evidence."
+            : "Manage the library of security controls. Create controls and assign ownership before assessment."
+        }
+        showSampleNotice={false}
+        {...(activeTab === "catalog" && canCreate
+          ? {
+              primaryAction: "Create control",
+              onPrimaryAction: () => setEditor({}),
+            }
+          : {})}
       />
-      <ProductPanel title="Security controls">
-        <div className="space-y-4 p-5">
-          <form
-            className="flex flex-col gap-2 sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setQ(search.trim() || undefined);
-            }}
+
+      {/* ── Pill tab switcher — identical pattern to LogSourcesManager ── */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("assessments")}
+            className={cn(
+              "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "assessments"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
           >
-            <Input
-              aria-label="Search controls"
-              placeholder="Control code or name"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+            <ShieldCheck
+              aria-hidden="true"
+              className={cn(
+                "size-4",
+                activeTab === "assessments" ? "text-brand-contrast" : "text-muted",
+              )}
+              strokeWidth={2}
             />
-            <Button type="submit">
-              <Search className="size-4" aria-hidden="true" />
-              Search
-            </Button>
-          </form>
-          {query.isError ? (
-            <Alert>
-              Unable to load controls.{" "}
-              <button
-                type="button"
-                className="underline"
-                onClick={() => void query.refetch()}
+            <span>Control assessments</span>
+            {query.data ? (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  activeTab === "assessments"
+                    ? "bg-white/20 text-brand-contrast"
+                    : "border-border bg-neutral-soft text-muted border",
+                )}
               >
-                Try again
-              </button>
-            </Alert>
-          ) : query.isPending ? (
-            <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
-          ) : query.data.items.length ? (
-            <DataTable
-              columns={columns}
-              rows={query.data.items}
-              getRowKey={(item) => item.id}
+                {query.data.pagination.total}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("catalog")}
+            className={cn(
+              "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              activeTab === "catalog"
+                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                : "text-muted hover:bg-neutral-soft hover:text-foreground",
+            )}
+          >
+            <Library
+              aria-hidden="true"
+              className={cn(
+                "size-4",
+                activeTab === "catalog" ? "text-brand-contrast" : "text-muted",
+              )}
+              strokeWidth={2}
             />
-          ) : (
-            <EmptyState
-              title="No controls available"
-              description={
-                canCreate
-                  ? "Create a reusable control to get started. Evidence and Risk links are added separately."
-                  : "Control Owners see only controls currently assigned to them."
-              }
-            />
-          )}
-          {query.data ? (
-            <Pagination
-              page={page}
-              pageCount={query.data.pagination.totalPages}
-              onPageChange={setPage}
-            />
-          ) : null}
+            <span>Control catalog</span>
+          </button>
         </div>
-      </ProductPanel>
+      </div>
+
+      {/* ── Tab content ── */}
+      {activeTab === "assessments" ? (
+        <ProductPanel
+          title="Security controls"
+          description={
+            query.data
+              ? `${query.data.pagination.total} controls found`
+              : "Control assessment list"
+          }
+        >
+          <div className="space-y-4 p-5">
+            <form
+              className="flex flex-col gap-2 sm:flex-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPage(1);
+                setQ(search.trim() || undefined);
+              }}
+            >
+              <Input
+                aria-label="Search controls"
+                placeholder="Control code or name"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <Button type="submit">
+                <Search className="size-4" aria-hidden="true" />
+                Search
+              </Button>
+            </form>
+            {query.isError ? (
+              <Alert>
+                Unable to load controls.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void query.refetch()}
+                >
+                  Try again
+                </button>
+              </Alert>
+            ) : query.isPending ? (
+              <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
+            ) : query.data.items.length ? (
+              <DataTable
+                columns={columns}
+                rows={query.data.items}
+                getRowKey={(item) => item.id}
+              />
+            ) : (
+              <EmptyState
+                title="No controls available"
+                description={
+                  canCreate
+                    ? "Create a reusable control to get started. Evidence and Risk links are added separately."
+                    : "Control Owners see only controls currently assigned to them."
+                }
+              />
+            )}
+            {query.data ? (
+              <Pagination
+                page={page}
+                pageCount={query.data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            ) : null}
+          </div>
+        </ProductPanel>
+      ) : (
+        <ProductPanel
+          title="Control library"
+          description="All controls available in the catalog. Use the controls above to create or edit entries."
+        >
+          <div className="space-y-4 p-5">
+            <form
+              className="flex flex-col gap-2 sm:flex-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPage(1);
+                setQ(search.trim() || undefined);
+              }}
+            >
+              <Input
+                aria-label="Search catalog"
+                placeholder="Control code or name"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <Button type="submit">
+                <Search className="size-4" aria-hidden="true" />
+                Search
+              </Button>
+            </form>
+            {query.isError ? (
+              <Alert>
+                Unable to load controls.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void query.refetch()}
+                >
+                  Try again
+                </button>
+              </Alert>
+            ) : query.isPending ? (
+              <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
+            ) : query.data.items.length ? (
+              <DataTable
+                columns={columns}
+                rows={query.data.items}
+                getRowKey={(item) => item.id}
+              />
+            ) : (
+              <EmptyState
+                title={canCreate ? "No controls yet" : "No controls available"}
+                description={
+                  canCreate
+                    ? "Create the first control to start building the catalog."
+                    : "Control Owners see only controls currently assigned to them."
+                }
+              />
+            )}
+            {query.data ? (
+              <Pagination
+                page={page}
+                pageCount={query.data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            ) : null}
+          </div>
+        </ProductPanel>
+      )}
+
+      {/* ── Shared overlays ── */}
       {evidenceControl ? (
         <ControlEvidenceDialog
           controlId={evidenceControl}
@@ -312,6 +468,8 @@ export function ControlAssessmentManager() {
       {editor ? (
         <ControlEditor {...editor} onClose={() => setEditor(undefined)} />
       ) : null}
+
+      {/* ── Assess dialog ── */}
       <Dialog
         title={selected ? `Assess ${selected.controlCode}` : "Assess control"}
         dialogRef={ref}

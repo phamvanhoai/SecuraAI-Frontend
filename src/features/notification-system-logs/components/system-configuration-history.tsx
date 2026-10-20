@@ -1,5 +1,5 @@
 "use client";
-import { Eye, Info, Search, Settings2, X } from "lucide-react";
+import { Eye, RotateCcw, Search, Settings2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api/api-client";
 type RecordItem = {
   id: string;
@@ -136,7 +137,15 @@ export function SystemConfigurationHistory() {
       key: "status",
       header: "Status",
       cell: (r) => (
-        <StatusBadge tone={r.outcome === "SUCCESS" ? "success" : "danger"}>
+        <StatusBadge
+          tone={
+            r.outcome === "SUCCESS"
+              ? "success"
+              : r.outcome === "DENIED"
+                ? "warning"
+                : "danger"
+          }
+        >
           {r.outcome}
         </StatusBadge>
       ),
@@ -161,15 +170,13 @@ export function SystemConfigurationHistory() {
   ];
   return (
     <>
-      <Alert className="border-info/25 bg-info-soft text-info">
-        <div className="flex items-start gap-2">
-          <Info className="mt-0.5 size-4" />
-          <p>Append-only configuration changes from the backend audit trail.</p>
-        </div>
-      </Alert>
       <ProductPanel
         title="Configuration change history"
-        description={`${query.data?.pagination.total ?? 0} recorded changes found`}
+        description={
+          query.data
+            ? `${query.data.pagination.total} append-only configuration changes found`
+            : "Append-only configuration changes from the backend audit trail"
+        }
       >
         <form
           className="border-border flex flex-wrap gap-2 border-b p-4"
@@ -215,34 +222,72 @@ export function SystemConfigurationHistory() {
                 setPage(1);
               }}
             >
-              <X className="size-4" />
-              Clear
+              <RotateCcw aria-hidden="true" className="size-4" />
+              Reset
             </Button>
           ) : null}
         </form>
         <div className="p-4">
           {query.isPending ? (
-            <div className="bg-neutral-soft h-64 animate-pulse rounded-lg" />
+            <TableSkeleton
+              headers={[
+                "Affected setting",
+                "Actor",
+                "Timestamp",
+                "Recorded change",
+                "Status",
+                "Actions",
+              ]}
+              rows={6}
+              label="Loading configuration change history"
+            />
           ) : query.isError ? (
             <Alert>Unable to load configuration history. Try again.</Alert>
           ) : rows.length ? (
             <DataTable columns={cols} rows={rows} getRowKey={(r) => r.id} />
           ) : (
             <div className="py-12 text-center">
-              <Settings2 className="text-muted mx-auto size-7" />
-              <p className="mt-3 font-medium">
-                No configuration changes match your filters
+              <Settings2
+                aria-hidden="true"
+                className="text-muted mx-auto mb-3 size-10"
+              />
+              <h3 className="text-foreground text-base font-semibold">
+                {q || actor
+                  ? "No configuration changes match your filters"
+                  : "No configuration changes recorded"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {q || actor
+                  ? "Try another setting, action, resource, or actor."
+                  : "Auditable system configuration changes will appear here."}
               </p>
+              {q || actor ? (
+                <Button
+                  className="mt-4"
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setDraft("");
+                    setQ("");
+                    setActor("");
+                    setPage(1);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              ) : null}
             </div>
           )}
         </div>
-        <div className="border-border border-t p-4">
-          <Pagination
-            page={query.data?.pagination.page ?? page}
-            pageCount={query.data?.pagination.pageCount ?? 1}
-            onPageChange={setPage}
-          />
-        </div>
+        {query.data?.pagination ? (
+          <div className="border-border border-t p-4">
+            <Pagination
+              page={query.data.pagination.page}
+              pageCount={query.data.pagination.pageCount}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : null}
       </ProductPanel>
       <Dialog dialogRef={dialog} title="Configuration change details">
         {selected ? (
@@ -250,7 +295,13 @@ export function SystemConfigurationHistory() {
             <div className="flex justify-between">
               <span className="font-mono text-sm">{selected.id}</span>
               <StatusBadge
-                tone={selected.outcome === "SUCCESS" ? "success" : "danger"}
+                tone={
+                  selected.outcome === "SUCCESS"
+                    ? "success"
+                    : selected.outcome === "DENIED"
+                      ? "warning"
+                      : "danger"
+                }
               >
                 {selected.outcome}
               </StatusBadge>
@@ -265,7 +316,10 @@ export function SystemConfigurationHistory() {
                 />
               ) : null}
               {selected.resourceId ? (
-                <Detail label="Technical resource ID" value={selected.resourceId} />
+                <Detail
+                  label="Technical resource ID"
+                  value={selected.resourceId}
+                />
               ) : null}
               <Detail
                 label="Actor"

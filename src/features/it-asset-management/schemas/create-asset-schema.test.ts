@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createAssetSchema, createAssetRequestSchema } from "./create-asset-schema";
-const identity = { name: " Server ", assetType: " server " };
+const identity = { name: " Server ", assetType: "SERVER" };
 describe("createAssetSchema", () => {
   it("normalizes identity without assigning classification or service", () => {
     expect(createAssetSchema.parse(identity)).toEqual({
-      name: "Server", assetType: "server",
+      name: "Server", assetType: "SERVER",
       dependencyIds: [], eventSourceIds: [],
     });
   });

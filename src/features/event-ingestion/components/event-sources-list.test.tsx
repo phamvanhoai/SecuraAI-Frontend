@@ -3,6 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseEventSources = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-event-sources", () => ({
   useEventSources: (params?: unknown) => mockUseEventSources(params),
@@ -172,5 +180,26 @@ describe("EventSourcesList", () => {
     await user.click(pauseButton);
 
     expect(screen.getByText("Pause Event Ingestion")).toBeInTheDocument();
+  });
+
+  it("does not render Pause/Resume button when user is SECURITY_OFFICER", () => {
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] } as any,
+      isPending: false,
+    } as any);
+
+    mockUseEventSources.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        items: mockItems,
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+    });
+
+    render(<EventSourcesList />);
+
+    expect(screen.queryByRole("button", { name: /Pause/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Resume/i })).not.toBeInTheDocument();
   });
 });

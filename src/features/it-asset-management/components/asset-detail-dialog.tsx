@@ -1,4 +1,5 @@
 "use client";
+import { assetTypeLabel } from "../schemas/asset-type-schema";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
@@ -74,7 +75,7 @@ export function AssetDetailDialog({
             className="border-border bg-neutral-soft/40 rounded-lg border p-4"
           >
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Fact label="Asset type" value={asset.assetType} />
+              <Fact label="Asset type" value={assetTypeLabel(asset.assetType)} />
               <Fact
                 label="Criticality"
                 value={

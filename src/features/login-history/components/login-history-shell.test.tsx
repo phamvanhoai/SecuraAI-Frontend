@@ -83,6 +83,7 @@ describe("LoginHistoryShell", () => {
     mount();
     expect(await screen.findByText("Other User")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Search by name or email"), "other");
+    await user.click(screen.getByRole("button", { name: "Search" }));
     await user.selectOptions(screen.getByLabelText("Status"), "failed");
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
@@ -95,21 +96,23 @@ describe("LoginHistoryShell", () => {
     const user = userEvent.setup();
     mount();
     await screen.findByText("Other User");
+    await user.click(screen.getByRole("button", { name: /Advanced/i }));
     await user.type(screen.getByLabelText("IP address"), "hostname");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Search" }));
     expect(
       await screen.findByText("Enter a valid IPv4 or IPv6 address."),
     ).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
-  it("loads typed search automatically and cancels pending text when filters are cleared", async () => {
+  it("searches only on submit and clears unsubmitted text", async () => {
     const user = userEvent.setup();
     mount();
     await screen.findByText("Other User");
-    expect(
-      screen.queryByRole("button", { name: "Apply" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Search" })).toBeInTheDocument();
     await user.type(screen.getByLabelText("Search by name or email"), "other");
     expect(fetch).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Search" }));
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(
         expect.stringContaining("search=other"),
@@ -120,7 +123,7 @@ describe("LoginHistoryShell", () => {
       screen.getByLabelText("Search by name or email"),
       "pending",
     );
-    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
     await user.selectOptions(screen.getByLabelText("Status"), "success");
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith(

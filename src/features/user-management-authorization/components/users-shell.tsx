@@ -7,7 +7,6 @@ import {
   LockKeyhole,
   Pencil,
   Search,
-  SlidersHorizontal,
   ShieldPlus,
   UnlockKeyhole,
 } from "lucide-react";
@@ -41,7 +40,6 @@ import type { UserListQuery, UserListResponse } from "../schemas/user-schema";
 import { UserDetailDialog } from "./user-detail-dialog";
 import { EditUserDialog } from "./edit-user-dialog";
 import { AssignUserRolesDialog } from "./assign-user-roles-dialog";
-import { UserPermissionsDialog } from "@/features/access-control";
 import { ImportUsersDialog } from "./import-users-dialog";
 
 function UserCell({ name, email }: { name: string; email: string }) {
@@ -54,13 +52,17 @@ function UserCell({ name, email }: { name: string; email: string }) {
     .toUpperCase();
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 max-w-[22rem] items-center gap-3">
       <span className="bg-brand-soft text-brand grid size-9 shrink-0 place-items-center rounded-lg text-xs font-semibold">
         {initials}
       </span>
-      <span>
-        <span className="block font-medium">{name}</span>
-        <span className="text-muted block text-xs">{email}</span>
+      <span className="min-w-0">
+        <span className="block truncate font-medium" title={name}>
+          {name}
+        </span>
+        <span className="text-muted block truncate text-xs" title={email}>
+          {email}
+        </span>
       </span>
     </div>
   );
@@ -107,8 +109,6 @@ function userRows(
   canUpdate: boolean,
   assignRoles: (userId: string) => void,
   canAssignRoles: boolean,
-  configurePermissions: (userId: string) => void,
-  canConfigurePermissions: boolean,
 ) {
   return data.items.map((user) => {
     const action = accountLockAction(actor, user);
@@ -177,20 +177,6 @@ function userRows(
               />
               Assign role, scope & ownership
             </button>
-            <button
-              aria-label={`Configure detailed permissions for ${user.fullName}`}
-              className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!canConfigurePermissions || user.status === "disabled"}
-              onClick={() => configurePermissions(user.id)}
-              type="button"
-            >
-              <SlidersHorizontal
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-              Configure detailed permissions
-            </button>
             {action ? (
               <button
                 aria-label={`${action === "lock" ? "Lock" : "Unlock"} ${user.fullName}`}
@@ -225,17 +211,12 @@ export function UsersShell() {
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [assignRoleUserId, setAssignRoleUserId] = useState<string | null>(null);
-  const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
   const session = useSessionUser();
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
-  const canRead = session.data?.permissions.includes("users.read") ?? false;
-  const canUpdate = session.data?.permissions.includes("users.update") ?? false;
-  const canAssignRoles =
-    isAdmin &&
-    (session.data?.permissions.includes("users.assign-role") ?? false);
-  const canConfigurePermissions =
-    isAdmin && (session.data?.permissions.includes("roles.update") ?? false);
+  const canRead = isAdmin;
+  const canUpdate = isAdmin;
+  const canAssignRoles = isAdmin;
   const departmentOptions = useUserDepartments(canRead && isAdmin);
   const users = useUsers(
     {
@@ -343,9 +324,7 @@ export function UsersShell() {
         title="User Management"
         description="Manage user accounts, departments, roles, and access status across the organization."
         showSampleNotice={false}
-        {...(isAdmin &&
-        canAssignRoles &&
-        (session.data?.permissions.includes("users.create") ?? false)
+        {...(isAdmin
           ? {
               secondaryAction: "Import Excel",
               secondaryActionIcon: (
@@ -501,8 +480,6 @@ export function UsersShell() {
               canUpdate,
               setAssignRoleUserId,
               canAssignRoles,
-              setPermissionUserId,
-              canConfigurePermissions,
             )}
           />
         )}
@@ -531,14 +508,7 @@ export function UsersShell() {
         userId={assignRoleUserId}
         onClose={() => setAssignRoleUserId(null)}
       />
-      <UserPermissionsDialog
-        key={permissionUserId ?? "closed-permission-dialog"}
-        userId={permissionUserId}
-        onClose={() => setPermissionUserId(null)}
-      />
-      {isAdmin &&
-      canAssignRoles &&
-      session.data?.permissions.includes("users.create") ? (
+      {isAdmin ? (
         <CreateUserDialog
           open={createOpen}
           onClose={() => setCreateOpen(false)}

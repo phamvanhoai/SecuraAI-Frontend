@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useEventSources } from "../hooks/use-event-sources";
 import type {
   EventSourceResponse,
@@ -62,6 +63,10 @@ export function EventSourcesList({
   const [importingSource, setImportingSource] = useState<EventSourceResponse | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewingBatchId, setViewingBatchId] = useState<string | null>(null);
+
+  const session = useSessionUser();
+  const canToggleStatus =
+    session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
 
   const eventSourcesQuery = useEventSources({
     page,
@@ -172,26 +177,28 @@ export function EventSourcesList({
             <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
             <span>Details</span>
           </Button>
-          <Button
-            className={`min-h-8 gap-1.5 px-2 text-xs font-medium ${
-              item.status === "ACTIVE"
-                ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
-                : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
-            }`}
-            onClick={() => setTogglingSource(item)}
-            title={
-              item.status === "ACTIVE"
-                ? "Pause event ingestion"
-                : "Resume event ingestion"
-            }
-            type="button"
-            variant="secondary"
-          >
-            <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-            <span className="hidden sm:inline">
-              {item.status === "ACTIVE" ? "Pause" : "Resume"}
-            </span>
-          </Button>
+          {canToggleStatus ? (
+            <Button
+              className={`min-h-8 gap-1.5 px-2 text-xs font-medium ${
+                item.status === "ACTIVE"
+                  ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                  : "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+              }`}
+              onClick={() => setTogglingSource(item)}
+              title={
+                item.status === "ACTIVE"
+                  ? "Pause event ingestion"
+                  : "Resume event ingestion"
+              }
+              type="button"
+              variant="secondary"
+            >
+              <Power aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+              <span className="hidden sm:inline">
+                {item.status === "ACTIVE" ? "Pause" : "Resume"}
+              </span>
+            </Button>
+          ) : null}
         </div>
       ),
     },

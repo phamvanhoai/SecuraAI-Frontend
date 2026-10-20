@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   ShieldX,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
@@ -57,6 +58,7 @@ import { ConfirmAlertIncidentDialog } from "./confirm-alert-incident-dialog";
 import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
 import { MarkFurtherInvestigationDialog } from "./mark-further-investigation-dialog";
 import { AssetThresholdOverridesManager } from "./alert-thresholds-dialog";
+import { useAlertThresholds } from "../hooks/use-alert-thresholds";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -100,6 +102,26 @@ export function AiAlertsManager() {
     ...(after ? { detectedAfter: after } : {}),
   });
   const metrics = useAiAlertMetrics();
+  const thresholdOverview = useAlertThresholds(1, "", canManageThresholds);
+  const thresholdItems = thresholdOverview.data?.items ?? [];
+  const enabledThresholds = thresholdItems.filter(
+    (item) => item.enabled,
+  ).length;
+  const averageThreshold = thresholdItems.length
+    ? thresholdItems.reduce((total, item) => total + item.threshold, 0) /
+      thresholdItems.length
+    : null;
+  const hasActiveFilters = Boolean(
+    search || status !== "all" || timeRange !== "24h",
+  );
+
+  function clearFilters() {
+    setSearchDraft("");
+    setSearch("");
+    setStatus("all");
+    setTimeRange("24h");
+    setPage(1);
+  }
 
   const columns: readonly DataTableColumn<AiAlert>[] = [
     {
@@ -220,7 +242,9 @@ export function AiAlertsManager() {
                   .mutateAsync(item.id)
                   .then((result) => {
                     toast.success(
-                      result.changed ? "Triage started" : "Triage already started",
+                      result.changed
+                        ? "Triage started"
+                        : "Triage already started",
                       `${item.alertCode} is assigned to you and is now under review.`,
                     );
                   })
@@ -359,7 +383,86 @@ export function AiAlertsManager() {
           ) : undefined
         }
         showSampleNotice={false}
-        title="AI alerts"
+        title="Anomaly Monitoring"
+      />
+      <MetricStrip
+        ariaLabel={
+          view === "alerts"
+            ? "AI alert metrics for the last 24 hours"
+            : "Asset threshold override metrics"
+        }
+        metrics={
+          view === "alerts"
+            ? [
+                {
+                  label: "Alerts",
+                  value: metrics.data ? String(metrics.data.total) : "—",
+                  detail: "Detected in the last 24 hours",
+                  tone: "brand",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "New",
+                  value: metrics.data ? String(metrics.data.newAlerts) : "—",
+                  detail: "Awaiting analyst triage",
+                  tone: "danger",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Under review",
+                  value: metrics.data ? String(metrics.data.reviewing) : "—",
+                  detail: "Currently being investigated",
+                  tone: "warning",
+                  loading: metrics.isPending,
+                },
+                {
+                  label: "Confirmed",
+                  value: metrics.data ? String(metrics.data.confirmed) : "—",
+                  detail: "Verified security alerts",
+                  tone: "danger",
+                  loading: metrics.isPending,
+                },
+              ]
+            : [
+                {
+                  label: "Asset overrides",
+                  value: thresholdOverview.data
+                    ? String(thresholdOverview.data.pagination.total)
+                    : "—",
+                  detail: "Configured custom thresholds",
+                  tone: "brand",
+                  loading: thresholdOverview.isPending,
+                },
+                {
+                  label: "Enabled",
+                  value: thresholdOverview.data
+                    ? String(enabledThresholds)
+                    : "—",
+                  detail: "Active on this page",
+                  tone: "neutral",
+                  loading: thresholdOverview.isPending,
+                },
+                {
+                  label: "Disabled",
+                  value: thresholdOverview.data
+                    ? String(thresholdItems.length - enabledThresholds)
+                    : "—",
+                  detail: "Inactive on this page",
+                  tone: "neutral",
+                  loading: thresholdOverview.isPending,
+                },
+                {
+                  label: "Average threshold",
+                  value:
+                    averageThreshold === null
+                      ? "—"
+                      : formatScore(averageThreshold),
+                  detail: "Across overrides on this page",
+                  tone: "warning",
+                  loading: thresholdOverview.isPending,
+                },
+              ]
+        }
       />
       {canManageThresholds ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -389,6 +492,18 @@ export function AiAlertsManager() {
                 strokeWidth={2}
               />
               <span>AI alerts</span>
+              {metrics.data ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                    view === "alerts"
+                      ? "text-brand-contrast bg-white/20"
+                      : "border-border bg-neutral-soft text-muted border",
+                  )}
+                >
+                  {metrics.data.total}
+                </span>
+              ) : null}
             </button>
             <button
               aria-selected={view === "thresholds"}
@@ -406,186 +521,195 @@ export function AiAlertsManager() {
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0",
-                  view === "thresholds"
-                    ? "text-brand-contrast"
-                    : "text-muted",
+                  view === "thresholds" ? "text-brand-contrast" : "text-muted",
                 )}
                 strokeWidth={2}
               />
-              <span className="truncate">Set Custom Alert Threshold</span>
+              <span className="truncate">Asset threshold overrides</span>
+              {thresholdOverview.data ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                    view === "thresholds"
+                      ? "text-brand-contrast bg-white/20"
+                      : "border-border bg-neutral-soft text-muted border",
+                  )}
+                >
+                  {thresholdOverview.data.pagination.total}
+                </span>
+              ) : null}
             </button>
           </div>
         </div>
       ) : null}
       {view === "alerts" ? (
         <>
-      <MetricStrip
-        ariaLabel="AI alert metrics for the last 24 hours"
-        metrics={[
-          {
-            label: "Alerts",
-            value: metrics.data ? String(metrics.data.total) : "—",
-            detail: "Detected in the last 24 hours",
-            tone: "brand",
-            loading: metrics.isPending,
-          },
-          {
-            label: "New",
-            value: metrics.data ? String(metrics.data.newAlerts) : "—",
-            detail: "Detected in the last 24 hours",
-            tone: "danger",
-            loading: metrics.isPending,
-          },
-          {
-            label: "Under review",
-            value: metrics.data ? String(metrics.data.reviewing) : "—",
-            detail: "Detected in the last 24 hours",
-            tone: "warning",
-            loading: metrics.isPending,
-          },
-          {
-            label: "Confirmed",
-            value: metrics.data ? String(metrics.data.confirmed) : "—",
-            detail: "Detected in the last 24 hours",
-            tone: "danger",
-            loading: metrics.isPending,
-          },
-        ]}
-      />
-      <ProductPanel
-        description={
-          alerts.data
-            ? `${alerts.data.pagination.total} alerts match the current filters`
-            : "Backend-generated anomaly alerts"
-        }
-        title="Real-time alert feed"
-      >
-        <form
-          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setSearch(searchDraft.trim());
-            setPage(1);
-          }}
-        >
-          <label className="relative block w-full max-w-md">
-            <span className="sr-only">Search AI alerts</span>
-            <Search
-              aria-hidden="true"
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              strokeWidth={1.8}
-            />
-            <Input
-              className="bg-background min-h-10 pl-9"
-              maxLength={100}
-              onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Search alerts, sources, or assets"
-              value={searchDraft}
-            />
-          </label>
-          <Button className="min-h-10" type="submit">
-            Search
-          </Button>
-          <label className="w-full sm:w-48">
-            <span className="sr-only">Filter by alert status</span>
-            <Select
-              aria-label="Filter by alert status"
-              onChange={(event) => {
-                setStatus(event.target.value as AiAlertStatus | "all");
+          <ProductPanel
+            description={
+              alerts.isPlaceholderData && alerts.isFetching
+                ? "Updating alert results…"
+                : alerts.data
+                  ? `${alerts.data.pagination.total} alerts match the current filters`
+                  : "Backend-generated anomaly alerts"
+            }
+            title="Real-time alert feed"
+          >
+            <form
+              className="border-border flex flex-wrap items-center gap-2 border-b p-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setSearch(searchDraft.trim());
                 setPage(1);
               }}
-              value={status}
             >
-              <option value="all">All statuses</option>
-              {aiAlertStatuses.map((value) => (
-                <option key={value} value={value}>
-                  {formatStatus(value)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="w-full sm:w-48">
-            <span className="sr-only">Filter by detection time</span>
-            <Select
-              aria-label="Filter by detection time"
-              onChange={(event) => {
-                setTimeRange(event.target.value as TimeRange);
-                setPage(1);
-              }}
-              value={timeRange}
-            >
-              <option value="1h">Last hour</option>
-              <option value="24h">Last 24 hours</option>
-              <option value="7d">Last 7 days</option>
-              <option value="all">All time</option>
-            </Select>
-          </label>
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <p aria-live="polite" className="text-muted text-xs">
-              {alerts.data
-                ? `Updated ${formatTime(alerts.data.serverTime)}`
-                : "Updates every 10 seconds"}
-            </p>
-            <Button
-              disabled={alerts.isFetching}
-              onClick={() => void alerts.refetch()}
-              variant="secondary"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={`size-4 ${alerts.isFetching ? "animate-spin" : ""}`}
-                strokeWidth={1.8}
-              />
-              Refresh
-            </Button>
-          </div>
-        </form>
-        <div className="p-4">
-          {alerts.isPending ? (
-            <TableSkeleton
-              headers={[
-                "Alert",
-                "Log source",
-                "Asset",
-                "Anomaly score",
-                "AI risk level",
-                "Status",
-                "Detected",
-                "Actions",
-              ]}
-              label="Loading AI alerts"
-              rows={skeletonRows(metrics.data?.total, 6)}
-            />
-          ) : alerts.isError ? (
-            <Alert>
-              Unable to load AI alerts. Check your session, permission, and
-              backend connection, then try again.
-            </Alert>
-          ) : alerts.data?.items.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="font-medium">No AI alerts found</p>
-              <p className="text-muted mt-1 text-sm">
-                Try a broader status or detection-time filter.
-              </p>
+              <label className="relative block max-w-md min-w-[220px] flex-1">
+                <span className="sr-only">Search AI alerts</span>
+                <Search
+                  aria-hidden="true"
+                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  strokeWidth={1.8}
+                />
+                <Input
+                  className="bg-background min-h-10 pl-9"
+                  maxLength={100}
+                  onChange={(event) => setSearchDraft(event.target.value)}
+                  placeholder="Search alerts, sources, or assets"
+                  value={searchDraft}
+                />
+              </label>
+              <label className="w-full sm:w-44">
+                <span className="sr-only">Filter by alert status</span>
+                <Select
+                  aria-label="Filter by alert status"
+                  onChange={(event) => {
+                    setStatus(event.target.value as AiAlertStatus | "all");
+                    setPage(1);
+                  }}
+                  value={status}
+                >
+                  <option value="all">All statuses</option>
+                  {aiAlertStatuses.map((value) => (
+                    <option key={value} value={value}>
+                      {formatStatus(value)}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="w-full sm:w-44">
+                <span className="sr-only">Filter by detection time</span>
+                <Select
+                  aria-label="Filter by detection time"
+                  onChange={(event) => {
+                    setTimeRange(event.target.value as TimeRange);
+                    setPage(1);
+                  }}
+                  value={timeRange}
+                >
+                  <option value="1h">Last hour</option>
+                  <option value="24h">Last 24 hours</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="all">All time</option>
+                </Select>
+              </label>
+              <Button className="min-h-10" type="submit">
+                Search
+              </Button>
+              {hasActiveFilters ? (
+                <Button
+                  className="min-h-10 gap-1.5"
+                  onClick={clearFilters}
+                  type="button"
+                  variant="secondary"
+                >
+                  <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                  Clear
+                </Button>
+              ) : null}
+              <div className="ml-auto flex flex-wrap items-center gap-3">
+                <p aria-live="polite" className="text-muted text-xs">
+                  {alerts.data
+                    ? `Updated ${formatTime(alerts.data.serverTime)}`
+                    : "Updates every 10 seconds"}
+                </p>
+                <Button
+                  disabled={alerts.isFetching}
+                  onClick={() => void alerts.refetch()}
+                  variant="secondary"
+                >
+                  <RefreshCw
+                    aria-hidden="true"
+                    className={`size-4 ${alerts.isFetching ? "animate-spin" : ""}`}
+                    strokeWidth={1.8}
+                  />
+                  Refresh
+                </Button>
+              </div>
+            </form>
+            <div className="p-4">
+              {alerts.isPending ||
+              (alerts.isPlaceholderData && alerts.isFetching) ? (
+                <TableSkeleton
+                  headers={[
+                    "Alert",
+                    "Log source",
+                    "Asset",
+                    "Anomaly score",
+                    "AI risk level",
+                    "Status",
+                    "Detected",
+                    "Actions",
+                  ]}
+                  label="Loading AI alerts"
+                  rows={skeletonRows(metrics.data?.total, 6)}
+                />
+              ) : alerts.isError ? (
+                <Alert>
+                  Unable to load AI alerts. Check your session, permission, and
+                  backend connection, then try again.
+                </Alert>
+              ) : alerts.data?.items.length === 0 ? (
+                <div className="py-12 text-center">
+                  <Radar className="text-muted mx-auto size-10 stroke-1" />
+                  <h3 className="mt-2 text-base font-semibold">
+                    No AI alerts found
+                  </h3>
+                  <p className="text-muted mt-1 text-sm">
+                    {hasActiveFilters
+                      ? "No alerts match the current search and filter criteria."
+                      : "No anomaly alerts have been generated yet."}
+                  </p>
+                  {hasActiveFilters ? (
+                    <Button
+                      className="mt-4 min-h-9 gap-1.5 text-xs"
+                      onClick={clearFilters}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <X aria-hidden="true" className="size-3.5" />
+                      Clear filters
+                    </Button>
+                  ) : null}
+                </div>
+              ) : alerts.data ? (
+                <DataTable
+                  columns={columns}
+                  getRowKey={(item) => item.id}
+                  rows={alerts.data.items}
+                />
+              ) : null}
             </div>
-          ) : alerts.data ? (
-            <DataTable
-              columns={columns}
-              getRowKey={(item) => item.id}
-              rows={alerts.data.items}
-            />
-          ) : null}
-        </div>
-        {alerts.data ? (
-          <div className="border-border border-t p-4">
-            <Pagination
-              onPageChange={setPage}
-              page={alerts.data.pagination.page}
-              pageCount={alerts.data.pagination.totalPages}
-            />
-          </div>
-        ) : null}
-      </ProductPanel>
+            {alerts.data &&
+            alerts.data.items.length > 0 &&
+            !alerts.isPlaceholderData ? (
+              <div className="border-border border-t p-4">
+                <Pagination
+                  onPageChange={setPage}
+                  page={alerts.data.pagination.page}
+                  pageCount={alerts.data.pagination.totalPages}
+                />
+              </div>
+            ) : null}
+          </ProductPanel>
         </>
       ) : (
         <AssetThresholdOverridesManager />

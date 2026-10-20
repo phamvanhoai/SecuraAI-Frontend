@@ -33,8 +33,10 @@ type SelectedMapping = { controlId: string; notes: string };
 
 export function PolicyControlMappingManager({
   onBack,
+  hideHeader = false,
 }: {
   onBack?: () => void;
+  hideHeader?: boolean;
 }) {
   const session = useSessionUser();
   const allowed =
@@ -208,14 +210,16 @@ export function PolicyControlMappingManager({
 
   return (
     <>
-      <ProductPageHeader
-        title="Map controls to standard frameworks"
-        description="Connect published policy versions to ISO, NIST, or other compliance framework controls."
-        showSampleNotice={false}
-        {...(onBack
-          ? { secondaryAction: "Back to policies", onSecondaryAction: onBack }
-          : {})}
-      />
+      {!hideHeader && (
+        <ProductPageHeader
+          title="Map controls to standard frameworks"
+          description="Connect published policy versions to ISO, NIST, or other compliance framework controls."
+          showSampleNotice={false}
+          {...(onBack
+            ? { secondaryAction: "Back to policies", onSecondaryAction: onBack }
+            : {})}
+        />
+      )}
       <ProductPanel
         title="Published policy versions"
         description="Mappings are maintained separately for each framework."
