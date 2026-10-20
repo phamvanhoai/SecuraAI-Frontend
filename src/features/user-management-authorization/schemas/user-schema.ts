@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const USER_FULL_NAME_MAX_LENGTH = 80;
+
 export const createUserSchema = z.object({
   email: z
     .email("Enter a valid email address.")
@@ -9,7 +11,10 @@ export const createUserSchema = z.object({
     .string()
     .trim()
     .min(2, "Full name must contain at least 2 characters.")
-    .max(150)
+    .max(
+      USER_FULL_NAME_MAX_LENGTH,
+      `Full name cannot exceed ${USER_FULL_NAME_MAX_LENGTH} characters.`,
+    )
     .regex(
       /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u,
       "Full name may contain letters and spaces only.",
@@ -43,7 +48,10 @@ export const updateUserSchema = z.object({
     .string()
     .trim()
     .min(2)
-    .max(255)
+    .max(
+      USER_FULL_NAME_MAX_LENGTH,
+      `Full name cannot exceed ${USER_FULL_NAME_MAX_LENGTH} characters.`,
+    )
     .regex(
       /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u,
       "Full name may contain letters and spaces only.",
