@@ -9,8 +9,6 @@ import {
   Gauge,
   GitBranch,
   History,
-  LayoutDashboard,
-  Library,
   ScrollText,
   SearchCode,
   Settings,
@@ -33,13 +31,6 @@ export type NavigationItem = {
 type ModuleDefinition = Omit<NavigationItem, "href"> & { slug: string };
 
 const modules = {
-  alerts: {
-    title: "Alerts",
-    slug: "alerts",
-    requiredAnyPermission: ["ai-alerts.read", "ai-alerts.thresholds.manage"],
-    icon: Bell,
-    section: "Overview",
-  },
   users: {
     title: "Users",
     slug: "users",
@@ -76,13 +67,6 @@ const modules = {
       "compliance.map-controls",
     ],
     icon: ClipboardCheck,
-    section: "Management",
-  },
-  compliance: {
-    title: "Compliance",
-    slug: "compliance",
-    allowedRoleCodes: ["SECURITY_OFFICER", "EMPLOYEE"],
-    icon: Library,
     section: "Management",
   },
   audits: {
@@ -146,13 +130,6 @@ const modules = {
     requiredAnyPermission: ["reports.read"],
     section: "Reporting",
   },
-  customDashboard: {
-    title: "Custom Dashboard",
-    slug: "custom-dashboard",
-    icon: LayoutDashboard,
-    requiredAnyPermission: ["reports.read"],
-    section: "Reporting",
-  },
   notifications: {
     title: "Notifications",
     slug: "notifications",
@@ -184,13 +161,11 @@ const modules = {
 
 export const panelModules = {
   dashboard: [
-    modules.alerts,
     modules.users,
     modules.assets,
     modules.risks,
     modules.incidents,
     modules.controls,
-    modules.compliance,
     modules.audits,
     modules.policies,
     modules.workflowDefinitions,
@@ -198,20 +173,17 @@ export const panelModules = {
     modules.aiModels,
     modules.eventLogs,
     modules.reports,
-    modules.customDashboard,
     modules.notifications,
     modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
   admin: [
-    modules.alerts,
     modules.users,
     modules.assets,
     modules.risks,
     modules.incidents,
     modules.controls,
-    modules.compliance,
     modules.audits,
     modules.policies,
     modules.workflowDefinitions,
@@ -219,19 +191,16 @@ export const panelModules = {
     modules.aiModels,
     modules.eventLogs,
     modules.reports,
-    modules.customDashboard,
     modules.notifications,
     modules.systemLogs,
     modules.settings,
     modules.loginHistory,
   ],
   "security-officer": [
-    modules.alerts,
     modules.assets,
     modules.risks,
     modules.incidents,
     modules.controls,
-    modules.compliance,
     modules.audits,
     modules.policies,
     modules.workflowDefinitions,
@@ -253,11 +222,9 @@ export const panelModules = {
     modules.assets,
     modules.anomalyMonitoring,
     modules.risks,
-    modules.compliance,
     modules.policies,
     modules.workflowDefinitions,
     modules.reports,
-    modules.customDashboard,
     modules.notifications,
   ],
 } as const satisfies Record<PanelKind, readonly ModuleDefinition[]>;
