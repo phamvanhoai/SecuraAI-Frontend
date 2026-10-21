@@ -41,7 +41,8 @@ export function useRequestPolicyRevision() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: requestPolicyRevision,
-    onSuccess: () => client.invalidateQueries({ queryKey: publicationKeys }),
+    retry: false,
+    onSuccess: () => client.invalidateQueries({ queryKey: ["policies"] }),
   });
 }
 

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { PolicyRevisionNotice } from "./policy-revision-notice";
 import {
   useCreatePolicyDraft,
   useUpdatePolicyDraft,
@@ -420,6 +421,7 @@ function EditDraftDialog({
         ) : null}
 
         {/* Read-only context strip */}
+        <PolicyRevisionNotice request={draft.revisionRequest} />
         <div className="bg-neutral-soft grid grid-cols-2 gap-3 rounded-lg p-4 sm:grid-cols-4">
           <div>
             <p className="text-muted text-xs font-medium tracking-wide uppercase">
