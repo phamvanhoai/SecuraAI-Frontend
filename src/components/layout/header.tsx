@@ -89,12 +89,12 @@ export function Header() {
                 <PanelLink
                   href="/profile"
                   icon={<UserRound />}
-                  label="Hồ sơ cá nhân"
+                  label="Profile"
                 />
                 <PanelLink
                   href="/change-password"
                   icon={<KeyRound />}
-                  label="Đổi mật khẩu"
+                  label="Change password"
                 />
               </div>
               <button
@@ -102,7 +102,7 @@ export function Header() {
                 onClick={logout}
               >
                 <LogOut className="size-4" strokeWidth={1.8} />
-                Đăng xuất
+                Sign out
               </button>
             </>
           ) : (

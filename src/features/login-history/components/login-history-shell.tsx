@@ -107,10 +107,13 @@ export function LoginHistoryShell() {
   const router = useRouter();
   const session = useSessionUser();
   const allowed = canViewLoginHistory(session.data);
+  const isEmployee =
+    session.data?.roles.some((role) => role.code === "EMPLOYEE") ?? false;
   const [query, setQuery] = useState<LoginHistoryQuery>(() =>
     loginHistoryQuerySchema.parse({}),
   );
   const [filters, setFilters] = useState(initialFilters);
+  const [scope, setScope] = useState<"organization" | "mine">("organization");
   const [advanced, setAdvanced] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const history = useLoginHistory(query, session.isSuccess && allowed);
@@ -150,6 +153,7 @@ export function LoginHistoryShell() {
       limit: filters.limit,
       sortOrder: filters.sortOrder,
       ...(filters.search.trim() ? { search: filters.search.trim() } : {}),
+      ...(isEmployee || scope === "mine" ? { userId: session.data?.id } : {}),
       ...(filters.status ? { status: filters.status } : {}),
       ...(filters.ipAddress.trim()
         ? { ipAddress: filters.ipAddress.trim() }
@@ -185,6 +189,15 @@ export function LoginHistoryShell() {
     setErrors({});
     setQuery(loginHistoryQuerySchema.parse({}));
   }
+  function changeScope(nextScope: "organization" | "mine") {
+    setScope(nextScope);
+    const nextQuery = loginHistoryQuerySchema.safeParse({
+      ...query,
+      page: 1,
+      ...(nextScope === "mine" ? { userId: session.data?.id } : { userId: undefined }),
+    });
+    if (nextQuery.success) setQuery(nextQuery.data);
+  }
   const fields = [
     { key: "from", label: "From", type: "datetime-local" },
     { key: "to", label: "To", type: "datetime-local" },
@@ -210,7 +223,11 @@ export function LoginHistoryShell() {
     <>
       <ProductPageHeader
         title="Login history"
-        description="Review authentication activity across the organization and investigate unusual sign-in patterns."
+        description={
+          isEmployee
+            ? "Review your recent successful and failed sign-in activity."
+            : "Review authentication activity across the organization and investigate unusual sign-in patterns."
+        }
         showSampleNotice={false}
         additionalActions={
           <Button
@@ -261,6 +278,24 @@ export function LoginHistoryShell() {
           },
         ]}
       />
+      {!isEmployee ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs" role="tablist" aria-label="Login history scope">
+            {(["organization", "mine"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={scope === tab}
+                className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${scope === tab ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+                onClick={() => changeScope(tab)}
+              >
+                <span>{tab === "organization" ? "Organization" : "My activity"}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <ProductPanel
         title="Login history"
         description={

@@ -6,7 +6,11 @@ export function canViewLoginHistory(
   return Boolean(
     user?.status.toUpperCase() === "ACTIVE" &&
     user.roles.some(
-      (role) => role.code === "ADMIN" || role.code === "SECURITY_OFFICER",
+      (role) =>
+        role.code === "ADMIN" ||
+        role.code === "SECURITY_OFFICER" ||
+        role.code === "EMPLOYEE" ||
+        role.code === "EXECUTIVE",
     ) &&
     user.permissions.includes("login-history.read"),
   );
