@@ -49,6 +49,7 @@ export function RecordControlWeaknessDialog({
   );
   useEffect(() => {
     if (incident) {
+      setTab(incident.status === "closed" ? "history" : "record");
       form.reset({ controlId: "", severity: "medium", description: "" });
       ref.current?.showModal();
     } else ref.current?.close();
@@ -102,7 +103,7 @@ export function RecordControlWeaknessDialog({
                 label: "Weakness history",
                 icon: History,
               },
-            ].map((item) => {
+            ].filter((item) => incident.status !== "closed" || item.id === "history").map((item) => {
               const Icon = item.icon;
               const selected = tab === item.id;
               return (
