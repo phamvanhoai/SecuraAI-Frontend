@@ -133,6 +133,8 @@ export function PolicyDraftsManager({
   onViewPublished,
   onViewHistory,
   hideHeader = false,
+  createDialogOpen,
+  onCreateDialogOpenChange,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
@@ -140,6 +142,8 @@ export function PolicyDraftsManager({
   onViewPublished?: () => void;
   onViewHistory?: () => void;
   hideHeader?: boolean;
+  createDialogOpen?: boolean;
+  onCreateDialogOpenChange?: (open: boolean) => void;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -157,7 +161,15 @@ export function PolicyDraftsManager({
   const [activeTab, setActiveTab] = useState<"drafts" | "rejected">("drafts");
   const [rejectedQuery, setRejectedQuery] = useState(initialRejectedQuery);
   const [rejectedSearch, setRejectedSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [internalCreateOpen, setInternalCreateOpen] = useState(false);
+  const createOpen = createDialogOpen ?? internalCreateOpen;
+  const setCreateOpen = (open: boolean): void => {
+    if (onCreateDialogOpenChange) {
+      onCreateDialogOpenChange(open);
+      return;
+    }
+    setInternalCreateOpen(open);
+  };
   const [selected, setSelected] = useState<{
     policyId: string;
     versionId: string;
