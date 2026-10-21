@@ -82,6 +82,7 @@ export function PoliciesManager() {
               : "drafts";
 
   const [activeTab, setActiveTab] = useState<TabId>(firstTab);
+  const [createDraftOpen, setCreateDraftOpen] = useState(false);
 
   // Metric data — fetched only when the user has the relevant permission
   const draftMetrics = usePolicyDrafts(overviewDraftQuery, canCreateDrafts);
@@ -603,6 +604,12 @@ export function PoliciesManager() {
       {/* Shared page header — title & description switch per tab */}
       <ProductPageHeader
         description={current.description}
+        {...(activeTab === "drafts" && canCreateDrafts
+          ? {
+              primaryAction: "Create draft",
+              onPrimaryAction: () => setCreateDraftOpen(true),
+            }
+          : {})}
         showSampleNotice={false}
         title={current.title}
       />
@@ -650,7 +657,9 @@ export function PoliciesManager() {
       {/* Tab content — each manager gets hideHeader=true to suppress its own header */}
       {activeTab === "drafts" && canCreateDrafts ? (
         <PolicyDraftsManager
+          createDialogOpen={createDraftOpen}
           hideHeader
+          onCreateDialogOpenChange={setCreateDraftOpen}
           {...(canAssignDepartments
             ? { onAssignDepartments: () => setActiveTab("departments") }
             : {})}
