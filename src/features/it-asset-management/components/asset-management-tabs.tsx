@@ -13,7 +13,7 @@ export function AssetManagementTabs({
   return (
     <nav
       aria-label="Asset management views"
-      className="border-border bg-surface inline-flex max-w-full flex-wrap gap-1 rounded-xl border p-1"
+      className="border-border bg-surface mb-5 inline-flex max-w-full flex-wrap gap-1 rounded-xl border p-1 shadow-xs"
     >
       {[
         { key: "assets", href: "/assets", label: "Assets", icon: Server },
@@ -29,10 +29,10 @@ export function AssetManagementTabs({
           href={item.href}
           aria-current={active === item.key ? "page" : undefined}
           className={cn(
-            "focus-visible:outline-brand inline-flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2",
+            "focus-visible:outline-brand inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2",
             active === item.key
-              ? "bg-brand text-brand-contrast"
-              : "text-muted hover:bg-neutral-soft",
+              ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+              : "text-muted hover:bg-neutral-soft hover:text-foreground",
           )}
         >
           <item.icon aria-hidden="true" className="size-4" strokeWidth={1.8} />

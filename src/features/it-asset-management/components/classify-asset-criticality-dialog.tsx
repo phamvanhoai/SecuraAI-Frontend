@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetDetail } from "../hooks/use-asset-detail";
 import { previewAssetCriticality } from "../lib/asset-classification-method";
@@ -184,7 +185,15 @@ export function ClassifyAssetCriticalityDialog({
             </p>
           </details>
           {detail.isPending ? (
-            <p role="status">Loading classification context…</p>
+            <div className="space-y-3" role="status">
+              <span className="sr-only">Loading classification context</span>
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-24 w-full" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
           ) : null}
           {detail.isError ? (
             <Alert>

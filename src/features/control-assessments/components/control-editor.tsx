@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ClipboardCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -39,7 +40,7 @@ export function ControlEditor({
     <Dialog
       dialogRef={dialog}
       title={controlId ? "Edit Control" : "Create Control"}
-      className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
       onClose={onClose}
       onCancel={(event) => {
         if (controlId && !detail.data) {
@@ -49,8 +50,10 @@ export function ControlEditor({
       }}
     >
       {controlId && detail.isPending ? (
-        <div className="space-y-4">
-          <p role="status">Loading control…</p>
+        <div className="space-y-4 py-2" role="status" aria-live="polite">
+          <p className="sr-only" role="status">Loading control details</p>
+          <div className="border-border bg-neutral-soft/30 h-24 animate-pulse rounded-xl border" />
+          <div className="border-border bg-neutral-soft/30 h-40 animate-pulse rounded-xl border" />
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -222,12 +225,15 @@ function ControlFields({
     ...(errors[key] ? { "aria-describedby": `control-${key}-error` } : {}),
   });
   return (
-    <form ref={form} onSubmit={submit} noValidate className="space-y-4">
-      <p className="text-muted text-sm">
+    <form ref={form} onSubmit={submit} noValidate className="space-y-6">
+      <div className="border-border bg-neutral-soft/20 flex items-start gap-3 rounded-xl border p-3.5">
+        <ClipboardCheck className="text-brand mt-0.5 size-5 shrink-0" aria-hidden="true" />
+        <p className="text-muted text-sm">
         Define a reusable security control. This does not link it to a Risk, add
         Evidence, or record effectiveness. Do not repurpose an existing control
         for a different security objective.
-      </p>
+        </p>
+      </div>
       {error ? (
         <Alert
           className="border-danger/25 bg-danger-soft text-danger"
@@ -239,8 +245,8 @@ function ControlFields({
             : ""}
         </Alert>
       ) : null}
-      <fieldset disabled={save.isPending || blocked} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <fieldset disabled={save.isPending || blocked} className="space-y-6">
+        <div className="border-border bg-neutral-soft/30 grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
           {baseline ? (
             <div>
               <Label htmlFor="control-controlCode">Control code</Label>
@@ -270,7 +276,7 @@ function ControlFields({
             {message("name")}
           </div>
         </div>
-        <div>
+        <div className="border-border bg-neutral-soft/30 space-y-4 rounded-xl border p-4">
           <Label htmlFor="control-description">Purpose and description *</Label>
           <Textarea
             {...attributes("description")}
@@ -282,7 +288,7 @@ function ControlFields({
           />
           {message("description")}
         </div>
-        <div>
+        <div className="border-border bg-neutral-soft/30 space-y-4 rounded-xl border p-4">
           <Label htmlFor="control-owner-search">Find Control Owner</Label>
           <Input
             id="control-owner-search"
@@ -432,7 +438,7 @@ function ControlFields({
           </div>
         ) : null}
       </fieldset>
-      <div className="flex justify-end gap-2">
+      <div className="border-border flex justify-end gap-2 border-t pt-4">
         <Button
           type="button"
           variant="secondary"
