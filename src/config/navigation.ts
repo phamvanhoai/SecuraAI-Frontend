@@ -73,7 +73,7 @@ const modules = {
     title: "Audit",
     slug: "audits",
     icon: History,
-    allowedRoleCodes: ["ADMIN"],
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER"],
     section: "Management",
   },
   policies: {

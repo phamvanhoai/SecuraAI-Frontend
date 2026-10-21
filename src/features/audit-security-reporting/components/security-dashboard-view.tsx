@@ -23,13 +23,20 @@ import {
 } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useSecurityDashboard } from "../hooks/use-security-dashboard";
 
 export function SecurityDashboardView() {
-  const { data, isLoading, isError, error, refetch, isFetching } =
-    useSecurityDashboard();
+  const session = useSessionUser();
+  const canView =
+    session.data?.roles.some(
+      (r) => r.code === "SECURITY_OFFICER" || r.code === "EXECUTIVE",
+    ) ?? false;
 
-  if (isLoading) {
+  const { data, isLoading, isError, error, refetch, isFetching } =
+    useSecurityDashboard(canView);
+
+  if (session.isPending || (canView && isLoading)) {
     return (
       <div className="space-y-5" data-testid="dashboard-loading-skeleton">
         <div className="flex flex-col gap-2">
@@ -52,6 +59,31 @@ export function SecurityDashboardView() {
           <Skeleton className="h-72 rounded-[10px]" />
           <Skeleton className="h-72 rounded-[10px]" />
           <Skeleton className="h-72 rounded-[10px]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <div className="space-y-5">
+        <ProductPageHeader
+          title="Security & Risk Posture Dashboard"
+          description="View aggregated security posture, risk indicators, incident telemetry, and real-time AI alerts."
+        />
+        <div
+          className="border-danger/30 bg-danger/10 text-danger rounded-xl border p-6 text-center space-y-3"
+          data-testid="dashboard-unauthorized-state"
+        >
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-danger/20 text-danger">
+            <ShieldAlert className="size-6" />
+          </div>
+          <h3 className="text-base font-semibold">
+            Access Restricted
+          </h3>
+          <p className="text-muted mx-auto max-w-md text-xs">
+            This security dashboard is available to Security Officers and Executives only.
+          </p>
         </div>
       </div>
     );

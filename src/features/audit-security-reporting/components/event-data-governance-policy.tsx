@@ -21,6 +21,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useSessionUser } from "@/features/authentication-account";
 
 const retentionRules = [
   {
@@ -73,8 +74,17 @@ const lifecycleSteps = [
 ] as const;
 
 export function EventDataGovernancePolicy() {
+  const session = useSessionUser();
+  const isAdmin = session.data?.roles.some((r) => r.code === "ADMIN") ?? false;
   const updateDialog = useRef<HTMLDialogElement>(null);
   const toast = useToast();
+
+  if (!session.isPending && !isAdmin) {
+    return (
+      <Alert>This event data governance policy is available to administrators only.</Alert>
+    );
+  }
+
   return (
     <>
       <div className="space-y-5">

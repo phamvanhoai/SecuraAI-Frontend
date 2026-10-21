@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
+import { useSessionUser } from "@/features/authentication-account";
 
 type ApiKeyStatus = "active" | "expires_soon" | "expired" | "revoked";
 type ExpirationFilter = "all" | "30_days" | "expired" | "never";
@@ -133,6 +134,8 @@ const records: readonly ApiKeyRecord[] = [
 const pageSize = 3;
 
 export function IntegrationApiKeyList() {
+  const session = useSessionUser();
+  const isAdmin = session.data?.roles.some((r) => r.code === "ADMIN") ?? false;
   const detailDialog = useRef<HTMLDialogElement>(null);
   const createDialog = useRef<HTMLDialogElement>(null);
   const editDialog = useRef<HTMLDialogElement>(null);
@@ -339,6 +342,13 @@ export function IntegrationApiKeyList() {
       ),
     },
   ];
+
+  if (!session.isPending && !isAdmin) {
+    return (
+      <Alert>This integration API key management is available to administrators only.</Alert>
+    );
+  }
+
   return (
     <>
       <div className="space-y-5">
