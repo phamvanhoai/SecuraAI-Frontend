@@ -2,6 +2,7 @@
 
 import {
   CheckCircle2,
+  ClipboardList,
   Ellipsis,
   Eye,
   Gauge,
@@ -19,7 +20,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
   const [page, setPage] = useState(1);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState<string | undefined>();
+  const hasActiveFilters = status !== "all" || Boolean(search);
   const requests = useOwnedRiskReassessmentRequests(
     { page, limit: 10, status, ...(search ? { q: search } : {}) },
     enabled,
@@ -350,10 +351,37 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
               </div>
             </>
           ) : (
-            <EmptyState
-              title="No reassessment requests"
-              description="No reassessment requests match the selected status."
-            />
+            <div className="py-12 text-center">
+              <ClipboardList
+                aria-hidden="true"
+                className="text-muted mx-auto size-10 stroke-1"
+              />
+              <h3 className="mt-2 text-base font-semibold">
+                {hasActiveFilters
+                  ? "No matching reassessment requests"
+                  : "No reassessment requests"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {hasActiveFilters
+                  ? "No reassessment requests match the current search and status filters."
+                  : "No reassessment requests are currently assigned to your risks."}
+              </p>
+              {hasActiveFilters ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={() => {
+                    setSearchDraft("");
+                    setSearch(undefined);
+                    setStatus("all");
+                    setPage(1);
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
       </ProductPanel>
