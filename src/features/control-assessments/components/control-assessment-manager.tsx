@@ -229,6 +229,58 @@ export function ControlAssessmentManager() {
     },
   ];
 
+  const catalogColumns: readonly DataTableColumn<ControlAssessmentItem>[] = [
+    {
+      key: "control",
+      header: "Control",
+      cell: (item) => (
+        <span className="block min-w-56">
+          <strong className="block">{item.name}</strong>
+          <span className="text-muted text-xs">{item.controlCode}</span>
+        </span>
+      ),
+    },
+    {
+      key: "description",
+      header: "Purpose",
+      cell: (item) => (
+        <span className="text-muted block max-w-sm text-sm line-clamp-2">
+          {item.description ?? "No description provided"}
+        </span>
+      ),
+    },
+    {
+      key: "owner",
+      header: "Control owner",
+      cell: (item) => item.owner?.fullName ?? <span className="text-muted">Unassigned</span>,
+    },
+    {
+      key: "configuration",
+      header: "Configuration",
+      cell: (item) => (
+        <span className="text-sm">
+          <strong className="block font-medium">{item.applicability.replaceAll("_", " ")}</strong>
+          <span className="text-muted">{item.implementationStatus.replaceAll("_", " ")}</span>
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (item) => (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!canEdit}
+          onClick={() => setEditor({ controlId: item.id })}
+        >
+          <Pencil className="size-4" aria-hidden="true" />
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
   if (session.isPending)
     return (
       <div
@@ -259,7 +311,7 @@ export function ControlAssessmentManager() {
             : "Manage the library of security controls. Create controls and assign ownership before assessment."
         }
         showSampleNotice={false}
-        {...(activeTab === "catalog" && canCreate
+        {...(canCreate
           ? {
               primaryAction: "Create control",
               onPrimaryAction: () => setEditor({}),
@@ -268,7 +320,7 @@ export function ControlAssessmentManager() {
       />
 
       {/* ── Pill tab switcher — identical pattern to LogSourcesManager ── */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="hidden" aria-hidden="true">
         <div className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs">
           <button
             type="button"
@@ -433,7 +485,7 @@ export function ControlAssessmentManager() {
               <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
             ) : query.data.items.length ? (
               <DataTable
-                columns={columns}
+                columns={catalogColumns}
                 rows={query.data.items}
                 getRowKey={(item) => item.id}
               />

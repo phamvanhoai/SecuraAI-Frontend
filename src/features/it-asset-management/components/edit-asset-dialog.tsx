@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssetDetail } from "../hooks/use-asset-detail";
 import { useUpdateAsset } from "../hooks/use-update-asset";
@@ -27,7 +28,7 @@ export function EditAssetDialog({ assetId, onClose }: { assetId: string | null; 
   const submit = handleSubmit(async (values) => { try { const asset = await mutation.mutateAsync(values); onClose(); toast.success("Asset updated", `${asset.assetCode} – ${asset.name}`); } catch (error: unknown) { toast.error("Unable to update asset", error instanceof Error ? error.message : "Please try again."); } });
 
   return <Dialog dialogRef={dialog} title="Edit IT Asset" onClose={onClose} className="w-[min(36rem,calc(100%-2rem))]">
-    {detail.isPending ? <p className="text-muted py-8 text-center">Loading asset information…</p> : null}
+    {detail.isPending ? <div className="space-y-4 py-2" role="status"><span className="sr-only">Loading asset information</span><Skeleton className="h-5 w-40" /><div className="grid gap-4 sm:grid-cols-2"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div><Skeleton className="h-28 w-full" /></div> : null}
     {detail.isError ? <Alert>Unable to load the selected asset.</Alert> : null}
     {detail.data ? <form className="space-y-5" noValidate onSubmit={submit}>
       <p className="text-muted text-sm">Asset code: <strong className="text-foreground">{detail.data.assetCode}</strong></p>
