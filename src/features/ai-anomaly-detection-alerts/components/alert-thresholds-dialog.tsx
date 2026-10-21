@@ -322,6 +322,7 @@ function ThresholdFormDialog({
         assetId: values.assetId,
         input: {
           threshold: values.thresholdPercent / 100,
+          mode: editing ? "edit" : "create",
           riskLevelMin: values.riskLevelMin || null,
           enabled: values.enabled,
         },
