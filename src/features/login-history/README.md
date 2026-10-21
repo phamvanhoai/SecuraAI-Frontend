@@ -1,6 +1,6 @@
 # View Login History
 
-Admin navigation uses `/admin/login-history`; Security Officer uses `/login-history`. Both use the same feature. Menu visibility and direct navigation require an active session with ADMIN or SECURITY_OFFICER and `login-history.read`. Disallowed accounts redirect to `/forbidden`; missing/expired sessions redirect to login. Backend 403 also redirects to forbidden without displaying historical data.
+Admin navigation uses `/admin/login-history`; Security Officer and Employee use `/login-history`. Both use the same feature. Menu visibility and direct navigation require an active active session with ADMIN, SECURITY_OFFICER or EMPLOYEE and `login-history.read`. Employees receive only their own records from the backend; Administrators and Security Officers receive organization-scoped records. Disallowed accounts redirect to `/forbidden`; missing/expired sessions redirect to login. Backend 403 also redirects to forbidden without displaying historical data.
 
 The BFF GET `/api/login-history` validates bounded, allow-listed parameters and forwards to GET `/api/v1/login-history` through the existing HttpOnly cookie flow, including token refresh. Backend remains the authority for authentication, account state and authorization. TanStack queries are disabled until authorization succeeds and use AbortSignal with no automatic retries.
 
