@@ -9,7 +9,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useRef, useState, type ComponentProps } from "react";
+import { useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -26,12 +26,14 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
 import { exportInvestigationLogs } from "../api/export-investigation-logs";
 import { useSystemLogSearch } from "../hooks/use-system-log-search";
+import { useSystemLogDetail } from "../hooks/use-system-log-detail";
 import type {
+  SystemLogDetail,
   SystemLogRecord,
   SystemLogStatus,
 } from "../schemas/system-log-schema";
@@ -101,6 +103,7 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
     },
     searchRequest,
   );
+  const detail = useSystemLogDetail(selected?.id ?? null);
   const rows = logs.data?.items ?? [];
   const pagination = logs.data?.pagination;
   const activeCount = [
@@ -436,7 +439,12 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
           </div>
         ) : null}
       </ProductPanel>
-      <Dialog dialogRef={dialog} title="System log details">
+      <Dialog
+        className="max-h-[calc(100dvh-2rem)] w-[min(72rem,calc(100%-2rem))] overflow-y-auto"
+        dialogRef={dialog}
+        title="System log details"
+        onClose={() => setSelected(null)}
+      >
         {selected ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
@@ -469,6 +477,24 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
               />
               <Detail label="Error code" value={selected.errorCode ?? "None"} />
             </dl>
+            {detail.isPending ? (
+              <SystemLogDetailSkeleton />
+            ) : detail.isError ? (
+              <Alert>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>Unable to load the complete log record.</span>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => void detail.refetch()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </Alert>
+            ) : detail.data ? (
+              <CompleteSystemLogDetail log={detail.data} />
+            ) : null}
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -795,6 +821,109 @@ function Detail({ label, value }: { label: string; value: string }) {
         {label}
       </dt>
       <dd className="mt-1 text-sm break-words">{value}</dd>
+    </div>
+  );
+}
+function CompleteSystemLogDetail({ log }: { log: SystemLogDetail }) {
+  return (
+    <div className="space-y-5">
+      <DetailSection title="Event overview">
+        <Detail label="Recorded at" value={formatTime(log.createdAt)} />
+        <Detail label="Source" value={log.source ?? "Application"} />
+        <Detail label="Resource ID" value={log.resourceId ?? "Not recorded"} />
+      </DetailSection>
+      <DetailSection title="Actor and request context">
+        <Detail label="Actor" value={log.actor?.name ?? "Unknown actor"} />
+        <Detail label="Actor type" value={humanize(log.actorType)} />
+        <Detail
+          label="Role"
+          value={log.actor?.role ? humanize(log.actor.role) : "Not applicable"}
+        />
+        <Detail label="User ID" value={log.actorUserId ?? "Not applicable"} />
+        <Detail
+          label="API key ID"
+          value={log.actorApiKeyId ?? "Not applicable"}
+        />
+        <Detail
+          label="API key prefix"
+          value={log.actor?.keyPrefix ?? "Not applicable"}
+        />
+        <Detail label="IP address" value={log.sourceIp ?? "Not recorded"} />
+        <Detail label="User agent" value={log.userAgent ?? "Not recorded"} />
+      </DetailSection>
+      <section aria-labelledby="recorded-changes-heading" className="space-y-3">
+        <h3 id="recorded-changes-heading" className="text-sm font-semibold">
+          Recorded changes
+        </h3>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <JsonSnapshot label="Before" value={log.beforeData} />
+          <JsonSnapshot label="After" value={log.afterData} />
+        </div>
+      </section>
+      <DetailSection title="Integrity chain">
+        <Detail label="Log ID" value={log.id} />
+        <Detail
+          label="Previous record hash"
+          value={log.previousHash ?? "First record in chain"}
+        />
+        <Detail label="Record hash" value={log.recordHash} />
+      </DetailSection>
+    </div>
+  );
+}
+function DetailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-border rounded-lg border p-4">
+      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
+    </section>
+  );
+}
+function JsonSnapshot({ label, value }: { label: string; value: unknown }) {
+  const content = value === null ? null : JSON.stringify(value, null, 2);
+  return (
+    <div className="border-border min-w-0 rounded-lg border">
+      <h4 className="border-border bg-neutral-soft/50 border-b px-3 py-2 text-xs font-semibold uppercase">
+        {label}
+      </h4>
+      {content ? (
+        <pre className="max-h-72 overflow-auto p-3 font-mono text-xs break-all whitespace-pre-wrap">
+          {content}
+        </pre>
+      ) : (
+        <p className="text-muted p-3 text-sm">No state was recorded.</p>
+      )}
+    </div>
+  );
+}
+function SystemLogDetailSkeleton() {
+  return (
+    <div
+      aria-busy="true"
+      aria-label="Loading system log details"
+      className="space-y-4"
+      role="status"
+    >
+      <span className="sr-only">Loading system log details</span>
+      {Array.from({ length: 2 }, (_, section) => (
+        <div className="border-border rounded-lg border p-4" key={section}>
+          <Skeleton className="mb-4 h-4 w-36" />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }, (_, item) => (
+              <div className="space-y-2" key={item}>
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
