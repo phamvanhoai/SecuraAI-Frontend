@@ -784,7 +784,7 @@ export function IncidentReportingManager() {
                   : "Record containment action"}
               </button>
             ) : null}
-            {canLinkAssets ? (
+            {canLinkAssets && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setAssetLinkTarget(item)}
@@ -800,7 +800,7 @@ export function IncidentReportingManager() {
                   : "Link asset"}
               </button>
             ) : null}
-            {canLinkControls ? (
+            {canLinkControls && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setControlLinkTarget(item)}
@@ -816,7 +816,7 @@ export function IncidentReportingManager() {
                   : "Link control"}
               </button>
             ) : null}
-            {canLinkRisks ? (
+            {canLinkRisks && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRiskLinkTarget(item)}
@@ -843,7 +843,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Record control weakness
+                {item.status === "closed" ? "View control weakness history" : "Record control weakness"}
               </button>
             ) : null}
             {canRequestRiskReassessment ? (
@@ -857,7 +857,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Request risk reassessment
+                {item.status === "closed" ? "View risk reassessment history" : "Request risk reassessment"}
               </button>
             ) : null}
           </DropdownMenu>
