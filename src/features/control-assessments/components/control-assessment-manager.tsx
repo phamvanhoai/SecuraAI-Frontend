@@ -20,7 +20,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,9 @@ const tones = {
 } as const;
 export function ControlAssessmentManager() {
   const session = useSessionUser();
-  const [activeTab, setActiveTab] = useState<"assessments" | "catalog">("assessments");
+  const [activeTab, setActiveTab] = useState<"assessments" | "catalog">(
+    "assessments",
+  );
   const [editor, setEditor] = useState<{ controlId?: string }>();
   const [evidenceControl, setEvidenceControl] = useState<string>();
   const canCreate =
@@ -191,7 +192,11 @@ export function ControlAssessmentManager() {
           label={
             <span className="grid size-8 place-items-center">
               <span className="sr-only">Actions for {item.controlCode}</span>
-              <Ellipsis aria-hidden="true" className="size-5" strokeWidth={1.8} />
+              <Ellipsis
+                aria-hidden="true"
+                className="size-5"
+                strokeWidth={1.8}
+              />
             </span>
           }
         >
@@ -229,6 +234,63 @@ export function ControlAssessmentManager() {
     },
   ];
 
+  const catalogColumns: readonly DataTableColumn<ControlAssessmentItem>[] = [
+    {
+      key: "control",
+      header: "Control",
+      cell: (item) => (
+        <span className="block min-w-56">
+          <strong className="block">{item.name}</strong>
+          <span className="text-muted text-xs">{item.controlCode}</span>
+        </span>
+      ),
+    },
+    {
+      key: "description",
+      header: "Purpose",
+      cell: (item) => (
+        <span className="text-muted line-clamp-2 block max-w-sm text-sm">
+          {item.description ?? "No description provided"}
+        </span>
+      ),
+    },
+    {
+      key: "owner",
+      header: "Control owner",
+      cell: (item) =>
+        item.owner?.fullName ?? <span className="text-muted">Unassigned</span>,
+    },
+    {
+      key: "configuration",
+      header: "Configuration",
+      cell: (item) => (
+        <span className="text-sm">
+          <strong className="block font-medium">
+            {item.applicability.replaceAll("_", " ")}
+          </strong>
+          <span className="text-muted">
+            {item.implementationStatus.replaceAll("_", " ")}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      header: "Action",
+      cell: (item) => (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={!canEdit}
+          onClick={() => setEditor({ controlId: item.id })}
+        >
+          <Pencil className="size-4" aria-hidden="true" />
+          Edit
+        </Button>
+      ),
+    },
+  ];
+
   if (session.isPending)
     return (
       <div
@@ -259,7 +321,7 @@ export function ControlAssessmentManager() {
             : "Manage the library of security controls. Create controls and assign ownership before assessment."
         }
         showSampleNotice={false}
-        {...(activeTab === "catalog" && canCreate
+        {...(canCreate
           ? {
               primaryAction: "Create control",
               onPrimaryAction: () => setEditor({}),
@@ -268,13 +330,13 @@ export function ControlAssessmentManager() {
       />
 
       {/* ── Pill tab switcher — identical pattern to LogSourcesManager ── */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="hidden" aria-hidden="true">
         <div className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs">
           <button
             type="button"
             onClick={() => setActiveTab("assessments")}
             className={cn(
-              "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-all",
               activeTab === "assessments"
                 ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                 : "text-muted hover:bg-neutral-soft hover:text-foreground",
@@ -284,7 +346,9 @@ export function ControlAssessmentManager() {
               aria-hidden="true"
               className={cn(
                 "size-4",
-                activeTab === "assessments" ? "text-brand-contrast" : "text-muted",
+                activeTab === "assessments"
+                  ? "text-brand-contrast"
+                  : "text-muted",
               )}
               strokeWidth={2}
             />
@@ -294,7 +358,7 @@ export function ControlAssessmentManager() {
                 className={cn(
                   "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
                   activeTab === "assessments"
-                    ? "bg-white/20 text-brand-contrast"
+                    ? "text-brand-contrast bg-white/20"
                     : "border-border bg-neutral-soft text-muted border",
                 )}
               >
@@ -306,7 +370,7 @@ export function ControlAssessmentManager() {
             type="button"
             onClick={() => setActiveTab("catalog")}
             className={cn(
-              "inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-all",
               activeTab === "catalog"
                 ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                 : "text-muted hover:bg-neutral-soft hover:text-foreground",
@@ -375,14 +439,44 @@ export function ControlAssessmentManager() {
                 getRowKey={(item) => item.id}
               />
             ) : (
-              <EmptyState
-                title="No controls available"
-                description={
-                  canCreate
-                    ? "Create a reusable control to get started. Evidence and Risk links are added separately."
-                    : "Control Owners see only controls currently assigned to them."
-                }
-              />
+              <div className="py-12 text-center">
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="text-muted mx-auto size-10 stroke-1"
+                />
+                <h3 className="mt-2 text-base font-semibold">
+                  {q ? "No matching controls found" : "No controls available"}
+                </h3>
+                <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                  {q
+                    ? "No controls match the current search. Try another term or clear the search."
+                    : canCreate
+                      ? "No security controls have been created yet."
+                      : "No security controls are currently assigned to you."}
+                </p>
+                {q ? (
+                  <Button
+                    className="mt-4 min-h-9 text-xs"
+                    onClick={() => {
+                      setSearch("");
+                      setQ(undefined);
+                      setPage(1);
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    Clear search
+                  </Button>
+                ) : canCreate ? (
+                  <Button
+                    className="mt-4 min-h-9 text-xs"
+                    onClick={() => setEditor({})}
+                    type="button"
+                  >
+                    Create control
+                  </Button>
+                ) : null}
+              </div>
             )}
             {query.data ? (
               <Pagination
@@ -433,19 +527,49 @@ export function ControlAssessmentManager() {
               <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
             ) : query.data.items.length ? (
               <DataTable
-                columns={columns}
+                columns={catalogColumns}
                 rows={query.data.items}
                 getRowKey={(item) => item.id}
               />
             ) : (
-              <EmptyState
-                title={canCreate ? "No controls yet" : "No controls available"}
-                description={
-                  canCreate
-                    ? "Create the first control to start building the catalog."
-                    : "Control Owners see only controls currently assigned to them."
-                }
-              />
+              <div className="py-12 text-center">
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="text-muted mx-auto size-10 stroke-1"
+                />
+                <h3 className="mt-2 text-base font-semibold">
+                  {q ? "No matching controls found" : "No controls available"}
+                </h3>
+                <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                  {q
+                    ? "No controls match the current search. Try another term or clear the search."
+                    : canCreate
+                      ? "No security controls have been created yet."
+                      : "No security controls are currently assigned to you."}
+                </p>
+                {q ? (
+                  <Button
+                    className="mt-4 min-h-9 text-xs"
+                    onClick={() => {
+                      setSearch("");
+                      setQ(undefined);
+                      setPage(1);
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    Clear search
+                  </Button>
+                ) : canCreate ? (
+                  <Button
+                    className="mt-4 min-h-9 text-xs"
+                    onClick={() => setEditor({})}
+                    type="button"
+                  >
+                    Create control
+                  </Button>
+                ) : null}
+              </div>
             )}
             {query.data ? (
               <Pagination
@@ -490,7 +614,9 @@ export function ControlAssessmentManager() {
             className={`min-h-10 flex-1 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${assessmentTab === "assess" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
             onClick={() => setAssessmentTab("assess")}
             onKeyDown={(event) => {
-              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+              if (
+                ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              ) {
                 event.preventDefault();
                 setAssessmentTab("assess");
                 event.currentTarget.parentElement
@@ -508,10 +634,12 @@ export function ControlAssessmentManager() {
             aria-selected={assessmentTab === "history"}
             aria-controls="control-history-panel"
             tabIndex={assessmentTab === "history" ? 0 : -1}
-            className={`min-h-10 inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${assessmentTab === "history" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
+            className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none ${assessmentTab === "history" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
             onClick={() => setAssessmentTab("history")}
             onKeyDown={(event) => {
-              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+              if (
+                ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              ) {
                 event.preventDefault();
                 setAssessmentTab("history");
                 event.currentTarget.parentElement
@@ -525,7 +653,12 @@ export function ControlAssessmentManager() {
           </button>
         </div>
         {assessmentTab === "history" ? (
-          <section id="control-history-panel" role="tabpanel" aria-labelledby="control-history-tab" className="space-y-3">
+          <section
+            id="control-history-panel"
+            role="tabpanel"
+            aria-labelledby="control-history-tab"
+            className="space-y-3"
+          >
             <p className="text-muted text-sm">
               Previous assessment results are read-only. Saving a new assessment
               creates a new record and does not overwrite this history.
@@ -537,47 +670,50 @@ export function ControlAssessmentManager() {
                   historyPage * historyPageSize,
                 )
                 .map((assessment) => {
-                const assessmentLabel = assessment.result
-                  ? labels[assessment.result]
-                  : "Not assessed";
-                const assessmentTone = assessment.result
-                  ? tones[assessment.result]
-                  : "neutral";
-                return (
-                <article
-                  key={assessment.id}
-                  className="border-border rounded-lg border p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">
-                        {assessmentLabel}
+                  const assessmentLabel = assessment.result
+                    ? labels[assessment.result]
+                    : "Not assessed";
+                  const assessmentTone = assessment.result
+                    ? tones[assessment.result]
+                    : "neutral";
+                  return (
+                    <article
+                      key={assessment.id}
+                      className="border-border rounded-lg border p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold">{assessmentLabel}</p>
+                          <p className="text-muted text-sm">
+                            {new Intl.DateTimeFormat("en-GB", {
+                              timeZone: "Asia/Bangkok",
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            }).format(new Date(assessment.assessedAt))}{" "}
+                            (UTC+7)
+                          </p>
+                        </div>
+                        <StatusBadge tone={assessmentTone}>
+                          {assessment.effectiveness ?? "—"}% effective
+                        </StatusBadge>
+                      </div>
+                      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                        <div>
+                          <dt className="text-muted">Assessed by</dt>
+                          <dd>{assessment.assessor.fullName}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted">Test method</dt>
+                          <dd className="whitespace-pre-wrap">
+                            {assessment.testMethod}
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="mt-3 text-sm whitespace-pre-wrap">
+                        {assessment.notes}
                       </p>
-                      <p className="text-muted text-sm">
-                        {new Intl.DateTimeFormat("en-GB", {
-                          timeZone: "Asia/Bangkok",
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        }).format(new Date(assessment.assessedAt))} (UTC+7)
-                      </p>
-                    </div>
-                    <StatusBadge tone={assessmentTone}>
-                      {assessment.effectiveness ?? "—"}% effective
-                    </StatusBadge>
-                  </div>
-                  <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-muted">Assessed by</dt>
-                      <dd>{assessment.assessor.fullName}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted">Test method</dt>
-                      <dd className="whitespace-pre-wrap">{assessment.testMethod}</dd>
-                    </div>
-                  </dl>
-                  <p className="mt-3 whitespace-pre-wrap text-sm">{assessment.notes}</p>
-                </article>
-                );
+                    </article>
+                  );
                 })
             ) : (
               <div className="border-border rounded-lg border border-dashed p-6 text-center">
@@ -607,96 +743,100 @@ export function ControlAssessmentManager() {
             </div>
           </section>
         ) : (
-        <form id="control-assessment-panel" className="space-y-4" onSubmit={submit}>
-          {error ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              {error}
-            </Alert>
-          ) : null}
-          <section className="border-border grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
+          <form
+            id="control-assessment-panel"
+            className="space-y-4"
+            onSubmit={submit}
+          >
+            {error ? (
+              <Alert className="border-danger/25 bg-danger-soft text-danger">
+                {error}
+              </Alert>
+            ) : null}
+            <section className="border-border grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
+              <div>
+                <p className="text-muted text-xs uppercase">Applicability</p>
+                <p className="mt-1">
+                  {selected?.applicability.replaceAll("_", " ")}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted text-xs uppercase">Implementation</p>
+                <p className="mt-1">
+                  {selected?.implementationStatus.replaceAll("_", " ")}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted text-xs uppercase">Evidence</p>
+                <p className="mt-1">
+                  {selected?.evidence.map((item) => item.name).join(", ")}
+                </p>
+              </div>
+            </section>
             <div>
-              <p className="text-muted text-xs uppercase">Applicability</p>
-              <p className="mt-1">
-                {selected?.applicability.replaceAll("_", " ")}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted text-xs uppercase">Implementation</p>
-              <p className="mt-1">
-                {selected?.implementationStatus.replaceAll("_", " ")}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted text-xs uppercase">Evidence</p>
-              <p className="mt-1">
-                {selected?.evidence.map((item) => item.name).join(", ")}
-              </p>
-            </div>
-          </section>
-          <div>
-            <Label htmlFor="testMethod">Test method</Label>
-            <Textarea
-              id="testMethod"
-              className="mt-1.5"
-              rows={3}
-              value={method}
-              onChange={(event) => setMethod(event.target.value)}
-            />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="testResult">Testing result</Label>
-              <Select
-                id="testResult"
+              <Label htmlFor="testMethod">Test method</Label>
+              <Textarea
+                id="testMethod"
                 className="mt-1.5"
-                value={result}
-                onChange={(event) =>
-                  setResult(event.target.value as keyof typeof labels)
-                }
-              >
-                {Object.entries(labels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="effectiveness">Effectiveness (%)</Label>
-              <Input
-                id="effectiveness"
-                className="mt-1.5"
-                type="number"
-                min={0}
-                max={100}
-                value={effectiveness}
-                onChange={(event) => setEffectiveness(event.target.value)}
+                rows={3}
+                value={method}
+                onChange={(event) => setMethod(event.target.value)}
               />
             </div>
-          </div>
-          <div>
-            <Label htmlFor="controlNotes">Assessment notes</Label>
-            <Textarea
-              id="controlNotes"
-              className="mt-1.5"
-              rows={4}
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => ref.current?.close()}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving…" : "Save assessment"}
-            </Button>
-          </div>
-        </form>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="testResult">Testing result</Label>
+                <Select
+                  id="testResult"
+                  className="mt-1.5"
+                  value={result}
+                  onChange={(event) =>
+                    setResult(event.target.value as keyof typeof labels)
+                  }
+                >
+                  {Object.entries(labels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="effectiveness">Effectiveness (%)</Label>
+                <Input
+                  id="effectiveness"
+                  className="mt-1.5"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={effectiveness}
+                  onChange={(event) => setEffectiveness(event.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="controlNotes">Assessment notes</Label>
+              <Textarea
+                id="controlNotes"
+                className="mt-1.5"
+                rows={4}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => ref.current?.close()}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving…" : "Save assessment"}
+              </Button>
+            </div>
+          </form>
         )}
       </Dialog>
     </>

@@ -11,7 +11,7 @@ const user: AuthSessionUser = {
   permissions: ["login-history.read"],
 };
 describe("login history access", () => {
-  it.each(["ADMIN", "SECURITY_OFFICER"])(
+  it.each(["ADMIN", "SECURITY_OFFICER", "EMPLOYEE", "EXECUTIVE"])(
     "allows %s with the permission",
     (code) => {
       expect(
@@ -19,7 +19,7 @@ describe("login history access", () => {
       ).toBe(true);
     },
   );
-  it.each(["EMPLOYEE", "MANAGER", "EXECUTIVE", "SECURITY_OFFICER_CUSTOM"])(
+  it.each(["MANAGER", "SECURITY_OFFICER_CUSTOM"])(
     "denies %s even with the permission",
     (code) => {
       expect(

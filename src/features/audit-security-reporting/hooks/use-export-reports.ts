@@ -6,15 +6,19 @@ import type {
   ReportExportItem,
 } from "../schemas/export-report-schema";
 
-export function useExportReportsQuery(params?: {
-  page?: number | undefined;
-  limit?: number | undefined;
-  reportType?: string | undefined;
-  status?: string | undefined;
-}) {
+export function useExportReportsQuery(
+  params?: {
+    page?: number | undefined;
+    limit?: number | undefined;
+    reportType?: string | undefined;
+    status?: string | undefined;
+  },
+  enabled: boolean = true,
+) {
   return useQuery<ListExportReportsResponse, Error>({
     queryKey: ["export-reports", params],
     queryFn: () => fetchExportReports(params),
+    enabled,
   });
 }
 

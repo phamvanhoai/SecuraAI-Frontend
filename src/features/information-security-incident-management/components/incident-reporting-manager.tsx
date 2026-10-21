@@ -31,7 +31,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
@@ -97,6 +96,12 @@ const defaults: ReportIncidentForm = {
   severity: "medium",
   occurredAt: "",
 };
+const createDefaults = (
+  canUseConfirmedSource: boolean,
+): ReportIncidentForm => ({
+  ...defaults,
+  creationMode: canUseConfirmedSource ? "source" : "manual",
+});
 const classificationDefaults: ClassifyIncidentForm = {
   severity: "medium",
   rationale: "",
@@ -253,11 +258,11 @@ export function IncidentReportingManager() {
     formState: { errors },
   } = useForm<ReportIncidentForm>({
     resolver: zodResolver(reportIncidentFormSchema),
-    defaultValues: defaults,
+    defaultValues: createDefaults(isSecurityOfficer),
   });
   const creationMode = useWatch({ control, name: "creationMode" });
   const sourceOptions = useIncidentSourceOptions(
-    open && creationMode === "source",
+    open && isSecurityOfficer && creationMode === "source",
   );
   const selectedSourceId = useWatch({ control, name: "sourceId" });
   const selectedSource = sourceOptions.data?.items.find(
@@ -337,7 +342,12 @@ export function IncidentReportingManager() {
   const close = () => {
     setOpen(false);
     setMessage(undefined);
-    reset(defaults);
+    reset(createDefaults(isSecurityOfficer));
+  };
+  const openCreateDialog = () => {
+    setMessage(undefined);
+    reset(createDefaults(isSecurityOfficer));
+    setOpen(true);
   };
   const submit = async (values: ReportIncidentForm) => {
     try {
@@ -551,6 +561,11 @@ export function IncidentReportingManager() {
     });
   };
   const displayedItems = displayedList.data?.items ?? [];
+  const hasActiveFilters = Boolean(
+    classificationFilters.search ||
+    classificationFilters.severity ||
+    classificationFilters.status,
+  );
   const columns: readonly DataTableColumn<Incident>[] = [
     {
       key: "incident",
@@ -769,7 +784,7 @@ export function IncidentReportingManager() {
                   : "Record containment action"}
               </button>
             ) : null}
-            {canLinkAssets ? (
+            {canLinkAssets && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setAssetLinkTarget(item)}
@@ -785,7 +800,7 @@ export function IncidentReportingManager() {
                   : "Link asset"}
               </button>
             ) : null}
-            {canLinkControls ? (
+            {canLinkControls && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setControlLinkTarget(item)}
@@ -801,7 +816,7 @@ export function IncidentReportingManager() {
                   : "Link control"}
               </button>
             ) : null}
-            {canLinkRisks ? (
+            {canLinkRisks && item.status !== "closed" ? (
               <button
                 className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
                 onClick={() => setRiskLinkTarget(item)}
@@ -828,7 +843,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Record control weakness
+                {item.status === "closed" ? "View control weakness history" : "Record control weakness"}
               </button>
             ) : null}
             {canRequestRiskReassessment ? (
@@ -842,7 +857,7 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                Request risk reassessment
+                {item.status === "closed" ? "View risk reassessment history" : "Request risk reassessment"}
               </button>
             ) : null}
           </DropdownMenu>
@@ -877,7 +892,7 @@ export function IncidentReportingManager() {
         showSampleNotice={false}
         additionalActions={
           allowed ? (
-            <Button onClick={() => setOpen(true)}>
+            <Button onClick={openCreateDialog}>
               <Plus aria-hidden="true" className="size-4" />
               Create incident
             </Button>
@@ -1004,14 +1019,45 @@ export function IncidentReportingManager() {
               getRowKey={(item) => item.id}
             />
           ) : (
-            <EmptyState
-              title={canRead ? "No incidents found" : "No incidents reported"}
-              description={
-                canRead
-                  ? "No incidents match the current search and filters."
-                  : "Choose an eligible confirmed alert or finding to create an incident."
-              }
-            />
+            <div className="py-12 text-center">
+              <ShieldAlert
+                aria-hidden="true"
+                className="text-muted mx-auto size-10 stroke-1"
+              />
+              <h3 className="mt-2 text-base font-semibold">
+                {canRead && hasActiveFilters
+                  ? "No matching incidents found"
+                  : canRead
+                    ? "No incidents found"
+                    : "No incidents reported"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {canRead && hasActiveFilters
+                  ? "No incidents match the current search and filter criteria. Try adjusting or clearing the filters."
+                  : canRead
+                    ? "No security incidents have been recorded yet."
+                    : "No incident reports have been submitted yet."}
+              </p>
+              {canRead && hasActiveFilters ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={resetFilters}
+                  type="button"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              ) : !canRead ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={openCreateDialog}
+                  type="button"
+                >
+                  <Plus aria-hidden="true" className="size-4" />
+                  Create incident
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
         {displayedList.data ? (
@@ -1036,62 +1082,69 @@ export function IncidentReportingManager() {
               {message}
             </Alert>
           ) : null}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Creation method</p>
-            <input type="hidden" {...register("creationMode")} />
-            <div
-              aria-label="Incident creation methods"
-              className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
-              role="tablist"
-            >
-              {(
-                [
-                  {
-                    value: "source",
-                    label: "From confirmed source",
-                    icon: Link2,
-                  },
-                  {
-                    value: "manual",
-                    label: "Manual",
-                    icon: Plus,
-                  },
-                ] as const
-              ).map((option) => {
-                const Icon = option.icon;
-                const selected = creationMode === option.value;
-                return (
-                  <button
-                    aria-selected={selected}
-                    className={cn(
-                      "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none",
-                      selected
-                        ? "bg-brand text-brand-contrast font-semibold shadow-xs"
-                        : "text-muted hover:bg-neutral-soft hover:text-foreground",
-                    )}
-                    key={option.value}
-                    onClick={() => {
-                      setValue("creationMode", option.value, {
-                        shouldValidate: true,
-                      });
-                      if (option.value === "manual") {
-                        setValue("sourceId", "", { shouldValidate: true });
-                      }
-                    }}
-                    role="tab"
-                    type="button"
-                  >
-                    <Icon
-                      aria-hidden="true"
-                      className="size-4 shrink-0"
-                      strokeWidth={1.8}
-                    />
-                    <span>{option.label}</span>
-                  </button>
-                );
-              })}
+          <input type="hidden" {...register("creationMode")} />
+          {isSecurityOfficer ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Creation method</p>
+              <div
+                aria-label="Incident creation methods"
+                className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+                role="tablist"
+              >
+                {(
+                  [
+                    {
+                      value: "source",
+                      label: "From confirmed source",
+                      icon: Link2,
+                    },
+                    {
+                      value: "manual",
+                      label: "Manual",
+                      icon: Plus,
+                    },
+                  ] as const
+                ).map((option) => {
+                  const Icon = option.icon;
+                  const selected = creationMode === option.value;
+                  return (
+                    <button
+                      aria-selected={selected}
+                      className={cn(
+                        "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none",
+                        selected
+                          ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                          : "text-muted hover:bg-neutral-soft hover:text-foreground",
+                      )}
+                      key={option.value}
+                      onClick={() => {
+                        setValue("creationMode", option.value, {
+                          shouldValidate: true,
+                        });
+                        if (option.value === "manual") {
+                          setValue("sourceId", "", { shouldValidate: true });
+                        }
+                      }}
+                      role="tab"
+                      type="button"
+                    >
+                      <Icon
+                        aria-hidden="true"
+                        className="size-4 shrink-0"
+                        strokeWidth={1.8}
+                      />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <Alert>
+              Submit the information you observed. The security team will review
+              and investigate this report.
+            </Alert>
+          )}
           {creationMode === "source" && sourceOptions.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               Unable to load confirmed alerts and findings. Close and reopen the
@@ -1141,12 +1194,12 @@ export function IncidentReportingManager() {
                 incident are shown.
               </p>
             </FormField>
-          ) : (
+          ) : isSecurityOfficer ? (
             <Alert>
               Create manually only when no confirmed alert or finding exists.
               The incident will have no originating-source link.
             </Alert>
-          )}
+          ) : null}
           {creationMode === "source" &&
           sourceOptions.data?.items.length === 0 ? (
             <Alert>

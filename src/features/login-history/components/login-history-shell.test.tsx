@@ -70,7 +70,7 @@ afterEach(() => {
 });
 describe("LoginHistoryShell", () => {
   it("redirects a disallowed role without fetching history", async () => {
-    if (mocks.user) mocks.user.roles = [{ code: "EMPLOYEE", name: "Employee" }];
+    if (mocks.user) mocks.user.roles = [{ code: "MANAGER", name: "Manager" }];
     mount();
     await waitFor(() =>
       expect(mocks.replace).toHaveBeenCalledWith("/forbidden"),

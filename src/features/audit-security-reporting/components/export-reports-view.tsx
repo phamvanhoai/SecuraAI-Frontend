@@ -28,6 +28,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useExportReportsQuery } from "../hooks/use-export-reports";
 import type { ReportExportItem } from "../schemas/export-report-schema";
 import { ExportReportDialog } from "./export-report-dialog";
@@ -153,6 +154,12 @@ function formatExactTime(isoString: string): string {
 }
 
 export function ExportReportsView() {
+  const session = useSessionUser();
+  const canAccess =
+    session.data?.roles.some(
+      (role) => role.code === "SECURITY_OFFICER" || role.code === "EXECUTIVE",
+    ) ?? false;
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [revokingItem, setRevokingItem] = useState<ReportExportItem | null>(null);
   const [page, setPage] = useState(1);
@@ -173,7 +180,7 @@ export function ExportReportsView() {
     limit,
     reportType: reportTypeFilter || undefined,
     status: statusFilter || undefined,
-  });
+  }, canAccess);
 
   const items = reportsData?.items ?? [];
   const pagination = reportsData?.pagination ?? {
@@ -346,6 +353,30 @@ export function ExportReportsView() {
       ),
     },
   ];
+
+  if (session.isPending) {
+    return (
+      <div className="space-y-6">
+        <ProductPageHeader
+          title="Security & Risk Reports"
+          description="Compile and export security risk registers, incident logs, and organization security posture reports for executive leadership and compliance auditors in accordance with ISO/IEC 27001."
+        />
+        <TableSkeleton columns={6} rows={5} />
+      </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <div className="space-y-6">
+        <ProductPageHeader
+          title="Security & Risk Reports"
+          description="Compile and export security risk registers, incident logs, and organization security posture reports for executive leadership and compliance auditors in accordance with ISO/IEC 27001."
+        />
+        <Alert>This reporting module is available to Security Officers and Executives only.</Alert>
+      </div>
+    );
+  }
 
   return (
     <>

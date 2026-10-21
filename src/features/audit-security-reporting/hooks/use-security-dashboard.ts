@@ -3,10 +3,11 @@ import { getSecurityDashboard } from "../api/security-dashboard";
 
 export const securityDashboardQueryKey = ["security-dashboard"] as const;
 
-export function useSecurityDashboard() {
+export function useSecurityDashboard(enabled: boolean = true) {
   return useQuery({
     queryKey: securityDashboardQueryKey,
     queryFn: getSecurityDashboard,
     staleTime: 60 * 1000,
+    enabled,
   });
 }

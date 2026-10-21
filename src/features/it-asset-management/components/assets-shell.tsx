@@ -12,7 +12,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -127,6 +126,9 @@ export function AssetsShell() {
   const [type, setType] = useState(query.assetType ?? "");
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
+  const hasActiveFilters = Boolean(
+    query.q || query.assetType || query.criticality || query.status,
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -196,74 +198,58 @@ export function AssetsShell() {
       </Alert>
     );
   return (
-    <div className="space-y-5">
+    <>
       <ProductPageHeader
         title="IT Asset List"
         description="View the organization’s managed IT assets, ownership, business context, classification, and lifecycle status."
         additionalActions={canCreate ? <CreateAssetDialog /> : undefined}
       />
       <AssetManagementTabs active="assets" canReadServices={session.data?.permissions.includes("business-services.read") ?? false} />
-      <ProductPanel title="Asset directory">
+      <ProductPanel
+        title="Asset directory"
+        description={assets.data ? `${assets.data.pagination.total} assets found` : "Managed IT assets within your access scope"}
+      >
         <form
           aria-label="Asset filters"
-          className="border-border grid gap-3 border-b p-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_11rem_auto]"
+          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
           onSubmit={submit}
         >
-          <label className="text-sm font-medium">
-            Search
+          <label className="relative block min-w-[220px] max-w-md flex-1">
+            <span className="sr-only">Search</span>
+            <Search
+              aria-hidden="true"
+              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              strokeWidth={1.8}
+            />
             <Input
-              className="mt-1"
+              className="bg-background min-h-10 pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Code, name, owner, or service"
             />
           </label>
-          <label className="text-sm font-medium">
-            Asset type
-            <Select
-              className="mt-1"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-            >
-              <option value="">All types</option>
-              {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
-            </Select>
-          </label>
-          <label className="text-sm font-medium">
-            Criticality
-            <Select
-              className="mt-1"
-              value={criticality}
-              onChange={(e) => setCriticality(e.target.value)}
-            >
-              <option value="">All criticalities</option>
-              {assetCriticalities.map((value) => (
-                <option key={value} value={value}>
-                  {value.charAt(0).toUpperCase() + value.slice(1)}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <label className="text-sm font-medium">
-            Status
-            <Select
-              className="mt-1"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">All statuses</option>
-              <option value="active">Active</option>
-              <option value="archived">Archived</option>
-            </Select>
-          </label>
-          <div className="flex items-end gap-2">
-            <Button type="submit">
-              <Search className="size-4" />
-              Filter
-            </Button>
+          <Select aria-label="Asset type" className="min-h-10 w-40" value={type} onChange={(e) => setType(e.target.value)}>
+            <option value="">All types</option>
+            {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
+          </Select>
+          <Select aria-label="Criticality" className="min-h-10 w-40" value={criticality} onChange={(e) => setCriticality(e.target.value)}>
+            <option value="">All criticalities</option>
+            {assetCriticalities.map((value) => <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>)}
+          </Select>
+          <Select aria-label="Status" className="min-h-10 w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="archived">Archived</option>
+          </Select>
+          <Button className="min-h-10" type="submit">
+            <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            Filter
+          </Button>
+          {search || type || criticality || status ? (
             <Button
               type="button"
               variant="secondary"
+              className="min-h-10 gap-1.5"
               aria-label="Clear filters"
               onClick={() => {
                 setSearch("");
@@ -273,9 +259,10 @@ export function AssetsShell() {
                 router.push("/assets");
               }}
             >
-              <X className="size-4" />
+              <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Clear
             </Button>
-          </div>
+          ) : null}
         </form>
         <div className="p-4">
           {assets.isPending ? (
@@ -299,21 +286,51 @@ export function AssetsShell() {
                 rows={assets.data.items}
                 getRowKey={(item) => item.id}
               />
-              <div className="mt-4">
-                <Pagination
-                  page={assets.data.pagination.page}
-                  pageCount={assets.data.pagination.totalPages}
-                  onPageChange={(page) => navigate({ page })}
-                />
-              </div>
             </>
           ) : (
-            <EmptyState
-              title="No assets found"
-              description="Adjust the filters or add assets through an implemented asset workflow."
-            />
+            <div className="py-12 text-center">
+              <Server
+                aria-hidden="true"
+                className="text-muted mx-auto size-10 stroke-1"
+              />
+              <h3 className="mt-2 text-base font-semibold">
+                {hasActiveFilters
+                  ? "No matching assets found"
+                  : "No assets found"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {hasActiveFilters
+                  ? "No assets match the current search and filter criteria. Try adjusting or clearing the filters."
+                  : "No IT assets have been registered yet."}
+              </p>
+              {hasActiveFilters ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={() => {
+                    setSearch("");
+                    setType("");
+                    setCriticality("");
+                    setStatus("");
+                    router.push("/assets");
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
+        {assets.data && assets.data.items.length > 0 ? (
+          <div className="border-border border-t p-4">
+            <Pagination
+              page={assets.data.pagination.page}
+              pageCount={assets.data.pagination.totalPages}
+              onPageChange={(page) => navigate({ page })}
+            />
+          </div>
+        ) : null}
       </ProductPanel>
       <AssetDetailDialog
         assetId={selectedId}
@@ -327,7 +344,7 @@ export function AssetsShell() {
       <AssignAssetOwnerDialog asset={assigningAsset} onClose={() => setAssigningAsset(null)} />
       <ClassifyAssetCriticalityDialog asset={classifyingAsset} onClose={() => setClassifyingAsset(null)} />
       <LinkAssetContextDialog assetId={linkingAssetId} onClose={() => setLinkingAssetId(null)} />
-    </div>
+    </>
   );
 }
 

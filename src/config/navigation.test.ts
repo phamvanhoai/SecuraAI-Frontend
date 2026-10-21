@@ -83,7 +83,7 @@ describe("V2 role navigation", () => {
     expect(paths).toContain("/incidents");
     expect(paths).toContain("/reports");
     expect(paths).not.toContain("/users");
-    expect(paths).not.toContain("/audits");
+    expect(paths).toContain("/audits");
   });
 
   it("limits executive navigation to assigned work", () => {

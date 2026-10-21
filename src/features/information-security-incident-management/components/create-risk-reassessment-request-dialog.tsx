@@ -45,6 +45,7 @@ export function CreateRiskReassessmentRequestDialog({
   );
   useEffect(() => {
     if (incident) {
+      setTab(incident.status === "closed" ? "history" : "create");
       form.reset({ riskId: "", controlFindingId: "", reason: "" });
       ref.current?.showModal();
     } else ref.current?.close();
@@ -98,7 +99,7 @@ export function CreateRiskReassessmentRequestDialog({
                 label: "Request history",
                 icon: History,
               },
-            ].map((item) => {
+            ].filter((item) => incident.status !== "closed" || item.id === "history").map((item) => {
               const Icon = item.icon;
               const selected = tab === item.id;
               return (

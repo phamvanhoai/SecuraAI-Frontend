@@ -489,9 +489,12 @@ export function ControlEvidenceDialog({
             </button>
           </Alert>
         ) : query.isPending ? (
-          <p role="status" className="text-muted py-6">
-            Loading evidence…
-          </p>
+          <div className="space-y-4 py-2" role="status" aria-live="polite">
+            <span className="sr-only">Loading evidence</span>
+            <div className="border-border bg-neutral-soft/30 h-10 animate-pulse rounded-lg border" />
+            <div className="border-border bg-neutral-soft/30 h-28 animate-pulse rounded-xl border" />
+            <div className="border-border bg-neutral-soft/30 h-40 animate-pulse rounded-xl border" />
+          </div>
         ) : mode === "add" ? (
           <form ref={form} onSubmit={submit} className="space-y-4" noValidate>
             <fieldset

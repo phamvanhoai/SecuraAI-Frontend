@@ -32,5 +32,16 @@ describe("AssetsShell", () => { beforeEach(() => { push.mockReset(); useSessionU
   it("groups asset actions in an overflow menu", async () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read", "assets.update"] } }); render(<AssetsShell />); expect(screen.queryByRole("button", { name: "Assign owner" })).not.toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Actions for AST-001" })); expect(screen.getByRole("button", { name: "View details" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Edit asset" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Manage links" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Classify asset" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Assign owner" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Archive asset" })).toBeInTheDocument(); });
   it("only allows viewing an archived asset", async () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read", "assets.update"] } }); useAssets.mockReturnValue({ isPending: false, isError: false, data: { ...response, items: [{ ...response.items[0], status: "archived" }] }, refetch: vi.fn() }); render(<AssetsShell />); await userEvent.click(screen.getByRole("button", { name: "Actions for AST-001" })); expect(screen.getByRole("button", { name: "View details" })).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Edit asset" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Manage links" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Classify asset" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Assign owner" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Archive asset" })).not.toBeInTheDocument(); });
   it("writes bounded filters to the URL", async () => { render(<AssetsShell />); const user = userEvent.setup(); await user.type(screen.getByLabelText("Search"), "server"); await user.click(screen.getByRole("button", { name: "Filter" })); expect(push).toHaveBeenCalledWith(expect.stringContaining("q=server")); });
+  it("uses the product collection empty-state pattern", () => {
+    useAssets.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: { items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } },
+      refetch: vi.fn(),
+    });
+    render(<AssetsShell />);
+    expect(screen.getByRole("heading", { name: "No assets found" })).toBeInTheDocument();
+    expect(screen.getByText("No IT assets have been registered yet.")).toBeInTheDocument();
+  });
   it("shows an authorization state without querying", () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: [] } }); render(<AssetsShell />); expect(screen.getByText("You do not have permission to view assets")).toBeInTheDocument(); });
 });

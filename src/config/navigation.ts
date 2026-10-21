@@ -73,7 +73,7 @@ const modules = {
     title: "Audit",
     slug: "audits",
     icon: History,
-    allowedRoleCodes: ["ADMIN"],
+    allowedRoleCodes: ["ADMIN", "SECURITY_OFFICER"],
     section: "Management",
   },
   policies: {
@@ -217,12 +217,14 @@ export const panelModules = {
     modules.policies,
     modules.incidents,
     modules.notifications,
+    modules.loginHistory,
   ],
   "executive-auditor": [
     modules.assets,
     modules.anomalyMonitoring,
     modules.risks,
     modules.policies,
+    modules.loginHistory,
     modules.workflowDefinitions,
     modules.reports,
     modules.notifications,

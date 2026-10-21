@@ -72,6 +72,7 @@ export type AlertThresholdFormValues = z.output<
   typeof alertThresholdFormSchema
 >;
 export type SetAlertThresholdRequest = {
+  mode?: "create" | "edit";
   threshold: number;
   riskLevelMin: (typeof thresholdRiskLevels)[number] | null;
   enabled: boolean;
