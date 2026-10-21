@@ -12,7 +12,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -127,6 +126,9 @@ export function AssetsShell() {
   const [type, setType] = useState(query.assetType ?? "");
   const [criticality, setCriticality] = useState(query.criticality ?? "");
   const [status, setStatus] = useState(query.status ?? "");
+  const hasActiveFilters = Boolean(
+    query.q || query.assetType || query.criticality || query.status,
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detailTrigger = useRef<HTMLElement | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -286,10 +288,38 @@ export function AssetsShell() {
               />
             </>
           ) : (
-            <EmptyState
-              title="No assets found"
-              description="Adjust the filters or add assets through an implemented asset workflow."
-            />
+            <div className="py-12 text-center">
+              <Server
+                aria-hidden="true"
+                className="text-muted mx-auto size-10 stroke-1"
+              />
+              <h3 className="mt-2 text-base font-semibold">
+                {hasActiveFilters
+                  ? "No matching assets found"
+                  : "No assets found"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {hasActiveFilters
+                  ? "No assets match the current search and filter criteria. Try adjusting or clearing the filters."
+                  : "No IT assets have been registered yet."}
+              </p>
+              {hasActiveFilters ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={() => {
+                    setSearch("");
+                    setType("");
+                    setCriticality("");
+                    setStatus("");
+                    router.push("/assets");
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
         {assets.data && assets.data.items.length > 0 ? (

@@ -26,7 +26,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -101,6 +100,7 @@ export function RiskAssessmentsShell() {
   const [view, setView] = useState<"register" | "requests">("register");
   const risks = useRiskRegister(query, canRead && view === "register");
   const [draft, setDraft] = useState(query.q ?? "");
+  const hasActiveFilters = Boolean(query.q || query.status || query.riskRating);
   const [editingVulnerability, setEditingVulnerability] = useState<{
     riskId: string;
     riskLabel: string;
@@ -499,10 +499,35 @@ export function RiskAssessmentsShell() {
                   </div>
                 </>
               ) : (
-                <EmptyState
-                  title="No risks found"
-                  description="Adjust the filters, or create risk records through an implemented risk workflow."
-                />
+                <div className="py-12 text-center">
+                  <ShieldAlert
+                    aria-hidden="true"
+                    className="text-muted mx-auto size-10 stroke-1"
+                  />
+                  <h3 className="mt-2 text-base font-semibold">
+                    {hasActiveFilters
+                      ? "No matching risks found"
+                      : "No risks found"}
+                  </h3>
+                  <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                    {hasActiveFilters
+                      ? "No risks match the current search and filter criteria. Try adjusting or clearing the filters."
+                      : "No risk records have been created yet."}
+                  </p>
+                  {hasActiveFilters ? (
+                    <Button
+                      className="mt-4 min-h-9 text-xs"
+                      onClick={() => {
+                        setDraft("");
+                        router.push("/risks");
+                      }}
+                      type="button"
+                      variant="secondary"
+                    >
+                      Clear filters
+                    </Button>
+                  ) : null}
+                </div>
               )}
             </div>
           </ProductPanel>

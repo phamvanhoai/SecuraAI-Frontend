@@ -11,7 +11,6 @@ import {
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
-import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -56,6 +55,7 @@ export function EmployeePolicyAcknowledgementManager({
   );
   const mutation = useAcknowledgePolicy();
   const toast = useToast();
+  const hasActiveFilters = Boolean(query.q || query.status !== "all");
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -152,13 +152,25 @@ export function EmployeePolicyAcknowledgementManager({
               {
                 id: "published",
                 label: "Published policies",
-                icon: <BookOpenCheck aria-hidden="true" className="size-4" strokeWidth={2} />,
+                icon: (
+                  <BookOpenCheck
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
                 onSelect: () => undefined,
               },
               {
                 id: "history",
                 label: "Version history",
-                icon: <History aria-hidden="true" className="size-4" strokeWidth={2} />,
+                icon: (
+                  <History
+                    aria-hidden="true"
+                    className="size-4"
+                    strokeWidth={2}
+                  />
+                ),
                 onSelect: onViewHistory,
               },
             ]}
@@ -223,10 +235,35 @@ export function EmployeePolicyAcknowledgementManager({
               getRowKey={(p) => p.versionId}
             />
           ) : (
-            <EmptyState
-              title="No applicable policies"
-              description="No published policies match this view."
-            />
+            <div className="py-12 text-center">
+              <BookOpenCheck
+                aria-hidden="true"
+                className="text-muted mx-auto size-10 stroke-1"
+              />
+              <h3 className="mt-2 text-base font-semibold">
+                {hasActiveFilters
+                  ? "No matching policies found"
+                  : "No applicable policies"}
+              </h3>
+              <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
+                {hasActiveFilters
+                  ? "No policies match the current search and reading status. Try adjusting or clearing the filters."
+                  : "No published policies are currently assigned to your department."}
+              </p>
+              {hasActiveFilters ? (
+                <Button
+                  className="mt-4 min-h-9 text-xs"
+                  onClick={() => {
+                    setSearch("");
+                    setQuery(initial);
+                  }}
+                  type="button"
+                  variant="secondary"
+                >
+                  Clear filters
+                </Button>
+              ) : null}
+            </div>
           )}
         </div>
         {list.data ? (
