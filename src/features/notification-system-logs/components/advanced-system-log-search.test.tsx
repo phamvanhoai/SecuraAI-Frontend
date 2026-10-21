@@ -9,6 +9,14 @@ vi.mock("../hooks/use-system-log-search", () => ({
     isError: false,
   }),
 }));
+vi.mock("../hooks/use-system-log-detail", () => ({
+  useSystemLogDetail: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+}));
 vi.mock("../api/export-investigation-logs", () => ({
   exportInvestigationLogs: mocks.exportLogs,
 }));
