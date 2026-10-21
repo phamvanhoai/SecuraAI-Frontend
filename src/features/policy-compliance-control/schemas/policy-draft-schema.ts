@@ -60,6 +60,15 @@ export const policyDraftQuerySchema = z.object({
 });
 
 export const ownedPolicyDraftSchema = z.object({
+  revisionRequest: z
+    .object({
+      id: z.uuid(),
+      reason: z.string().nullable(),
+      requestedAt: z.string().datetime(),
+      requestedBy: z.object({ id: z.uuid(), name: z.string() }),
+    })
+    .nullable()
+    .optional(),
   policyId: z.uuid(),
   policyCode: z.string(),
   title: z.string(),

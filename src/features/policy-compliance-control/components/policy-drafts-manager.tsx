@@ -58,6 +58,7 @@ import type {
   RejectedPolicyQuery,
 } from "../schemas/policy-publication-schema";
 import { PolicyDraftFormDialog } from "./policy-draft-form-dialog";
+import { PolicyRevisionNotice } from "./policy-revision-notice";
 import { PolicyViewTabs } from "./policy-view-tabs";
 import { PolicyApplicabilityDialog } from "./policy-applicability-dialog";
 
@@ -133,6 +134,8 @@ export function PolicyDraftsManager({
   onViewPublished,
   onViewHistory,
   hideHeader = false,
+  createDialogOpen,
+  onCreateDialogOpenChange,
 }: {
   onAssignDepartments?: () => void;
   onCreateNewVersion?: () => void;
@@ -140,6 +143,8 @@ export function PolicyDraftsManager({
   onViewPublished?: () => void;
   onViewHistory?: () => void;
   hideHeader?: boolean;
+  createDialogOpen?: boolean;
+  onCreateDialogOpenChange?: (open: boolean) => void;
 } = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -157,7 +162,15 @@ export function PolicyDraftsManager({
   const [activeTab, setActiveTab] = useState<"drafts" | "rejected">("drafts");
   const [rejectedQuery, setRejectedQuery] = useState(initialRejectedQuery);
   const [rejectedSearch, setRejectedSearch] = useState("");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [internalCreateOpen, setInternalCreateOpen] = useState(false);
+  const createOpen = createDialogOpen ?? internalCreateOpen;
+  const setCreateOpen = (open: boolean): void => {
+    if (onCreateDialogOpenChange) {
+      onCreateDialogOpenChange(open);
+      return;
+    }
+    setInternalCreateOpen(open);
+  };
   const [selected, setSelected] = useState<{
     policyId: string;
     versionId: string;
@@ -859,6 +872,7 @@ function PolicyDraftDetailDialog({
       ) : null}
       {draft ? (
         <div className="space-y-5">
+          <PolicyRevisionNotice request={draft.revisionRequest} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h3 className="text-xl font-semibold">{draft.title}</h3>

@@ -11,6 +11,7 @@ export { SendEmailNotificationManager } from "./components/send-email-notificati
 export { SendInSystemNotificationManager } from "./components/send-in-system-notification-manager";
 export { SystemConfigurationHistory } from "./components/system-configuration-history";
 export { useSystemLogSearch } from "./hooks/use-system-log-search";
+export { useSystemLogDetail } from "./hooks/use-system-log-detail";
 
 export { NotificationBell } from "./components/notification-bell";
 export {
