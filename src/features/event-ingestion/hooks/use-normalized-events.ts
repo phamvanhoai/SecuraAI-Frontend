@@ -16,18 +16,28 @@ import type {
   UpdateEntityMappingPayload,
 } from "../schemas/normalized-event-schema";
 
-export function useNormalizedEvents(params?: Partial<ListNormalizedEventsQuery>) {
+export function useNormalizedEvents(
+  params?: Partial<ListNormalizedEventsQuery>,
+  options?: { refetchInterval?: number | false },
+) {
   return useQuery<PaginatedNormalizedEvents, Error>({
     queryKey: ["normalized-events", params],
     queryFn: () => listNormalizedEvents(params),
+    refetchInterval: options?.refetchInterval ?? 3_000,
+    refetchIntervalInBackground: false,
   });
 }
 
-export function useNormalizedEventMetrics(options?: { enabled?: boolean }) {
+export function useNormalizedEventMetrics(options?: {
+  enabled?: boolean;
+  refetchInterval?: number | false;
+}) {
   return useQuery<NormalizedEventMetrics, Error>({
     queryKey: ["normalized-events", "metrics"],
     queryFn: () => getNormalizedEventMetrics(),
     enabled: options?.enabled ?? true,
+    refetchInterval: options?.refetchInterval ?? 5_000,
+    refetchIntervalInBackground: false,
   });
 }
 
