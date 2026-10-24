@@ -2,6 +2,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { useSessionUser } from "@/features/authentication-account";
+
 const { createMock, updateMock, mockSessionUser } = vi.hoisted(() => ({
   createMock: vi.fn(),
   updateMock: vi.fn(),
@@ -129,9 +131,9 @@ describe("LogSourcesManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSessionUser.mockReturnValue({
-      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] } as any,
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
       isPending: false,
-    } as any);
+    } as unknown as ReturnType<typeof useSessionUser>);
   });
   afterEach(cleanup);
 
@@ -172,9 +174,9 @@ describe("LogSourcesManager", () => {
 
   it("hides Security events tab and defaults to Normalized event sources when user is ADMIN", () => {
     mockSessionUser.mockReturnValue({
-      data: { roles: [{ code: "ADMIN", name: "Administrator" }] } as any,
+      data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
       isPending: false,
-    } as any);
+    } as unknown as ReturnType<typeof useSessionUser>);
 
     render(<LogSourcesManager />);
 
