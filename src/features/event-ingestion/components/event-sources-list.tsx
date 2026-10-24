@@ -146,7 +146,7 @@ export function EventSourcesList({
           {item.eventFamilies.map((family) => (
             <span
               key={family}
-              className="border-primary/20 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium"
+              className="border-brand/20 bg-brand-soft text-brand-strong dark:text-brand inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap"
             >
               {formatFamilyLabel[family] ?? family}
             </span>
