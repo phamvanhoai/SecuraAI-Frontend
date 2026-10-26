@@ -136,17 +136,8 @@ describe("RegisterEventSourceForm", () => {
     expect(onSuccessMock).toHaveBeenCalledWith(createdRecord);
   });
 
-  it("renders the Test connection button and opens the test modal when clicked", async () => {
-    const user = userEvent.setup();
+  it("does not render the Test connection button", () => {
     render(<RegisterEventSourceForm />);
-
-    const testBtn = screen.getByRole("button", { name: /Test connection/i });
-    expect(testBtn).toBeInTheDocument();
-
-    await user.click(testBtn);
-
-    expect(
-      screen.getByText("Verify connection and authentication diagnostics against a Wazuh Manager before applying changes."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Test connection/i })).not.toBeInTheDocument();
   });
 });

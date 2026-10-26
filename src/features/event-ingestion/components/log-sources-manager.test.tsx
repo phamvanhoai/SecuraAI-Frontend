@@ -2,8 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { useSessionUser } from "@/features/authentication-account";
-
 const { createMock, updateMock, mockSessionUser } = vi.hoisted(() => ({
   createMock: vi.fn(),
   updateMock: vi.fn(),
@@ -133,7 +131,7 @@ describe("LogSourcesManager", () => {
     mockSessionUser.mockReturnValue({
       data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
       isPending: false,
-    } as unknown as ReturnType<typeof useSessionUser>);
+    });
   });
   afterEach(cleanup);
 
@@ -176,7 +174,7 @@ describe("LogSourcesManager", () => {
     mockSessionUser.mockReturnValue({
       data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
       isPending: false,
-    } as unknown as ReturnType<typeof useSessionUser>);
+    });
 
     render(<LogSourcesManager />);
 

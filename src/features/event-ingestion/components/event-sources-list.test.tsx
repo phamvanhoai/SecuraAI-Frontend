@@ -1,7 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { useSessionUser } from "@/features/authentication-account";
 
 const mockUseEventSources = vi.fn();
 const mockSessionUser = vi.fn(() => ({
@@ -187,7 +186,7 @@ describe("EventSourcesList", () => {
     mockSessionUser.mockReturnValue({
       data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
       isPending: false,
-    } as unknown as ReturnType<typeof useSessionUser>);
+    });
 
     mockUseEventSources.mockReturnValue({
       isPending: false,
