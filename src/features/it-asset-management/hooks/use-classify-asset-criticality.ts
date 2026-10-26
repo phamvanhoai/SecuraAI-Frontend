@@ -18,6 +18,7 @@ export function useClassifyAssetCriticality(assetId: string | null) {
         queryClient.invalidateQueries({
           queryKey: ["assets", "detail", assetId],
         }),
+        queryClient.invalidateQueries({ queryKey: ["assets", "classification-history", assetId] }),
       ]);
     },
     onError: async (error) => {

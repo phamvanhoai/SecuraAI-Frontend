@@ -159,6 +159,7 @@ export function AssetsShell() {
               <Action icon={UserRoundCheck} label="Assign owner" onClick={() => setAssigningAsset(item)} />
               <Action icon={Archive} label="Archive asset" danger onClick={() => setArchivingAsset(item)} />
             </> : null}
+            {canEdit && item.status === "archived" ? <Action icon={ShieldCheck} label="Classification history" onClick={() => setClassifyingAsset(item)} /> : null}
           </DropdownMenu>
         ),
       },
