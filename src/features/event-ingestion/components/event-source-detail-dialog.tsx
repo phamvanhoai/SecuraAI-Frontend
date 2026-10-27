@@ -72,19 +72,22 @@ const FAMILY_METADATA = {
     label: "Authentication & Identity",
     description:
       "Windows logon events (4624, 4625, 4740), Linux SSH/PAM auth, and brute-force attempts.",
-    badgeClass: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+    badgeClass:
+      "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:border-sky-500/30",
   },
   VPN_SSO: {
     label: "VPN & Remote SSO Access",
     description:
       "Remote access via OpenVPN, Cisco, Fortinet gateways, and Keycloak/Okta/Azure AD SSO logs.",
-    badgeClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+    badgeClass:
+      "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 dark:border-emerald-500/30",
   },
   APPLICATION_ACCESS: {
     label: "Application & Privilege Access",
     description:
       "Application logins, database authentications, and Windows/Linux privilege use (4672).",
-    badgeClass: "border-purple-500/30 bg-purple-500/10 text-purple-400",
+    badgeClass:
+      "border-purple-500/25 bg-purple-500/10 text-purple-700 dark:text-purple-300 dark:border-purple-500/30",
   },
 } as const;
 
