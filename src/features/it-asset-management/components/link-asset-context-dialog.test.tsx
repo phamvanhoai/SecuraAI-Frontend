@@ -1,5 +1,6 @@
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ApiError } from "@/lib/api/api-error";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ save: vi.fn(), success: vi.fn(), detail: { isPending: false, isError: false, data: { assetCode: "AST-01", name: "App", status: "active", businessService: null, dependencies: [{ asset: { id: "00000000-0000-4000-8000-000000000002", assetCode: "AST-02", name: "Database", status: "archived" } }], eventSources: [] } } }));
 const assetId = "00000000-0000-4000-8000-000000000001";
@@ -16,6 +17,15 @@ beforeAll(() => {
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe("LinkAssetContextDialog existing links", () => {
+  it("shows the circular path beside Dependencies and preserves selections", async () => {
+    mocks.save.mockRejectedValueOnce(new ApiError("Remove the dependency causing the loop.", 422, "VALIDATION_FAILED", {
+      error: { code: "ASSET_DEPENDENCY_CYCLE", details: { path: ["AST-01 — App", "AST-02 — Database", "AST-01 — App"] } },
+    }));
+    render(<LinkAssetContextDialog assetId={assetId} onClose={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Save links" }));
+    expect(await screen.findByText(/Circular dependency: AST-01 — App → AST-02 — Database → AST-01 — App/)).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: /Database/ })).toBeChecked();
+  });
   it("keeps history readable when the asset is archived", async () => {
     mocks.detail.data.status = "archived";
     try {

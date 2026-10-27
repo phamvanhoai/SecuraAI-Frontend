@@ -312,6 +312,16 @@ export function RiskAssessmentDetailDialog({
               />
             </details>
           ) : null}
+          {risk.assetContextReviewRequired ? (
+            <Alert className="border-warning/25 bg-warning-soft text-warning">
+              Asset context changed after this risk assessment. Review recommended.
+            </Alert>
+          ) : null}
+          {risk.assetClassificationReviewRequired ? (
+            <Alert className="border-warning/25 bg-warning-soft text-warning">
+              Asset classification changed after this risk assessment. Review recommended.
+            </Alert>
+          ) : null}
           {risk.scope?.type === "business_service" ? (
             <p className="text-muted text-sm">
               Linked assets are the recorded risk scope, not the service&apos;s

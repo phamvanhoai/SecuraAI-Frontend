@@ -1,5 +1,13 @@
 # SecuraAI Frontend
 
+Assign Asset Owner uses debounced server search by name/email (`GET /api/assets/owner-options`), showing up to 10 name/email matches and keyboard selection like Risk Owner. Typed text never becomes an ID; owner removal still needs explicit confirmation and a reason. Uses UI UX Pro Max and the existing combobox interaction pattern.
+
+Risk Detail has separate server-confirmed advisories for changed Asset classification and Asset context. Both can appear together near Related assets; neither appears without evidence. Link Asset Context saves invalidate Risk Register queries. Existing ratings remain historical.
+
+Link Asset Context displays server-confirmed circular dependency paths beside Dependencies using the shared Alert pattern. Failed saves preserve selections, and each save validates the remaining graph again. Business service and event sources remain editable.
+
+Risk Detail shows a shared Alert (UI UX Pro Max) near Related assets only when the backend confirms `assetClassificationReviewRequired`. Classification saves refresh Risk Register queries. Historical ratings and workflow permissions remain unchanged.
+
 Asset classification: **Classify Asset | History (n)** inside the existing dialog shows paginated read-only Before/After snapshots from `GET /api/assets/:assetId/classify-criticality/history`. Uses the established shared dialog/pagination pattern and UI UX Pro Max keyboard/focus guidance. Tabs preserve unsaved inputs; saving refreshes list, detail and classification history queries. Archived assets are history-only. Earlier unlogged events are not reconstructed. Changes are audited atomically in existing audit_logs; no migration.
 
 Asset context: **Assets → Manage links** has **Link Asset Context | History (n)** tabs using the established risk-context Before/After pattern and UI UX Pro Max keyboard/responsive guidance. History reads paginated `GET /api/assets/:assetId/context/history` via the authenticated BFF; names/codes are immutable server snapshots, not resolved from current options. Tab changes preserve unsaved selections. Saves invalidate list, detail and history queries. Empty/loading/retry states and keyboard tab navigation are supported. History starts when tracking was introduced; prior changes are not reconstructed. Backend uses existing `audit_logs` with no schema migration.

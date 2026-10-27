@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api/api-error";
+import { z } from "zod";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,7 @@ export function LinkAssetContextDialog({
   const mutation = useLinkAssetContext(assetId);
   const toast = useToast();
   const [message, setMessage] = useState<string>();
+  const [cycleMessage, setCycleMessage] = useState<string>();
   const {
     register,
     handleSubmit,
@@ -69,10 +72,13 @@ export function LinkAssetContextDialog({
     reset(defaults);
     hydratedAssetId.current = null;
     setMessage(undefined);
+    setCycleMessage(undefined);
     setTab("links");
     onClose();
   };
   const submit = async (values: LinkAssetContextRequest) => {
+    setMessage(undefined);
+    setCycleMessage(undefined);
     try {
       await mutation.mutateAsync(values);
       toast.success(
@@ -81,6 +87,17 @@ export function LinkAssetContextDialog({
       );
       close();
     } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        const cycle = z.object({ error: z.object({
+          code: z.literal("ASSET_DEPENDENCY_CYCLE"),
+          details: z.object({ path: z.array(z.string()) }).optional(),
+        }) }).safeParse(error.details);
+        if (cycle.success) {
+          const path = cycle.data.error.details?.path ?? [];
+          setCycleMessage(`${error.message}${path.length ? ` Circular dependency: ${path.join(" → ")}.` : ""}`);
+          return;
+        }
+      }
       setMessage(
         error instanceof Error
           ? error.message
@@ -271,6 +288,11 @@ export function LinkAssetContextDialog({
                     </label>
                   ))}
                 </div>
+                {cycleMessage ? (
+                  <Alert className="border-danger/25 bg-danger-soft text-danger break-words">
+                    {cycleMessage}
+                  </Alert>
+                ) : null}
                 <p
                   id="context-dependencies-help"
                   className="text-muted mt-1 text-xs"
