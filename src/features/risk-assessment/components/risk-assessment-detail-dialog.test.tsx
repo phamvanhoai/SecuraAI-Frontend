@@ -123,6 +123,15 @@ describe("Risk detail workflow", () => {
     if (required) expect(warning).toBeVisible();
     else expect(warning).not.toBeInTheDocument();
   });
+  it("shows the current review snapshot beneath the risk overview", () => {
+    if (!state.risk) throw new Error("Missing fixture");
+    state.risk.currentReview = { openedAt: "2026-10-27T07:30:00Z", openedBy: "owner", openedByName: "Recorded Owner", previousReviewDate: "2026-10-16T00:00:00Z", reason: "Asset context changed; review required." };
+    open();
+    expect(screen.getByRole("region", { name: "Current review" })).toHaveTextContent("Recorded Owner");
+    expect(screen.getByText("Review in progress")).toBeVisible();
+    expect(screen.getByText("27/10/2026, 14:30 (UTC+7)")).toBeVisible();
+    expect(screen.getByText("Asset context changed; review required.")).toBeVisible();
+  });
   it("warns when historical ratings no longer cover the vulnerability context", () => {
     if (state.risk)
       state.risk.vulnerabilityWorkflow = {

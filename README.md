@@ -1,5 +1,13 @@
 # SecuraAI Frontend
 
+Acceptance is unavailable while Current review is open. Detail and the submission dialog instruct the Owner to Complete Risk Review first; backend enforces the same guard under the Risk lock with 409 RISK_REVIEW_IN_PROGRESS. After completion, normal eligibility/Control/Evidence checks still apply. Older decisions remain historical.
+
+Current review includes Complete Risk Review for server-authorized Owners. Requires review conclusion and a new residual after opening; next deadline is suggested from the internal 1/3/6/12-month residual cycle in Vietnam time, allowing earlier dates. Backend revalidates all evidence/revisions. Completion refreshes register/detail, retains status/acceptance and moves the snapshot into Review history. No migration or automatic notifications.
+
+Risk Detail shows server-confirmed Current review beneath overview (opener snapshot, Vietnam opening time, prior review deadline, rationale). Register shows Review in progress. Owner-only Open Review is backend-driven for Open/Under treatment/Accepted, with duplicate/pending guards. Complete Review records the conclusion and sets the Next review date. UI UX Pro Max shared panel/badge patterns apply.
+
+Risk Register and Risk Detail retain the review date and show Due today / Overdue — X days using Vietnam calendar days (Asia/Ho_Chi_Minh, UTC+7). Missing dates show Not scheduled; upcoming dates retain the date alone. The display refreshes while open and on browser focus; it never mutates Risk ratings, workflow states or acceptance. No backend or migration change.
+
 Assign Asset Owner uses debounced server search by name/email (`GET /api/assets/owner-options`), showing up to 10 name/email matches and keyboard selection like Risk Owner. Typed text never becomes an ID; owner removal still needs explicit confirmation and a reason. Uses UI UX Pro Max and the existing combobox interaction pattern.
 
 Risk Detail has separate server-confirmed advisories for changed Asset classification and Asset context. Both can appear together near Related assets; neither appears without evidence. Link Asset Context saves invalidate Risk Register queries. Existing ratings remain historical.

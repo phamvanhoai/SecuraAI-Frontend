@@ -1,7 +1,7 @@
 /** Risk review dates are calendar dates in the application's UTC+7 timezone. */
 export function riskToday(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Bangkok",
+    timeZone: "Asia/Ho_Chi_Minh",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
