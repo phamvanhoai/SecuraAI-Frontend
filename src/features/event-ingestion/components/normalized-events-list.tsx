@@ -663,7 +663,7 @@ export function NormalizedEventsList() {
                   <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
                     <span>
                       Source:{" "}
-                      {eventSourcesQuery.data?.items.find((s) => s.id === sourceFilter)?.name ??
+                      {eventSourcesQuery.data?.items.find((s: { id: string; name?: string }) => s.id === sourceFilter)?.name ??
                         sourceFilter}
                     </span>
                     <button

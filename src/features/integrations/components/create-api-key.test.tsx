@@ -174,4 +174,27 @@ describe("Create Integration API Key Workflow", () => {
     expect(screen.getByDisplayValue("sec_live_wazuh1234567890abcdef1234567890abcdef1234")).toBeInTheDocument();
     expect(screen.getByText(/not be able to view/i)).toBeInTheDocument();
   });
+
+  it("disables events:ingest scope and displays indicator when no event source is associated", () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    renderModal({ integrationId: "all" });
+
+    const ingestCheckbox = screen.getByLabelText((content, element) => {
+      return (
+        element?.tagName.toLowerCase() === "input" &&
+        element?.getAttribute("type") === "checkbox" &&
+        element?.closest("label")?.textContent?.includes("Ingest Log Events") === true
+      );
+    });
+
+    expect(ingestCheckbox).toBeDisabled();
+    expect(screen.getByText("Requires Event Source")).toBeInTheDocument();
+  });
 });
+

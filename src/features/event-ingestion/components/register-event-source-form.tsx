@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Database,
   Globe,
-  Info,
   KeyRound,
   Layers,
   Loader2,
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/feedback/toast";
+import { ApiError } from "@/lib/api/api-error";
 import { useCreateEventSource } from "../hooks/use-event-sources";
 import {
   eventFamilies,
@@ -139,10 +139,24 @@ export function RegisterEventSourceForm({
       setForm(defaultValues);
       onSuccess?.(result);
     } catch (err: unknown) {
+      const isDuplicate =
+        (err instanceof ApiError && (err.status === 409 || err.code === "CONFLICT")) ||
+        (err instanceof Error &&
+          (err.message.toLowerCase().includes("already exists") ||
+            err.message.toLowerCase().includes("trùng")));
+
       const message =
         err instanceof Error
           ? err.message
           : "Unable to register event source. Please try again.";
+
+      if (isDuplicate) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          name: message,
+        }));
+      }
+
       setSubmitError(message);
       toast.error("Registration failed", message);
     }
@@ -183,6 +197,9 @@ export function RegisterEventSourceForm({
                   value={form.name}
                   onChange={(e) => {
                     setForm((prev) => ({ ...prev, name: e.target.value }));
+                    if (submitError) {
+                      setSubmitError(null);
+                    }
                     if (fieldErrors["name"]) {
                       setFieldErrors((p) => {
                         const n = { ...p };
@@ -280,26 +297,14 @@ export function RegisterEventSourceForm({
               </FormField>
             </div>
 
-            <FormField
-              id="event-source-secret"
-              label="Ingestion Secret Token / API Key"
-              error={fieldErrors["secretToken"]}
-            >
-              <Input
-                id="event-source-secret"
-                placeholder="YOUR_SECURA_AI_INGEST_TOKEN"
-                value={form.secretToken ?? ""}
-                onChange={(e) => {
-                  setForm((prev) => ({ ...prev, secretToken: e.target.value }));
-                }}
-                disabled={createMutation.isPending}
-              />
-            </FormField>
-
             <div className="flex items-start gap-2.5 rounded-lg border border-info/20 bg-info-soft/40 p-3 text-xs text-foreground">
-              <Info className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+              <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-info" />
               <span>
-                Wazuh Manager (via <code>custom-securaai</code> Edge Normalizer) pushes normalized JSON events to SecuraAI using this webhook endpoint and secret key.
+                No secret is stored on the event source. The{" "}
+                <code>custom-securaai</code> integration on Wazuh Manager authenticates with an
+                ingestion API key sent in its <code>&lt;api_key&gt;</code> setting. Create and
+                manage that key (scope <code>events:ingest</code>, linked to this source) under
+                Integration API Keys after registering the source.
               </span>
             </div>
 
@@ -404,6 +409,13 @@ export function RegisterEventSourceForm({
                 value={form.description ?? ""}
                 onChange={(e) => {
                   setForm((prev) => ({ ...prev, description: e.target.value }));
+                  if (fieldErrors["description"]) {
+                    setFieldErrors((p) => {
+                      const n = { ...p };
+                      delete n["description"];
+                      return n;
+                    });
+                  }
                 }}
                 disabled={createMutation.isPending}
               />
