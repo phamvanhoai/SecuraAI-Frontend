@@ -168,6 +168,36 @@ const formatBytes = (value: number | null) => {
   if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 };
+function ContextList({
+  title,
+  empty,
+  items,
+}: {
+  title: string;
+  empty: string;
+  items: string[];
+}) {
+  return (
+    <div className="border-border rounded-lg border p-3">
+      <h4 className="text-xs font-semibold">{title}</h4>
+      {items.length ? (
+        <ul className="mt-2 space-y-2">
+          {items.map((item, index) => (
+            <li
+              className="text-muted text-sm break-words"
+              key={`${item}-${index}`}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted mt-2 text-sm">{empty}</p>
+      )}
+    </div>
+  );
+}
+
 export function IncidentReportingManager() {
   const session = useSessionUser();
   const isSecurityOfficer =
@@ -843,7 +873,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.status === "closed" ? "View control weakness history" : "Record control weakness"}
+                {item.status === "closed"
+                  ? "View control weakness history"
+                  : "Record control weakness"}
               </button>
             ) : null}
             {canRequestRiskReassessment ? (
@@ -857,7 +889,9 @@ export function IncidentReportingManager() {
                   className="size-4"
                   strokeWidth={1.8}
                 />
-                {item.status === "closed" ? "View risk reassessment history" : "Request risk reassessment"}
+                {item.status === "closed"
+                  ? "View risk reassessment history"
+                  : "Request risk reassessment"}
               </button>
             ) : null}
           </DropdownMenu>
@@ -2346,6 +2380,51 @@ export function IncidentReportingManager() {
                   No affected assets have been linked to this incident.
                 </p>
               )}
+            </section>
+            <section
+              aria-labelledby="linked-context-heading"
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h3
+                  id="linked-context-heading"
+                  className="text-sm font-semibold"
+                >
+                  Investigation context
+                </h3>
+                <span className="text-muted text-xs">Read-only record</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ContextList
+                  title="Linked controls"
+                  empty="No controls linked."
+                  items={detail.data.linkedControls.map(
+                    (item) => `${item.controlCode} · ${item.name}`,
+                  )}
+                />
+                <ContextList
+                  title="Linked risks"
+                  empty="No existing risks linked."
+                  items={detail.data.linkedRisks.map(
+                    (item) => `${item.riskCode} · ${item.title}`,
+                  )}
+                />
+                <ContextList
+                  title="Control weaknesses"
+                  empty="No control weaknesses recorded."
+                  items={detail.data.controlWeaknesses.map(
+                    (item) =>
+                      `${item.control.control_code} · ${item.description}`,
+                  )}
+                />
+                <ContextList
+                  title="Risk reassessment requests"
+                  empty="No reassessment requests recorded."
+                  items={detail.data.riskReassessmentRequests.map(
+                    (item) => `${item.risk.risk_code} · ${item.status}`,
+                  )}
+                />
+              </div>
             </section>
             <section aria-labelledby="response-actions-heading">
               <div className="flex items-center justify-between gap-3">
