@@ -55,7 +55,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "criticality",
     header: "Criticality",
-    cell: (item) => item.criticality === null ? "—" : (
+    cell: (item) => item.criticality === null ? "-" : (
       <StatusBadge
         tone={
           item.criticality.toLowerCase() === "critical"
@@ -72,7 +72,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
   {
     key: "classification",
     header: "Data classification",
-    cell: (item) => item.dataClassification ?? "—",
+    cell: (item) => item.dataClassification ?? "-",
   },
   {
     key: "service",

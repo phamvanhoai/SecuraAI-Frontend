@@ -14,6 +14,7 @@ export function useClassifyAssetCriticality(assetId: string | null) {
     },
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["risk-register"] }),
         queryClient.invalidateQueries({ queryKey: ["assets", "list"] }),
         queryClient.invalidateQueries({
           queryKey: ["assets", "detail", assetId],

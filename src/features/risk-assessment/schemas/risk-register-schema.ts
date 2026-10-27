@@ -112,6 +112,8 @@ export const riskRegisterResponseSchema = z.object({
   }),
 });
 export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
+  assetClassificationReviewRequired: z.boolean().optional(),
+  assetContextReviewRequired: z.boolean().optional(),
   acceptanceWorkflow: z
     .object({
       canSubmit: z.boolean(),

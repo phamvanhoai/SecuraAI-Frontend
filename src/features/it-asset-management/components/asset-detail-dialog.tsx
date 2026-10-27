@@ -168,8 +168,8 @@ export function AssetDetailDialog({
                     FIPS category.
                   </p>
                   {asset.classification.dataClassificationMethodVersion ? (
-                    <p className="text-muted text-xs">
-                      {asset.classification.dataClassificationMethodVersion} ·
+                    <p className="text-muted mt-2 text-xs leading-5 [overflow-wrap:anywhere]">
+                      Method: {asset.classification.dataClassificationMethodVersion} ·
                       Informed by ISO/IEC 27002:2022, Control 5.12; internal
                       labels, not a compliance certification.
                     </p>
