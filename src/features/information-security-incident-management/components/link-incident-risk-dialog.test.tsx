@@ -4,7 +4,6 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Incident } from "../schemas/report-incident-schema";
@@ -112,12 +111,13 @@ describe("link incident risk dialog", () => {
   it("shows existing links and only offers unlinked risks", () => {
     render(<LinkIncidentRiskDialog incident={incident} onClose={vi.fn()} />);
     expect(
-      screen.getByRole("heading", { name: "Link another risk" }),
+      screen.getAllByRole("heading", { name: "Link another risk" })[0],
     ).toBeVisible();
     expect(screen.getByText("Credential compromise")).toBeVisible();
-    const select = screen.getByLabelText("Additional risk");
-    expect(within(select).queryByText(/RSK-001/)).not.toBeInTheDocument();
-    expect(within(select).getByText(/RSK-002/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: /RSK-001/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /RSK-002/ })).toBeInTheDocument();
   });
   it("requires confirmation before unlinking a risk", async () => {
     mocks.unlinkAsync.mockResolvedValue(undefined);
@@ -135,7 +135,7 @@ describe("link incident risk dialog", () => {
   it("searches available risks by code or title", () => {
     render(<LinkIncidentRiskDialog incident={incident} onClose={vi.fn()} />);
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Search available risks" }),
+      screen.getByPlaceholderText("Search by risk code or title"),
       { target: { value: "RSK-002" } },
     );
     fireEvent.click(
