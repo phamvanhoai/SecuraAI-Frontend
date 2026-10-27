@@ -9,6 +9,10 @@ vi.mock("../hooks/use-event-sources", () => ({
     isPending: false,
     mutateAsync: mockTestConnection,
   }),
+  useEventSources: () => ({
+    data: { items: [] },
+    isLoading: false,
+  }),
 }));
 
 import { TestEventSourceDialog } from "./test-event-source-dialog";

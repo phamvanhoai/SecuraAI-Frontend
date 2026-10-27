@@ -17,6 +17,10 @@ vi.mock("../hooks/use-event-sources", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useEventSources: () => ({
+    data: { items: [] },
+    isLoading: false,
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({

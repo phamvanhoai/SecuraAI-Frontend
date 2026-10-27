@@ -2,10 +2,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
+const { createMock, toastSuccessMock, toastErrorMock, listSourcesMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  listSourcesMock: vi.fn().mockReturnValue({ items: [] }),
 }));
 
 vi.mock("../hooks/use-event-sources", () => ({
@@ -16,6 +17,10 @@ vi.mock("../hooks/use-event-sources", () => ({
   useTestEventSourceConnection: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
+  }),
+  useEventSources: () => ({
+    data: listSourcesMock(),
+    isLoading: false,
   }),
 }));
 
@@ -165,5 +170,58 @@ describe("RegisterEventSourceForm", () => {
   it("does not render the Test connection button", () => {
     render(<RegisterEventSourceForm />);
     expect(screen.queryByRole("button", { name: /Test connection/i })).not.toBeInTheDocument();
+  });
+
+  it("warns about duplicate endpoint and blocks submission until confirmed", async () => {
+    const user = userEvent.setup();
+    listSourcesMock.mockReturnValue({
+      items: [
+        {
+          id: "source-existing",
+          name: "Wazuh SIEM - Master",
+          endpoint: "http://localhost:5555",
+        },
+      ],
+    });
+
+    createMock.mockResolvedValue({
+      id: "source-new",
+      name: "Wazuh Production SIEM",
+      sourceType: "WAZUH",
+      endpoint: "http://localhost:5555",
+      ingestionMethod: "API",
+      status: "ACTIVE",
+      eventFamilies: ["AUTHENTICATION"],
+    });
+
+    render(<RegisterEventSourceForm />);
+
+    await user.type(screen.getByLabelText("Event source name *"), "Wazuh Production SIEM");
+    await user.type(
+      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
+      "http://localhost:5555",
+    );
+
+    // Warning alert should appear
+    expect(
+      screen.getByText(/Warning: Duplicate endpoint detected for "Wazuh SIEM - Master"/i),
+    ).toBeInTheDocument();
+
+    // Try submit without confirmation
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+    expect(createMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/This endpoint is already configured for another event source/i),
+    ).toBeInTheDocument();
+
+    // Check confirmation checkbox
+    const confirmCheckbox = screen.getByLabelText(
+      /I understand and confirm that I want to proceed with this endpoint/i,
+    );
+    await user.click(confirmCheckbox);
+
+    // Now submit should proceed
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+    expect(createMock).toHaveBeenCalled();
   });
 });

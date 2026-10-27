@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
   Database,
   FileText,
@@ -20,7 +21,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
 import { ApiError } from "@/lib/api/api-error";
 import { cn } from "@/lib/utils";
-import { useCreateEventSource } from "../hooks/use-event-sources";
+import { useCreateEventSource, useEventSources } from "../hooks/use-event-sources";
+import { findDuplicateEndpointSource } from "../utils/endpoint-helpers";
 import {
   eventFamilies,
   eventSourceStatuses,
@@ -86,6 +88,13 @@ export function RegisterEventSourceForm({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const createMutation = useCreateEventSource();
+  const sourcesQuery = useEventSources({ limit: 100 });
+  const [confirmedDuplicateEndpoint, setConfirmedDuplicateEndpoint] = useState(false);
+
+  const duplicateEndpointSource = findDuplicateEndpointSource(
+    form.endpoint ?? "",
+    sourcesQuery.data?.items
+  );
 
   const handleFamilyToggle = (family: (typeof eventFamilies)[number]) => {
     setForm((prev) => {
@@ -123,6 +132,15 @@ export function RegisterEventSourceForm({
         }
       }
       setFieldErrors(formattedErrors);
+      return;
+    }
+
+    if (duplicateEndpointSource && !confirmedDuplicateEndpoint) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        endpointWarning:
+          "This endpoint is already configured for another event source. Please confirm below to proceed.",
+      }));
       return;
     }
 
@@ -254,16 +272,59 @@ export function RegisterEventSourceForm({
               value={form.endpoint ?? ""}
               onChange={(e) => {
                 setForm((prev) => ({ ...prev, endpoint: e.target.value }));
-                if (fieldErrors["endpoint"]) {
+                setConfirmedDuplicateEndpoint(false);
+                if (fieldErrors["endpoint"] || fieldErrors["endpointWarning"]) {
                   setFieldErrors((p) => {
                     const n = { ...p };
                     delete n["endpoint"];
+                    delete n["endpointWarning"];
                     return n;
                   });
                 }
               }}
               disabled={createMutation.isPending}
             />
+            {duplicateEndpointSource ? (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mt-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200"
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <div className="space-y-1.5 flex-1">
+                    <p className="font-semibold text-foreground">
+                      Warning: Duplicate endpoint detected for &quot;{duplicateEndpointSource.name}&quot;
+                    </p>
+                    <p className="text-muted leading-relaxed">
+                      The event source <strong>{duplicateEndpointSource.name}</strong> is currently using this same endpoint ({form.endpoint}).
+                      Sharing an endpoint may make it difficult to attribute incoming events to their originating source.
+                    </p>
+                    <label className="flex items-center gap-2 pt-1 font-medium text-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={confirmedDuplicateEndpoint}
+                        onChange={(e) => {
+                          setConfirmedDuplicateEndpoint(e.target.checked);
+                          if (fieldErrors["endpointWarning"]) {
+                            setFieldErrors((p) => {
+                              const n = { ...p };
+                              delete n["endpointWarning"];
+                              return n;
+                            });
+                          }
+                        }}
+                        className="rounded border-border accent-brand size-3.5"
+                      />
+                      <span>I understand and confirm that I want to proceed with this endpoint</span>
+                    </label>
+                    {fieldErrors["endpointWarning"] ? (
+                      <p className="text-danger font-medium">{fieldErrors["endpointWarning"]}</p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </FormField>
 
           <div className="grid gap-4 sm:grid-cols-2">
