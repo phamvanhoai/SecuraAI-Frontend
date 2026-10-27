@@ -57,6 +57,7 @@ export function SubmitRiskAcceptanceDialog({
   const [error, setError] = useState("");
   useEffect(() => ref.current?.showModal(), []);
   const submit = async () => {
+    if (risk.currentReview) return setError("Complete Risk Review before submitting a new acceptance request.");
     if (
       ["accepted", "closed", "archived"].includes(risk.status) ||
       risk.vulnerabilityWorkflow?.assessmentReviewRequired ||
@@ -146,9 +147,9 @@ export function SubmitRiskAcceptanceDialog({
           {residual?.riskAppetite ?? "Not defined"} · Tolerance:{" "}
           {residual?.riskTolerance ?? "Not defined"}
         </p>
-        {!risk.acceptanceWorkflow?.canSubmit ? (
+        {risk.currentReview || !risk.acceptanceWorkflow?.canSubmit ? (
           <Alert>
-            {risk.acceptanceWorkflow?.blockedReason ??
+            {risk.currentReview ? "Complete Risk Review before submitting a new acceptance request." : risk.acceptanceWorkflow?.blockedReason ??
               "Refresh the Risk to check acceptance eligibility."}
           </Alert>
         ) : null}
@@ -254,7 +255,7 @@ export function SubmitRiskAcceptanceDialog({
             type="submit"
             disabled={
               mutation.isPending ||
-              !risk.acceptanceWorkflow?.canSubmit ||
+              Boolean(risk.currentReview) || !risk.acceptanceWorkflow?.canSubmit ||
               (selectedPlan?.strategy === "accept" && !selectedPlan.acceptanceCost) ||
               risk.vulnerabilityWorkflow?.assessmentReviewRequired ||
               ["accepted", "closed", "archived"].includes(risk.status)
@@ -422,8 +423,8 @@ export function OpenRiskReviewDialog({
         }}
       >
         <p className="text-muted text-sm">
-          This reopens the same Risk for assessment. It does not extend or
-          delete previous acceptance decisions.
+          This starts a review of the same Risk. Its current review deadline is
+          retained. Previous acceptance decisions remain in history.
         </p>
         {error ? <Alert className="text-danger">{error}</Alert> : null}
         <label className="block text-sm font-medium">

@@ -1,6 +1,10 @@
 "use client";
 
 import { AcceptanceCostSummary } from "./acceptance-cost-fields";
+import { RiskReviewDate } from "./risk-review-date";
+import { CompleteRiskReviewDialog } from "./complete-risk-review-dialog";
+import { riskReviewSchedule } from "../lib/risk-review-schedule";
+import { riskToday } from "../schemas/risk-review-date";
 import { useEffect, useRef, useState } from "react";
 import {
   ClipboardCheck,
@@ -57,6 +61,7 @@ export function RiskAssessmentDetailDialog({
   const session = useSessionUser();
   const [accepting, setAccepting] = useState(false);
   const [openingReview, setOpeningReview] = useState(false);
+  const [completingReview, setCompletingReview] = useState(false);
   const [decidingAcceptance, setDecidingAcceptance] = useState<string | null>(
     null,
   );
@@ -108,7 +113,7 @@ export function RiskAssessmentDetailDialog({
       ["draft", "active", "completed"].includes(plan.status),
     ) ?? [];
   const acceptanceBlocked =
-    risk?.acceptanceWorkflow?.blockedReason ??
+    risk?.currentReview ? "Complete Risk Review before submitting a new acceptance request." : risk?.acceptanceWorkflow?.blockedReason ??
     (terminalRisk
       ? "Closed or archived risks cannot submit acceptance."
       : risk?.status === "accepted"
@@ -185,7 +190,10 @@ export function RiskAssessmentDetailDialog({
                 label="Risk owner"
                 value={risk.owner?.fullName ?? "Unassigned"}
               />
-              <Fact label="Review date" value={format(risk.reviewDate)} />
+              <div>
+                <dt className="text-muted text-xs font-medium">Review date</dt>
+                <dd className="mt-1 text-sm font-medium"><RiskReviewDate value={risk.reviewDate} /></dd>
+              </div>
               <Fact label="Last updated" value={format(risk.updatedAt)} />
               <Fact label="Created at" value={format(risk.createdAt)} />
               <Fact
@@ -194,6 +202,44 @@ export function RiskAssessmentDetailDialog({
               />
             </dl>
           </section>
+          {risk.currentReview ? (
+            <section aria-label="Current review" className="border-border rounded-xl border p-4 sm:p-5">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">Current review</h3>
+                <span className="bg-info-soft text-info rounded-md px-2 py-1 text-xs font-medium">Review in progress</span>
+              </div>
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <Fact label="Opened by" value={risk.currentReview.openedByName ?? "Not recorded"} />
+                <Fact label="Opened at" value={`${new Intl.DateTimeFormat("en-GB", {
+                  timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short",
+                }).format(new Date(risk.currentReview.openedAt))} (UTC+7)`} />
+                <div><dt className="text-muted text-xs font-medium">Review due date when opened</dt>
+                  <dd className="mt-1 text-sm">{risk.currentReview.previousReviewDate ? <RiskReviewDate value={risk.currentReview.previousReviewDate} /> : "Not recorded"}</dd>
+                </div>
+                <Fact label="Review rationale" value={risk.currentReview.reason ?? "Not recorded"} />
+              </dl>
+              {risk.canCompleteReview ? <Button type="button" className="mt-4" onClick={() => setCompletingReview(true)}>Complete Risk Review</Button> : null}
+            </section>
+          ) : null}
+          {risk.reviewHistory?.length ? (
+            <details className="border-border rounded-xl border p-4 sm:p-5">
+              <summary className="cursor-pointer font-medium">Review history ({risk.reviewHistory.length})</summary>
+              <div className="mt-3 space-y-4">{risk.reviewHistory.map((review) => (
+                <article key={review.completedAt} className="border-border rounded-lg border p-3 text-sm">
+                  <p className="font-medium">Completed by {review.completedByName ?? "Not recorded"} · {new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(review.completedAt))} (UTC+7)</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words">{review.conclusion}</p>
+                  <p className="text-muted mt-2">Opened by: {review.openedByName ?? "Not recorded"} · {review.openedAt ? format(review.openedAt) : "Not recorded"}</p>
+                  <p className="whitespace-pre-wrap break-words">Opening reason: {review.openingReason ?? "Not recorded"}</p>
+                  <p>Previous deadline: {review.previousReviewDate ? format(review.previousReviewDate) : "Not recorded"}</p>
+                  {review.previousReviewDate ? <p className="text-muted">{(() => {
+                    const schedule = riskReviewSchedule(review.previousReviewDate, riskToday(new Date(review.completedAt)));
+                    return schedule.daysOverdue > 0 ? `Completed ${schedule.daysOverdue} days after the review deadline` : "Completed within the review deadline";
+                  })()}</p> : null}
+                  <p>Residual risk: {title(review.residualRating)} · Next review: {review.nextReviewDate.split("-").reverse().join("/")}</p>
+                </article>
+              ))}</div>
+            </details>
+          ) : null}
           {risk.status === "under_treatment" &&
           (!risk.latestAssessment ||
             !risk.treatmentPlans.some((plan) => plan.status === "active")) ? (
@@ -850,6 +896,7 @@ export function RiskAssessmentDetailDialog({
           onClose={() => setDecidingAcceptance(null)}
         />
       ) : null}
+      {completingReview && risk ? <CompleteRiskReviewDialog risk={risk} onClose={() => setCompletingReview(false)} /> : null}
       {openingReview && risk ? (
         <OpenRiskReviewDialog
           risk={risk}
