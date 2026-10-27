@@ -58,6 +58,7 @@ import type {
   RejectedPolicyQuery,
 } from "../schemas/policy-publication-schema";
 import { PolicyDraftFormDialog } from "./policy-draft-form-dialog";
+import { PolicyRevisionNotice } from "./policy-revision-notice";
 import { PolicyViewTabs } from "./policy-view-tabs";
 import { PolicyApplicabilityDialog } from "./policy-applicability-dialog";
 
@@ -871,6 +872,7 @@ function PolicyDraftDetailDialog({
       ) : null}
       {draft ? (
         <div className="space-y-5">
+          <PolicyRevisionNotice request={draft.revisionRequest} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h3 className="text-xl font-semibold">{draft.title}</h3>

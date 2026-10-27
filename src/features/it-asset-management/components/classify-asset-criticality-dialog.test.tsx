@@ -25,6 +25,7 @@ vi.mock("../hooks/use-classify-asset-criticality", () => ({
 vi.mock("../hooks/use-asset-detail", () => ({
   useAssetDetail: detailMock,
 }));
+vi.mock("../hooks/use-asset-classification-history", () => ({ useAssetClassificationHistory: () => ({ data: { items: [], pagination: { total: 0, totalPages: 0 } }, isPending: false, isError: false }) }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: successMock }),
 }));
@@ -94,6 +95,21 @@ describe("ClassifyAssetCriticalityDialog", () => {
     });
   });
 
+  it("keeps unsaved scores when switching tabs with the keyboard", async () => {
+    const user = userEvent.setup();
+    render(<ClassifyAssetCriticalityDialog asset={asset} onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText("Confidentiality impact"), "4");
+    const classify = screen.getByRole("tab", { name: "Classify Asset" });
+    classify.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: "History (0)" })).toHaveFocus();
+    expect(screen.getByText("No classification history recorded.")).toBeVisible();
+    await user.keyboard("{Home}");
+    expect(classify).toHaveFocus();
+    expect(screen.getByLabelText("Confidentiality impact")).toHaveValue(4);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
   it("submits four scores and the data classification", async () => {
     const user = userEvent.setup();
     render(<ClassifyAssetCriticalityDialog asset={asset} onClose={vi.fn()} />);
@@ -149,9 +165,8 @@ describe("ClassifyAssetCriticalityDialog", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: "Save classification" }),
-    ).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Save classification" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "History (0)" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Archived assets cannot be classified.",
     );

@@ -2,8 +2,6 @@
 
 import { useState, type FormEvent } from "react";
 import {
-  Activity,
-  AlertCircle,
   CheckCircle2,
   Database,
   FileText,
@@ -29,7 +27,6 @@ import {
   type RegisterEventSourceFormValues,
   type EventSourceResponse,
 } from "../schemas/event-source-schema";
-import { TestEventSourceDialog } from "./test-event-source-dialog";
 
 const defaultValues: RegisterEventSourceFormValues = {
   name: "",
@@ -86,12 +83,6 @@ export function RegisterEventSourceForm({
     Record<string, string | undefined>
   >({});
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [testModalOpen, setTestModalOpen] = useState(false);
-  const [connectionHealth, setConnectionHealth] = useState<{
-    connected: boolean;
-    message: string;
-    latencyMs: number;
-  } | null>(null);
 
   const createMutation = useCreateEventSource();
 
@@ -315,25 +306,6 @@ export function RegisterEventSourceForm({
               Wazuh Manager (via <code className="rounded bg-neutral-soft px-1 py-0.5 font-mono text-xs">custom-securaai</code> Edge Normalizer) pushes normalized JSON events to SecuraAI using this webhook endpoint and secret key.
             </span>
           </div>
-
-          {connectionHealth ? (
-            connectionHealth.connected ? (
-              <div className="flex items-center gap-2.5 rounded-lg border border-success/30 bg-success-soft/40 px-3.5 py-2.5 text-xs text-foreground">
-                <CheckCircle2 className="size-4 shrink-0 text-success" strokeWidth={2} />
-                <div>
-                  <span className="font-semibold text-success">Connection Verified:</span> Wazuh Manager is reachable and responding ({connectionHealth.latencyMs}ms latency).
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2.5 rounded-lg border border-danger/30 bg-danger-soft/40 p-3 text-xs text-foreground">
-                <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={2} />
-                <div className="space-y-0.5">
-                  <p className="font-semibold text-danger">Connection Check Failed</p>
-                  <p className="text-muted">{connectionHealth.message}</p>
-                </div>
-              </div>
-            )
-          ) : null}
         </div>
 
         {/* SECTION 3: Supported Event Families */}
@@ -427,65 +399,37 @@ export function RegisterEventSourceForm({
         </div>
 
         {/* FORM ACTIONS */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setTestModalOpen(true)}
-            className="flex items-center gap-1.5"
-          >
-            <Activity aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            <span>Test connection</span>
-          </Button>
-
-          <div className="flex items-center gap-2.5">
-            {onCancel ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onCancel}
-                disabled={createMutation.isPending}
-              >
-                Cancel
-              </Button>
-            ) : null}
-
+        <div className="flex items-center justify-end gap-2.5 border-t border-border pt-4">
+          {onCancel ? (
             <Button
-              type="submit"
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
               disabled={createMutation.isPending}
-              className="flex items-center gap-2"
             >
-              {createMutation.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="size-4" strokeWidth={1.8} />
-                  <span>Register event source</span>
-                </>
-              )}
+              Cancel
             </Button>
-          </div>
+          ) : null}
+
+          <Button
+            type="submit"
+            disabled={createMutation.isPending}
+            className="flex items-center gap-2"
+          >
+            {createMutation.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="size-4" strokeWidth={1.8} />
+                <span>Register event source</span>
+              </>
+            )}
+          </Button>
         </div>
       </form>
-
-      {testModalOpen ? (
-        <TestEventSourceDialog
-          initialEndpoint={form.endpoint || "https://127.0.0.1:56000"}
-          initialUsername={form.username || "wazuh-wui"}
-          isOpen={testModalOpen}
-          onClose={() => setTestModalOpen(false)}
-          onTestComplete={(result) => {
-            setConnectionHealth({
-              connected: result.connected,
-              message: result.message,
-              latencyMs: result.latencyMs,
-            });
-          }}
-        />
-      ) : null}
     </div>
   );
 }
