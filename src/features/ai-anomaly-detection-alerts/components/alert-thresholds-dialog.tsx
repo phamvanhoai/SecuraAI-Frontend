@@ -96,7 +96,7 @@ export function AssetThresholdOverridesManager() {
     },
     {
       key: "risk",
-      header: "Minimum AI risk",
+      header: "Minimum detection risk",
       cell: (item) =>
         item.riskLevelMin ? formatLevel(item.riskLevelMin) : "Any level",
     },
@@ -185,7 +185,7 @@ export function AssetThresholdOverridesManager() {
               headers={[
                 "Asset",
                 "Alert threshold",
-                "Minimum AI risk",
+                "Minimum detection risk",
                 "Status",
                 "Actions",
               ]}
@@ -474,7 +474,7 @@ function ThresholdFormDialog({
                 An alert is created when the asset score reaches this value.
               </p>
             </FormField>
-            <FormField id="threshold-risk" label="Minimum AI risk level">
+            <FormField id="threshold-risk" label="Minimum detection risk level">
               <Select id="threshold-risk" {...register("riskLevelMin")}>
                 <option value="">Any risk level</option>
                 {thresholdRiskLevels.map((level) => (

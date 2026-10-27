@@ -23,7 +23,7 @@ export function FeedbackRecordContext({
       icon: Clock3,
     },
     {
-      label: "Model version",
+      label: "Scoring version",
       value: alert.model.name,
       detail: `v${alert.model.version}`,
       icon: Cpu,

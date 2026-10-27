@@ -27,7 +27,7 @@ export function ModelConfigurationDetailDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={onClose}
-      title="Model version metrics"
+      title="Detection scoring version"
     >
       {configuration ? (
         <div className="space-y-6">
@@ -66,7 +66,7 @@ export function ModelConfigurationDetailDialog({
             <SectionHeading
               icon={Database}
               id="model-context-heading"
-              title="Model context"
+              title="Scoring context"
             />
             <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2">
               <Metric

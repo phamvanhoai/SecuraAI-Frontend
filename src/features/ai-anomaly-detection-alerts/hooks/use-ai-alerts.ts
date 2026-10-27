@@ -16,6 +16,7 @@ import {
   listAiAlerts,
   markAiAlertFalsePositive,
   markAiAlertFurtherInvestigation,
+  regenerateAiAlertExplanation,
   runAnomalyDetection,
   startAiAlertTriage,
   type AiAlertQuery,
@@ -25,6 +26,7 @@ import type {
   EvaluateAiAlertReliabilityRequest,
   MarkFalsePositiveRequest,
   MarkFurtherInvestigationRequest,
+  RegenerateAlertExplanationRequest,
 } from "../schemas/ai-alert-schema";
 import type { AnomalyDetectionRunInput } from "../schemas/anomaly-detection-run-schema";
 
@@ -75,6 +77,20 @@ export function useAiAlertExplanation(alertId: string | null) {
       return getAiAlertExplanation(alertId, signal);
     },
     enabled: alertId !== null,
+  });
+}
+
+export function useRegenerateAiAlertExplanation(alertId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: RegenerateAlertExplanationRequest) => {
+      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      return regenerateAiAlertExplanation(alertId, input);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["ai-alerts", "explanation", alertId], data);
+    },
+    retry: false,
   });
 }
 
