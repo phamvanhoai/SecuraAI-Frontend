@@ -17,6 +17,7 @@ import {
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
 import {
+  MetricStrip,
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
@@ -49,10 +50,30 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState<string | undefined>();
   const hasActiveFilters = status !== "all" || Boolean(search);
+
   const requests = useOwnedRiskReassessmentRequests(
     { page, limit: 10, status, ...(search ? { q: search } : {}) },
     enabled,
   );
+
+  // Lightweight summary queries for MetricStrip — limit:1 fetches only pagination.total
+  const pendingCount = useOwnedRiskReassessmentRequests(
+    { page: 1, limit: 1, status: "pending" },
+    enabled,
+  );
+  const underReviewCount = useOwnedRiskReassessmentRequests(
+    { page: 1, limit: 1, status: "under_review" },
+    enabled,
+  );
+  const completedCount = useOwnedRiskReassessmentRequests(
+    { page: 1, limit: 1, status: "completed" },
+    enabled,
+  );
+  const rejectedCount = useOwnedRiskReassessmentRequests(
+    { page: 1, limit: 1, status: "rejected" },
+    enabled,
+  );
+
   const review = useStartRiskReassessmentReview();
   const toast = useToast();
   const [completionTarget, setCompletionTarget] =
@@ -61,6 +82,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
     useState<RiskReassessmentReviewItem | null>(null);
   const [detailTarget, setDetailTarget] =
     useState<RiskReassessmentReviewItem | null>(null);
+
   const startReview = async (item: RiskReassessmentReviewItem) => {
     try {
       await review.mutateAsync(item.id);
@@ -72,6 +94,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       /* Normalized mutation error is rendered below. */
     }
   };
+
   const columns: readonly DataTableColumn<RiskReassessmentReviewItem>[] = [
     {
       key: "risk",
@@ -244,87 +267,138 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
       ),
     },
   ];
+
   return (
     <>
+      {/* Live metric strip */}
+      <MetricStrip
+        ariaLabel="Reassessment request summary"
+        metrics={[
+          {
+            label: "Pending",
+            value: pendingCount.data
+              ? String(pendingCount.data.pagination.total)
+              : "—",
+            detail: "Awaiting review start",
+            tone:
+              (pendingCount.data?.pagination.total ?? 0) > 0
+                ? "warning"
+                : "neutral",
+            loading: pendingCount.isPending,
+          },
+          {
+            label: "Under review",
+            value: underReviewCount.data
+              ? String(underReviewCount.data.pagination.total)
+              : "—",
+            detail: "Review in progress",
+            tone:
+              (underReviewCount.data?.pagination.total ?? 0) > 0
+                ? "brand"
+                : "neutral",
+            loading: underReviewCount.isPending,
+          },
+          {
+            label: "Completed",
+            value: completedCount.data
+              ? String(completedCount.data.pagination.total)
+              : "—",
+            detail: "Reassessment finalised",
+            tone: "neutral",
+            loading: completedCount.isPending,
+          },
+          {
+            label: "Rejected",
+            value: rejectedCount.data
+              ? String(rejectedCount.data.pagination.total)
+              : "—",
+            detail: "Requests closed without reassessment",
+            tone:
+              (rejectedCount.data?.pagination.total ?? 0) > 0
+                ? "danger"
+                : "neutral",
+            loading: rejectedCount.isPending,
+          },
+        ]}
+      />
+
       <ProductPanel title="My reassessment requests">
-        <div className="p-4">
-          <form
-            className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_14rem_auto] md:items-end"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPage(1);
-              setSearch(searchDraft.trim() || undefined);
-            }}
-          >
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-sm font-medium">
-                Search requests
-              </span>
-              <span className="relative block">
-                <Search
-                  aria-hidden="true"
-                  className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                  strokeWidth={1.8}
-                />
-                <Input
-                  className="pl-9"
-                  maxLength={100}
-                  placeholder="Search by risk, incident, or reason"
-                  value={searchDraft}
-                  onChange={(event) => setSearchDraft(event.target.value)}
-                />
-              </span>
+        {/* Toolbar */}
+        <form
+          className="border-border flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setPage(1);
+            setSearch(searchDraft.trim() || undefined);
+          }}
+        >
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="relative block w-full sm:max-w-xs">
+              <span className="sr-only">Search requests</span>
+              <Search
+                aria-hidden="true"
+                className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                strokeWidth={1.8}
+              />
+              <Input
+                className="pl-9"
+                maxLength={100}
+                placeholder="Search by risk, incident, or reason"
+                value={searchDraft}
+                onChange={(event) => setSearchDraft(event.target.value)}
+              />
             </label>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">Status</span>
-              <Select
-                value={status}
-                onChange={(event) => {
-                  setPage(1);
-                  setStatus(
-                    event.target.value as ReassessmentRequestStatusFilter,
-                  );
-                }}
-              >
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="under_review">Under review</option>
-                <option value="completed">Completed</option>
-                <option value="rejected">Rejected</option>
-              </Select>
-            </label>
-            <div className="flex gap-2">
-              <Button type="submit">
-                <Search
-                  aria-hidden="true"
-                  className="size-4"
-                  strokeWidth={1.8}
-                />
-                Search
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                aria-label="Clear reassessment request filters"
-                onClick={() => {
-                  setSearchDraft("");
-                  setSearch(undefined);
-                  setStatus("all");
-                  setPage(1);
-                }}
-              >
-                <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
-              </Button>
-            </div>
-          </form>
-          {review.isError ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger mb-4">
+            <Select
+              value={status}
+              onChange={(event) => {
+                setPage(1);
+                setStatus(
+                  event.target.value as ReassessmentRequestStatusFilter,
+                );
+              }}
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="pending">Pending</option>
+              <option value="under_review">Under review</option>
+              <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
+            </Select>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button type="submit">
+              <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Search
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label="Clear reassessment request filters"
+              onClick={() => {
+                setSearchDraft("");
+                setSearch(undefined);
+                setStatus("all");
+                setPage(1);
+              }}
+            >
+              <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            </Button>
+          </div>
+        </form>
+
+        {/* Mutation error */}
+        {review.isError ? (
+          <div className="px-4 pt-4">
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
               {review.error instanceof Error
                 ? review.error.message
                 : "Unable to start this review."}
             </Alert>
-          ) : null}
+          </div>
+        ) : null}
+
+        {/* Table body */}
+        <div className="p-4">
           {requests.isPending ? (
             <TableSkeleton rows={5} columns={7} />
           ) : requests.isError ? (
@@ -385,6 +459,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
           )}
         </div>
       </ProductPanel>
+
       <CompleteRiskReassessmentDialog
         request={completionTarget}
         onClose={() => setCompletionTarget(null)}
