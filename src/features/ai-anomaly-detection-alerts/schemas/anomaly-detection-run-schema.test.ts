@@ -18,4 +18,23 @@ describe("anomaly detection run result", () => {
       }).alertsCreated,
     ).toBe(2);
   });
+
+  it("accepts an all-pending recovery result with remaining backlog", () => {
+    const result = anomalyDetectionRunResultSchema.parse({
+      modelVersionId: "00000000-0000-4000-8000-000000000001",
+      modelName: "security-anomaly",
+      modelVersion: "2.0",
+      lookbackHours: 24,
+      scope: "ALL_PENDING",
+      hasMore: true,
+      eventsEvaluated: 100,
+      anomaliesDetected: 20,
+      detectionsCreated: 100,
+      alertsCreated: 20,
+      threshold: 0.8,
+      completedAt: "2026-09-25T00:00:00.000Z",
+    });
+
+    expect(result).toMatchObject({ scope: "ALL_PENDING", hasMore: true });
+  });
 });
