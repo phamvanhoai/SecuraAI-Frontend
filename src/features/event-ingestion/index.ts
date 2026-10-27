@@ -1,5 +1,6 @@
 export { LogSourcesManager } from "./components/log-sources-manager";
 export { RegisterEventSourceForm } from "./components/register-event-source-form";
+export { RegisterEventSourceDialog } from "./components/register-event-source-dialog";
 export { EventSourcesList } from "./components/event-sources-list";
 export { EventSourceDetailDialog } from "./components/event-source-detail-dialog";
 export { EditEventSourceDialog } from "./components/edit-event-source-dialog";

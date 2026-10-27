@@ -165,8 +165,12 @@ describe("EventSourceDetailDialog", () => {
     expect(screen.getByText("sec_live_wazuh_agent...****")).toBeInTheDocument();
     expect(screen.getByText("IP: 10.0.0.45")).toBeInTheDocument();
 
-    expect(screen.getByText("25,420")).toBeInTheDocument();
-    expect(screen.getByText("310")).toBeInTheDocument();
+    expect(
+      screen.getByText(mockDetailData.stats.totalIngestedEvents.toLocaleString()),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(mockDetailData.stats.totalBatches.toLocaleString()),
+    ).toBeInTheDocument();
 
     expect(screen.getByText("Security Operations")).toBeInTheDocument();
   });

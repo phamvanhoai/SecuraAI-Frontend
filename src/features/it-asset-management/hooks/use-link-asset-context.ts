@@ -6,6 +6,29 @@ import type { LinkAssetContextRequest } from "../schemas/link-asset-context-sche
 
 export function useLinkAssetContext(assetId: string | null) {
   const queryClient = useQueryClient();
-  const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["assets", "list"] }), queryClient.invalidateQueries({ queryKey: ["assets", "detail", assetId] })]); };
-  return useMutation({ mutationFn: (input: LinkAssetContextRequest) => { if (!assetId) throw new Error("Asset is unavailable."); return linkAssetContext(assetId, input); }, onSuccess: refresh, onError: async (error) => { if (error instanceof ApiError && (error.status === 403 || error.status === 409)) await refresh(); } });
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["assets", "list"] }),
+      queryClient.invalidateQueries({
+        queryKey: ["assets", "detail", assetId],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["assets", "context-history", assetId],
+      }),
+    ]);
+  };
+  return useMutation({
+    mutationFn: (input: LinkAssetContextRequest) => {
+      if (!assetId) throw new Error("Asset is unavailable.");
+      return linkAssetContext(assetId, input);
+    },
+    onSuccess: refresh,
+    onError: async (error) => {
+      if (
+        error instanceof ApiError &&
+        (error.status === 403 || error.status === 409)
+      )
+        await refresh();
+    },
+  });
 }

@@ -17,7 +17,7 @@ import { useSessionUser } from "@/features/authentication-account";
 import { EventSourcesList } from "./event-sources-list";
 import { EventGovernancePoliciesList } from "./event-governance-policies-list";
 import { NormalizedEventsList } from "./normalized-events-list";
-import { RegisterEventSourceForm } from "./register-event-source-form";
+import { RegisterEventSourceDialog } from "./register-event-source-dialog";
 import { cn } from "@/lib/utils";
 
 export function LogSourcesManager() {
@@ -301,14 +301,14 @@ export function LogSourcesManager() {
         </div>
       </div>
 
-      {registerEventSourceOpen ? (
-        <div className="mb-6">
-          <RegisterEventSourceForm
-            onCancel={() => setRegisterEventSourceOpen(false)}
-            onSuccess={() => setRegisterEventSourceOpen(false)}
-          />
-        </div>
-      ) : null}
+      <RegisterEventSourceDialog
+        isOpen={registerEventSourceOpen}
+        onClose={() => setRegisterEventSourceOpen(false)}
+        onSuccess={() => {
+          setRegisterEventSourceOpen(false);
+          eventSourcesOverview.refetch();
+        }}
+      />
 
       {activeTab === "events" && canViewEvents ? (
         <NormalizedEventsList />

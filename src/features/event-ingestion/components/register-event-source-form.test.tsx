@@ -26,8 +26,8 @@ vi.mock("@/components/feedback/toast", () => ({
   }),
 }));
 
-import { ApiError } from "@/lib/api/api-error";
 import { RegisterEventSourceForm } from "./register-event-source-form";
+import { ApiError } from "@/lib/api/api-error";
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -79,6 +79,30 @@ describe("RegisterEventSourceForm", () => {
     expect(
       screen.getByRole("button", { name: /Register event source/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows an inline error under the name field when the name already exists (409)", async () => {
+    const user = userEvent.setup();
+    createMock.mockRejectedValue(
+      new ApiError("An event source with this name already exists", 409, "CONFLICT"),
+    );
+
+    render(<RegisterEventSourceForm />);
+
+    await user.type(screen.getByLabelText("Event source name *"), "Wazuh SIEM Production");
+    await user.type(
+      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
+      "/api/v1/integrations/wazuh/events",
+    );
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+
+    expect(
+      (await screen.findAllByText("An event source with this name already exists")).length,
+    ).toBeGreaterThan(0);
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Registration failed",
+      "An event source with this name already exists",
+    );
   });
 
   it("shows validation error when submitting with empty name", async () => {
@@ -138,42 +162,8 @@ describe("RegisterEventSourceForm", () => {
     expect(onSuccessMock).toHaveBeenCalledWith(createdRecord);
   });
 
-  it("shows an inline error under the name field when the name already exists (409)", async () => {
-    const user = userEvent.setup();
-    createMock.mockRejectedValue(
-      new ApiError("An event source with this name already exists", 409, "CONFLICT"),
-    );
-
+  it("does not render the Test connection button", () => {
     render(<RegisterEventSourceForm />);
-
-    await user.type(screen.getByLabelText("Event source name *"), "Wazuh SIEM Production");
-    await user.type(
-      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
-      "/api/v1/integrations/wazuh/events",
-    );
-    await user.click(screen.getByRole("button", { name: /Register event source/i }));
-
-    expect(
-      (await screen.findAllByText("An event source with this name already exists")).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Event source name *")).toBeInTheDocument();
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      "Registration failed",
-      "An event source with this name already exists",
-    );
-  });
-
-  it("renders the Test connection button and opens the test modal when clicked", async () => {
-    const user = userEvent.setup();
-    render(<RegisterEventSourceForm />);
-
-    const testBtn = screen.getByRole("button", { name: /Test connection/i });
-    expect(testBtn).toBeInTheDocument();
-
-    await user.click(testBtn);
-
-    expect(
-      screen.getByText("Verify connection and authentication diagnostics against a Wazuh Manager before applying changes."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Test connection/i })).not.toBeInTheDocument();
   });
 });
