@@ -11,6 +11,7 @@ import {
   markFalsePositiveResultSchema,
   markFurtherInvestigationResultSchema,
   markFurtherInvestigationSchema,
+  regenerateAlertExplanationSchema,
   startAiAlertTriageResultSchema,
 } from "./ai-alert-schema";
 
@@ -41,6 +42,19 @@ describe("aiAlertExplanationSchema", () => {
         createdAt: "2026-09-13T00:00:00.000Z",
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("regenerateAlertExplanationSchema", () => {
+  it("requires a meaningful trimmed reason", () => {
+    expect(
+      regenerateAlertExplanationSchema.parse({
+        reason: "  Review explanation accuracy  ",
+      }),
+    ).toEqual({ reason: "Review explanation accuracy" });
+    expect(
+      regenerateAlertExplanationSchema.safeParse({ reason: "short" }).success,
+    ).toBe(false);
   });
 });
 

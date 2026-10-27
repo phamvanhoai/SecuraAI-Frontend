@@ -12,6 +12,7 @@ import {
   markFalsePositiveSchema,
   markFurtherInvestigationResultSchema,
   markFurtherInvestigationSchema,
+  regenerateAlertExplanationSchema,
   startAiAlertTriageResultSchema,
   type AiAlertFeedback,
   type AiAlertFeedbackList,
@@ -25,6 +26,7 @@ import {
   type MarkFalsePositiveResult,
   type MarkFurtherInvestigationRequest,
   type MarkFurtherInvestigationResult,
+  type RegenerateAlertExplanationRequest,
   type StartAiAlertTriageResult,
 } from "../schemas/ai-alert-schema";
 import {
@@ -98,6 +100,22 @@ export async function getAiAlertExplanation(
         { target: "same-origin", ...(signal ? { signal } : {}) },
       ),
     );
+}
+
+export async function regenerateAiAlertExplanation(
+  alertId: string,
+  input: RegenerateAlertExplanationRequest,
+): Promise<AiAlertExplanation> {
+  return aiAlertExplanationSchema.parse(
+    await apiRequest<unknown>(
+      `/api/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
+      {
+        method: "POST",
+        target: "same-origin",
+        body: regenerateAlertExplanationSchema.parse(input),
+      },
+    ),
+  );
 }
 
 export async function evaluateAiAlertReliability(

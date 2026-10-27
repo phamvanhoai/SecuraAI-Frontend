@@ -1,14 +1,26 @@
 "use client";
 
-import { Box, BrainCircuit, Database, Radar } from "lucide-react";
+import {
+  Box,
+  BrainCircuit,
+  Database,
+  LoaderCircle,
+  Radar,
+  RefreshCw,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useToast } from "@/components/feedback/toast";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAiAlertExplanation } from "../hooks/use-ai-alerts";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  useAiAlertExplanation,
+  useRegenerateAiAlertExplanation,
+} from "../hooks/use-ai-alerts";
 import type { AiAlert } from "../schemas/ai-alert-schema";
 
 export function AiAlertDetailDialog({
@@ -19,7 +31,12 @@ export function AiAlertDetailDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [showRegenerate, setShowRegenerate] = useState(false);
+  const [reason, setReason] = useState("");
+  const [regenerateError, setRegenerateError] = useState<string>();
   const explanation = useAiAlertExplanation(alert?.id ?? null);
+  const regenerate = useRegenerateAiAlertExplanation(alert?.id ?? null);
+  const toast = useToast();
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
@@ -27,11 +44,42 @@ export function AiAlertDetailDialog({
     if (!alert && dialog.open) dialog.close();
   }, [alert]);
 
+  const closeDialog = (): void => {
+    setShowRegenerate(false);
+    setReason("");
+    setRegenerateError(undefined);
+    onClose();
+  };
+
+  const submitRegeneration = async (): Promise<void> => {
+    const normalizedReason = reason.trim();
+    if (normalizedReason.length < 10) {
+      setRegenerateError("Reason must be at least 10 characters.");
+      return;
+    }
+    setRegenerateError(undefined);
+    try {
+      await regenerate.mutateAsync({ reason: normalizedReason });
+      toast.success(
+        "Explanation regenerated",
+        "The latest explanation is displayed and the change was recorded in the audit log.",
+      );
+      setShowRegenerate(false);
+      setReason("");
+    } catch (error: unknown) {
+      setRegenerateError(
+        error instanceof Error
+          ? error.message
+          : "Unable to regenerate the AI explanation.",
+      );
+    }
+  };
+
   return (
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
-      onClose={onClose}
+      onClose={closeDialog}
       title="AI alert details"
     >
       {alert ? (
@@ -77,7 +125,7 @@ export function AiAlertDetailDialog({
               value={formatScore(alert.anomalyScore)}
             />
             <SummaryMetric
-              label="AI-suggested risk level"
+              label="Detection risk level"
               value={
                 alert.riskLevel
                   ? formatRiskLevel(alert.riskLevel)
@@ -85,7 +133,7 @@ export function AiAlertDetailDialog({
               }
             />
             <SummaryMetric
-              label="AI risk score"
+              label="Detection risk score"
               value={
                 alert.riskScore === null
                   ? "Not available"
@@ -126,10 +174,10 @@ export function AiAlertDetailDialog({
                 value={alert.asset?.assetCode ?? "Not available"}
               />
               <Detail
-                label="Model"
+                label="Scoring configuration"
                 value={`${alert.model.name} ${alert.model.version}`}
               />
-              <Detail label="Provider" value={alert.model.provider} />
+              <Detail label="Detection method" value={alert.model.provider} />
             </dl>
           </DetailSection>
 
@@ -140,8 +188,14 @@ export function AiAlertDetailDialog({
             <SectionHeading
               icon={BrainCircuit}
               id="ai-decision-explanation"
-              title="AI decision explanation"
+              title="Decision explanation"
             />
+            <Alert className="border-info/25 bg-info-soft text-foreground">
+              The deployed scoring configuration calculates the anomaly score
+              and decides whether to create an alert. Ollama only turns the
+              stored evidence into analyst-readable text; when unavailable, a
+              deterministic fallback explanation is shown.
+            </Alert>
             {explanation.isPending ? (
               <div
                 aria-label="Loading AI explanation"
@@ -181,6 +235,97 @@ export function AiAlertDetailDialog({
                   label="Baseline data"
                   value={explanation.data.baselineData}
                 />
+                <div className="border-border border-t pt-4">
+                  {showRegenerate ? (
+                    <div className="bg-neutral-soft/30 space-y-3 rounded-lg p-4">
+                      <div>
+                        <label
+                          className="text-sm font-semibold"
+                          htmlFor="regenerate-explanation-reason"
+                        >
+                          Reason for regeneration
+                        </label>
+                        <p className="text-muted mt-1 text-xs leading-5">
+                          The new explanation replaces the displayed text. The
+                          previous and new values remain traceable in the audit
+                          log.
+                        </p>
+                      </div>
+                      <Textarea
+                        aria-describedby="regenerate-explanation-help"
+                        disabled={regenerate.isPending}
+                        id="regenerate-explanation-reason"
+                        maxLength={500}
+                        onChange={(event) => setReason(event.target.value)}
+                        placeholder="Example: Recheck the explanation after reviewing the contributing factors."
+                        rows={3}
+                        value={reason}
+                      />
+                      <div className="flex items-center justify-between gap-3">
+                        <p
+                          className="text-muted text-xs"
+                          id="regenerate-explanation-help"
+                        >
+                          {reason.length}/500 characters
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            disabled={regenerate.isPending}
+                            onClick={() => {
+                              setShowRegenerate(false);
+                              setRegenerateError(undefined);
+                            }}
+                            variant="secondary"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            disabled={
+                              regenerate.isPending || reason.trim().length < 10
+                            }
+                            onClick={() => void submitRegeneration()}
+                          >
+                            {regenerate.isPending ? (
+                              <LoaderCircle
+                                aria-hidden="true"
+                                className="size-4 animate-spin"
+                              />
+                            ) : (
+                              <RefreshCw
+                                aria-hidden="true"
+                                className="size-4"
+                                strokeWidth={1.8}
+                              />
+                            )}
+                            {regenerate.isPending
+                              ? "Regenerating…"
+                              : "Regenerate"}
+                          </Button>
+                        </div>
+                      </div>
+                      {regenerateError ? (
+                        <Alert>{regenerateError}</Alert>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-muted text-xs">
+                        Generated {formatDate(explanation.data.createdAt)}
+                      </p>
+                      <Button
+                        onClick={() => setShowRegenerate(true)}
+                        variant="secondary"
+                      >
+                        <RefreshCw
+                          aria-hidden="true"
+                          className="size-4"
+                          strokeWidth={1.8}
+                        />
+                        Regenerate explanation
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : null}
           </section>

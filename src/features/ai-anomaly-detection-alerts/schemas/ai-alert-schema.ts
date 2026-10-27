@@ -78,6 +78,14 @@ export const aiAlertExplanationSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 
+export const regenerateAlertExplanationSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Reason must be at least 10 characters.")
+    .max(500, "Reason must be 500 characters or fewer."),
+});
+
 export const aiAlertFeedbackLabels = [
   "confirmed_incident",
   "false_positive",
@@ -181,6 +189,12 @@ export const markFurtherInvestigationResultSchema = z.object({
 
 export type AiAlert = z.infer<typeof aiAlertSchema>;
 export type AiAlertExplanation = z.infer<typeof aiAlertExplanationSchema>;
+export type RegenerateAlertExplanationInput = z.input<
+  typeof regenerateAlertExplanationSchema
+>;
+export type RegenerateAlertExplanationRequest = z.output<
+  typeof regenerateAlertExplanationSchema
+>;
 export type AiAlertList = z.infer<typeof aiAlertListSchema>;
 export type AiAlertStatus = (typeof aiAlertStatuses)[number];
 export type StartAiAlertTriageResult = z.infer<

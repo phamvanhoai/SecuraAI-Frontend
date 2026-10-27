@@ -9,3 +9,18 @@ export async function GET(
     `/ai-alerts/${encodeURIComponent(alertId)}/explanation`,
   );
 }
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ alertId: string }> },
+): Promise<Response> {
+  const { alertId } = await context.params;
+  return proxyAuthenticatedRequest(
+    `/ai-alerts/${encodeURIComponent(alertId)}/explanation/regenerate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: await request.text(),
+    },
+  );
+}

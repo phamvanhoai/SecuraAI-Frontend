@@ -49,7 +49,7 @@ const columns: readonly DataTableColumn<AiAlertFeedback>[] = [
   },
   {
     key: "modelVersion",
-    header: "Model version",
+    header: "Scoring version",
     cell: (item) => (
       <span className="block min-w-36">
         <strong className="block text-sm font-medium">
@@ -79,7 +79,7 @@ export function AlertFeedbackHistoryPanel({ alertId }: { alertId: string }) {
             "Assessment",
             "Feedback reason",
             "Analyst",
-            "Model version",
+            "Scoring version",
             "Recorded time",
           ]}
           label="Loading alert feedback"
