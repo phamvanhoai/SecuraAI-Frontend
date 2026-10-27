@@ -1,17 +1,22 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search } from "lucide-react";
+import {
+  CheckCircle2,
+  Link2,
+  Loader2,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Pagination } from "@/components/data-display/pagination";
-import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   useIncidentControlOptions,
   useLinkIncidentToControl,
@@ -60,6 +65,7 @@ export function LinkIncidentControlDialog({
     resolver: zodResolver(linkIncidentControlFormSchema),
     defaultValues: { controlId: "" },
   });
+  const selectedControlId = form.watch("controlId");
   const availableControls = availableOptions.data?.controls ?? [];
   const linkedControls = linkedOptions.data?.controls ?? [];
   const hasLinkedControls = incident
@@ -135,12 +141,19 @@ export function LinkIncidentControlDialog({
           noValidate
           onSubmit={form.handleSubmit(submit)}
         >
-          <div className="border-border bg-neutral-soft rounded-lg border p-4">
-            <p className="text-muted text-xs font-medium tracking-wide uppercase">
-              {incident.incidentCode}
-            </p>
-            <p className="mt-1 font-semibold break-words">{incident.title}</p>
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-muted font-mono font-semibold">
+                {incident.incidentCode}
+              </span>
+              <span className="text-foreground font-semibold break-words">
+                {incident.title}
+              </span>
+            </div>
           </div>
+
+          {/* Alerts */}
           {availableOptions.isError || linkedOptions.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               Unable to load security controls. Check your session and backend
@@ -161,21 +174,32 @@ export function LinkIncidentControlDialog({
                 : "Unable to unlink this control."}
             </Alert>
           ) : null}
+
+          {/* Linked controls section */}
           {hasLinkedControls ? (
             <section
               aria-labelledby="linked-controls-heading"
-              className="border-border rounded-lg border"
+              className="border-border bg-neutral-soft/30 rounded-xl border"
             >
-              <div className="border-border border-b px-4 py-3">
-                <h3
-                  id="linked-controls-heading"
-                  className="text-sm font-semibold"
-                >
-                  Already linked controls
-                </h3>
-                <p className="text-muted mt-0.5 text-xs">
-                  These controls already provide context for this incident.
-                </p>
+              <div className="border-border border-b p-4">
+                <div className="border-border flex items-center gap-2 border-b pb-2">
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="text-brand size-4"
+                  />
+                  <div>
+                    <h3
+                      id="linked-controls-heading"
+                      className="text-foreground text-sm font-semibold"
+                    >
+                      Linked controls
+                    </h3>
+                    <p className="text-muted text-xs">
+                      These controls already provide context for this incident.
+                    </p>
+                  </div>
+                </div>
+                {/* Linked search row */}
                 <div className="mt-3 flex gap-2">
                   <label className="relative min-w-0 flex-1">
                     <span className="sr-only">Search linked controls</span>
@@ -218,22 +242,25 @@ export function LinkIncidentControlDialog({
                   No linked controls match this search.
                 </p>
               ) : (
-                <ul className="divide-border divide-y">
+                <ul className="space-y-2.5 p-4">
                   {linkedControls.map((control) => (
-                    <li className="px-4 py-3 text-sm" key={control.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0">
-                          <span className="block font-medium">
-                            {control.name}
-                          </span>
-                          <span className="text-muted block text-xs">
-                            {control.controlCode} ·{" "}
-                            {title(control.implementationStatus)}
-                          </span>
-                        </span>
+                    <li
+                      key={control.id}
+                      className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium break-words">
+                          {control.name}
+                        </p>
+                        <p className="text-muted mt-0.5 text-xs">
+                          {control.controlCode} ·{" "}
+                          {title(control.implementationStatus)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
                         {unlinkTargetId !== control.id ? (
                           <button
-                            className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 shrink-0 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
+                            className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
                             disabled={unlinkMutation.isPending}
                             onClick={() => setUnlinkTargetId(control.id)}
                             type="button"
@@ -243,8 +270,8 @@ export function LinkIncidentControlDialog({
                         ) : null}
                       </div>
                       {unlinkTargetId === control.id ? (
-                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-md border p-3">
-                          <p className="text-sm font-medium">
+                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-xl border p-3">
+                          <p className="text-sm font-semibold">
                             Remove this control link?
                           </p>
                           <p className="text-muted mt-1 text-xs">
@@ -253,17 +280,19 @@ export function LinkIncidentControlDialog({
                           </p>
                           <div className="mt-3 flex justify-end gap-2">
                             <Button
-                              className="min-h-9 px-3 py-1.5 text-xs"
+                              className="min-h-9 px-3 text-xs"
                               disabled={unlinkMutation.isPending}
                               onClick={() => setUnlinkTargetId(undefined)}
+                              type="button"
                               variant="secondary"
                             >
                               Cancel
                             </Button>
                             <Button
-                              className="min-h-9 px-3 py-1.5 text-xs"
+                              className="min-h-9 px-3 text-xs"
                               disabled={unlinkMutation.isPending}
                               onClick={() => void unlink(control.id)}
+                              type="button"
                               variant="danger"
                             >
                               {unlinkMutation.isPending
@@ -289,10 +318,35 @@ export function LinkIncidentControlDialog({
               ) : null}
             </section>
           ) : null}
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="control-search">
-              Search available controls
-            </label>
+
+          {/* Available controls — radio card list */}
+          <section
+            aria-labelledby="available-controls-heading"
+            className="space-y-4"
+          >
+            <div className="border-border flex items-center gap-2 border-b pb-2">
+              <ShieldCheck
+                aria-hidden="true"
+                className="text-brand size-4"
+                strokeWidth={1.8}
+              />
+              <div>
+                <h3
+                  id="available-controls-heading"
+                  className="text-foreground text-sm font-semibold"
+                >
+                  {hasLinkedControls
+                    ? "Link another control"
+                    : "Select a control to link"}
+                </h3>
+                <p className="text-muted text-xs">
+                  Link the control involved in the incident. A control weakness
+                  is assessed separately in the next workflow step.
+                </p>
+              </div>
+            </div>
+
+            {/* Search row */}
             <div className="flex gap-2">
               <div className="relative min-w-0 flex-1">
                 <Search
@@ -324,77 +378,134 @@ export function LinkIncidentControlDialog({
                 Search
               </Button>
             </div>
-          </div>
-          <FormField
-            id="incident-control"
-            label={
-              hasLinkedControls ? "Additional control" : "Security control"
-            }
-            error={form.formState.errors.controlId?.message}
-          >
-            <Select
-              id="incident-control"
-              autoFocus
-              disabled={
-                availableOptions.isPending ||
-                availableOptions.isError ||
-                availableControls.length === 0
-              }
-              aria-invalid={Boolean(form.formState.errors.controlId)}
-              {...form.register("controlId")}
-            >
-              <option value="">
-                {availableOptions.isPending
-                  ? "Loading security controls…"
-                  : "Select a security control"}
-              </option>
-              {availableControls.map((control) => (
-                <option key={control.id} value={control.id}>
-                  {control.controlCode} — {control.name} (
-                  {title(control.implementationStatus)})
-                </option>
-              ))}
-            </Select>
-            {!availableOptions.isPending &&
-            !availableOptions.isError &&
-            availableControls.length === 0 ? (
-              <p className="text-muted text-xs">
-                {availableSearch
-                  ? "No available controls match this search."
-                  : "All available controls are already linked to this incident."}
-              </p>
+
+            {/* Radio card list */}
+            {availableOptions.isPending ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <p className="text-muted text-sm">Loading security controls…</p>
+              </div>
+            ) : availableControls.length === 0 ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <ShieldCheck
+                  aria-hidden="true"
+                  className="text-muted mx-auto size-8 stroke-1"
+                />
+                <p className="text-muted mt-2 text-sm">
+                  {availableSearch
+                    ? "No controls match this search."
+                    : "All available controls are already linked to this incident."}
+                </p>
+              </div>
             ) : (
-              <p className="text-muted text-xs">
-                Link the control involved in the incident. A control weakness is
-                assessed separately in the next workflow step.
-              </p>
+              <ul
+                className="space-y-2"
+                role="radiogroup"
+                aria-labelledby="available-controls-heading"
+              >
+                {availableControls.map((control) => {
+                  const isSelected = selectedControlId === control.id;
+                  return (
+                    <li key={control.id}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() =>
+                          form.setValue("controlId", control.id, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={cn(
+                          "border-border focus-visible:outline-brand w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+                          isSelected
+                            ? "border-brand bg-brand/5 shadow-xs"
+                            : "bg-surface hover:bg-neutral-soft/60",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium break-words">
+                              {control.name}
+                            </p>
+                            <p className="text-muted mt-0.5 text-xs">
+                              {control.controlCode} ·{" "}
+                              {title(control.implementationStatus)}
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "grid size-4 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                              isSelected
+                                ? "border-brand bg-brand"
+                                : "border-border bg-surface",
+                            )}
+                          >
+                            {isSelected ? (
+                              <span className="size-1.5 rounded-full bg-white" />
+                            ) : null}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </FormField>
-          {availableOptions.data &&
-          availableOptions.data.pagination.totalPages > 1 ? (
-            <Pagination
-              onPageChange={(page) => {
-                setAvailablePage(page);
-                form.reset({ controlId: "" });
-              }}
-              page={availableOptions.data.pagination.page}
-              pageCount={availableOptions.data.pagination.totalPages}
-            />
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || availableControls.length === 0}
-            >
-              {mutation.isPending
-                ? "Linking…"
-                : hasLinkedControls
-                  ? "Link another control"
-                  : "Link control"}
-            </Button>
+
+            {/* Validation error */}
+            {form.formState.errors.controlId ? (
+              <p className="text-danger text-sm">
+                {form.formState.errors.controlId.message}
+              </p>
+            ) : null}
+
+            {/* Pagination */}
+            {availableOptions.data &&
+            availableOptions.data.pagination.totalPages > 1 ? (
+              <Pagination
+                onPageChange={(page) => {
+                  setAvailablePage(page);
+                  form.reset({ controlId: "" });
+                }}
+                page={availableOptions.data.pagination.page}
+                pageCount={availableOptions.data.pagination.totalPages}
+              />
+            ) : null}
+          </section>
+
+          {/* Footer actions */}
+          <div className="border-border flex items-center justify-between border-t pt-4">
+            <div />
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={close} type="button">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || !selectedControlId}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                    Linking…
+                  </>
+                ) : (
+                  <>
+                    <Link2
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    {hasLinkedControls
+                      ? "Link another control"
+                      : "Link control"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}

@@ -1,16 +1,21 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search } from "lucide-react";
+import {
+  CheckCircle2,
+  Link2,
+  Loader2,
+  Search,
+  ShieldAlert,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Pagination } from "@/components/data-display/pagination";
-import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   useIncidentRiskOptions,
   useLinkIncidentToRisk,
@@ -21,8 +26,10 @@ import {
   type LinkIncidentRiskForm,
 } from "../schemas/incident-risk-schema";
 import type { Incident } from "../schemas/report-incident-schema";
+
 const title = (value: string) =>
   value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+
 export function LinkIncidentRiskDialog({
   incident,
   onClose,
@@ -57,15 +64,18 @@ export function LinkIncidentRiskDialog({
     resolver: zodResolver(linkIncidentRiskFormSchema),
     defaultValues: { riskId: "" },
   });
+  const selectedRiskId = form.watch("riskId");
   const available = options.data?.risks ?? [];
   const linked = linkedOptions.data?.risks ?? [];
   const hasLinked = incident ? incident.relatedCounts.risks > 0 : false;
+
   useEffect(() => {
     if (incident) {
       form.reset({ riskId: "" });
       ref.current?.showModal();
     } else ref.current?.close();
   }, [form, incident]);
+
   const close = () => {
     setUnlinkTargetId(undefined);
     setAvailableDraft("");
@@ -103,6 +113,7 @@ export function LinkIncidentRiskDialog({
       /* normalized error remains visible */
     }
   };
+
   return (
     <Dialog
       dialogRef={ref}
@@ -116,12 +127,19 @@ export function LinkIncidentRiskDialog({
           noValidate
           onSubmit={form.handleSubmit(submit)}
         >
-          <div className="border-border bg-neutral-soft rounded-lg border p-4">
-            <p className="text-muted text-xs font-medium tracking-wide uppercase">
-              {incident.incidentCode}
-            </p>
-            <p className="mt-1 font-semibold break-words">{incident.title}</p>
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-muted font-mono font-semibold">
+                {incident.incidentCode}
+              </span>
+              <span className="text-foreground font-semibold break-words">
+                {incident.title}
+              </span>
+            </div>
           </div>
+
+          {/* Alerts */}
           {options.isError || linkedOptions.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               Unable to load existing risks. Check your session and backend
@@ -142,24 +160,39 @@ export function LinkIncidentRiskDialog({
                 : "Unable to link this risk."}
             </Alert>
           ) : null}
+
+          {/* Linked risks section */}
           {hasLinked ? (
             <section
               aria-labelledby="linked-risks-heading"
-              className="border-border rounded-lg border"
+              className="border-border bg-neutral-soft/30 rounded-xl border"
             >
-              <div className="border-border border-b px-4 py-3">
-                <h3 id="linked-risks-heading" className="text-sm font-semibold">
-                  Already linked risks
-                </h3>
-                <p className="text-muted mt-0.5 text-xs">
-                  These risks already provide context for this incident.
-                </p>
+              <div className="border-border border-b p-4">
+                <div className="border-border flex items-center gap-2 border-b pb-2">
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="text-brand size-4"
+                  />
+                  <div>
+                    <h3
+                      id="linked-risks-heading"
+                      className="text-foreground text-sm font-semibold"
+                    >
+                      Linked risks
+                    </h3>
+                    <p className="text-muted text-xs">
+                      These risks already provide context for this incident.
+                    </p>
+                  </div>
+                </div>
+                {/* Linked search row */}
                 <div className="mt-3 flex gap-2">
                   <label className="relative min-w-0 flex-1">
                     <span className="sr-only">Search linked risks</span>
                     <Search
                       aria-hidden="true"
                       className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                      strokeWidth={1.8}
                     />
                     <Input
                       className="min-h-10 pl-9"
@@ -190,42 +223,52 @@ export function LinkIncidentRiskDialog({
                   No linked risks match this search.
                 </p>
               ) : (
-                <ul className="divide-border divide-y">
+                <ul className="space-y-2.5 p-4">
                   {linked.map((risk) => (
-                    <li className="px-4 py-3 text-sm" key={risk.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <span>
-                          <span className="block font-medium">
-                            {risk.title}
-                          </span>
-                          <span className="text-muted text-xs">
-                            {risk.riskCode} · {title(risk.status)}
-                          </span>
-                        </span>
-                        <button
-                          className="text-danger min-h-8 px-2 text-xs font-semibold"
-                          onClick={() => setUnlinkTargetId(risk.id)}
-                          type="button"
-                        >
-                          Unlink
-                        </button>
+                    <li
+                      key={risk.id}
+                      className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium break-words">{risk.title}</p>
+                        <p className="text-muted mt-0.5 text-xs">
+                          {risk.riskCode} · {title(risk.status)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {unlinkTargetId !== risk.id ? (
+                          <button
+                            className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
+                            disabled={unlinkMutation.isPending}
+                            onClick={() => setUnlinkTargetId(risk.id)}
+                            type="button"
+                          >
+                            Unlink
+                          </button>
+                        ) : null}
                       </div>
                       {unlinkTargetId === risk.id ? (
-                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-md border p-3">
-                          <p className="font-medium">Remove this risk link?</p>
+                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-xl border p-3">
+                          <p className="text-sm font-semibold">
+                            Remove this risk link?
+                          </p>
                           <p className="text-muted mt-1 text-xs">
                             The risk and incident records will not be deleted.
                           </p>
                           <div className="mt-3 flex justify-end gap-2">
                             <Button
+                              className="min-h-9 px-3 text-xs"
                               onClick={() => setUnlinkTargetId(undefined)}
+                              type="button"
                               variant="secondary"
                             >
                               Cancel
                             </Button>
                             <Button
+                              className="min-h-9 px-3 text-xs"
                               disabled={unlinkMutation.isPending}
                               onClick={() => void unlink(risk.id)}
+                              type="button"
                               variant="danger"
                             >
                               {unlinkMutation.isPending
@@ -251,20 +294,52 @@ export function LinkIncidentRiskDialog({
               ) : null}
             </section>
           ) : null}
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="risk-search">
-              Search available risks
-            </label>
+
+          {/* Available risks — radio card list */}
+          <section
+            aria-labelledby="available-risks-heading"
+            className="space-y-4"
+          >
+            <div className="border-border flex items-center gap-2 border-b pb-2">
+              <ShieldAlert
+                aria-hidden="true"
+                className="text-brand size-4"
+                strokeWidth={1.8}
+              />
+              <div>
+                <h3
+                  id="available-risks-heading"
+                  className="text-foreground text-sm font-semibold"
+                >
+                  {hasLinked ? "Link another risk" : "Select a risk to link"}
+                </h3>
+                <p className="text-muted text-xs">
+                  This records incident context only. Risk reassessment remains
+                  a separate reviewed action.
+                </p>
+              </div>
+            </div>
+
+            {/* Search row */}
             <div className="flex gap-2">
               <div className="relative min-w-0 flex-1">
                 <Search
                   aria-hidden="true"
                   className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  strokeWidth={1.8}
                 />
                 <Input
                   className="pl-9"
                   id="risk-search"
                   onChange={(event) => setAvailableDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      setAvailableSearch(availableDraft.trim());
+                      setAvailablePage(1);
+                      form.reset({ riskId: "" });
+                    }
+                  }}
                   placeholder="Search by risk code or title"
                   value={availableDraft}
                 />
@@ -282,69 +357,130 @@ export function LinkIncidentRiskDialog({
                 Search
               </Button>
             </div>
-          </div>
-          <FormField
-            id="incident-risk"
-            label={hasLinked ? "Additional risk" : "Existing risk"}
-            error={form.formState.errors.riskId?.message}
-          >
-            <Select
-              id="incident-risk"
-              autoFocus
-              disabled={
-                options.isPending || options.isError || available.length === 0
-              }
-              aria-invalid={Boolean(form.formState.errors.riskId)}
-              {...form.register("riskId")}
-            >
-              <option value="">
-                {options.isPending
-                  ? "Loading existing risks…"
-                  : "Select an existing risk"}
-              </option>
-              {available.map((risk) => (
-                <option key={risk.id} value={risk.id}>
-                  {risk.riskCode} — {risk.title} ({title(risk.status)})
-                </option>
-              ))}
-            </Select>
-            {!options.isPending &&
-            !options.isError &&
-            available.length === 0 ? (
-              <p className="text-muted text-xs">
-                All available risks are already linked to this incident.
-              </p>
+
+            {/* Radio card list */}
+            {options.isPending ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <p className="text-muted text-sm">Loading risks…</p>
+              </div>
+            ) : available.length === 0 ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <ShieldAlert
+                  aria-hidden="true"
+                  className="text-muted mx-auto size-8 stroke-1"
+                />
+                <p className="text-muted mt-2 text-sm">
+                  {availableSearch
+                    ? "No risks match this search."
+                    : "All available risks are already linked to this incident."}
+                </p>
+              </div>
             ) : (
-              <p className="text-muted text-xs">
-                This records incident context only. Risk reassessment remains a
-                separate reviewed action.
-              </p>
+              <ul
+                className="space-y-2"
+                role="radiogroup"
+                aria-labelledby="available-risks-heading"
+              >
+                {available.map((risk) => {
+                  const isSelected = selectedRiskId === risk.id;
+                  return (
+                    <li key={risk.id}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() =>
+                          form.setValue("riskId", risk.id, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={cn(
+                          "border-border focus-visible:outline-brand w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+                          isSelected
+                            ? "border-brand bg-brand/5 shadow-xs"
+                            : "bg-surface hover:bg-neutral-soft/60",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium break-words">
+                              {risk.title}
+                            </p>
+                            <p className="text-muted mt-0.5 text-xs">
+                              {risk.riskCode} · {title(risk.status)}
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "grid size-4 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                              isSelected
+                                ? "border-brand bg-brand"
+                                : "border-border bg-surface",
+                            )}
+                          >
+                            {isSelected ? (
+                              <span className="size-1.5 rounded-full bg-white" />
+                            ) : null}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </FormField>
-          {options.data && options.data.pagination.totalPages > 1 ? (
-            <Pagination
-              onPageChange={(page) => {
-                setAvailablePage(page);
-                form.reset({ riskId: "" });
-              }}
-              page={options.data.pagination.page}
-              pageCount={options.data.pagination.totalPages}
-            />
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || available.length === 0}
-            >
-              {mutation.isPending
-                ? "Linking…"
-                : hasLinked
-                  ? "Link another risk"
-                  : "Link risk"}
-            </Button>
+
+            {/* Validation error */}
+            {form.formState.errors.riskId ? (
+              <p className="text-danger text-sm">
+                {form.formState.errors.riskId.message}
+              </p>
+            ) : null}
+
+            {/* Pagination */}
+            {options.data && options.data.pagination.totalPages > 1 ? (
+              <Pagination
+                onPageChange={(page) => {
+                  setAvailablePage(page);
+                  form.reset({ riskId: "" });
+                }}
+                page={options.data.pagination.page}
+                pageCount={options.data.pagination.totalPages}
+              />
+            ) : null}
+          </section>
+
+          {/* Footer actions */}
+          <div className="border-border flex items-center justify-between border-t pt-4">
+            <div />
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={close} type="button">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || !selectedRiskId}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                    Linking…
+                  </>
+                ) : (
+                  <>
+                    <Link2
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    {hasLinked ? "Link another risk" : "Link risk"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}

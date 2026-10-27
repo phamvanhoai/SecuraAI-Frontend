@@ -4,7 +4,6 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Incident } from "../schemas/report-incident-schema";
@@ -116,14 +115,16 @@ describe("link incident asset dialog", () => {
     render(<LinkIncidentAssetDialog incident={incident} onClose={vi.fn()} />);
 
     expect(
-      screen.getByRole("heading", { name: "Link another asset" }),
+      screen.getAllByRole("heading", { name: "Link another asset" })[0],
     ).toBeVisible();
-    expect(screen.getByText("Already linked assets")).toBeVisible();
+    expect(screen.getByText("Linked assets")).toBeVisible();
     expect(screen.getByText("Production API")).toBeVisible();
 
-    const select = screen.getByLabelText("Additional asset");
-    expect(within(select).queryByText(/AST-001/)).not.toBeInTheDocument();
-    expect(within(select).getByText(/AST-002/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: /AST-001/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /AST-002/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /AST-002/ }));
     expect(
       screen.getByRole("button", { name: "Link another asset" }),
     ).toBeEnabled();
@@ -154,7 +155,7 @@ describe("link incident asset dialog", () => {
     render(<LinkIncidentAssetDialog incident={incident} onClose={vi.fn()} />);
 
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Search available assets" }),
+      screen.getByPlaceholderText("Search by asset code or name"),
       {
         target: { value: "VPN Gateway" },
       },
