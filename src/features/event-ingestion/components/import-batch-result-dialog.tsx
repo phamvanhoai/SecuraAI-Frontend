@@ -121,6 +121,18 @@ export function ImportBatchResultDialog({
       ? Math.round((batch.acceptedRecords / batch.totalRecords) * 100)
       : 0;
 
+  const availableErrorCodes = Array.from(
+    new Set([
+      "VALIDATION_FAILED",
+      "INVALID_TIMESTAMP",
+      "FUTURE_TIMESTAMP",
+      "INVALID_RECORD_FORMAT",
+      "INVALID_EVENT_FAMILY",
+      ...(errorCodeFilter ? [errorCodeFilter] : []),
+      ...(invalidEventsData?.items.map((item) => item.errorCode) ?? []),
+    ]),
+  );
+
   return (
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100%-2rem))] overflow-y-auto"
@@ -273,14 +285,14 @@ export function ImportBatchResultDialog({
                         setErrorCodeFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="text-xs h-8 w-36"
+                      className="text-xs h-8 min-w-44 max-w-56"
                     >
-                      <option value="">All Errors</option>
-                      <option value="MISSING_REQUIRED_FIELD">Missing Field</option>
-                      <option value="INVALID_FORMAT">Invalid Format</option>
-                      <option value="INVALID_EVENT_FAMILY">Invalid Family</option>
-                      <option value="SCHEMA_VALIDATION_ERROR">Schema Error</option>
-                      <option value="DATABASE_ERROR">Database Error</option>
+                      <option value="">All Error Codes</option>
+                      {availableErrorCodes.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
                     </Select>
                   </div>
                 )}
@@ -373,44 +385,68 @@ export function ImportBatchResultDialog({
                   </div>
 
                   {/* Pagination Footer */}
-                  {invalidEventsData.pagination.totalPages > 1 && (
-                    <div className="border-border flex items-center justify-between border-t px-4 py-2.5 bg-neutral-soft/20 text-xs">
+                  {invalidEventsData && invalidEventsData.pagination.total > 0 && (
+                    <div className="border-border flex flex-col sm:flex-row items-center justify-between gap-3 border-t px-4 py-2.5 bg-neutral-soft/20 text-xs">
                       <span className="text-muted">
-                        Page{" "}
+                        Showing{" "}
                         <strong className="text-foreground font-mono font-bold">
-                          {invalidEventsData.pagination.page}
+                          {(invalidEventsData.pagination.page - 1) *
+                            invalidEventsData.pagination.limit +
+                            1}
+                        </strong>
+                        –
+                        <strong className="text-foreground font-mono font-bold">
+                          {Math.min(
+                            invalidEventsData.pagination.page *
+                              invalidEventsData.pagination.limit,
+                            invalidEventsData.pagination.total,
+                          )}
                         </strong>{" "}
                         of{" "}
                         <strong className="text-foreground font-mono font-bold">
-                          {invalidEventsData.pagination.totalPages}
+                          {invalidEventsData.pagination.total}
                         </strong>{" "}
-                        ({invalidEventsData.pagination.total} total errors)
+                        rejected{" "}
+                        {invalidEventsData.pagination.total === 1 ? "event" : "events"}
                       </span>
 
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={invalidEventsData.pagination.page <= 1}
-                          onClick={() => setPage((p) => Math.max(1, p - 1))}
-                          className="h-7 px-2"
-                        >
-                          <ChevronLeft className="size-3.5" />
-                          <span className="sr-only">Previous Page</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          disabled={
-                            invalidEventsData.pagination.page >=
-                            invalidEventsData.pagination.totalPages
-                          }
-                          onClick={() => setPage((p) => p + 1)}
-                          className="h-7 px-2"
-                        >
-                          <ChevronRight className="size-3.5" />
-                          <span className="sr-only">Next Page</span>
-                        </Button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted">
+                          Page{" "}
+                          <strong className="text-foreground font-mono font-bold">
+                            {invalidEventsData.pagination.page}
+                          </strong>{" "}
+                          of{" "}
+                          <strong className="text-foreground font-mono font-bold">
+                            {Math.max(1, invalidEventsData.pagination.totalPages)}
+                          </strong>
+                        </span>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={invalidEventsData.pagination.page <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            className="h-7 px-2"
+                            aria-label="Previous Page"
+                          >
+                            <ChevronLeft className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={
+                              invalidEventsData.pagination.page >=
+                              invalidEventsData.pagination.totalPages
+                            }
+                            onClick={() => setPage((p) => p + 1)}
+                            className="h-7 px-2"
+                            aria-label="Next Page"
+                          >
+                            <ChevronRight className="size-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

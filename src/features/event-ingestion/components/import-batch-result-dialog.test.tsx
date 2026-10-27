@@ -193,15 +193,15 @@ describe("ImportBatchResultDialog", () => {
     expect(screen.getByText("Corporate Wazuh Ingestion")).toBeInTheDocument();
     expect(screen.getByText("PARTIALLY COMPLETED")).toBeInTheDocument();
     expect(screen.getByText("Total Records")).toBeInTheDocument();
-    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getAllByText("10").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("8")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1);
 
     // Invalid events table
     expect(screen.getByText("Row #4")).toBeInTheDocument();
-    expect(screen.getByText("MISSING_REQUIRED_FIELD")).toBeInTheDocument();
+    expect(screen.getAllByText("MISSING_REQUIRED_FIELD").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Row #8")).toBeInTheDocument();
-    expect(screen.getByText("INVALID_FORMAT")).toBeInTheDocument();
+    expect(screen.getAllByText("INVALID_FORMAT").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders success state with no invalid events when rejectedCount is 0", () => {
@@ -301,5 +301,56 @@ describe("ImportBatchResultDialog", () => {
     await user.click(importAnotherBtn);
 
     expect(onImportAnotherFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders matching backend error codes in filter dropdown", () => {
+    render(
+      <ImportBatchResultDialog
+        batchId="660e8400-e29b-41d4-a716-446655440002"
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const select = screen.getByRole("combobox", { name: /Filter error code/i });
+    expect(select).toBeInTheDocument();
+
+    expect(screen.getByRole("option", { name: "All Error Codes" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "VALIDATION_FAILED" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "INVALID_TIMESTAMP" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "FUTURE_TIMESTAMP" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "INVALID_RECORD_FORMAT" })).toBeInTheDocument();
+    // Dynamic error codes from mockInvalidEvents
+    expect(screen.getByRole("option", { name: "MISSING_REQUIRED_FIELD" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "INVALID_FORMAT" })).toBeInTheDocument();
+  });
+
+  it("renders pagination controls for 10-item pages when records exist", () => {
+    render(
+      <ImportBatchResultDialog
+        batchId="660e8400-e29b-41d4-a716-446655440002"
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText((_content, element) => {
+        return (
+          element?.tagName.toLowerCase() === "span" &&
+          (element.textContent?.includes("Showing 1–2 of 2 rejected events") ?? false)
+        );
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText((_content, element) => {
+        return (
+          element?.tagName.toLowerCase() === "span" &&
+          (element.textContent?.includes("Page 1 of 1") ?? false)
+        );
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Previous Page/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Next Page/i })).toBeDisabled();
   });
 });
