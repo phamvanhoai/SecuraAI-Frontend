@@ -112,52 +112,60 @@ export const incidentDetailSchema = incidentSchema.extend({
       linkedBy: incidentActorSchema.nullable(),
     }),
   ),
-  linkedControls: z.array(
-    z.object({
-      id: z.uuid(),
-      controlCode: z.string(),
-      name: z.string(),
-      linkedAt: z.string().datetime(),
-    }),
-  ),
-  linkedRisks: z.array(
-    z.object({
-      id: z.uuid(),
-      riskCode: z.string(),
-      title: z.string(),
-      status: z.string(),
-      linkedAt: z.string().datetime(),
-    }),
-  ),
-  controlWeaknesses: z.array(
-    z.object({
-      id: z.uuid(),
-      severity: z.string().nullable(),
-      description: z.string(),
-      status: z.string(),
-      identifiedAt: z.string().datetime(),
-      control: z.object({
+  linkedControls: z
+    .array(
+      z.object({
         id: z.uuid(),
-        control_code: z.string(),
+        controlCode: z.string(),
         name: z.string(),
+        linkedAt: z.string().datetime(),
       }),
-    }),
-  ),
-  riskReassessmentRequests: z.array(
-    z.object({
-      id: z.uuid(),
-      reason: z.string(),
-      status: z.string(),
-      requestedAt: z.string().datetime(),
-      reviewedAt: z.string().datetime().nullable(),
-      reviewComment: z.string().nullable(),
-      risk: z.object({
+    )
+    .default([]),
+  linkedRisks: z
+    .array(
+      z.object({
         id: z.uuid(),
-        risk_code: z.string(),
+        riskCode: z.string(),
         title: z.string(),
+        status: z.string(),
+        linkedAt: z.string().datetime(),
       }),
-    }),
-  ),
+    )
+    .default([]),
+  controlWeaknesses: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        severity: z.string().nullable(),
+        description: z.string(),
+        status: z.string(),
+        identifiedAt: z.string().datetime(),
+        control: z.object({
+          id: z.uuid(),
+          control_code: z.string(),
+          name: z.string(),
+        }),
+      }),
+    )
+    .default([]),
+  riskReassessmentRequests: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        reason: z.string(),
+        status: z.string(),
+        requestedAt: z.string().datetime(),
+        reviewedAt: z.string().datetime().nullable(),
+        reviewComment: z.string().nullable(),
+        risk: z.object({
+          id: z.uuid(),
+          risk_code: z.string(),
+          title: z.string(),
+        }),
+      }),
+    )
+    .default([]),
   responseActions: z.array(
     z.object({
       id: z.uuid(),
