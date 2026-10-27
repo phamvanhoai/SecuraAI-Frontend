@@ -28,10 +28,14 @@ import type {
   UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
-export function useEventSources(params?: Partial<EventSourceListQuery>) {
+export function useEventSources(
+  params?: Partial<EventSourceListQuery>,
+  options?: { enabled?: boolean },
+) {
   return useQuery<PaginatedEventSources, Error>({
     queryKey: ["event-sources", params],
     queryFn: () => listEventSources(params),
+    ...(options?.enabled !== undefined ? { enabled: options.enabled } : {}),
   });
 }
 

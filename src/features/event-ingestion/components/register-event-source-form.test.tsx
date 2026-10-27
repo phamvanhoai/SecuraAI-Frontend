@@ -27,6 +27,7 @@ vi.mock("@/components/feedback/toast", () => ({
 }));
 
 import { RegisterEventSourceForm } from "./register-event-source-form";
+import { ApiError } from "@/lib/api/api-error";
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -72,11 +73,36 @@ describe("RegisterEventSourceForm", () => {
     expect(screen.getByLabelText("Ingestion method *")).toBeInTheDocument();
     expect(screen.getByLabelText("Authentication method *")).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Ingestion Secret Token / API Key"),
-    ).toBeInTheDocument();
+      screen.queryByLabelText("Ingestion Secret Token / API Key"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/No secret is stored on the event source/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Register event source/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows an inline error under the name field when the name already exists (409)", async () => {
+    const user = userEvent.setup();
+    createMock.mockRejectedValue(
+      new ApiError("An event source with this name already exists", 409, "CONFLICT"),
+    );
+
+    render(<RegisterEventSourceForm />);
+
+    await user.type(screen.getByLabelText("Event source name *"), "Wazuh SIEM Production");
+    await user.type(
+      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
+      "/api/v1/integrations/wazuh/events",
+    );
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+
+    expect(
+      (await screen.findAllByText("An event source with this name already exists")).length,
+    ).toBeGreaterThan(0);
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Registration failed",
+      "An event source with this name already exists",
+    );
   });
 
   it("shows validation error when submitting with empty name", async () => {

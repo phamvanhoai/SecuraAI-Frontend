@@ -13,6 +13,7 @@ import {
   KeyRound,
   Layers,
   Loader2,
+  Plus,
   Power,
   ShieldCheck,
   SlidersHorizontal,
@@ -27,6 +28,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
+import { ApiKeyModal, OneTimeSecretDialog } from "@/features/integrations";
 import { useEventSource, useUpdateEventSource } from "../hooks/use-event-sources";
 import {
   eventFamilies,
@@ -105,6 +107,11 @@ export function EventSourceDetailDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [isCreatingKey, setIsCreatingKey] = useState(false);
+  const [generatedSecret, setGeneratedSecret] = useState<{
+    keyName: string;
+    secret: string;
+  } | null>(null);
   const [connectionHealth, setConnectionHealth] = useState<{
     connected: boolean;
     message: string;
@@ -145,6 +152,7 @@ export function EventSourceDetailDialog({
   const handleClose = () => {
     setIsEditing(false);
     setIsTogglingStatus(false);
+    setIsCreatingKey(false);
     onClose();
   };
 
@@ -367,10 +375,30 @@ export function EventSourceDetailDialog({
                 >
                   Ingestion Credentials (Masked)
                 </h4>
-                <span className="text-muted text-xs">
-                  {source.apiKeys.length} key(s) linked
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-muted text-xs">
+                    {source.apiKeys.length} key(s) linked
+                  </span>
+                  {canToggleStatus ? (
+                    <Button
+                      className="flex items-center gap-1.5"
+                      onClick={() => setIsCreatingKey(true)}
+                      type="button"
+                      variant="secondary"
+                    >
+                      <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
+                      <span>Generate API Key</span>
+                    </Button>
+                  ) : null}
+                </div>
               </div>
+              {canToggleStatus ? (
+                <p className="text-muted mb-3 text-xs">
+                  Paste the generated secret into the <code>&lt;api_key&gt;</code> setting of the{" "}
+                  <code>custom-securaai</code> integration in Wazuh Manager&apos;s{" "}
+                  <code>ossec.conf</code>. The secret is shown only once.
+                </p>
+              ) : null}
               {source.apiKeys.length === 0 ? (
                 <div className="border-border bg-neutral-soft/20 rounded-xl border p-4 text-center">
                   <KeyRound className="text-muted mx-auto size-6 stroke-1" />
@@ -536,6 +564,27 @@ export function EventSourceDetailDialog({
         onUpdated?.(updated);
       }}
       source={isTogglingStatus && source ? source : null}
+    />
+
+    {source && isCreatingKey ? (
+      <ApiKeyModal
+        integrationId={source.id}
+        key={`create-key-${source.id}`}
+        mode="create"
+        onOpenChange={setIsCreatingKey}
+        onSecretGenerated={(keyName, secret) => {
+          setGeneratedSecret({ keyName, secret });
+          void detailQuery.refetch();
+        }}
+        open={isCreatingKey}
+      />
+    ) : null}
+
+    <OneTimeSecretDialog
+      keyName={generatedSecret?.keyName ?? ""}
+      onClose={() => setGeneratedSecret(null)}
+      open={generatedSecret !== null}
+      secret={generatedSecret?.secret ?? null}
     />
   </>
   );
