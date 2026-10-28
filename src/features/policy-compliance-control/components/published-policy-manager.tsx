@@ -1,6 +1,16 @@
 "use client";
 
-import { BookOpenCheck, Eye, Files, History } from "lucide-react";
+import {
+  AlertTriangle,
+  BookOpenCheck,
+  Eye,
+  FileText,
+  Files,
+  History,
+  Info,
+  ScrollText,
+  Tag,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/data-display/data-table";
 import { ProductPageHeader, ProductPanel, StatusBadge } from "@/components/data-display/static-product";
@@ -41,6 +51,7 @@ export function PublishedPolicyManager({
     if (selected && !dialog.open) dialog.showModal();
     if (!selected && dialog.open) dialog.close();
   }, [selected]);
+
   const columns: readonly DataTableColumn<PublishedPolicyForNewVersion>[] = [
     {
       key: "policy",
@@ -59,16 +70,22 @@ export function PublishedPolicyManager({
       key: "action",
       header: "Action",
       cell: (policy) => (
-        <Button variant="secondary" onClick={() => setSelected(policy)}>
-          <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
+        <Button
+          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
+          variant="secondary"
+          onClick={() => setSelected(policy)}
+        >
+          <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
           View policy
         </Button>
       ),
     },
   ];
+
   if (session.isPending)
     return <div aria-label="Checking policy access" className="bg-neutral-soft h-56 animate-pulse rounded-xl" />;
   if (!allowed) return <Alert>Insufficient permissions</Alert>;
+
   return (
     <>
       {!hideHeader && (
@@ -123,6 +140,8 @@ export function PublishedPolicyManager({
           )}
         </div>
       </ProductPanel>
+
+      {/* ── Published policy details dialog ── */}
       <Dialog
         className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
         dialogRef={dialogRef}
@@ -131,24 +150,106 @@ export function PublishedPolicyManager({
       >
         {selected ? (
           <div className="space-y-5">
-            <div>
-              <p className="text-muted text-xs font-semibold uppercase">
-                {selected.policyCode} · v{selected.currentVersion ?? "—"}
-              </p>
-              <h3 className="mt-1 text-lg font-semibold">{selected.title}</h3>
-              {selected.description ? <p className="text-muted mt-2 text-sm">{selected.description}</p> : null}
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+                {selected.policyCode}
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-muted">
+                v{selected.currentVersion ?? "—"}
+              </span>
+              <span className="text-border">·</span>
+              <StatusBadge tone="success">Published</StatusBadge>
             </div>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              <dt className="text-muted">Published</dt>
-              <dd>{formatDate(selected.publishedAt)}</dd>
-              <dt className="text-muted">Change summary</dt>
-              <dd>{selected.changeSummary ?? "No change summary provided"}</dd>
+
+            {/* Title & description */}
+            <div className="min-w-0">
+              <h3 className="text-xl font-semibold">{selected.title}</h3>
+              {selected.description ? (
+                <p className="text-muted mt-1.5 text-sm leading-relaxed">
+                  {selected.description}
+                </p>
+              ) : null}
+            </div>
+
+            {/* Metadata fact grid */}
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Policy code
+                </dt>
+                <dd className="mt-1 text-sm font-medium break-all">
+                  {selected.policyCode}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Current version
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
+                  v{selected.currentVersion ?? "—"}
+                </dd>
+              </div>
+              <div className="min-w-0 sm:col-span-2">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Published at
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
+                  {formatDate(selected.publishedAt)}
+                </dd>
+              </div>
             </dl>
-            <section aria-label="Policy content" className="border-border bg-background max-h-96 overflow-y-auto rounded-lg border p-4 text-sm leading-6 whitespace-pre-wrap">
-              {selected.content ?? "No policy content is available."}
-            </section>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setSelected(undefined)}>Close</Button>
+
+            {/* Change summary section */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Tag
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Change summary</h3>
+              </div>
+              {selected.changeSummary ? (
+                <p className="text-sm leading-relaxed">{selected.changeSummary}</p>
+              ) : (
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <p className="text-sm text-muted">No change summary was recorded for this version.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Policy content section */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <ScrollText
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Policy content</h3>
+              </div>
+              {selected.content ? (
+                <pre className="border-border bg-background max-h-96 overflow-y-auto rounded-lg border p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
+                  {selected.content}
+                </pre>
+              ) : (
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0 text-warning"
+                    strokeWidth={1.8}
+                  />
+                  <p className="text-sm text-muted">No policy content is available for this version.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <Button variant="secondary" onClick={() => setSelected(undefined)}>
+                Close
+              </Button>
             </div>
           </div>
         ) : null}

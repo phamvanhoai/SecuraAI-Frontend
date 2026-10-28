@@ -191,7 +191,7 @@ describe("PolicyPublicationManager", () => {
       }),
     );
     await user.click(screen.getByRole("button", { name: "Review details" }));
-    expect(screen.getByText("Policy content")).toBeInTheDocument();
+    expect(screen.getByText("Policy content", { selector: "pre" })).toBeInTheDocument();
     expect(
       screen.getByText(/Confirm that you have reviewed/),
     ).toBeInTheDocument();

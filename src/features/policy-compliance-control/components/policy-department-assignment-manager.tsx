@@ -1,6 +1,13 @@
 "use client";
 
-import { Building2, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  Building2,
+  FileText,
+  Info,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -244,55 +251,78 @@ export function PolicyDepartmentAssignmentManager({
         onClose={() => setSelectedPolicy(undefined)}
       >
         <form className="space-y-5" onSubmit={save}>
+          {/* Context bar */}
+          {selectedPolicy ? (
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+                {selectedPolicy.policyCode}
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-muted">{selectedPolicy.title}</span>
+            </div>
+          ) : null}
+
+          {/* Error banner */}
           {message ? (
-            <Alert
-              className="border-danger/25 bg-danger-soft text-danger"
-              role="alert"
-            >
-              {message}
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5" role="alert">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-danger">{message}</p>
+            </div>
           ) : null}
+
+          {/* Truncation hint */}
           {query.data?.departmentsTruncated ? (
-            <Alert>Only the first 200 active departments are available.</Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <p className="text-sm text-muted">
+                Only the first 200 active departments are shown.
+              </p>
+            </div>
           ) : null}
-          <fieldset className="space-y-2">
-            <legend className="font-medium">Applicable departments</legend>
-            <p className="text-muted text-sm">
+
+          {/* Departments section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Building2 className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Applicable departments</h3>
+            </div>
+            <p className="text-muted text-xs">
               Clear every selection to make the policy organization-wide or
               unassigned.
             </p>
-            <div className="border-border max-h-80 space-y-1 overflow-y-auto rounded-lg border p-2">
-              {query.data?.departments.map((department) => {
-                const checked = departmentIds.includes(department.id);
-                return (
-                  <label
-                    className="hover:bg-neutral-soft flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 py-2"
-                    key={department.id}
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onChange={() =>
-                        setDepartmentIds((current) =>
-                          checked
-                            ? current.filter((id) => id !== department.id)
-                            : [...current, department.id],
-                        )
-                      }
-                    />
-                    <span className="min-w-0">
-                      <strong className="block text-sm">
-                        {department.name}
-                      </strong>
-                      <span className="text-muted text-xs">
-                        {department.code}
+            <div className="border-border overflow-hidden rounded-xl border">
+              <div className="divide-y divide-border max-h-80 overflow-y-auto">
+                {query.data?.departments.map((department) => {
+                  const checked = departmentIds.includes(department.id);
+                  return (
+                    <label
+                      className="flex cursor-pointer items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-neutral-soft/60"
+                      key={department.id}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onChange={() =>
+                          setDepartmentIds((current) =>
+                            checked
+                              ? current.filter((id) => id !== department.id)
+                              : [...current, department.id],
+                          )
+                        }
+                      />
+                      <span className="min-w-0">
+                        <strong className="block font-medium">{department.name}</strong>
+                        <span className="text-muted">{department.code}</span>
                       </span>
-                    </span>
-                  </label>
-                );
-              })}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
-          </fieldset>
-          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button
               type="button"
               variant="secondary"
@@ -302,7 +332,14 @@ export function PolicyDepartmentAssignmentManager({
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving assignments…" : "Save assignments"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Saving…
+                </>
+              ) : (
+                "Save assignments"
+              )}
             </Button>
           </div>
         </form>

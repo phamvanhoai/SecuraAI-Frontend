@@ -1,13 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Alert } from "@/components/ui/alert";
+import {
+  AlertTriangle,
+  BookOpen,
+  Building2,
+  FileText,
+  Info,
+  Loader2,
+  Tag,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
+import { cn } from "@/lib/utils";
 import type { OwnedPolicyDraft } from "../schemas/policy-draft-schema";
 import {
   definePolicyApplicabilitySchema,
@@ -59,6 +70,7 @@ export function PolicyApplicabilityDialog({
     if (draft && !dialog.open) dialog.showModal();
     if (!draft && dialog.open) dialog.close();
   }, [draft]);
+
   useEffect(() => {
     const value = query.data?.applicability;
     if (!query.data) return;
@@ -91,7 +103,9 @@ export function PolicyApplicabilityDialog({
     values.includes(value)
       ? values.filter((item) => item !== value)
       : [...values, value];
+
   const submit = async (): Promise<void> => {
+    setError("");
     const candidate = {
       ...form,
       userGroups: groups
@@ -103,8 +117,7 @@ export function PolicyApplicabilityDialog({
     const parsed = definePolicyApplicabilitySchema.safeParse(candidate);
     if (!parsed.success)
       return setError(
-        parsed.error.issues[0]?.message ??
-          "Review the applicability information.",
+        parsed.error.issues[0]?.message ?? "Review the applicability information.",
       );
     try {
       await mutation.mutateAsync(parsed.data);
@@ -133,16 +146,59 @@ export function PolicyApplicabilityDialog({
       }}
       onClose={onClose}
     >
+      {/* ── Loading skeleton ── */}
       {query.isPending ? (
-        <div
-          className="bg-neutral-soft h-72 animate-pulse rounded-xl motion-reduce:animate-none"
-          aria-label="Loading applicability"
-          role="status"
-        />
+        <div className="space-y-5" role="status" aria-label="Loading applicability">
+          {/* Context bar */}
+          <Skeleton className="h-11 w-full rounded-lg" />
+          {/* Info hint */}
+          <Skeleton className="h-12 w-full rounded-xl" />
+          {/* Departments */}
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-28 rounded" />
+            <Skeleton className="h-44 w-full rounded-xl" />
+          </div>
+          {/* Roles */}
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-20 rounded" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+          {/* Text fields */}
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-24 rounded" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-32 rounded" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-36 rounded" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+          {/* Footer */}
+          <div className="flex justify-end gap-2 border-t border-border pt-4">
+            <Skeleton className="h-9 w-20 rounded-lg" />
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </div>
+        </div>
       ) : null}
+
+      {/* ── Query error ── */}
       {query.isError ? (
-        <Alert>Unable to load applicability. {query.error.message}</Alert>
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-danger"
+            strokeWidth={1.8}
+          />
+          <p className="text-sm">
+            Unable to load applicability.{" "}
+            <span className="text-muted">{query.error.message}</span>
+          </p>
+        </div>
       ) : null}
+
+      {/* ── Main form ── */}
       {query.data ? (
         <form
           className="space-y-5"
@@ -151,134 +207,277 @@ export function PolicyApplicabilityDialog({
             void submit();
           }}
         >
-          <p className="text-muted text-sm leading-6">
-            Set who and which organizational areas are covered by{" "}
-            <strong className="text-foreground">{query.data.policyCode}</strong>
-            . At least one scope is required before submission.
-          </p>
-          {error ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              {error}
-            </Alert>
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <span className="flex items-center gap-1.5 font-medium">
+              <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+              {query.data.policyCode}
+            </span>
+            <span className="text-border">·</span>
+            <span className="text-muted">
+              v{draft?.version.versionNumber ?? "—"}
+            </span>
+            <span className="text-border">·</span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium",
+                query.data.editable
+                  ? "bg-success/10 text-success"
+                  : "bg-neutral-soft text-muted",
+              )}
+            >
+              {query.data.editable ? "Editable" : "Read-only"}
+            </span>
+          </div>
+
+          {/* Not-editable warning */}
+          {!query.data.editable ? (
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-warning"
+                strokeWidth={1.8}
+              />
+              <p className="text-sm">
+                This version is no longer editable. Applicability settings are
+                shown in read-only mode.
+              </p>
+            </div>
           ) : null}
-          <fieldset>
-            <legend className="text-sm font-semibold">Departments</legend>
-            <div className="border-border mt-2 grid max-h-44 gap-1 overflow-y-auto rounded-lg border p-2 sm:grid-cols-2">
-              {query.data.options.departments.map((department) => (
-                <label
-                  className="hover:bg-neutral-soft flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm"
-                  key={department.id}
-                >
-                  <Checkbox
-                    checked={form.departmentIds.includes(department.id)}
-                    onChange={() =>
-                      setForm((current) => ({
-                        ...current,
-                        departmentIds: toggle(
-                          current.departmentIds,
-                          department.id,
-                        ),
-                      }))
-                    }
-                  />
-                  <span>
-                    {department.name}{" "}
-                    <span className="text-muted">({department.code})</span>
-                  </span>
+
+          {/* Info hint */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+            <p className="text-sm text-muted leading-relaxed">
+              Set who and which organizational areas are covered by{" "}
+              <strong className="text-foreground">{query.data.policyCode}</strong>.
+              At least one scope is required before submission.
+            </p>
+          </div>
+
+          {/* Error banner */}
+          {error ? (
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-danger"
+                strokeWidth={1.8}
+              />
+              <p className="text-sm text-danger">{error}</p>
+            </div>
+          ) : null}
+
+          <fieldset disabled={mutation.isPending} className="space-y-5 border-none p-0">
+            {/* ── Departments ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Building2
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Departments</h3>
+              </div>
+              {query.data.options.departments.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Building2 className="mx-auto size-8 stroke-1 text-muted" />
+                  <p className="mt-2 text-sm text-muted">No departments available.</p>
+                </div>
+              ) : (
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="divide-y divide-border max-h-44 overflow-y-auto">
+                    {query.data.options.departments.map((department) => (
+                      <label
+                        key={department.id}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-neutral-soft/60",
+                          form.departmentIds.includes(department.id) &&
+                            "bg-brand/5",
+                        )}
+                      >
+                        <Checkbox
+                          checked={form.departmentIds.includes(department.id)}
+                          onChange={() =>
+                            setForm((current) => ({
+                              ...current,
+                              departmentIds: toggle(
+                                current.departmentIds,
+                                department.id,
+                              ),
+                            }))
+                          }
+                        />
+                        <span className="font-medium">{department.name}</span>
+                        <span className="text-muted">({department.code})</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Roles ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Users
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Roles</h3>
+              </div>
+              <div className="border-border overflow-hidden rounded-xl border">
+                <div className="divide-y divide-border">
+                  {query.data.options.roles.map((role) => (
+                    <label
+                      key={role}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-neutral-soft/60",
+                        form.roleCodes.includes(role) && "bg-brand/5",
+                      )}
+                    >
+                      <Checkbox
+                        checked={form.roleCodes.includes(role)}
+                        onChange={() =>
+                          setForm((current) => ({
+                            ...current,
+                            roleCodes: toggle(current.roleCodes, role),
+                          }))
+                        }
+                      />
+                      <span className="font-medium">{roleLabels[role]}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* ── User groups ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Tag
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">User groups</h3>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-muted uppercase tracking-wide" htmlFor="policy-app-groups">
+                  Group names
                 </label>
-              ))}
+                <Input
+                  id="policy-app-groups"
+                  value={groups}
+                  maxLength={2000}
+                  onChange={(event) => setGroups(event.target.value)}
+                  placeholder="e.g. New hires, Remote workforce"
+                />
+                <p className="text-muted text-xs">
+                  Separate group names with commas.
+                </p>
+              </div>
+            </div>
+
+            {/* ── Organizational scope ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Building2
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Organizational scope</h3>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-muted uppercase tracking-wide" htmlFor="policy-app-org-scope">
+                  Scope description
+                </label>
+                <Textarea
+                  id="policy-app-org-scope"
+                  value={form.organizationalScope ?? ""}
+                  maxLength={2000}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      organizationalScope: event.target.value,
+                    }))
+                  }
+                  placeholder="Describe locations, subsidiaries, business units, or other boundaries."
+                />
+              </div>
+            </div>
+
+            {/* ── Applicability rationale ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <FileText
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">
+                  Applicability rationale{" "}
+                  <span className="text-danger">*</span>
+                </h3>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-muted uppercase tracking-wide" htmlFor="policy-app-rationale">
+                  Rationale
+                </label>
+                <Textarea
+                  id="policy-app-rationale"
+                  required
+                  minLength={20}
+                  maxLength={2000}
+                  value={form.rationale}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      rationale: event.target.value,
+                    }))
+                  }
+                  placeholder="Explain why the selected audience and boundaries apply…"
+                />
+                <p className="text-muted text-xs">
+                  Explain why the selected audience and boundaries apply.
+                </p>
+              </div>
+            </div>
+
+            {/* ── Reference basis ── */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <BookOpen
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">
+                  Reference basis{" "}
+                  <span className="text-danger">*</span>
+                </h3>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-muted uppercase tracking-wide" htmlFor="policy-app-ref-basis">
+                  Reference
+                </label>
+                <Textarea
+                  id="policy-app-ref-basis"
+                  required
+                  minLength={5}
+                  maxLength={2000}
+                  value={form.referenceBasis}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      referenceBasis: event.target.value,
+                    }))
+                  }
+                  placeholder="Cite the standard, regulation, contract, risk, or business requirement…"
+                />
+                <p className="text-muted text-xs">
+                  Cite the standard, regulation, contract, risk, or business
+                  requirement.
+                </p>
+              </div>
             </div>
           </fieldset>
-          <fieldset>
-            <legend className="text-sm font-semibold">Roles</legend>
-            <div className="mt-2 grid gap-1 sm:grid-cols-2">
-              {query.data.options.roles.map((role) => (
-                <label
-                  className="hover:bg-neutral-soft flex min-h-10 cursor-pointer items-center gap-2 rounded-md px-2 text-sm"
-                  key={role}
-                >
-                  <Checkbox
-                    checked={form.roleCodes.includes(role)}
-                    onChange={() =>
-                      setForm((current) => ({
-                        ...current,
-                        roleCodes: toggle(current.roleCodes, role),
-                      }))
-                    }
-                  />
-                  {roleLabels[role]}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <label className="block text-sm font-medium">
-            User groups
-            <Input
-              className="mt-1"
-              value={groups}
-              maxLength={2000}
-              onChange={(event) => setGroups(event.target.value)}
-              placeholder="Example: New hires, Remote workforce"
-            />
-            <span className="text-muted mt-1 block text-xs font-normal">
-              Separate group names with commas.
-            </span>
-          </label>
-          <label className="block text-sm font-medium">
-            Organizational scope
-            <Textarea
-              className="mt-1"
-              value={form.organizationalScope ?? ""}
-              maxLength={2000}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  organizationalScope: event.target.value,
-                }))
-              }
-              placeholder="Describe locations, subsidiaries, business units, or other boundaries."
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Applicability rationale
-            <Textarea
-              className="mt-1"
-              required
-              minLength={20}
-              maxLength={2000}
-              value={form.rationale}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  rationale: event.target.value,
-                }))
-              }
-            />
-            <span className="text-muted mt-1 block text-xs font-normal">
-              Explain why the selected audience and boundaries apply.
-            </span>
-          </label>
-          <label className="block text-sm font-medium">
-            Reference basis
-            <Textarea
-              className="mt-1"
-              required
-              minLength={5}
-              maxLength={2000}
-              value={form.referenceBasis}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  referenceBasis: event.target.value,
-                }))
-              }
-            />
-            <span className="text-muted mt-1 block text-xs font-normal">
-              Cite the standard, regulation, contract, risk, or business
-              requirement.
-            </span>
-          </label>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+
+          {/* ── Footer ── */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button
               type="button"
               variant="secondary"
@@ -291,7 +490,14 @@ export function PolicyApplicabilityDialog({
               type="submit"
               disabled={mutation.isPending || !query.data.editable}
             >
-              {mutation.isPending ? "Saving…" : "Save applicability"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Saving…
+                </>
+              ) : (
+                "Save applicability"
+              )}
             </Button>
           </div>
         </form>

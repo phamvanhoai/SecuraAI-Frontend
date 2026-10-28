@@ -1,27 +1,25 @@
 "use client";
 
 import {
-  ArrowRight,
+  AlertTriangle,
   Check,
   Code2,
   Copy,
-  Eye,
   FileDiff,
   Filter,
   Layers,
   MinusCircle,
   PlusCircle,
-  RefreshCw,
   Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuditLogDiff } from "../hooks/use-audit-logs";
 import {
   computePropertyChanges,
@@ -203,53 +201,61 @@ export function AuditLogChangesDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(56rem,calc(100%-2rem))] overflow-y-auto"
     >
       {isLoading && !diff ? (
-        <div className="py-12 text-center text-muted" role="status">
-          <p className="text-sm">Comparing entity properties before and after change…</p>
+        <div className="space-y-4" role="status" aria-label="Loading diff">
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-44 rounded-lg" />
+            <Skeleton className="h-9 w-32 rounded-lg" />
+          </div>
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <div className="flex justify-end pt-4 border-t border-border">
+            <Skeleton className="h-9 w-20 rounded-lg" />
+          </div>
         </div>
       ) : isError && !diff ? (
-        <Alert className="border-danger/30 bg-danger-soft text-danger">
-          <div className="flex items-center justify-between">
-            <span>Failed to load entity changes diff: {error?.message}</span>
-            <Button type="button" variant="secondary" onClick={() => void refetch()}>
-              Retry
-            </Button>
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-danger">Failed to load entity changes diff</p>
+            {error?.message && (
+              <p className="mt-0.5 text-xs text-muted">{error.message}</p>
+            )}
           </div>
-        </Alert>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void refetch()}
+            className="min-h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+          >
+            Retry
+          </Button>
+        </div>
       ) : diff ? (
         <div className="space-y-5">
-          {/* Header Summary Card */}
-          <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <StatusBadge tone={getActionTone(diff.action)}>
-                  <span className="font-mono text-xs font-bold">{diff.action}</span>
-                </StatusBadge>
-                <span className="font-mono text-xs font-semibold text-foreground">
-                  {diff.resourceType}
-                </span>
-                {diff.resourceId && (
-                  <span className="font-mono text-[11px] text-muted truncate max-w-[140px]" title={diff.resourceId}>
-                    ({diff.resourceId})
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted">
-                Audit Record ID: <span className="font-mono text-foreground">{diff.id}</span>
-              </p>
-            </div>
-
-            {/* Change Metrics Summary Badges */}
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <span className="rounded-md border border-border bg-surface px-2 py-1 font-mono text-[11px] text-foreground">
+          {/* Context Bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <StatusBadge tone={getActionTone(diff.action)}>
+              <span className="font-mono font-bold">{diff.action}</span>
+            </StatusBadge>
+            <span className="font-mono font-semibold text-foreground">{diff.resourceType}</span>
+            {diff.resourceId && (
+              <span className="font-mono text-muted truncate max-w-[160px]" title={diff.resourceId}>
+                ({diff.resourceId})
+              </span>
+            )}
+            <span className="text-border">·</span>
+            <span className="text-muted">ID: <span className="font-mono text-foreground">{diff.id}</span></span>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <span className="rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[11px] text-foreground">
                 Total: <strong>{diff.totalProperties}</strong>
               </span>
-              <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+              <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                 Modified: {diff.totalModified}
               </span>
-              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                 Added: {diff.totalAdded}
               </span>
-              <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 font-mono text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+              <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-rose-600 dark:text-rose-400">
                 Removed: {diff.totalRemoved}
               </span>
             </div>
@@ -258,31 +264,38 @@ export function AuditLogChangesDialog({
           {/* Comparison Control Toolbar */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3">
             {/* View Mode Switcher */}
-            <div className="inline-flex rounded-lg border border-border bg-surface-subtle p-0.5 text-xs">
+            <div
+              role="tablist"
+              className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs"
+            >
               <button
+                role="tab"
                 type="button"
+                aria-selected={viewMode === "table"}
                 onClick={() => setViewMode("table")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                   viewMode === "table"
-                    ? "bg-surface text-foreground shadow-sm"
+                    ? "bg-brand text-white shadow-xs"
                     : "text-muted hover:text-foreground",
                 )}
               >
-                <SlidersHorizontal className="size-3.5" />
+                <SlidersHorizontal className="size-3.5" strokeWidth={2} />
                 <span>Property Diff Table</span>
               </button>
               <button
+                role="tab"
                 type="button"
+                aria-selected={viewMode === "json"}
                 onClick={() => setViewMode("json")}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition-colors",
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
                   viewMode === "json"
-                    ? "bg-surface text-foreground shadow-sm"
+                    ? "bg-brand text-white shadow-xs"
                     : "text-muted hover:text-foreground",
                 )}
               >
-                <Code2 className="size-3.5" />
+                <Code2 className="size-3.5" strokeWidth={2} />
                 <span>Side-by-Side JSON</span>
               </button>
             </div>
@@ -292,7 +305,7 @@ export function AuditLogChangesDialog({
               {viewMode === "table" && (
                 <>
                   <div className="relative max-w-xs">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted pointer-events-none" />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted pointer-events-none" strokeWidth={1.8} />
                     <Input
                       id={searchInputId}
                       type="text"
@@ -317,9 +330,9 @@ export function AuditLogChangesDialog({
                     type="button"
                     variant={onlyChanged ? "primary" : "secondary"}
                     onClick={() => setOnlyChanged(!onlyChanged)}
-                    className="h-8 text-xs gap-1"
+                    className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                   >
-                    <Filter className="size-3" />
+                    <Filter className="size-3" strokeWidth={1.8} />
                     <span>{onlyChanged ? "Showing Changed Only" : "Show All"}</span>
                   </Button>
                 </>
@@ -344,7 +357,7 @@ export function AuditLogChangesDialog({
                     "fullDiff",
                   )
                 }
-                className="h-8 text-xs gap-1"
+                className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                 title="Copy full property changes JSON"
               >
                 {copiedField === "fullDiff" ? (
@@ -361,16 +374,16 @@ export function AuditLogChangesDialog({
           {viewMode === "table" ? (
             <div>
               {filteredChanges.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted border rounded-xl border-dashed border-border bg-surface-subtle/40">
-                  <Layers className="size-8 text-muted/50" />
-                  <p className="mt-2 font-medium text-foreground text-sm">
+                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-xl border-dashed border-border bg-neutral-soft/20">
+                  <Layers className="size-10 stroke-1 text-muted/50" />
+                  <h4 className="mt-3 text-sm font-semibold text-foreground">
                     {onlyChanged && diff.totalUnchanged > 0
                       ? "No property modifications detected"
                       : "No matching properties found"}
-                  </p>
-                  <p className="mt-0.5 text-xs max-w-sm">
+                  </h4>
+                  <p className="mt-1 text-xs text-muted max-w-sm">
                     {onlyChanged && diff.totalUnchanged > 0
-                      ? `All ${diff.totalUnchanged} properties remained unchanged. Click 'Show All' to inspect static entity properties.`
+                      ? "All " + diff.totalUnchanged + " properties remained unchanged. Click 'Show All' to inspect static entity properties."
                       : "Try clearing your property filter query."}
                   </p>
                   {onlyChanged && diff.totalUnchanged > 0 && (
@@ -378,7 +391,7 @@ export function AuditLogChangesDialog({
                       type="button"
                       variant="secondary"
                       onClick={() => setOnlyChanged(false)}
-                      className="mt-3 text-xs"
+                      className="mt-4 min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                     >
                       Show all {diff.totalUnchanged} unchanged properties
                     </Button>
@@ -387,7 +400,7 @@ export function AuditLogChangesDialog({
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-border">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-surface-subtle border-b border-border text-muted uppercase tracking-wider font-semibold text-[11px]">
+                    <thead className="bg-neutral-soft/30 border-b border-border text-muted uppercase tracking-wider font-semibold text-[11px]">
                       <tr>
                         <th className="py-2.5 px-3">Property</th>
                         <th className="py-2.5 px-3">Change Type</th>
@@ -410,7 +423,7 @@ export function AuditLogChangesDialog({
                               isMod && "bg-amber-500/[0.04] hover:bg-amber-500/[0.08]",
                               isAdd && "bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08]",
                               isRem && "bg-rose-500/[0.04] hover:bg-rose-500/[0.08]",
-                              !isMod && !isAdd && !isRem && "hover:bg-surface-subtle",
+                              !isMod && !isAdd && !isRem && "hover:bg-neutral-soft/40",
                             )}
                           >
                             {/* Property Key */}
@@ -474,7 +487,7 @@ export function AuditLogChangesDialog({
                                   )
                                 }
                                 className="size-6 p-0 shrink-0"
-                                title={`Copy ${change.property} change`}
+                                title={"Copy " + change.property + " change"}
                               >
                                 {copiedField === change.property ? (
                                   <Check className="size-3 text-success" />
@@ -497,9 +510,9 @@ export function AuditLogChangesDialog({
               {/* State Before Box */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-muted">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <span>Recorded State Before</span>
-                    <span className="rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1 py-0.2 text-[10px]">
+                    <span className="rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-1.5 py-0.5 font-mono text-[10px]">
                       beforeData
                     </span>
                   </span>
@@ -509,7 +522,7 @@ export function AuditLogChangesDialog({
                       onClick={() =>
                         handleCopy(JSON.stringify(initialData.beforeData, null, 2), "rawBefore")
                       }
-                      className="text-muted hover:text-foreground text-[11px] flex items-center gap-1"
+                      className="text-muted hover:text-foreground flex items-center gap-1"
                     >
                       {copiedField === "rawBefore" ? (
                         <Check className="size-3 text-success" />
@@ -520,23 +533,28 @@ export function AuditLogChangesDialog({
                     </button>
                   )}
                 </div>
-                <div className="rounded-lg border border-border bg-surface-subtle p-3 font-mono text-[11px] overflow-x-auto max-h-72">
-                  {initialData?.beforeData && Object.keys(initialData.beforeData).length > 0 ? (
-                    <pre className="text-foreground whitespace-pre-wrap">
-                      {JSON.stringify(initialData.beforeData, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="text-muted italic">No initial state recorded (New Entity / Create)</span>
-                  )}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-b border-border bg-rose-500/5 px-3 py-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                    Before
+                  </div>
+                  <div className="p-3 font-mono text-[11px] overflow-x-auto max-h-72">
+                    {initialData?.beforeData && Object.keys(initialData.beforeData).length > 0 ? (
+                      <pre className="text-foreground whitespace-pre-wrap">
+                        {JSON.stringify(initialData.beforeData, null, 2)}
+                      </pre>
+                    ) : (
+                      <span className="text-muted italic">No initial state recorded (New Entity / Create)</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* State After Box */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-semibold text-muted">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <span>Recorded State After</span>
-                    <span className="rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1 py-0.2 text-[10px]">
+                    <span className="rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 font-mono text-[10px]">
                       afterData
                     </span>
                   </span>
@@ -546,7 +564,7 @@ export function AuditLogChangesDialog({
                       onClick={() =>
                         handleCopy(JSON.stringify(initialData.afterData, null, 2), "rawAfter")
                       }
-                      className="text-muted hover:text-foreground text-[11px] flex items-center gap-1"
+                      className="text-muted hover:text-foreground flex items-center gap-1"
                     >
                       {copiedField === "rawAfter" ? (
                         <Check className="size-3 text-success" />
@@ -557,21 +575,26 @@ export function AuditLogChangesDialog({
                     </button>
                   )}
                 </div>
-                <div className="rounded-lg border border-border bg-surface-subtle p-3 font-mono text-[11px] overflow-x-auto max-h-72">
-                  {initialData?.afterData && Object.keys(initialData.afterData).length > 0 ? (
-                    <pre className="text-foreground whitespace-pre-wrap">
-                      {JSON.stringify(initialData.afterData, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="text-muted italic">No final state recorded (Deleted Entity)</span>
-                  )}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-b border-border bg-emerald-500/5 px-3 py-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    After
+                  </div>
+                  <div className="p-3 font-mono text-[11px] overflow-x-auto max-h-72">
+                    {initialData?.afterData && Object.keys(initialData.afterData).length > 0 ? (
+                      <pre className="text-foreground whitespace-pre-wrap">
+                        {JSON.stringify(initialData.afterData, null, 2)}
+                      </pre>
+                    ) : (
+                      <span className="text-muted italic">No final state recorded (Deleted Entity)</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Footer Actions */}
-          <div className="flex justify-end gap-2 border-t border-border pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="secondary" onClick={onClose}>
               Close
             </Button>
