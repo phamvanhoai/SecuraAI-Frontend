@@ -84,12 +84,8 @@ describe("residual risk assessment dialog", () => {
     });
     render(<PerformResidualRiskAssessmentDialog {...props} />);
 
-    fireEvent.change(screen.getByLabelText("Residual likelihood"), {
-      target: { value: "2" },
-    });
-    fireEvent.change(screen.getByLabelText("Residual impact"), {
-      target: { value: "3" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: /^2Unlikely/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^3Moderate/ }));
     fireEvent.change(screen.getByLabelText(/Assessment note/), {
       target: { value: "Controls were verified as effective." },
     });
@@ -112,12 +108,8 @@ describe("residual risk assessment dialog", () => {
 
   it("prevents a residual score above the inherent score", () => {
     render(<PerformResidualRiskAssessmentDialog {...props} />);
-    fireEvent.change(screen.getByLabelText("Residual likelihood"), {
-      target: { value: "5" },
-    });
-    fireEvent.change(screen.getByLabelText("Residual impact"), {
-      target: { value: "5" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: /^5Almost certain/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^5Severe/ }));
     fireEvent.change(screen.getByLabelText(/Assessment note/), {
       target: { value: "Controls were verified as effective." },
     });
@@ -149,7 +141,7 @@ describe("residual risk assessment dialog", () => {
         screen.getByRole("button", { name: "Reload risk details" }),
       ).toBeVisible(),
     );
-    expect(screen.getByLabelText("Residual likelihood")).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /^1Rare/ })).toBeDisabled();
     fireEvent.click(
       screen.getByRole("button", { name: "Reload risk details" }),
     );

@@ -74,10 +74,10 @@ describe("Assess Inherent Risk history", () => {
       screen.getByText("Methodology: SECURAAI-RISK-MATRIX-v1"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "3 — Possible" }),
+      screen.getByRole("radio", { name: /^3Possible/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: "3 — Moderate" }),
+      screen.getByRole("radio", { name: /^3Moderate/ }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Score = Likelihood/)).toBeInTheDocument();
   });
@@ -110,17 +110,13 @@ describe("Assess Inherent Risk history", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Likelihood (1–5)"), {
-      target: { value: "1" },
-    });
-    fireEvent.change(screen.getByLabelText("Potential impact (1–5)"), {
-      target: { value: "2" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: /^1Rare/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^2Minor/ }));
     expect(
       screen.getByText(/rating is changing from Critical to Low/i),
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Assessment basis"), {
+    fireEvent.change(screen.getByLabelText(/Assessment basis/), {
       target: { value: "Too short" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save assessment" }));
