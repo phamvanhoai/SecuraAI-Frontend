@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertTriangle,
@@ -2740,127 +2740,210 @@ export function IncidentReportingManager() {
       <Dialog
         dialogRef={detailDialogRef}
         title="Incident details"
-        className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
+        className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
         onClose={() => setSelectedId(undefined)}
       >
         {detail.isPending ? (
-          <div
-            aria-label="Loading incident details"
-            className="bg-neutral-soft h-64 animate-pulse rounded-xl"
-          />
+          <div role="status" aria-busy="true" className="space-y-4">
+            <span className="sr-only">Loading incident details</span>
+            <div className="bg-neutral-soft/60 h-20 animate-pulse rounded-xl" />
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="bg-neutral-soft/60 h-14 animate-pulse rounded-xl" />
+              <div className="bg-neutral-soft/60 h-14 animate-pulse rounded-xl" />
+              <div className="bg-neutral-soft/60 h-14 animate-pulse rounded-xl" />
+              <div className="bg-neutral-soft/60 h-14 animate-pulse rounded-xl" />
+            </div>
+            <div className="bg-neutral-soft/60 h-32 animate-pulse rounded-xl" />
+            <div className="bg-neutral-soft/60 h-24 animate-pulse rounded-xl" />
+          </div>
         ) : detail.isError ? (
-          <div className="space-y-4">
-            <Alert>Unable to load this incident report.</Alert>
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => void detail.refetch()}>
-                Try again
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setSelectedId(undefined)}
-              >
-                Close
-              </Button>
+          <div className="space-y-5">
+            <Alert className="border-danger/25 bg-danger-soft text-danger">
+              Unable to load this incident report.
+            </Alert>
+            <div className="flex items-center justify-between border-t border-border pt-4">
+              <div />
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => void detail.refetch()}
+                  type="button"
+                >
+                  Try again
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setSelectedId(undefined)}
+                  type="button"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         ) : detail.data ? (
-          <div className="space-y-5">
-            <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b pb-4">
-              <div className="min-w-0">
-                <p className="text-muted text-xs font-medium tracking-wide uppercase">
-                  {detail.data.incidentCode}
-                </p>
-                <p className="mt-1 text-base font-semibold break-words">
-                  {detail.data.title}
-                </p>
+          <div className="space-y-6">
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="font-mono font-semibold text-muted">
+                      {detail.data.incidentCode}
+                    </span>
+                    <span className="text-foreground font-semibold break-words text-sm">
+                      {detail.data.title}
+                    </span>
+                  </div>
+                </div>
+                <StatusBadge tone={incidentStatus(detail.data.status).tone}>
+                  {incidentStatus(detail.data.status).label}
+                </StatusBadge>
               </div>
-              <StatusBadge tone={incidentStatus(detail.data.status).tone}>
-                {incidentStatus(detail.data.status).label}
-              </StatusBadge>
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+                <span className="text-muted">
+                  Handler:{" "}
+                  <span className="font-medium text-foreground">
+                    {detail.data.currentAssignment?.assignee.name ?? "Unassigned"}
+                  </span>
+                </span>
+                <span className="text-muted">
+                  Reported:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatDate(detail.data.createdAt)}
+                  </span>
+                </span>
+                {detail.data.createdBy ? (
+                  <span className="text-muted">
+                    Reported by:{" "}
+                    <span className="font-medium text-foreground">
+                      {detail.data.createdBy.name}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <dt className="text-muted text-sm">Severity</dt>
-                <dd className="mt-1 font-medium capitalize">
-                  {detail.data.severity}
+
+            {/* Key metrics strip */}
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="border-border bg-surface rounded-xl border p-3">
+                <dt className="text-muted text-xs">Severity</dt>
+                <dd className="mt-1 text-sm font-semibold capitalize">
+                  {detail.data.severity ?? "Not set"}
                 </dd>
               </div>
-              <div>
-                <dt className="text-muted text-sm">Occurred</dt>
-                <dd className="mt-1 font-medium">
+              <div className="border-border bg-surface rounded-xl border p-3">
+                <dt className="text-muted text-xs">Occurred</dt>
+                <dd className="mt-1 text-sm font-semibold">
                   {detail.data.occurredAt
                     ? formatDate(detail.data.occurredAt)
                     : "Not specified"}
                 </dd>
               </div>
-              <div>
-                <dt className="text-muted text-sm">Reported</dt>
-                <dd className="mt-1 font-medium">
-                  {formatDate(detail.data.createdAt)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted text-sm">Detected</dt>
-                <dd className="mt-1 font-medium">
+              <div className="border-border bg-surface rounded-xl border p-3">
+                <dt className="text-muted text-xs">Detected</dt>
+                <dd className="mt-1 text-sm font-semibold">
                   {detail.data.detectedAt
                     ? formatDate(detail.data.detectedAt)
                     : "Not recorded"}
                 </dd>
               </div>
-              <div>
-                <dt className="text-muted text-sm">Handler</dt>
-                <dd className="mt-1 font-medium">
-                  {detail.data.currentAssignment?.assignee.name ?? "Unassigned"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted text-sm">Created by</dt>
-                <dd className="mt-1 font-medium">
-                  {detail.data.createdBy?.name ?? "Unknown"}
+              <div className="border-border bg-surface rounded-xl border p-3">
+                <dt className="text-muted text-xs">Phase</dt>
+                <dd className="mt-1 text-sm font-semibold capitalize">
+                  {incidentStatus(detail.data.status).label}
                 </dd>
               </div>
             </dl>
-            {detail.data.source ? (
-              <div className="border-border bg-neutral-soft rounded-lg border p-4">
-                <h3 className="text-sm font-semibold">Origin traceability</h3>
-                <p className="text-muted mt-2 text-sm break-words">
-                  Finding {detail.data.source.findingId} · Alert{" "}
-                  {detail.data.source.alertId}
-                </p>
-                <p className="mt-1 text-sm font-medium">
-                  {detail.data.source.title}
-                </p>
-              </div>
-            ) : null}
-            <div>
-              <h3 className="text-sm font-semibold">Description</h3>
-              <p className="text-muted mt-2 leading-6 break-words whitespace-pre-wrap">
-                {detail.data.description ?? "No description available."}
-              </p>
-            </div>
-            <section aria-labelledby="affected-assets-heading">
-              <div className="flex items-center justify-between gap-3">
+
+            {/* Description */}
+            <section aria-labelledby="detail-description-heading" className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <FileText
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
                 <h3
-                  id="affected-assets-heading"
-                  className="text-sm font-semibold"
+                  id="detail-description-heading"
+                  className="text-sm font-semibold text-foreground"
                 >
-                  Affected assets
+                  Description
                 </h3>
-                <span className="text-muted text-xs tabular-nums">
-                  {detail.data.affectedAssets.length} linked
-                </span>
+              </div>
+              <p className="text-muted leading-6 break-words whitespace-pre-wrap text-sm">
+                {detail.data.description ?? "No description provided."}
+              </p>
+            </section>
+
+            {/* Origin traceability */}
+            {detail.data.source ? (
+              <section aria-labelledby="detail-source-heading" className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Link2
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3
+                    id="detail-source-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    Origin traceability
+                  </h3>
+                </div>
+                <div className="border-border bg-neutral-soft/30 rounded-xl border p-3.5">
+                  <p className="text-muted text-xs">
+                    Finding{" "}
+                    <span className="font-mono text-foreground">
+                      {detail.data.source.findingId}
+                    </span>{" "}
+                    Â· Alert{" "}
+                    <span className="font-mono text-foreground">
+                      {detail.data.source.alertId}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-sm font-medium break-words">
+                    {detail.data.source.title}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {/* Affected assets */}
+            <section aria-labelledby="affected-assets-heading" className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <ShieldAlert
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <h3
+                    id="affected-assets-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    Affected assets
+                  </h3>
+                  <span className="text-muted text-xs tabular-nums">
+                    {detail.data.affectedAssets.length} linked
+                  </span>
+                </div>
               </div>
               {detail.data.affectedAssets.length ? (
-                <ul className="border-border mt-3 divide-y rounded-lg border">
+                <ul className="space-y-2">
                   {detail.data.affectedAssets.map((asset) => (
                     <li
-                      className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between"
                       key={asset.id}
                     >
                       <div className="min-w-0">
-                        <p className="font-medium break-words">{asset.name}</p>
-                        <p className="text-muted mt-1 text-xs break-words">
-                          {asset.assetCode} · {asset.assetType}
+                        <p className="text-sm font-medium break-words">
+                          {asset.name}
+                        </p>
+                        <p className="text-muted mt-0.5 text-xs break-words">
+                          <span className="font-mono">{asset.assetCode}</span>{" "}
+                          Â· {asset.assetType}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -2881,37 +2964,56 @@ export function IncidentReportingManager() {
                   ))}
                 </ul>
               ) : (
-                <p className="border-border bg-neutral-soft text-muted mt-3 rounded-lg border p-4 text-sm">
-                  No affected assets have been linked to this incident.
-                </p>
+                <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                  <ShieldAlert
+                    aria-hidden="true"
+                    className="text-muted mx-auto mb-2 size-7"
+                    strokeWidth={1.5}
+                  />
+                  <p className="text-sm font-medium text-foreground">
+                    No affected assets
+                  </p>
+                  <p className="text-muted mt-0.5 text-xs">
+                    No assets have been linked to this incident.
+                  </p>
+                </div>
               )}
             </section>
+
+            {/* Investigation context */}
             <section
               aria-labelledby="linked-context-heading"
-              className="space-y-4"
+              className="space-y-3"
             >
-              <div className="flex items-center justify-between gap-3">
-                <h3
-                  id="linked-context-heading"
-                  className="text-sm font-semibold"
-                >
-                  Investigation context
-                </h3>
-                <span className="text-muted text-xs">Read-only record</span>
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Eye
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <h3
+                    id="linked-context-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    Investigation context
+                  </h3>
+                  <span className="text-muted text-xs">Read-only</span>
+                </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <ContextList
                   title="Linked controls"
                   empty="No controls linked."
                   items={detail.data.linkedControls.map(
-                    (item) => `${item.controlCode} · ${item.name}`,
+                    (item) => `${item.controlCode} Â· ${item.name}`,
                   )}
                 />
                 <ContextList
                   title="Linked risks"
                   empty="No existing risks linked."
                   items={detail.data.linkedRisks.map(
-                    (item) => `${item.riskCode} · ${item.title}`,
+                    (item) => `${item.riskCode} Â· ${item.title}`,
                   )}
                 />
                 <ContextList
@@ -2919,35 +3021,44 @@ export function IncidentReportingManager() {
                   empty="No control weaknesses recorded."
                   items={detail.data.controlWeaknesses.map(
                     (item) =>
-                      `${item.control.control_code} · ${item.description}`,
+                      `${item.control.control_code} Â· ${item.description}`,
                   )}
                 />
                 <ContextList
                   title="Risk reassessment requests"
                   empty="No reassessment requests recorded."
                   items={detail.data.riskReassessmentRequests.map(
-                    (item) => `${item.risk.risk_code} · ${item.status}`,
+                    (item) => `${item.risk.risk_code} Â· ${item.status}`,
                   )}
                 />
               </div>
             </section>
-            <section aria-labelledby="response-actions-heading">
-              <div className="flex items-center justify-between gap-3">
-                <h3
-                  id="response-actions-heading"
-                  className="text-sm font-semibold"
-                >
-                  Response actions
-                </h3>
-                <span className="text-muted text-xs tabular-nums">
-                  {detail.data.responseActions.length} recorded
-                </span>
+
+            {/* Response actions */}
+            <section aria-labelledby="response-actions-heading" className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <GitBranch
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <h3
+                    id="response-actions-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    Response actions
+                  </h3>
+                  <span className="text-muted text-xs tabular-nums">
+                    {detail.data.responseActions.length} recorded
+                  </span>
+                </div>
               </div>
               {detail.data.responseActions.length ? (
-                <ol className="mt-3 space-y-2">
+                <ol className="space-y-2">
                   {detail.data.responseActions.map((action) => (
                     <li
-                      className="border-border rounded-lg border p-3"
+                      className="border-border bg-surface rounded-xl border p-3.5"
                       key={action.id}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2961,30 +3072,51 @@ export function IncidentReportingManager() {
                           {formatDate(action.performedAt)}
                         </time>
                       </div>
-                      <p className="mt-2 text-sm leading-6 break-words whitespace-pre-wrap">
+                      <p className="mt-2.5 text-sm leading-6 break-words whitespace-pre-wrap">
                         {action.description}
                       </p>
-                      <p className="text-muted mt-1 text-xs">
+                      <p className="text-muted mt-1.5 text-xs">
                         Performed by{" "}
-                        {action.performedBy?.name ?? "Unknown user"}
+                        <span className="font-medium text-foreground">
+                          {action.performedBy?.name ?? "Unknown user"}
+                        </span>
                       </p>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="border-border bg-neutral-soft text-muted mt-3 rounded-lg border p-4 text-sm">
-                  No response actions have been recorded yet.
-                </p>
+                <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                  <GitBranch
+                    aria-hidden="true"
+                    className="text-muted mx-auto mb-2 size-7"
+                    strokeWidth={1.5}
+                  />
+                  <p className="text-sm font-medium text-foreground">
+                    No response actions yet
+                  </p>
+                  <p className="text-muted mt-0.5 text-xs">
+                    Actions recorded during handling phases will appear here.
+                  </p>
+                </div>
               )}
             </section>
-            <section aria-labelledby="handling-history-heading">
-              <h3
-                id="handling-history-heading"
-                className="text-sm font-semibold"
-              >
-                Handling history
-              </h3>
-              <ol className="border-border mt-3 space-y-0 border-l pl-4">
+
+            {/* Handling history */}
+            <section aria-labelledby="handling-history-heading" className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <History
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={2}
+                />
+                <h3
+                  id="handling-history-heading"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Handling history
+                </h3>
+              </div>
+              <ol className="border-border space-y-0 border-l pl-4">
                 {detail.data.handlingHistory.map((event) => (
                   <li className="relative pb-4 last:pb-0" key={event.id}>
                     <span
@@ -3000,7 +3132,7 @@ export function IncidentReportingManager() {
                           {event.phase
                             ? formatWorkflowLabel(event.phase)
                             : formatWorkflowLabel(event.type)}
-                          {event.actor ? ` · ${event.actor.name}` : ""}
+                          {event.actor ? ` Â· ${event.actor.name}` : ""}
                         </p>
                       </div>
                       <time
@@ -3014,12 +3146,29 @@ export function IncidentReportingManager() {
                 ))}
               </ol>
             </section>
-            <section>
-              <h3 className="text-sm font-semibold">Related records</h3>
-              <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+
+            {/* Related records */}
+            <section aria-labelledby="related-records-heading" className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Paperclip
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3
+                  id="related-records-heading"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Related records
+                </h3>
+              </div>
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 {Object.entries(detail.data.relatedCounts).map(
                   ([label, count]) => (
-                    <div className="bg-neutral-soft rounded-lg p-3" key={label}>
+                    <div
+                      className="border-border bg-surface rounded-xl border p-3"
+                      key={label}
+                    >
                       <dt className="text-muted text-xs capitalize">{label}</dt>
                       <dd className="mt-1 text-lg font-semibold tabular-nums">
                         {count}
@@ -3029,10 +3178,13 @@ export function IncidentReportingManager() {
                 )}
               </dl>
             </section>
-            <div className="border-border flex justify-end border-t pt-4">
+
+            {/* Footer */}
+            <div className="flex justify-end border-t border-border pt-4">
               <Button
                 variant="secondary"
                 onClick={() => setSelectedId(undefined)}
+                type="button"
               >
                 Close
               </Button>
