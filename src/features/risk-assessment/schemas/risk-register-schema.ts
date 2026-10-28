@@ -64,6 +64,7 @@ const assessment = z.object({
   methodologyVersion: z.string(),
 });
 export const riskRegisterItemSchema = z.object({
+  reviewInProgress: z.boolean().optional(),
   scope: z
     .discriminatedUnion("type", [
       z.object({ type: z.literal("asset") }),
@@ -112,6 +113,20 @@ export const riskRegisterResponseSchema = z.object({
   }),
 });
 export const riskRegisterDetailSchema = riskRegisterItemSchema.extend({
+  canCompleteReview: z.boolean().optional(),
+  reviewHistory: z.array(z.object({
+    completedAt: z.iso.datetime({ offset: true }), completedByName: z.string().nullable(),
+    conclusion: z.string(), nextReviewDate: z.iso.date(), residualRating: z.string(),
+    openedAt: z.string().nullable(), openedByName: z.string().nullable(),
+    previousReviewDate: z.string().nullable(), openingReason: z.string().nullable(),
+  })).optional(),
+  currentReview: z.object({
+    openedAt: z.iso.datetime({ offset: true }), openedBy: z.string().nullable(),
+    openedByName: z.string().nullable(), previousReviewDate: z.iso.datetime({ offset: true }).nullable(),
+    reason: z.string().nullable(),
+  }).nullable().optional(),
+  assetClassificationReviewRequired: z.boolean().optional(),
+  assetContextReviewRequired: z.boolean().optional(),
   acceptanceWorkflow: z
     .object({
       canSubmit: z.boolean(),

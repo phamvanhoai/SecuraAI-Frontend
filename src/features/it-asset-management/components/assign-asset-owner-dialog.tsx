@@ -2,16 +2,15 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { AssetOwnerPicker } from "./asset-owner-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/api-error";
-import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
 import { useAssignAssetOwner } from "../hooks/use-assign-asset-owner";
 import {
   assignAssetOwnerSchema,
@@ -33,7 +32,6 @@ export function AssignAssetOwnerDialog({
   const [message, setMessage] = useState<string>();
   const [removalConfirmed, setRemovalConfirmed] = useState(false);
   const [stale, setStale] = useState(false);
-  const options = useAssetCreateOptions(asset !== null);
   const mutation = useAssignAssetOwner(asset?.id ?? null);
   const toast = useToast();
   const {
@@ -120,30 +118,13 @@ export function AssignAssetOwnerDialog({
             <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
           ) : null}
           <FormField id="asset-owner" label="New owner" error={errors.ownerUserId?.message}>
-            <Select
-              id="asset-owner"
-              disabled={locked || options.isPending || options.isError}
-              {...register("ownerUserId")}
-              onChange={(event) => {
-                setRemovalConfirmed(false);
-                void register("ownerUserId").onChange(event);
-              }}
-            >
-              <option value="">
-                {options.isPending ? "Loading users…" : "Remove owner"}
-              </option>
-              {(options.data?.owners ?? []).map((owner) => (
-                <option key={owner.id} value={owner.id}>
-                  {owner.fullName}{owner.employeeCode ? ` – ${owner.employeeCode}` : ""}
-                </option>
-              ))}
-            </Select>
+            <Controller name="ownerUserId" control={control} render={({ field }) => (
+              <AssetOwnerPicker key={asset.id} id="asset-owner" value={field.value ?? ""}
+                initialLabel={asset.owner?.fullName ?? ""} enabled={!locked}
+                invalid={Boolean(errors.ownerUserId)} inputRef={field.ref} onBlur={field.onBlur}
+                onChange={(value) => { setRemovalConfirmed(false); field.onChange(value); }} />
+            )} />
           </FormField>
-          {options.isError ? (
-            <Alert className="border-warning/25 bg-warning/10">
-              Unable to load users. Please try again later.
-            </Alert>
-          ) : null}
           <FormField id="owner-assignment-reason" label="Reason for change" error={errors.reason?.message}>
             <Textarea
               id="owner-assignment-reason"
@@ -175,7 +156,7 @@ export function AssignAssetOwnerDialog({
             </Button>
             <Button
               type="submit"
-              disabled={locked || options.isPending || options.isError || (removingOwner && !removalConfirmed)}
+              disabled={locked || (removingOwner && !removalConfirmed)}
             >
               {mutation.isPending ? "Saving…" : "Save owner"}
             </Button>

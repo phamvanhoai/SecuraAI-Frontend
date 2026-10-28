@@ -4,7 +4,6 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Incident } from "../schemas/report-incident-schema";
@@ -113,12 +112,13 @@ describe("link incident control dialog", () => {
   it("shows existing links and only offers controls that are not linked", () => {
     render(<LinkIncidentControlDialog incident={incident} onClose={vi.fn()} />);
     expect(
-      screen.getByRole("heading", { name: "Link another control" }),
+      screen.getAllByRole("heading", { name: "Link another control" })[0],
     ).toBeVisible();
     expect(screen.getByText("Multi-factor authentication")).toBeVisible();
-    const select = screen.getByLabelText("Additional control");
-    expect(within(select).queryByText(/CTRL-001/)).not.toBeInTheDocument();
-    expect(within(select).getByText(/CTRL-002/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: /CTRL-001/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /CTRL-002/ })).toBeInTheDocument();
   });
   it("requires confirmation before unlinking a control", async () => {
     mocks.unlinkAsync.mockResolvedValue(undefined);
@@ -136,7 +136,7 @@ describe("link incident control dialog", () => {
   it("sends code or name search to the paginated query", () => {
     render(<LinkIncidentControlDialog incident={incident} onClose={vi.fn()} />);
     fireEvent.change(
-      screen.getByRole("textbox", { name: "Search available controls" }),
+      screen.getByPlaceholderText("Search by control code or name"),
       { target: { value: "MFA" } },
     );
     fireEvent.click(

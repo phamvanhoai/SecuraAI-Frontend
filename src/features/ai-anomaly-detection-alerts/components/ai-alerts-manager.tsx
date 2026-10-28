@@ -15,7 +15,7 @@ import {
   ShieldX,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -29,6 +29,7 @@ import {
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/feedback/toast";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ export function AiAlertsManager() {
   const [markingFurtherInvestigation, setMarkingFurtherInvestigation] =
     useState<AiAlert | null>(null);
   const [view, setView] = useState<"alerts" | "thresholds">("alerts");
+  const manualDetectionDialogRef = useRef<HTMLDialogElement>(null);
   const session = useSessionUser();
   const toast = useToast();
   const runDetection = useRunAnomalyDetection();
@@ -123,6 +125,31 @@ export function AiAlertsManager() {
     setPage(1);
   }
 
+  function runManualDetectionBatch() {
+    manualDetectionDialogRef.current?.close();
+    void runDetection
+      .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
+      .then((result) => {
+        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created.`;
+        if (result.hasMore) {
+          toast.warning(
+            "Manual detection batch completed",
+            `${summary} Pending events remain; run another batch when you are ready.`,
+          );
+        } else {
+          toast.success("Manual detection completed", summary);
+        }
+      })
+      .catch((error: unknown) => {
+        toast.error(
+          "Detection run failed",
+          error instanceof Error
+            ? error.message
+            : "Try again after checking the deployed model and backend connection.",
+        );
+      });
+  }
+
   const columns: readonly DataTableColumn<AiAlert>[] = [
     {
       key: "alert",
@@ -155,7 +182,7 @@ export function AiAlertsManager() {
     },
     {
       key: "riskLevel",
-      header: "AI risk level",
+      header: "Detection risk level",
       cell: (item) =>
         item.riskLevel ? (
           <StatusBadge tone={riskLevelTone(item.riskLevel)}>
@@ -347,29 +374,12 @@ export function AiAlertsManager() {
   return (
     <>
       <ProductPageHeader
-        description="Monitor alerts detected automatically from connected security log sources. Use manual detection to retry pending events when needed."
+        description="Monitor alerts created by the deployed anomaly-scoring configuration. Ollama explains stored results but does not calculate scores or decide whether alerts are created."
         additionalActions={
           canRunDetection ? (
             <Button
               disabled={runDetection.isPending}
-              onClick={() => {
-                void runDetection
-                  .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
-                  .then((result) => {
-                    toast.success(
-                      "Manual detection completed",
-                      `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created.`,
-                    );
-                  })
-                  .catch((error: unknown) => {
-                    toast.error(
-                      "Detection run failed",
-                      error instanceof Error
-                        ? error.message
-                        : "Try again after checking the deployed model and backend connection.",
-                    );
-                  });
-              }}
+              onClick={() => manualDetectionDialogRef.current?.showModal()}
             >
               <Radar
                 aria-hidden="true"
@@ -654,7 +664,7 @@ export function AiAlertsManager() {
                     "Log source",
                     "Asset",
                     "Anomaly score",
-                    "AI risk level",
+                    "Detection risk level",
                     "Status",
                     "Detected",
                     "Actions",
@@ -732,6 +742,36 @@ export function AiAlertsManager() {
         alert={markingFurtherInvestigation}
         onClose={() => setMarkingFurtherInvestigation(null)}
       />
+      <Dialog dialogRef={manualDetectionDialogRef} title="Run manual detection">
+        <div className="space-y-4">
+          <Alert className="border-info/25 bg-info-soft text-foreground">
+            This run processes up to 100 of the oldest pending security events.
+          </Alert>
+          <div className="text-muted space-y-2 text-sm leading-6">
+            <p>
+              Events already evaluated by the deployed scoring configuration are
+              skipped. Pending events are eligible regardless of age. Ollama is
+              not used to calculate the anomaly score.
+            </p>
+            <p>
+              If more events remain, you can start another batch when you are
+              ready.
+            </p>
+          </div>
+          <div className="border-border flex justify-end gap-2 border-t pt-4">
+            <Button
+              onClick={() => manualDetectionDialogRef.current?.close()}
+              type="button"
+              variant="secondary"
+            >
+              Cancel
+            </Button>
+            <Button onClick={runManualDetectionBatch} type="button">
+              Run up to 100 events
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 }

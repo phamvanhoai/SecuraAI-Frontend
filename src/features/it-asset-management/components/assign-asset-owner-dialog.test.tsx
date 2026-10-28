@@ -10,8 +10,8 @@ const { mutateAsyncMock, successMock, optionsMock } = vi.hoisted(() => ({
 vi.mock("../hooks/use-assign-asset-owner", () => ({
   useAssignAssetOwner: () => ({ mutateAsync: mutateAsyncMock, isPending: false }),
 }));
-vi.mock("../hooks/use-asset-create-options", () => ({
-  useAssetCreateOptions: optionsMock,
+vi.mock("../hooks/use-asset-owner-options", () => ({
+  useAssetOwnerOptions: optionsMock,
 }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: successMock, info: vi.fn() }),
@@ -60,7 +60,7 @@ describe("AssignAssetOwnerDialog", () => {
       isError: false,
       data: {
         departments: [],
-        owners: [{ id: ownerUserId, fullName: "Nguyễn Văn A", employeeCode: "EMP-001" }],
+        items: [{ email: "owner@example.test", id: ownerUserId, fullName: "Nguyễn Văn A", employeeCode: "EMP-001" }],
         truncated: { departments: false, owners: false },
       },
     });
@@ -76,7 +76,8 @@ describe("AssignAssetOwnerDialog", () => {
   it("submits an owner and mandatory reason", async () => {
     const user = userEvent.setup();
     render(<AssignAssetOwnerDialog asset={asset} onClose={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText("New owner"), ownerUserId);
+    await user.click(screen.getByLabelText("New owner"));
+    await user.click(await screen.findByRole("option", { name: /owner@example.test/ }));
     await user.type(screen.getByLabelText("Reason for change"), "Bàn giao vận hành máy chủ");
     await user.click(screen.getByRole("button", { name: "Save owner" }));
 
@@ -107,7 +108,8 @@ describe("AssignAssetOwnerDialog", () => {
   it("requires explicit confirmation before removing an owner", async () => {
     const user = userEvent.setup();
     render(<AssignAssetOwnerDialog asset={{ ...asset, owner: { id: ownerUserId, fullName: "Nguyễn Văn A" } }} onClose={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText("New owner"), "");
+    await user.click(screen.getByLabelText("New owner"));
+    await user.click(screen.getByRole("button", { name: "Remove owner" }));
     await user.type(screen.getByLabelText("Reason for change"), "Awaiting a replacement owner");
     expect(screen.getByRole("button", { name: "Save owner" })).toBeDisabled();
     expect(mutateAsyncMock).not.toHaveBeenCalled();

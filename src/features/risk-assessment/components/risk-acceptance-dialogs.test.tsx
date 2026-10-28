@@ -135,6 +135,14 @@ it("uses the actual residual and warns on proposed threshold exceedance without 
     screen.getByRole("button", { name: "Submit for approval" }),
   ).toBeEnabled();
 });
+it("blocks acceptance while review remains open even with stale eligibility", () => {
+  render(<SubmitRiskAcceptanceDialog risk={{ ...risk, currentReview: {
+    openedAt: date, openedBy: id, openedByName: "Owner", previousReviewDate: null, reason: "Periodic review",
+  } }} onClose={vi.fn()} />);
+  expect(screen.getByText("Complete Risk Review before submitting a new acceptance request.")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Submit for approval" })).toBeDisabled();
+  expect(mutations.submit).not.toHaveBeenCalled();
+});
 it("shows server eligibility and disables unavailable acceptance", () => {
   render(
     <SubmitRiskAcceptanceDialog

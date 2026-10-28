@@ -184,9 +184,9 @@ describe("EventSourcesList", () => {
 
   it("does not render Pause/Resume button when user is SECURITY_OFFICER", () => {
     mockSessionUser.mockReturnValue({
-      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] } as any,
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
       isPending: false,
-    } as any);
+    });
 
     mockUseEventSources.mockReturnValue({
       isPending: false,

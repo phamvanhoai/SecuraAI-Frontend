@@ -2,10 +2,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createMock, toastSuccessMock, toastErrorMock } = vi.hoisted(() => ({
+const { createMock, toastSuccessMock, toastErrorMock, listSourcesMock } = vi.hoisted(() => ({
   createMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  listSourcesMock: vi.fn().mockReturnValue({ items: [] }),
 }));
 
 vi.mock("../hooks/use-event-sources", () => ({
@@ -17,6 +18,10 @@ vi.mock("../hooks/use-event-sources", () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useEventSources: () => ({
+    data: listSourcesMock(),
+    isLoading: false,
+  }),
 }));
 
 vi.mock("@/components/feedback/toast", () => ({
@@ -27,6 +32,7 @@ vi.mock("@/components/feedback/toast", () => ({
 }));
 
 import { RegisterEventSourceForm } from "./register-event-source-form";
+import { ApiError } from "@/lib/api/api-error";
 
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -72,11 +78,36 @@ describe("RegisterEventSourceForm", () => {
     expect(screen.getByLabelText("Ingestion method *")).toBeInTheDocument();
     expect(screen.getByLabelText("Authentication method *")).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Ingestion Secret Token / API Key"),
-    ).toBeInTheDocument();
+      screen.queryByLabelText("Ingestion Secret Token / API Key"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/No secret is stored on the event source/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Register event source/i }),
     ).toBeInTheDocument();
+  });
+
+  it("shows an inline error under the name field when the name already exists (409)", async () => {
+    const user = userEvent.setup();
+    createMock.mockRejectedValue(
+      new ApiError("An event source with this name already exists", 409, "CONFLICT"),
+    );
+
+    render(<RegisterEventSourceForm />);
+
+    await user.type(screen.getByLabelText("Event source name *"), "Wazuh SIEM Production");
+    await user.type(
+      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
+      "/api/v1/integrations/wazuh/events",
+    );
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+
+    expect(
+      (await screen.findAllByText("An event source with this name already exists")).length,
+    ).toBeGreaterThan(0);
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "Registration failed",
+      "An event source with this name already exists",
+    );
   });
 
   it("shows validation error when submitting with empty name", async () => {
@@ -136,17 +167,61 @@ describe("RegisterEventSourceForm", () => {
     expect(onSuccessMock).toHaveBeenCalledWith(createdRecord);
   });
 
-  it("renders the Test connection button and opens the test modal when clicked", async () => {
+  it("does not render the Test connection button", () => {
+    render(<RegisterEventSourceForm />);
+    expect(screen.queryByRole("button", { name: /Test connection/i })).not.toBeInTheDocument();
+  });
+
+  it("warns about duplicate endpoint and blocks submission until confirmed", async () => {
     const user = userEvent.setup();
+    listSourcesMock.mockReturnValue({
+      items: [
+        {
+          id: "source-existing",
+          name: "Wazuh SIEM - Master",
+          endpoint: "http://localhost:5555",
+        },
+      ],
+    });
+
+    createMock.mockResolvedValue({
+      id: "source-new",
+      name: "Wazuh Production SIEM",
+      sourceType: "WAZUH",
+      endpoint: "http://localhost:5555",
+      ingestionMethod: "API",
+      status: "ACTIVE",
+      eventFamilies: ["AUTHENTICATION"],
+    });
+
     render(<RegisterEventSourceForm />);
 
-    const testBtn = screen.getByRole("button", { name: /Test connection/i });
-    expect(testBtn).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Event source name *"), "Wazuh Production SIEM");
+    await user.type(
+      screen.getByLabelText("SecuraAI Ingestion Webhook Endpoint *"),
+      "http://localhost:5555",
+    );
 
-    await user.click(testBtn);
-
+    // Warning alert should appear
     expect(
-      screen.getByText("Verify connection and authentication diagnostics against a Wazuh Manager before applying changes."),
+      screen.getByText(/Warning: Duplicate endpoint detected for "Wazuh SIEM - Master"/i),
     ).toBeInTheDocument();
+
+    // Try submit without confirmation
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+    expect(createMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/This endpoint is already configured for another event source/i),
+    ).toBeInTheDocument();
+
+    // Check confirmation checkbox
+    const confirmCheckbox = screen.getByLabelText(
+      /I understand and confirm that I want to proceed with this endpoint/i,
+    );
+    await user.click(confirmCheckbox);
+
+    // Now submit should proceed
+    await user.click(screen.getByRole("button", { name: /Register event source/i }));
+    expect(createMock).toHaveBeenCalled();
   });
 });

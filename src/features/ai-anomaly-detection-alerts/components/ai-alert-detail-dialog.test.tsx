@@ -18,8 +18,16 @@ const explanationState = vi.hoisted(() => ({
     refetch: vi.fn(),
   },
 }));
+const regenerateState = vi.hoisted(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+}));
+vi.mock("@/components/feedback/toast", () => ({
+  useToast: () => ({ success: vi.fn() }),
+}));
 vi.mock("../hooks/use-ai-alerts", () => ({
   useAiAlertExplanation: () => explanationState.current,
+  useRegenerateAiAlertExplanation: () => regenerateState,
 }));
 import { AiAlertDetailDialog, statusTone } from "./ai-alert-detail-dialog";
 
@@ -85,6 +93,8 @@ beforeEach(() => {
   explanationState.current.isPending = false;
   explanationState.current.isError = false;
   explanationState.current.data = null;
+  regenerateState.isPending = false;
+  regenerateState.mutateAsync.mockReset();
 });
 
 describe("AiAlertDetailDialog", () => {
@@ -100,9 +110,13 @@ describe("AiAlertDetailDialog", () => {
         },
       ],
       baselineData: { normalFailedSignIns: 1 },
+      createdAt: "2026-09-11T03:00:01.000Z",
     };
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
-    expect(screen.getByText("AI decision explanation")).toBeInTheDocument();
+    expect(screen.getByText("Decision explanation")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ollama only turns the stored evidence/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Five failed sign-ins exceeded the baseline."),
     ).toBeInTheDocument();
@@ -111,6 +125,31 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.getByText("+0.4")).toBeInTheDocument();
     expect(screen.getByText("Raises score")).toBeInTheDocument();
     expect(screen.getByText("Normal Failed Sign Ins")).toBeInTheDocument();
+  });
+
+  it("requires a reason before regenerating the explanation", async () => {
+    explanationState.current.data = {
+      explanationText: "Stored explanation.",
+      featureContributions: [],
+      baselineData: null,
+      createdAt: "2026-09-11T03:00:01.000Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: "Regenerate explanation" }),
+    );
+    const submit = screen.getByRole("button", { name: "Regenerate" });
+    expect(submit).toBeDisabled();
+    await user.type(
+      screen.getByLabelText("Reason for regeneration"),
+      "Review explanation accuracy",
+    );
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    expect(regenerateState.mutateAsync).toHaveBeenCalledWith({
+      reason: "Review explanation accuracy",
+    });
   });
 
   it("explains when no stored explanation exists", () => {
@@ -145,7 +184,7 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
     expect(screen.getByText(alert.title)).toBeInTheDocument();
     expect(screen.getByText("92%")).toBeInTheDocument();
-    expect(screen.getByText("AI-suggested risk level")).toBeInTheDocument();
+    expect(screen.getByText("Detection risk level")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByText("8.5")).toBeInTheDocument();
     expect(screen.getByText("authentication.failed")).toBeInTheDocument();
@@ -161,11 +200,11 @@ describe("AiAlertDetailDialog", () => {
       />,
     );
     expect(
-      screen.getByText("AI-suggested risk level").parentElement,
+      screen.getByText("Detection risk level").parentElement,
     ).toHaveTextContent("Not available");
-    expect(screen.getByText("AI risk score").parentElement).toHaveTextContent(
-      "Not available",
-    );
+    expect(
+      screen.getByText("Detection risk score").parentElement,
+    ).toHaveTextContent("Not available");
   });
 
   it("closes through the secondary action", async () => {

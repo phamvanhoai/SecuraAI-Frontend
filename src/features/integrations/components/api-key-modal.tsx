@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/api-error";
+import { useEventSources } from "@/features/event-ingestion/hooks/use-event-sources";
 import {
   useCreateApiKey,
   useRotateApiKey,
@@ -52,6 +53,20 @@ export function ApiKeyModal({
   const updateMutation = useUpdateApiKey();
   const rotateMutation = useRotateApiKey();
 
+  const hasFixedSource = Boolean(integrationId && integrationId !== "all");
+  const [selectedSourceId, setSelectedSourceId] = useState<string>("");
+  const effectiveSourceId = hasFixedSource
+    ? integrationId
+    : selectedSourceId || (apiKey?.eventSourceId || apiKey?.integrationId || undefined);
+
+  const hasSource = Boolean(effectiveSourceId);
+
+  const eventSourcesQuery = useEventSources(
+    { limit: 100 },
+    { enabled: open && !hasFixedSource && mode === "create" },
+  );
+  const eventSources = eventSourcesQuery.data?.items ?? [];
+
   const [keyName, setKeyName] = useState(
     mode === "edit" && apiKey
       ? apiKey.keyName
@@ -62,7 +77,9 @@ export function ApiKeyModal({
   const [scopes, setScopes] = useState<string[]>(
     mode === "edit" && apiKey?.scopes && apiKey.scopes.length > 0
       ? apiKey.scopes
-      : ["events:ingest"],
+      : hasFixedSource
+        ? ["events:ingest"]
+        : ["events:read"],
   );
   const [expiresAt, setExpiresAt] = useState(
     mode === "edit" && apiKey?.expiresAt
@@ -87,26 +104,32 @@ export function ApiKeyModal({
 
   useEffect(() => {
     if (open) {
+      const fixedSource = Boolean(integrationId && integrationId !== "all");
       if (mode === "edit" && apiKey) {
         setKeyName(apiKey.keyName || apiKey.name || "");
         setScopes(
           apiKey.scopes && apiKey.scopes.length > 0
             ? apiKey.scopes
-            : ["events:ingest"],
+            : ["events:read"],
         );
         setExpiresAt(apiKey.expiresAt ? apiKey.expiresAt.slice(0, 16) : "");
+        setSelectedSourceId(apiKey.eventSourceId || apiKey.integrationId || "");
       } else if (mode === "rotate" && apiKey) {
         setKeyName(apiKey.keyName || apiKey.name || "");
       } else if (mode === "create") {
         setKeyName("");
-        setScopes(["events:ingest"]);
+        setSelectedSourceId("");
+        setScopes(fixedSource ? ["events:ingest"] : ["events:read"]);
         setExpiresAt("");
       }
       setFormError(null);
     }
-  }, [open, apiKey, mode]);
+  }, [open, apiKey, mode, integrationId]);
 
   function handleToggleScope(scopeCode: string) {
+    if (scopeCode === "events:ingest" && !hasSource) {
+      return;
+    }
     setScopes((prev) => {
       if (prev.includes(scopeCode)) {
         if (prev.length === 1) {
@@ -150,16 +173,21 @@ export function ApiKeyModal({
           return;
         }
 
+        if (scopes.includes("events:ingest") && !effectiveSourceId) {
+          setFormError("The scope 'events:ingest' requires an associated event source.");
+          return;
+        }
+
         const result = await createMutation.mutateAsync({
-          integrationId,
+          integrationId: effectiveSourceId ?? integrationId,
           input: {
             keyName: keyName.trim(),
             name: keyName.trim(),
             scopes,
             expiresAt: formattedExpiresAt,
             isActive: true,
-            eventSourceId:
-              integrationId && integrationId !== "all" ? integrationId : undefined,
+            eventSourceId: effectiveSourceId,
+            integrationId: effectiveSourceId,
           },
         });
 
@@ -177,6 +205,11 @@ export function ApiKeyModal({
 
         if (scopes.length === 0) {
           setFormError("At least one authorized scope must be selected.");
+          return;
+        }
+
+        if (scopes.includes("events:ingest") && !hasSource) {
+          setFormError("The scope 'events:ingest' requires an associated event source.");
           return;
         }
 
@@ -310,6 +343,43 @@ export function ApiKeyModal({
           </div>
         ) : null}
 
+        {mode === "create" && !hasFixedSource ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium" htmlFor="event-source-select">
+              Associated Event Source{" "}
+              <span className="text-muted font-normal">(Required for Log Ingestion scope)</span>
+            </Label>
+            <select
+              id="event-source-select"
+              aria-label="Associated Event Source"
+              className="border-border bg-surface text-foreground h-9 w-full rounded-md border px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-brand"
+              value={selectedSourceId}
+              onChange={(e) => {
+                const newSource = e.target.value;
+                setSelectedSourceId(newSource);
+                if (!newSource) {
+                  setScopes((prev) => {
+                    const filtered = prev.filter((s) => s !== "events:ingest");
+                    return filtered.length > 0 ? filtered : ["events:read"];
+                  });
+                } else {
+                  setScopes((prev) => Array.from(new Set([...prev, "events:ingest"])));
+                }
+              }}
+            >
+              <option value="">-- None (General Read-Only Key) --</option>
+              {eventSources.map((source: { id: string; name: string; status: string }) => (
+                <option key={source.id} value={source.id}>
+                  {source.name} ({source.status})
+                </option>
+              ))}
+            </select>
+            <p className="text-muted text-[11px]">
+              An event source must be bound to this key if you wish to assign the <code>events:ingest</code> scope.
+            </p>
+          </div>
+        ) : null}
+
         {/* Authorized Scopes selector in Create and Edit modes */}
         {mode !== "rotate" ? (
           <div className="space-y-2 pt-1">
@@ -326,29 +396,40 @@ export function ApiKeyModal({
               {standardApiKeyScopes.map((scopeCode: StandardApiKeyScope) => {
                 const info = apiKeyScopeDetails[scopeCode];
                 const isChecked = scopes.includes(scopeCode);
+                const isIngestScope = scopeCode === "events:ingest";
+                const isScopeDisabled = isIngestScope && !hasSource;
+
                 return (
                   <label
                     key={scopeCode}
-                    className={`flex items-start gap-3 p-3 transition-colors cursor-pointer select-none ${
-                      isChecked
-                        ? "bg-brand/5 hover:bg-brand/10"
-                        : "hover:bg-neutral-soft/60"
+                    className={`flex items-start gap-3 p-3 transition-colors select-none ${
+                      isScopeDisabled
+                        ? "cursor-not-allowed opacity-60 bg-neutral-soft/10"
+                        : isChecked
+                          ? "cursor-pointer bg-brand/5 hover:bg-brand/10"
+                          : "cursor-pointer hover:bg-neutral-soft/60"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
+                      disabled={isScopeDisabled}
                       onChange={() => handleToggleScope(scopeCode)}
                       className="accent-brand size-3.5 mt-0.5 rounded border-border"
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-foreground text-xs">
                           {info.label}
                         </span>
                         <code className="px-1.5 py-0.2 rounded bg-neutral-soft border border-border/60 text-[10px] text-muted font-mono">
                           {scopeCode}
                         </code>
+                        {isScopeDisabled ? (
+                          <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-medium">
+                            Requires Event Source
+                          </span>
+                        ) : null}
                       </div>
                       <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
                         {info.description}

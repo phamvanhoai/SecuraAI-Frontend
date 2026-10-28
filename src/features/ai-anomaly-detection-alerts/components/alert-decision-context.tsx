@@ -44,7 +44,7 @@ export function AlertDecisionContext({ alert }: { alert: AiAlert }) {
           </dd>
         </div>
         <div>
-          <dt className="text-muted text-xs font-medium">Model version</dt>
+          <dt className="text-muted text-xs font-medium">Scoring version</dt>
           <dd className="mt-1 text-sm font-semibold [overflow-wrap:anywhere]">
             {alert.model.name} v{alert.model.version}
           </dd>

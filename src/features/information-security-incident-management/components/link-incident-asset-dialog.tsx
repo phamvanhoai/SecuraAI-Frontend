@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search } from "lucide-react";
+import { Boxes, CheckCircle2, Link2, Loader2, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Pagination } from "@/components/data-display/pagination";
@@ -9,9 +9,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
+import { cn } from "@/lib/utils";
 import {
   useIncidentAssetOptions,
   useLinkIncidentToAsset,
@@ -57,6 +56,7 @@ export function LinkIncidentAssetDialog({
     resolver: zodResolver(linkIncidentAssetFormSchema),
     defaultValues: { assetId: "" },
   });
+  const selectedAssetId = form.watch("assetId");
   const availableAssets = availableOptions.data?.assets ?? [];
   const linkedAssets = linkedOptions.data?.assets ?? [];
   const hasLinkedAssets = incident ? incident.relatedCounts.assets > 0 : false;
@@ -134,12 +134,19 @@ export function LinkIncidentAssetDialog({
           noValidate
           onSubmit={form.handleSubmit(submit)}
         >
-          <div className="border-border bg-neutral-soft rounded-lg border p-4">
-            <p className="text-muted text-xs font-medium tracking-wide uppercase">
-              {incident.incidentCode}
-            </p>
-            <p className="mt-1 font-semibold break-words">{incident.title}</p>
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-muted font-mono font-semibold">
+                {incident.incidentCode}
+              </span>
+              <span className="text-foreground font-semibold break-words">
+                {incident.title}
+              </span>
+            </div>
           </div>
+
+          {/* Alerts */}
           {availableOptions.isError || linkedOptions.isError ? (
             <Alert className="border-danger/25 bg-danger-soft text-danger">
               Unable to load active assets. Check your session and backend
@@ -160,21 +167,31 @@ export function LinkIncidentAssetDialog({
                 : "Unable to unlink this asset."}
             </Alert>
           ) : null}
+
+          {/* Linked assets section */}
           {hasLinkedAssets ? (
             <section
               aria-labelledby="linked-assets-heading"
-              className="border-border rounded-lg border"
+              className="border-border bg-neutral-soft/30 rounded-xl border"
             >
-              <div className="border-border border-b px-4 py-3">
-                <h3
-                  id="linked-assets-heading"
-                  className="text-sm font-semibold"
-                >
-                  Already linked assets
-                </h3>
-                <p className="text-muted mt-0.5 text-xs">
-                  These assets already provide context for this incident.
-                </p>
+              <div className="border-border border-b p-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2
+                    aria-hidden="true"
+                    className="text-brand size-4"
+                  />
+                  <div>
+                    <h3
+                      id="linked-assets-heading"
+                      className="text-foreground text-sm font-semibold"
+                    >
+                      Linked assets
+                    </h3>
+                    <p className="text-muted text-xs">
+                      These assets already provide context for this incident.
+                    </p>
+                  </div>
+                </div>
                 <div className="mt-3 flex gap-2">
                   <label className="relative min-w-0 flex-1">
                     <span className="sr-only">Search linked assets</span>
@@ -217,37 +234,36 @@ export function LinkIncidentAssetDialog({
                   No linked assets match this search.
                 </p>
               ) : (
-                <ul className="divide-border divide-y">
+                <ul className="space-y-2.5 p-4">
                   {linkedAssets.map((asset) => (
-                    <li className="px-4 py-3 text-sm" key={asset.id}>
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0">
-                          <span className="block font-medium">
-                            {asset.name}
-                          </span>
-                          <span className="text-muted block text-xs">
-                            {asset.assetCode} · {asset.assetType}
-                          </span>
+                    <li
+                      key={asset.id}
+                      className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium break-words">{asset.name}</p>
+                        <p className="text-muted mt-0.5 text-xs">
+                          {asset.assetCode} · {asset.assetType}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="bg-neutral-soft text-muted rounded-md px-2 py-0.5 text-xs font-medium capitalize">
+                          {asset.criticality ?? "—"}
                         </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <span className="bg-neutral-soft text-muted rounded-md px-2 py-1 text-xs font-medium capitalize">
-                            {asset.criticality ?? "—"}
-                          </span>
-                          {unlinkTargetId !== asset.id ? (
-                            <button
-                              className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
-                              disabled={unlinkMutation.isPending}
-                              onClick={() => setUnlinkTargetId(asset.id)}
-                              type="button"
-                            >
-                              Unlink
-                            </button>
-                          ) : null}
-                        </span>
+                        {unlinkTargetId !== asset.id ? (
+                          <button
+                            className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
+                            disabled={unlinkMutation.isPending}
+                            onClick={() => setUnlinkTargetId(asset.id)}
+                            type="button"
+                          >
+                            Unlink
+                          </button>
+                        ) : null}
                       </div>
                       {unlinkTargetId === asset.id ? (
-                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-md border p-3">
-                          <p className="text-sm font-medium">
+                        <div className="border-danger/20 bg-danger-soft mt-3 rounded-xl border p-3 sm:col-span-2">
+                          <p className="text-sm font-semibold">
                             Remove this asset link?
                           </p>
                           <p className="text-muted mt-1 text-xs">
@@ -255,17 +271,19 @@ export function LinkIncidentAssetDialog({
                           </p>
                           <div className="mt-3 flex justify-end gap-2">
                             <Button
-                              className="min-h-9 px-3 py-1.5 text-xs"
+                              className="min-h-9 px-3 text-xs"
                               disabled={unlinkMutation.isPending}
                               onClick={() => setUnlinkTargetId(undefined)}
+                              type="button"
                               variant="secondary"
                             >
                               Cancel
                             </Button>
                             <Button
-                              className="min-h-9 px-3 py-1.5 text-xs"
+                              className="min-h-9 px-3 text-xs"
                               disabled={unlinkMutation.isPending}
                               onClick={() => void unlink(asset.id)}
+                              type="button"
                               variant="danger"
                             >
                               {unlinkMutation.isPending
@@ -291,10 +309,35 @@ export function LinkIncidentAssetDialog({
               ) : null}
             </section>
           ) : null}
-          <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="asset-search">
-              Search available assets
-            </label>
+
+          {/* Available assets — radio card list */}
+          <section
+            aria-labelledby="available-assets-heading"
+            className="space-y-4"
+          >
+            <div className="border-border flex items-center gap-2 border-b pb-2">
+              <Boxes
+                aria-hidden="true"
+                className="text-brand size-4"
+                strokeWidth={1.8}
+              />
+              <div>
+                <h3
+                  id="available-assets-heading"
+                  className="text-foreground text-sm font-semibold"
+                >
+                  {hasLinkedAssets
+                    ? "Link another asset"
+                    : "Select an asset to link"}
+                </h3>
+                <p className="text-muted text-xs">
+                  The link provides asset context for investigation and later
+                  risk reassessment.
+                </p>
+              </div>
+            </div>
+
+            {/* Search row */}
             <div className="flex gap-2">
               <div className="relative min-w-0 flex-1">
                 <Search
@@ -326,74 +369,134 @@ export function LinkIncidentAssetDialog({
                 Search
               </Button>
             </div>
-          </div>
-          <FormField
-            id="incident-asset"
-            label={hasLinkedAssets ? "Additional asset" : "Asset"}
-            error={form.formState.errors.assetId?.message}
-          >
-            <Select
-              id="incident-asset"
-              autoFocus
-              disabled={
-                availableOptions.isPending ||
-                availableOptions.isError ||
-                availableAssets.length === 0
-              }
-              aria-invalid={Boolean(form.formState.errors.assetId)}
-              {...form.register("assetId")}
-            >
-              <option value="">
-                {availableOptions.isPending
-                  ? "Loading active assets…"
-                  : "Select an active asset"}
-              </option>
-              {availableAssets.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.assetCode} — {asset.name} ({asset.criticality ?? "—"})
-                </option>
-              ))}
-            </Select>
-            {!availableOptions.isPending &&
-            !availableOptions.isError &&
-            availableAssets.length === 0 ? (
-              <p className="text-muted text-xs">
-                {availableSearch
-                  ? "No available assets match this search."
-                  : "All active assets are already linked to this incident."}
-              </p>
+
+            {/* Radio card list */}
+            {availableOptions.isPending ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <p className="text-muted text-sm">Loading assets…</p>
+              </div>
+            ) : availableAssets.length === 0 ? (
+              <div className="border-border bg-neutral-soft/20 rounded-xl border p-8 text-center">
+                <Boxes
+                  aria-hidden="true"
+                  className="text-muted mx-auto size-8 stroke-1"
+                />
+                <p className="text-muted mt-2 text-sm">
+                  {availableSearch
+                    ? "No assets match this search."
+                    : "All active assets are already linked to this incident."}
+                </p>
+              </div>
             ) : (
-              <p className="text-muted text-xs">
-                The link provides asset context for investigation and later risk
-                reassessment.
-              </p>
+              <ul
+                className="space-y-2"
+                role="radiogroup"
+                aria-labelledby="available-assets-heading"
+              >
+                {availableAssets.map((asset) => {
+                  const isSelected = selectedAssetId === asset.id;
+                  return (
+                    <li key={asset.id}>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() =>
+                          form.setValue("assetId", asset.id, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={cn(
+                          "border-border focus-visible:outline-brand w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+                          isSelected
+                            ? "border-brand bg-brand/5 shadow-xs"
+                            : "bg-surface hover:bg-neutral-soft/60",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium break-words">
+                              {asset.name}
+                            </p>
+                            <p className="text-muted mt-0.5 text-xs">
+                              {asset.assetCode} · {asset.assetType}
+                              {asset.criticality
+                                ? ` · ${asset.criticality}`
+                                : ""}
+                            </p>
+                          </div>
+                          <span
+                            className={cn(
+                              "grid size-4 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                              isSelected
+                                ? "border-brand bg-brand"
+                                : "border-border bg-surface",
+                            )}
+                          >
+                            {isSelected ? (
+                              <span className="size-1.5 rounded-full bg-white" />
+                            ) : null}
+                          </span>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </FormField>
-          {availableOptions.data &&
-          availableOptions.data.pagination.totalPages > 1 ? (
-            <Pagination
-              onPageChange={(page) => {
-                setAvailablePage(page);
-                form.reset({ assetId: "" });
-              }}
-              page={availableOptions.data.pagination.page}
-              pageCount={availableOptions.data.pagination.totalPages}
-            />
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || availableAssets.length === 0}
-            >
-              {mutation.isPending
-                ? "Linking…"
-                : hasLinkedAssets
-                  ? "Link another asset"
-                  : "Link asset"}
-            </Button>
+
+            {/* Validation error */}
+            {form.formState.errors.assetId ? (
+              <p className="text-danger text-sm">
+                {form.formState.errors.assetId.message}
+              </p>
+            ) : null}
+
+            {/* Pagination */}
+            {availableOptions.data &&
+            availableOptions.data.pagination.totalPages > 1 ? (
+              <Pagination
+                onPageChange={(page) => {
+                  setAvailablePage(page);
+                  form.reset({ assetId: "" });
+                }}
+                page={availableOptions.data.pagination.page}
+                pageCount={availableOptions.data.pagination.totalPages}
+              />
+            ) : null}
+          </section>
+
+          {/* Footer actions */}
+          <div className="border-border flex items-center justify-between border-t pt-4">
+            <div />
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={close} type="button">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || !selectedAssetId}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                    Linking…
+                  </>
+                ) : (
+                  <>
+                    <Link2
+                      aria-hidden="true"
+                      className="size-4"
+                      strokeWidth={1.8}
+                    />
+                    {hasLinkedAssets ? "Link another asset" : "Link asset"}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}

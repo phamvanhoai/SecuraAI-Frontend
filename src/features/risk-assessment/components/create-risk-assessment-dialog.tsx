@@ -195,8 +195,7 @@ export function CreateRiskAssessmentDialog() {
                   {...register("reviewDate")}
                 />
                 <p id="reviewDate-help" className="text-muted text-sm">
-                  After today in Asia/Bangkok (UTC+7). Browser format may vary;
-                  selected date (DD/MM/YYYY): {reviewDatePreview(reviewDate)}.
+                  Choose a date after today. Selected: {reviewDatePreview(reviewDate)}.
                 </p>
               </FormField>
             </div>

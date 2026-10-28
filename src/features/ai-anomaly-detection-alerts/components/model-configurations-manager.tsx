@@ -143,7 +143,7 @@ export function ModelConfigurationsManager() {
     <>
       <ProductPageHeader
         title="Model versions & evaluation"
-        description="Review deployed and historical anomaly detection models with their latest measured performance."
+        description="Review deployed and historical anomaly-scoring configurations and their measured performance. These versions calculate detection scores; Ollama is used only to explain stored alert evidence."
         additionalActions={
           canManageThreshold ? (
             <Button onClick={() => setThresholdOpen(true)}>

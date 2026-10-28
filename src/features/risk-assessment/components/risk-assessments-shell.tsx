@@ -42,6 +42,7 @@ import {
   type RiskRegisterQuery,
 } from "../schemas/risk-register-schema";
 import { RiskAssessmentDetailDialog } from "./risk-assessment-detail-dialog";
+import { RiskReviewDate } from "./risk-review-date";
 import { CreateRiskAssessmentDialog } from "./create-risk-assessment-dialog";
 import { IdentifyThreatDialog } from "./identify-threat-dialog";
 import { IdentifyVulnerabilityDialog } from "./identify-vulnerability-dialog";
@@ -74,15 +75,6 @@ const statusTone = {
   closed: "success",
   archived: "neutral",
 } as const;
-const date = (value: string | null) =>
-  value
-    ? new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }).format(new Date(value))
-    : "Not scheduled";
-
 function fromParams(params: URLSearchParams): RiskRegisterQuery {
   const parsed = riskRegisterQuerySchema.safeParse(
     Object.fromEntries(params.entries()),
@@ -189,7 +181,10 @@ export function RiskAssessmentsShell() {
       key: "review",
       header: "Review date",
       cell: (item) => (
-        <span className="tabular-nums">{date(item.reviewDate)}</span>
+        <span className="flex flex-col items-start gap-1">
+          <RiskReviewDate value={item.reviewDate} />
+          {item.reviewInProgress ? <StatusBadge tone="info">Review in progress</StatusBadge> : null}
+        </span>
       ),
     },
     {

@@ -10,6 +10,8 @@ export const anomalyDetectionRunResultSchema = z.object({
   modelName: z.string(),
   modelVersion: z.string(),
   lookbackHours: z.number().int(),
+  scope: z.enum(["ALL_PENDING", "LOOKBACK_WINDOW"]).default("LOOKBACK_WINDOW"),
+  hasMore: z.boolean().default(false),
   eventsEvaluated: z.number().int().nonnegative(),
   anomaliesDetected: z.number().int().nonnegative(),
   detectionsCreated: z.number().int().nonnegative(),

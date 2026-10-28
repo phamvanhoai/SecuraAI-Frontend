@@ -129,9 +129,9 @@ describe("LogSourcesManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSessionUser.mockReturnValue({
-      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] } as any,
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
       isPending: false,
-    } as any);
+    });
   });
   afterEach(cleanup);
 
@@ -172,9 +172,9 @@ describe("LogSourcesManager", () => {
 
   it("hides Security events tab and defaults to Normalized event sources when user is ADMIN", () => {
     mockSessionUser.mockReturnValue({
-      data: { roles: [{ code: "ADMIN", name: "Administrator" }] } as any,
+      data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
       isPending: false,
-    } as any);
+    });
 
     render(<LogSourcesManager />);
 

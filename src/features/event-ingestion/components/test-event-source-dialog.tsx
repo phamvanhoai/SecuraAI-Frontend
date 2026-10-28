@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Activity,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Eye,
@@ -19,7 +20,11 @@ import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useTestEventSourceConnection } from "../hooks/use-event-sources";
+import {
+  useEventSources,
+  useTestEventSourceConnection,
+} from "../hooks/use-event-sources";
+import { findDuplicateEndpointSource } from "../utils/endpoint-helpers";
 import {
   testEventSourceConnectionSchema,
   type TestEventSourceConnectionValues,
@@ -48,8 +53,10 @@ export function TestEventSourceDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const testMutation = useTestEventSourceConnection();
+  const sourcesQuery = useEventSources({ limit: 100 }, { enabled: isOpen });
 
   const [endpoint, setEndpoint] = useState(() => resolveDefaultEndpoint(initialEndpoint));
+  const duplicateSource = findDuplicateEndpointSource(endpoint, sourcesQuery.data?.items);
   const [username, setUsername] = useState(initialUsername || "wazuh-wui");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -186,6 +193,20 @@ export function TestEventSourceDialog({
                   value={endpoint}
                 />
               </div>
+              {duplicateSource ? (
+                <div
+                  role="note"
+                  className="mt-2 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-900 dark:text-amber-200"
+                >
+                  <AlertTriangle
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"
+                  />
+                  <div>
+                    <span className="font-semibold">Duplicate Endpoint:</span> This endpoint is also configured for event source <strong>&quot;{duplicateSource.name}&quot;</strong>.
+                  </div>
+                </div>
+              ) : null}
             </FormField>
           </div>
 
