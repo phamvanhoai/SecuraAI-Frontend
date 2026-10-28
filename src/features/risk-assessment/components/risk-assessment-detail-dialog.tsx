@@ -7,17 +7,26 @@ import { riskReviewSchedule } from "../lib/risk-review-schedule";
 import { riskToday } from "../schemas/risk-review-date";
 import { useEffect, useRef, useState } from "react";
 import {
+  AlertOctagon,
+  AlertTriangle,
+  BarChart2,
   ClipboardCheck,
+  ClipboardList,
   Ellipsis,
   History,
   Pencil,
+  RotateCcw,
   Send,
+  Server,
+  ShieldAlert,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
 import { UpdateRiskTreatmentPlanDialog } from "./update-risk-treatment-plan-dialog";
@@ -166,11 +175,28 @@ export function RiskAssessmentDetailDialog({
         </Alert>
       ) : risk ? (
         <div className="space-y-6 [&_h3]:text-base [&_h3]:font-semibold">
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-mono font-semibold text-muted">{risk.riskCode}</span>
+              <span className="text-foreground font-semibold break-words text-sm">{risk.title}</span>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+              <span className="text-muted">Owner: <span className="font-medium text-foreground">{risk.owner?.fullName ?? "Unassigned"}</span></span>
+              <span className="text-muted">Status: <span className="font-medium text-foreground capitalize">{title(risk.status)}</span></span>
+              <span className="text-muted">Created: <span className="font-medium text-foreground">{format(risk.createdAt)}</span></span>
+              <span className="text-muted">Updated: <span className="font-medium text-foreground">{format(risk.updatedAt)}</span></span>
+            </div>
+          </div>
+
           <section
             className="border-border rounded-xl border p-4 sm:p-5"
             aria-label="Risk overview"
           >
-            <h3 className="mb-3 font-semibold">Risk overview</h3>
+            <div className="flex items-start gap-2 border-b border-border pb-2 mb-3">
+              <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold text-foreground">Risk overview</h3>
+            </div>
             <p className="text-muted text-sm leading-6">
               {risk.description ?? "No description provided."}
             </p>
@@ -190,9 +216,9 @@ export function RiskAssessmentDetailDialog({
                 label="Risk owner"
                 value={risk.owner?.fullName ?? "Unassigned"}
               />
-              <div>
-                <dt className="text-muted text-xs font-medium">Review date</dt>
-                <dd className="mt-1 text-sm font-medium"><RiskReviewDate value={risk.reviewDate} /></dd>
+              <div className="border-border bg-surface min-w-0 rounded-xl border p-3">
+                <dt className="text-muted text-xs">Review date</dt>
+                <dd className="mt-1 text-sm font-semibold break-words whitespace-pre-wrap"><RiskReviewDate value={risk.reviewDate} /></dd>
               </div>
               <Fact label="Last updated" value={format(risk.updatedAt)} />
               <Fact label="Created at" value={format(risk.createdAt)} />
@@ -202,10 +228,14 @@ export function RiskAssessmentDetailDialog({
               />
             </dl>
           </section>
+
           {risk.currentReview ? (
             <section aria-label="Current review" className="border-border rounded-xl border p-4 sm:p-5">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-semibold">Current review</h3>
+                <div className="flex items-start gap-2 border-b border-border pb-2 flex-1">
+                  <RotateCcw aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <h3 className="text-sm font-semibold text-foreground">Current review</h3>
+                </div>
                 <span className="bg-info-soft text-info rounded-md px-2 py-1 text-xs font-medium">Review in progress</span>
               </div>
               <dl className="grid gap-4 sm:grid-cols-2">
@@ -213,19 +243,24 @@ export function RiskAssessmentDetailDialog({
                 <Fact label="Opened at" value={`${new Intl.DateTimeFormat("en-GB", {
                   timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short",
                 }).format(new Date(risk.currentReview.openedAt))} (UTC+7)`} />
-                <div><dt className="text-muted text-xs font-medium">Review due date when opened</dt>
-                  <dd className="mt-1 text-sm">{risk.currentReview.previousReviewDate ? <RiskReviewDate value={risk.currentReview.previousReviewDate} /> : "Not recorded"}</dd>
+                <div className="border-border bg-surface min-w-0 rounded-xl border p-3">
+                  <dt className="text-muted text-xs">Review due date when opened</dt>
+                  <dd className="mt-1 text-sm font-semibold break-words whitespace-pre-wrap">{risk.currentReview.previousReviewDate ? <RiskReviewDate value={risk.currentReview.previousReviewDate} /> : "Not recorded"}</dd>
                 </div>
                 <Fact label="Review rationale" value={risk.currentReview.reason ?? "Not recorded"} />
               </dl>
               {risk.canCompleteReview ? <Button type="button" className="mt-4" onClick={() => setCompletingReview(true)}>Complete Risk Review</Button> : null}
             </section>
           ) : null}
+
           {risk.reviewHistory?.length ? (
             <details className="border-border rounded-xl border p-4 sm:p-5">
-              <summary className="cursor-pointer font-medium">Review history ({risk.reviewHistory.length})</summary>
+              <summary className="flex items-center gap-2 cursor-pointer font-medium focus-visible:outline-brand focus-visible:outline-2 min-h-10">
+                <History aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={2} />
+                Review history ({risk.reviewHistory.length})
+              </summary>
               <div className="mt-3 space-y-4">{risk.reviewHistory.map((review) => (
-                <article key={review.completedAt} className="border-border rounded-lg border p-3 text-sm">
+                <article key={review.completedAt} className="bg-surface rounded-xl border border-border p-4 text-sm">
                   <p className="font-medium">Completed by {review.completedByName ?? "Not recorded"} · {new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short", timeStyle: "short" }).format(new Date(review.completedAt))} (UTC+7)</p>
                   <p className="mt-2 whitespace-pre-wrap break-words">{review.conclusion}</p>
                   <p className="text-muted mt-2">Opened by: {review.openedByName ?? "Not recorded"} · {review.openedAt ? format(review.openedAt) : "Not recorded"}</p>
@@ -240,6 +275,7 @@ export function RiskAssessmentDetailDialog({
               ))}</div>
             </details>
           ) : null}
+
           {risk.status === "under_treatment" &&
           (!risk.latestAssessment ||
             !risk.treatmentPlans.some((plan) => plan.status === "active")) ? (
@@ -249,8 +285,12 @@ export function RiskAssessmentDetailDialog({
               been changed automatically.
             </Alert>
           ) : null}
+
           <section className="border-border rounded-xl border p-4 sm:p-5">
-            <h3 className="font-semibold">Latest assessment</h3>
+            <div className="flex items-start gap-2 border-b border-border pb-2 mb-3">
+              <BarChart2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold text-foreground">Latest assessment</h3>
+            </div>
             {risk.vulnerabilityWorkflow?.assessmentReviewRequired ? (
               <Alert className="mt-3">
                 Risk context changed or has not been assessed. Existing ratings
@@ -337,14 +377,18 @@ export function RiskAssessmentDetailDialog({
                 />
               </dl>
             ) : (
-              <p className="text-muted mt-2 text-sm">
-                No assessment has been recorded.
-              </p>
+              <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                <BarChart2 aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                <p className="text-sm font-medium text-foreground">No assessment yet</p>
+                <p className="text-muted mt-0.5 text-xs">No assessment has been recorded for this risk.</p>
+              </div>
             )}
           </section>
+
           {risk.assessments.length > 1 ? (
             <details className="border-border rounded-xl border p-4 sm:p-5">
-              <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+                <History aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={2} />
                 Assessment history ({risk.assessments.length - 1})
               </summary>
               <Collection
@@ -358,6 +402,7 @@ export function RiskAssessmentDetailDialog({
               />
             </details>
           ) : null}
+
           {risk.assetContextReviewRequired ? (
             <Alert className="border-warning/25 bg-warning-soft text-warning">
               Asset context changed after this risk assessment. Review recommended.
@@ -375,14 +420,18 @@ export function RiskAssessmentDetailDialog({
               review; they do not automatically change this risk.
             </p>
           ) : null}
+
           <details className="border-border rounded-xl border p-4 sm:p-5">
-            <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+            <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <Server aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
               Related assets ({risk.assets.length})
             </summary>
             <div className="mt-3">
               <Collection
                 heading="Related assets"
                 empty="No assets linked."
+                emptyIcon={<Server aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />}
+                emptyDescription="No assets have been linked to this risk."
                 items={risk.assets.map((item) => ({
                   key: item.id,
                   heading: `${item.code} — ${item.name}`,
@@ -391,13 +440,15 @@ export function RiskAssessmentDetailDialog({
               />
             </div>
           </details>
+
           <details className="border-border rounded-xl border p-4 sm:p-5">
-            <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+            <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <ShieldCheck aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
               Controls &amp; treatment ({risk.controls.length} controls ·{" "}
               {risk.treatmentPlans.length} plans)
             </summary>
             <section
-              className="border-border min-w-0 rounded-xl border p-4 sm:p-5"
+              className="border-border min-w-0 rounded-xl border p-4 sm:p-5 mt-3"
               aria-label="Controls and treatment"
             >
               <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -405,6 +456,8 @@ export function RiskAssessmentDetailDialog({
                   <Collection
                     heading="Controls"
                     empty="No controls linked."
+                    emptyIcon={<ShieldCheck aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />}
+                    emptyDescription="No controls have been linked to this risk."
                     items={risk.controls.map((item) => ({
                       key: item.id,
                       heading: `${item.code} — ${item.name}`,
@@ -413,16 +466,21 @@ export function RiskAssessmentDetailDialog({
                   />
                 </div>
                 <section className="min-w-0">
-                  <h3 className="font-semibold">Treatment plans</h3>
+                  <div className="flex items-start gap-2 border-b border-border pb-2 mb-3">
+                    <ClipboardList aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                    <h3 className="text-sm font-semibold text-foreground">Treatment plans</h3>
+                  </div>
                   {!risk.treatmentPlans.length ? (
-                    <p className="text-muted mt-2 text-sm">
-                      No treatment plans linked.
-                    </p>
+                    <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                      <ClipboardList aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                      <p className="text-sm font-medium text-foreground">No treatment plans yet</p>
+                      <p className="text-muted mt-0.5 text-xs">No treatment plans have been linked to this risk.</p>
+                    </div>
                   ) : (
                     risk.treatmentPlans.map((plan) => (
                       <article
                         key={plan.id}
-                        className="border-border mt-3 max-w-full min-w-0 space-y-3 overflow-hidden rounded-lg border p-3"
+                        className="border-border bg-surface mt-3 max-w-full min-w-0 space-y-3 overflow-hidden rounded-xl border p-3.5"
                       >
                         <h4 className="text-sm font-semibold break-words">
                           {plan.title}
@@ -438,13 +496,16 @@ export function RiskAssessmentDetailDialog({
                         </p>
                         {plan.strategy === "accept" ? <AcceptanceCostSummary value={plan.acceptanceCost} /> : null}
                         <details>
-                          <summary className="cursor-pointer text-sm font-medium">
+                          <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                            <ClipboardList aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
                             Treatment actions ({plan.actionCount})
                           </summary>
                           {!plan.actions.length ? (
-                            <p className="text-muted mt-2 text-sm">
-                              No actions recorded.
-                            </p>
+                            <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center mt-2">
+                              <ClipboardList aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                              <p className="text-sm font-medium text-foreground">No actions yet</p>
+                              <p className="text-muted mt-0.5 text-xs">No actions have been recorded for this plan.</p>
+                            </div>
                           ) : (
                             <ul className="mt-2 space-y-3">
                               {plan.actions.map((action) => (
@@ -486,14 +547,18 @@ export function RiskAssessmentDetailDialog({
               </div>
             </section>
           </details>
+
           <details className="border-border rounded-xl border p-4 sm:p-5">
-            <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+            <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
               Linked incidents ({risk.incidents.length})
             </summary>
             <div className="mt-3">
               <Collection
                 heading="Linked incidents"
                 empty="No incidents linked."
+                emptyIcon={<AlertTriangle aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />}
+                emptyDescription="No incidents have been linked to this risk."
                 items={risk.incidents.map((item) => ({
                   key: item.id,
                   heading: `${item.code} — ${item.title}`,
@@ -502,22 +567,26 @@ export function RiskAssessmentDetailDialog({
               />
             </div>
           </details>
+
           <details className="border-border rounded-xl border p-4 sm:p-5">
-            <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+            <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <ClipboardCheck aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
               Risk acceptance ({risk.acceptances.length})
             </summary>
             <section className="mt-3">
               <h3 className="sr-only">Risk acceptance</h3>
               {!risk.acceptances.length ? (
-                <p className="text-muted mt-2 text-sm">
-                  No risk acceptance requests recorded.
-                </p>
+                <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                  <ClipboardCheck aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                  <p className="text-sm font-medium text-foreground">No risk acceptance requests recorded.</p>
+                  <p className="text-muted mt-0.5 text-xs">Acceptance requests will appear here after they are submitted.</p>
+                </div>
               ) : null}
               <div className="mt-3 space-y-2">
                 {risk.acceptances.map((item) => (
                   <div
                     key={item.id}
-                    className="border-border flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                    className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5"
                   >
                     <div>
                       <strong className="capitalize">
@@ -550,7 +619,7 @@ export function RiskAssessmentDetailDialog({
                       </p>
                     </div>
                     {item.canDecide ? (
-                      <Button onClick={() => setDecidingAcceptance(item.id)}>
+                      <Button type="button" onClick={() => setDecidingAcceptance(item.id)}>
                         <ClipboardCheck aria-hidden="true" className="size-4" />
                         Review decision
                       </Button>
@@ -565,6 +634,7 @@ export function RiskAssessmentDetailDialog({
                     circumstances change. Previous decisions remain historical.
                   </p>
                   <Button
+                    type="button"
                     variant="secondary"
                     onClick={() => setOpeningReview(true)}
                   >
@@ -581,6 +651,7 @@ export function RiskAssessmentDetailDialog({
                     </p>
                   ) : null}
                   <Button
+                    type="button"
                     className="mt-3"
                     onClick={() => setAccepting(true)}
                     disabled={
@@ -595,14 +666,16 @@ export function RiskAssessmentDetailDialog({
               ) : null}
             </section>
           </details>
+
           <details className="border-border rounded-xl border p-4 sm:p-5">
-            <summary className="focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+            <summary className="flex items-center gap-2 focus-visible:outline-brand min-h-10 cursor-pointer font-medium focus-visible:outline-2">
+              <AlertOctagon aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
               Threats &amp; vulnerabilities ({risk.threats.length} threats ·{" "}
               {risk.vulnerabilities.length} vulnerabilities ·{" "}
               {risk.contextHistory.length} history)
             </summary>
             <div
-              className="border-border bg-surface mb-4 inline-flex w-full gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+              className="border-border bg-surface mb-4 mt-3 inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
               role="tablist"
               aria-label="Risk context views"
             >
@@ -610,19 +683,30 @@ export function RiskAssessmentDetailDialog({
                 type="button"
                 role="tab"
                 aria-selected={contextTab === "records"}
-                className={`min-h-10 rounded-lg px-3.5 py-2 text-sm font-medium ${contextTab === "records" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft"}`}
+                className={cn(
+                  "inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium",
+                  contextTab === "records"
+                    ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                    : "text-muted hover:bg-neutral-soft",
+                )}
                 onClick={() => setContextTab("records")}
               >
+                <AlertOctagon aria-hidden="true" className="size-4" strokeWidth={1.8} />
                 Threats &amp; vulnerabilities
               </button>
               <button
                 type="button"
                 role="tab"
                 aria-selected={contextTab === "history"}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium ${contextTab === "history" ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft"}`}
+                className={cn(
+                  "inline-flex min-h-10 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium",
+                  contextTab === "history"
+                    ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                    : "text-muted hover:bg-neutral-soft",
+                )}
                 onClick={() => setContextTab("history")}
               >
-                <History className="size-4" aria-hidden="true" />
+                <History className="size-4" aria-hidden="true" strokeWidth={2} />
                 History ({risk.contextHistory.length})
               </button>
             </div>
@@ -636,7 +720,7 @@ export function RiskAssessmentDetailDialog({
                   risk.contextHistory.map((entry) => (
                     <article
                       key={entry.id}
-                      className="border-border rounded-lg border p-4"
+                      className="bg-surface rounded-xl border border-border p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -657,7 +741,8 @@ export function RiskAssessmentDetailDialog({
                         </span>
                       </div>
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-sm font-medium">
+                        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                          <History aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={2} />
                           View changes
                         </summary>
                         <div className="mt-2 grid gap-3 text-xs sm:grid-cols-2">
@@ -672,11 +757,11 @@ export function RiskAssessmentDetailDialog({
                     </article>
                   ))
                 ) : (
-                  <div className="border-border rounded-lg border border-dashed p-6 text-center">
-                    <p className="font-medium">No context history</p>
-                    <p className="text-muted mt-1 text-sm">
-                      Changes will appear here after a Threat or Vulnerability
-                      is edited.
+                  <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                    <History aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                    <p className="text-sm font-medium text-foreground">No context history</p>
+                    <p className="text-muted mt-0.5 text-xs">
+                      Changes will appear here after a Threat or Vulnerability is edited.
                     </p>
                   </div>
                 )}
@@ -685,12 +770,15 @@ export function RiskAssessmentDetailDialog({
             {contextTab === "records" ? (
               <div className="border-border grid gap-6 rounded-xl border p-4 sm:p-5 lg:grid-cols-2">
                 <section>
-                  <h3 className="font-semibold">Threats</h3>
+                  <div className="flex items-start gap-2 border-b border-border pb-2 mb-3">
+                    <AlertOctagon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                    <h3 className="text-sm font-semibold text-foreground">Threats</h3>
+                  </div>
                   {risk.threats.length ? (
                     <ul className="mt-3 space-y-3">
                       {risk.threats.map((item) => (
                         <li
-                          className="border-border relative rounded-lg border p-3 pr-12"
+                          className="border-border bg-surface relative rounded-xl border p-3.5 pr-12"
                           key={item.id}
                         >
                           <p className="text-sm font-medium">{item.name}</p>
@@ -763,18 +851,23 @@ export function RiskAssessmentDetailDialog({
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-muted mt-2 text-sm">
-                      No threats recorded.
-                    </p>
+                    <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                      <AlertOctagon aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                      <p className="text-sm font-medium text-foreground">No threats recorded</p>
+                      <p className="text-muted mt-0.5 text-xs">No threats have been identified for this risk.</p>
+                    </div>
                   )}
                 </section>
                 <section>
-                  <h3 className="font-semibold">Vulnerabilities</h3>
+                  <div className="flex items-start gap-2 border-b border-border pb-2 mb-3">
+                    <AlertOctagon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                    <h3 className="text-sm font-semibold text-foreground">Vulnerabilities</h3>
+                  </div>
                   {risk.vulnerabilities.length ? (
                     <ul className="mt-3 space-y-3">
                       {risk.vulnerabilities.map((item) => (
                         <li
-                          className="border-border relative rounded-lg border p-3 pr-12"
+                          className="border-border bg-surface relative rounded-xl border p-3.5 pr-12"
                           key={item.id}
                         >
                           <p className="text-sm font-medium">{item.name}</p>
@@ -852,9 +945,11 @@ export function RiskAssessmentDetailDialog({
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-muted mt-2 text-sm">
-                      No vulnerabilities recorded.
-                    </p>
+                    <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
+                      <AlertOctagon aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
+                      <p className="text-sm font-medium text-foreground">No vulnerabilities recorded</p>
+                      <p className="text-muted mt-0.5 text-xs">No vulnerabilities have been identified for this risk.</p>
+                    </div>
                   )}
                 </section>
               </div>
@@ -863,7 +958,7 @@ export function RiskAssessmentDetailDialog({
         </div>
       ) : null}
       <div className="border-border bg-surface sticky -bottom-6 z-10 mt-6 flex justify-end border-t py-3">
-        <Button variant="secondary" onClick={() => ref.current?.close()}>
+        <Button type="button" variant="secondary" onClick={() => ref.current?.close()}>
           <X aria-hidden="true" className="size-4" />
           Close
         </Button>
@@ -917,21 +1012,26 @@ function Fact({
   className?: string;
 }) {
   return (
-    <div className={`min-w-0 ${className}`}>
-      <dt className="text-muted text-xs font-medium">{label}</dt>
-      <dd className="mt-1 text-sm font-medium break-words whitespace-pre-wrap">
+    <div className={cn("border-border bg-surface min-w-0 rounded-xl border p-3", className)}>
+      <dt className="text-muted text-xs">{label}</dt>
+      <dd className="mt-1 text-sm font-semibold break-words whitespace-pre-wrap">
         {value}
       </dd>
     </div>
   );
 }
+
 function Collection({
   heading,
   empty,
+  emptyIcon,
+  emptyDescription,
   items,
 }: {
   heading: string;
   empty: string;
+  emptyIcon?: React.ReactNode;
+  emptyDescription?: string;
   items: { key: string; heading: string; detail: string | null }[];
 }) {
   return (
@@ -940,7 +1040,7 @@ function Collection({
       {items.length ? (
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {items.map((item) => (
-            <li className="border-border rounded-lg border p-3" key={item.key}>
+            <li className="border-border bg-surface rounded-xl border p-3.5" key={item.key}>
               <p className="text-sm font-medium">{item.heading}</p>
               {item.detail ? (
                 <p className="text-muted mt-1 text-xs leading-5 break-words whitespace-pre-wrap">
@@ -950,6 +1050,12 @@ function Collection({
             </li>
           ))}
         </ul>
+      ) : emptyIcon ? (
+        <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center mt-2">
+          {emptyIcon}
+          <p className="text-sm font-medium text-foreground">{empty}</p>
+          {emptyDescription ? <p className="text-muted mt-0.5 text-xs">{emptyDescription}</p> : null}
+        </div>
       ) : (
         <p className="text-muted mt-2 text-sm">{empty}</p>
       )}
