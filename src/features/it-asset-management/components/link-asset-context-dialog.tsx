@@ -1,14 +1,22 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { History } from "lucide-react";
+import {
+  AlertTriangle,
+  Boxes,
+  Building2,
+  HardDrive,
+  History,
+  Info,
+  Link2,
+  Loader2,
+  Radio,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/api-error";
 import { z } from "zod";
-import { FormField } from "@/components/forms/form-field";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
@@ -29,6 +37,7 @@ const defaults: LinkAssetContextInput = {
   dependencyIds: [],
   eventSourceIds: [],
 };
+
 export function LinkAssetContextDialog({
   assetId,
   onClose,
@@ -46,6 +55,7 @@ export function LinkAssetContextDialog({
   const toast = useToast();
   const [message, setMessage] = useState<string>();
   const [cycleMessage, setCycleMessage] = useState<string>();
+
   const {
     register,
     handleSubmit,
@@ -55,10 +65,12 @@ export function LinkAssetContextDialog({
     resolver: zodResolver(linkAssetContextSchema),
     defaultValues: defaults,
   });
+
   useEffect(() => {
     if (assetId && !ref.current?.open) ref.current?.showModal();
     if (!assetId && ref.current?.open) ref.current.close();
   }, [assetId]);
+
   useEffect(() => {
     if (!detail.data || !assetId || hydratedAssetId.current === assetId) return;
     reset({
@@ -68,6 +80,7 @@ export function LinkAssetContextDialog({
     });
     hydratedAssetId.current = assetId;
   }, [assetId, detail.data, reset]);
+
   const close = () => {
     reset(defaults);
     hydratedAssetId.current = null;
@@ -76,6 +89,7 @@ export function LinkAssetContextDialog({
     setTab("links");
     onClose();
   };
+
   const submit = async (values: LinkAssetContextRequest) => {
     setMessage(undefined);
     setCycleMessage(undefined);
@@ -88,23 +102,28 @@ export function LinkAssetContextDialog({
       close();
     } catch (error: unknown) {
       if (error instanceof ApiError) {
-        const cycle = z.object({ error: z.object({
-          code: z.literal("ASSET_DEPENDENCY_CYCLE"),
-          details: z.object({ path: z.array(z.string()) }).optional(),
-        }) }).safeParse(error.details);
+        const cycle = z
+          .object({
+            error: z.object({
+              code: z.literal("ASSET_DEPENDENCY_CYCLE"),
+              details: z.object({ path: z.array(z.string()) }).optional(),
+            }),
+          })
+          .safeParse(error.details);
         if (cycle.success) {
           const path = cycle.data.error.details?.path ?? [];
-          setCycleMessage(`${error.message}${path.length ? ` Circular dependency: ${path.join(" → ")}.` : ""}`);
+          setCycleMessage(
+            `${error.message}${path.length ? ` Circular dependency: ${path.join(" → ")}.` : ""}`,
+          );
           return;
         }
       }
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to update asset context.",
+        error instanceof Error ? error.message : "Unable to update asset context.",
       );
     }
   };
+
   const services = [...(options.data?.businessServices ?? [])];
   if (
     detail.data?.businessService &&
@@ -112,8 +131,9 @@ export function LinkAssetContextDialog({
   )
     services.push({
       id: detail.data.businessService.id,
-      name: `${detail.data.businessService.name} (Inactive — existing link)`,
+      name: `${detail.data.businessService.name} (Inactive - existing link)`,
     });
+
   const dependencies = (options.data?.assets ?? [])
     .filter((item) => item.id !== assetId)
     .map((item) => ({ ...item, status: "active" }));
@@ -121,6 +141,7 @@ export function LinkAssetContextDialog({
     if (!dependencies.some((item) => item.id === link.asset.id))
       dependencies.push(link.asset);
   }
+
   const sources = (options.data?.eventSources ?? []).map((item) => ({
     ...item,
     status: "active",
@@ -128,7 +149,10 @@ export function LinkAssetContextDialog({
   for (const source of detail.data?.eventSources ?? []) {
     if (!sources.some((item) => item.id === source.id)) sources.push(source);
   }
+
   const busy = detail.isPending || options.isPending;
+  const isArchived = detail.data?.status !== "active";
+
   return (
     <Dialog
       title="Link Asset Context"
@@ -136,59 +160,82 @@ export function LinkAssetContextDialog({
       onClose={close}
       className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
     >
+      {/* Tab switcher */}
       <div
         role="tablist"
         aria-label="Asset context views"
-        className="border-border bg-surface mb-4 flex gap-1 rounded-xl border p-1"
+        className="border-border bg-surface mb-5 inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs"
       >
-        {(["links", "history"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            id={`asset-context-${value}-tab`}
-            aria-controls={`asset-context-${value}-panel`}
-            aria-selected={tab === value}
-            tabIndex={tab === value ? 0 : -1}
-            className={cn(
-              "min-h-11 min-w-0 flex-1 rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2",
-              tab === value
-                ? "bg-brand text-brand-contrast"
-                : "text-muted hover:bg-neutral-soft",
-            )}
-            onClick={() => setTab(value)}
-            onKeyDown={(event) => {
-              if (
-                !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
-              )
-                return;
-              event.preventDefault();
-              const next =
-                event.key === "Home"
-                  ? "links"
-                  : event.key === "End"
-                    ? "history"
-                    : value === "links"
-                      ? "history"
-                      : "links";
-              setTab(next);
-              ref.current
-                ?.querySelector<HTMLButtonElement>(`#asset-context-${next}-tab`)
-                ?.focus();
-            }}
-          >
-            {value === "links" ? (
-              "Link Asset Context"
-            ) : (
-              <>
-                <History aria-hidden="true" className="mr-1 inline size-4" />
-                History
-                {history.data ? ` (${history.data.pagination.total})` : ""}
-              </>
-            )}
-          </button>
-        ))}
+        <button
+          type="button"
+          role="tab"
+          id="asset-context-links-tab"
+          aria-controls="asset-context-links-panel"
+          aria-selected={tab === "links"}
+          tabIndex={tab === "links" ? 0 : -1}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+            tab === "links"
+              ? "bg-brand text-white shadow-xs"
+              : "text-muted hover:text-foreground",
+          )}
+          onClick={() => setTab("links")}
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+              return;
+            event.preventDefault();
+            const next =
+              event.key === "Home"
+                ? "links"
+                : event.key === "End"
+                  ? "history"
+                  : "history";
+            setTab(next);
+            ref.current
+              ?.querySelector<HTMLButtonElement>(`#asset-context-${next}-tab`)
+              ?.focus();
+          }}
+        >
+          <Link2 className="size-3.5" strokeWidth={2} />
+          Link Asset Context
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="asset-context-history-tab"
+          aria-controls="asset-context-history-panel"
+          aria-selected={tab === "history"}
+          tabIndex={tab === "history" ? 0 : -1}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
+            tab === "history"
+              ? "bg-brand text-white shadow-xs"
+              : "text-muted hover:text-foreground",
+          )}
+          onClick={() => setTab("history")}
+          onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
+              return;
+            event.preventDefault();
+            const next =
+              event.key === "Home"
+                ? "links"
+                : event.key === "End"
+                  ? "history"
+                  : "links";
+            setTab(next);
+            ref.current
+              ?.querySelector<HTMLButtonElement>(`#asset-context-${next}-tab`)
+              ?.focus();
+          }}
+        >
+          <History className="size-3.5" strokeWidth={2} />
+          History
+          {history.data ? ` (${history.data.pagination.total})` : ""}
+        </button>
       </div>
+
+      {/* History tab panel */}
       <div
         role="tabpanel"
         id="asset-context-history-panel"
@@ -198,10 +245,14 @@ export function LinkAssetContextDialog({
         {tab === "history" && assetId ? (
           <AssetContextHistory key={assetId} assetId={assetId} />
         ) : null}
-        <div className="mt-4 flex justify-end">
-          <Button type="button" variant="secondary" onClick={close}>Close</Button>
+        <div className="mt-5 flex items-center justify-end border-t border-border pt-4">
+          <Button type="button" variant="secondary" onClick={close}>
+            Close
+          </Button>
         </div>
       </div>
+
+      {/* Links tab panel */}
       <div
         role="tabpanel"
         id="asset-context-links-panel"
@@ -209,142 +260,297 @@ export function LinkAssetContextDialog({
         hidden={tab !== "links"}
       >
         {busy ? (
-          <div className="space-y-4 py-2" role="status">
-            <span className="sr-only">Loading asset context</span>
-            <Skeleton className="h-5 w-48" />
+          <div
+            role="status"
+            aria-label="Loading asset context"
+            aria-busy="true"
+            className="space-y-5"
+          >
+            <span className="sr-only">Loading asset context…</span>
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <Skeleton className="h-5 w-36 rounded" />
             <Skeleton className="h-10 w-full" />
             <div className="grid gap-4 sm:grid-cols-2">
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <Skeleton className="h-40 w-full rounded-xl" />
             </div>
           </div>
         ) : detail.isError || options.isError ? (
-          <Alert className="border-danger/25 bg-danger-soft text-danger">
-            Unable to load available relationships.
-          </Alert>
+          <div className="border-border bg-neutral-soft/30 rounded-xl border p-6 text-center space-y-3">
+            <HardDrive
+              className="text-muted mx-auto mb-1 size-8"
+              strokeWidth={1.5}
+            />
+            <p className="text-sm font-medium">Unable to load relationships</p>
+            <p className="text-muted text-xs">
+              Reference data could not be fetched. Close the dialog and try
+              again.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-1"
+              onClick={() => {
+                void detail.refetch();
+                void options.refetch();
+              }}
+            >
+              Try again
+            </Button>
+          </div>
         ) : detail.data ? (
           <form
             className="space-y-5"
             noValidate
             onSubmit={(event) => void handleSubmit(submit)(event)}
           >
-            <p className="text-muted text-sm">
-              <strong className="text-foreground">
-                {detail.data.assetCode} — {detail.data.name}
-              </strong>
-              <br />
-              Select the operational context used by risk, incident, and anomaly
-              workflows.
-            </p>
-            {detail.data.status !== "active" ? (
-              <Alert>
-                Archived assets cannot be changed. Close this dialog to view the
-                preserved links.
-              </Alert>
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <HardDrive
+                className="size-3.5 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <span className="font-semibold tabular-nums">
+                {detail.data.assetCode}
+              </span>
+              <span className="text-muted">·</span>
+              <span className="text-muted truncate">{detail.data.name}</span>
+            </div>
+
+            {/* Archived warning */}
+            {isArchived ? (
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <AlertTriangle
+                  className="mt-0.5 size-4 shrink-0 text-warning"
+                  strokeWidth={1.8}
+                />
+                <p className="text-xs leading-5">
+                  <strong className="text-foreground block">
+                    Archived asset
+                  </strong>
+                  <span className="text-muted">
+                    Archived assets cannot be changed. Close this dialog to view
+                    the preserved links.
+                  </span>
+                </p>
+              </div>
             ) : null}
+
+            {/* Submit error */}
             {message ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
-                {message}
-              </Alert>
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <AlertTriangle
+                  className="mt-0.5 size-4 shrink-0 text-danger"
+                  strokeWidth={1.8}
+                />
+                <p className="text-danger text-xs leading-5">{message}</p>
+              </div>
             ) : null}
-            <FormField
-              id="context-service"
-              label="Business service"
-              error={errors.businessServiceId?.message}
-            >
-              <Select id="context-service" {...register("businessServiceId")}>
-                <option value="">Unassigned</option>
-                {services.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                id="context-dependencies"
-                label="Dependencies"
-                error={errors.dependencyIds?.message}
-              >
-                <div className="border-border min-h-36 space-y-2 rounded-lg border p-3">
-                  {dependencies.map((item) => (
-                    <label
-                      key={item.id}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        value={item.id}
-                        {...register("dependencyIds")}
-                        className="mt-1"
-                      />
-                      <span>
-                        {item.assetCode} · {item.name}
-                        {item.status !== "active"
-                          ? ` (${item.status} — existing link)`
-                          : ""}
-                      </span>
-                    </label>
+
+            {/* Business service */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Building2
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Business service</h3>
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="context-service"
+                  className="block text-sm font-medium"
+                >
+                  Business service
+                  <span className="text-muted ml-1 font-normal">
+                    (optional)
+                  </span>
+                </label>
+                <Select id="context-service" {...register("businessServiceId")}>
+                  <option value="">Unassigned</option>
+                  {services.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
                   ))}
+                </Select>
+                {errors.businessServiceId && (
+                  <p role="alert" className="text-danger text-xs">
+                    {errors.businessServiceId.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Dependencies + Event sources */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Dependencies */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Boxes
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Dependencies</h3>
+                </div>
+                <div className="border-border rounded-xl border">
+                  {dependencies.length > 0 ? (
+                    <ul className="divide-y divide-border px-3 py-2">
+                      {dependencies.map((item) => (
+                        <li key={item.id}>
+                          <label className="flex items-start gap-2.5 py-2.5 text-xs cursor-pointer hover:bg-neutral-soft/40 -mx-3 px-3 transition-colors">
+                            <input
+                              type="checkbox"
+                              value={item.id}
+                              {...register("dependencyIds")}
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="min-w-0">
+                              <span className="font-medium block">
+                                {item.assetCode}
+                              </span>
+                              <span className="text-muted block truncate">
+                                {item.name}
+                                {item.status !== "active"
+                                  ? ` (${item.status} — existing link)`
+                                  : ""}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-5 text-center">
+                      <Boxes
+                        className="text-muted mx-auto mb-2 size-6"
+                        strokeWidth={1.5}
+                      />
+                      <p className="text-xs font-medium">No assets available</p>
+                      <p className="text-muted mt-0.5 text-xs">
+                        No other assets found to link as dependencies.
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {cycleMessage ? (
-                  <Alert className="border-danger/25 bg-danger-soft text-danger break-words">
-                    {cycleMessage}
-                  </Alert>
+                  <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                    <AlertTriangle
+                      className="mt-0.5 size-4 shrink-0 text-danger"
+                      strokeWidth={1.8}
+                    />
+                    <p className="text-danger break-words text-xs leading-5">
+                      {cycleMessage}
+                    </p>
+                  </div>
                 ) : null}
-                <p
-                  id="context-dependencies-help"
-                  className="text-muted mt-1 text-xs"
-                >
+                {errors.dependencyIds && (
+                  <p role="alert" className="text-danger text-xs">
+                    {errors.dependencyIds.message}
+                  </p>
+                )}
+                <p className="text-muted text-xs leading-5">
                   Select assets this asset needs to operate. Unchecking removes
                   the link; existing inactive links may be kept.
                 </p>
-              </FormField>
-              <FormField
-                id="context-sources"
-                label="Event sources"
-                error={errors.eventSourceIds?.message}
-              >
-                <div className="border-border min-h-36 space-y-2 rounded-lg border p-3">
-                  {sources.map((item) => (
-                    <label
-                      key={item.id}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        value={item.id}
-                        {...register("eventSourceIds")}
-                        className="mt-1"
-                      />
-                      <span>
-                        {item.name} · {item.sourceType}
-                        {item.status !== "active"
-                          ? ` (${item.status} — existing link)`
-                          : ""}
-                      </span>
-                    </label>
-                  ))}
+              </div>
+
+              {/* Event sources */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Radio
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Event sources</h3>
                 </div>
-                <p
-                  id="context-sources-help"
-                  className="text-muted mt-1 text-xs"
-                >
+                <div className="border-border rounded-xl border">
+                  {sources.length > 0 ? (
+                    <ul className="divide-y divide-border px-3 py-2">
+                      {sources.map((item) => (
+                        <li key={item.id}>
+                          <label className="flex items-start gap-2.5 py-2.5 text-xs cursor-pointer hover:bg-neutral-soft/40 -mx-3 px-3 transition-colors">
+                            <input
+                              type="checkbox"
+                              value={item.id}
+                              {...register("eventSourceIds")}
+                              className="mt-0.5 shrink-0"
+                            />
+                            <span className="min-w-0">
+                              <span className="font-medium block">
+                                {item.name}
+                              </span>
+                              <span className="text-muted block truncate">
+                                {item.sourceType}
+                                {item.status !== "active"
+                                  ? ` (${item.status} — existing link)`
+                                  : ""}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="p-5 text-center">
+                      <Radio
+                        className="text-muted mx-auto mb-2 size-6"
+                        strokeWidth={1.5}
+                      />
+                      <p className="text-xs font-medium">
+                        No event sources available
+                      </p>
+                      <p className="text-muted mt-0.5 text-xs">
+                        Register event sources first to link them here.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {errors.eventSourceIds && (
+                  <p role="alert" className="text-danger text-xs">
+                    {errors.eventSourceIds.message}
+                  </p>
+                )}
+                <p className="text-muted text-xs leading-5">
                   Select sources that produce events for this asset. Unchecking
                   removes the link.
                 </p>
-              </FormField>
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
+
+            {/* Info hint */}
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <p className="text-muted text-xs leading-5">
+                Select the operational context used by risk, incident, and
+                anomaly workflows. Changes take effect immediately after saving.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
               <Button type="button" variant="secondary" onClick={close}>
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={mutation.isPending || detail.data.status !== "active"}
+                disabled={mutation.isPending || isArchived}
+                className={cn(mutation.isPending && "opacity-80")}
               >
-                {mutation.isPending ? "Saving…" : "Save links"}
+                {mutation.isPending ? (
+                  <>
+                    <Loader2
+                      className="mr-1.5 size-3.5 animate-spin"
+                      strokeWidth={2}
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  "Save links"
+                )}
               </Button>
             </div>
           </form>
