@@ -96,11 +96,9 @@ describe("define target risk", () => {
         onClose={vi.fn()}
       />,
     );
-    fireEvent.change(screen.getByLabelText("Target risk level"), {
-      target: { value: "medium" },
-    });
+    fireEvent.click(screen.getByRole("radio", { name: /Medium/i }));
     expect(screen.getByText(/proposed target is outside/i)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Target rationale"), {
+    fireEvent.change(screen.getByLabelText(/Target rationale/), {
       target: {
         value:
           "The planned actions aim for medium as an achievable first step.",
