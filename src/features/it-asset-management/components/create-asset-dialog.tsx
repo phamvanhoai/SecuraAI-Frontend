@@ -1,12 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
+import { FileText, Info, Loader2, Plus, Tag, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { FormField } from "@/components/forms/form-field";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/feedback/toast";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +35,7 @@ export function CreateAssetDialog() {
   const mutation = useCreateAsset();
   const options = useAssetCreateOptions(open);
   const toast = useToast();
+
   const {
     register,
     handleSubmit,
@@ -52,7 +52,9 @@ export function CreateAssetDialog() {
     if (open && !element.open) element.showModal();
     if (!open && element.open) element.close();
   }, [open]);
+
   const close = () => setOpen(false);
+
   const submit = handleSubmit(async (values) => {
     try {
       const { dependencyIds, ...assetFields } = values;
@@ -77,6 +79,7 @@ export function CreateAssetDialog() {
         <Plus className="size-4" aria-hidden="true" />
         Add asset
       </Button>
+
       <Dialog
         dialogRef={dialog}
         title="Create IT Asset"
@@ -84,43 +87,98 @@ export function CreateAssetDialog() {
         className="max-h-[90dvh] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
       >
         <form className="space-y-5" noValidate onSubmit={submit}>
+
+          {/* Options load error banner */}
           {options.isError ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              Unable to load reference data. Close the form and try again.
-            </Alert>
+            <div role="alert" className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info
+                className="mt-0.5 size-4 shrink-0 text-danger"
+                strokeWidth={1.8}
+              />
+              <p className="text-xs leading-5">
+                <span className="text-danger font-medium block">Unable to load reference data.</span>
+                <span className="text-muted">Close the form and try again before submitting.</span>
+              </p>
+            </div>
           ) : null}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              id="name"
-              label="Asset name"
-              error={errors.name?.message}
-            >
-              <Input id="name" maxLength={255} {...register("name")} />
-            </FormField>
-            <FormField
-              id="assetType"
-              label="Asset type"
-              error={errors.assetType?.message}
-            >
-              <Select
-                id="assetType"
-                aria-required="true"
-                aria-invalid={Boolean(errors.assetType)}
-                aria-describedby={errors.assetType ? "assetType-error" : undefined}
-                {...register("assetType")}
-              >
-                <option value="" disabled>Select asset type</option>
-                {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
-              </Select>
-            </FormField>
-            <FormField
-              id="ownerUserId"
-              label="Asset owner"
-              error={errors.ownerUserId?.message}
-            >
+
+          {/* Identity section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Tag
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Identity</h3>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Asset name */}
+              <div className="space-y-1.5">
+                <label htmlFor="name" className="block text-sm font-medium">
+                  Asset name
+                </label>
+                <Input
+                  id="name"
+                  maxLength={255}
+                  aria-invalid={Boolean(errors.name)}
+                  aria-describedby={errors.name ? "name-error" : undefined}
+                  {...register("name")}
+                />
+                {errors.name && (
+                  <p id="name-error" role="alert" className="text-danger text-xs">
+                    {errors.name.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Asset type */}
+              <div className="space-y-1.5">
+                <label htmlFor="assetType" className="block text-sm font-medium">
+                  Asset type
+                </label>
+                <Select
+                  id="assetType"
+                  aria-required="true"
+                  aria-invalid={Boolean(errors.assetType)}
+                  aria-describedby={errors.assetType ? "assetType-error" : undefined}
+                  {...register("assetType")}
+                >
+                  <option value="" disabled>Select asset type</option>
+                  {assetTypes.map((value) => (
+                    <option key={value} value={value}>
+                      {assetTypeLabels[value]}
+                    </option>
+                  ))}
+                </Select>
+                {errors.assetType && (
+                  <p id="assetType-error" role="alert" className="text-danger text-xs">
+                    {errors.assetType.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Ownership section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <User
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Ownership</h3>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="ownerUserId" className="block text-sm font-medium">
+                Asset owner
+                <span aria-hidden="true" className="text-muted ml-1 font-normal">(optional)</span>
+              </label>
               <Select
                 id="ownerUserId"
+                aria-label="Asset owner"
                 disabled={options.isPending || options.isError}
+                aria-invalid={Boolean(errors.ownerUserId)}
+                aria-describedby={errors.ownerUserId ? "ownerUserId-error" : undefined}
                 {...register("ownerUserId")}
               >
                 <option value="">Unassigned</option>
@@ -130,36 +188,80 @@ export function CreateAssetDialog() {
                   </option>
                 ))}
               </Select>
-            </FormField>
+              {errors.ownerUserId && (
+                <p id="ownerUserId-error" role="alert" className="text-danger text-xs">
+                  {errors.ownerUserId.message}
+                </p>
+              )}
+            </div>
           </div>
-          <p className="text-muted text-sm">
-            The system generates a unique asset code after creation. Then use
-            Manage links to assign business context and Classify asset to
-            determine criticality and data classification.
-          </p>
-          <FormField
-            id="description"
-            label="Description"
-            error={errors.description?.message}
-          >
-            <Textarea
-              id="description"
-              maxLength={10_000}
-              rows={4}
-              {...register("description")}
+
+          {/* Description section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <FileText
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Description</h3>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="description" className="block text-sm font-medium">
+                Description
+                <span aria-hidden="true" className="text-muted ml-1 font-normal">(optional)</span>
+              </label>
+              <Textarea
+                id="description"
+                maxLength={10_000}
+                rows={4}
+                aria-invalid={Boolean(errors.description)}
+                aria-describedby={errors.description ? "description-error" : undefined}
+                {...register("description")}
+              />
+              {errors.description && (
+                <p id="description-error" role="alert" className="text-danger text-xs">
+                  {errors.description.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Info hint */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <Info
+              className="mt-0.5 size-4 shrink-0 text-brand"
+              strokeWidth={1.8}
             />
-          </FormField>
-          <div className="flex justify-end gap-2">
+            <p className="text-muted text-xs leading-5">
+              The system generates a unique asset code after creation. Use{" "}
+              <strong className="text-foreground">Manage links</strong> to assign
+              business context and{" "}
+              <strong className="text-foreground">Classify asset</strong> to
+              determine criticality and data classification.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="secondary" onClick={close}>
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={
-                mutation.isPending || options.isPending || options.isError
-              }
+              disabled={mutation.isPending || options.isPending || options.isError}
+              className={cn(mutation.isPending && "opacity-80")}
             >
-              {mutation.isPending ? "Creating…" : "Create asset"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2
+                    className="mr-1.5 size-3.5 animate-spin"
+                    strokeWidth={2}
+                  />
+                  Creating…
+                </>
+              ) : (
+                "Create asset"
+              )}
             </Button>
           </div>
         </form>

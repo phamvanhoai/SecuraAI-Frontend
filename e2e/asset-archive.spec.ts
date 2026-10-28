@@ -46,6 +46,7 @@ for (const width of [375, 768, 1440]) {
     await actions.scrollIntoViewIfNeeded(); await actions.click();
     await expect(page.getByRole("button", { name: "Archive asset", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "View details", exact: true }).click();
+    await page.getByRole("tab", { name: "Record", exact: true }).click();
     await expect(page.getByText("Archiving Officer", { exact: true })).toBeVisible();
     await expect(page.getByText("Replaced by managed infrastructure", { exact: true })).toBeVisible();
   });

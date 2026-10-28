@@ -30,7 +30,7 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe("AssetDetailDialog", () => {
-  it("shows V2 ownership and linked security context", () => {
+  it("shows V2 ownership and linked security context", async () => {
     useAssetDetailMock.mockReturnValue({
       isPending: false,
       isError: false,
@@ -93,8 +93,10 @@ describe("AssetDetailDialog", () => {
 
     expect(screen.getByText("Asset Owner")).toBeInTheDocument();
     expect(screen.getByText("Payment Service")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Record" }));
     expect(screen.getByText("Created at")).toBeInTheDocument();
     expect(screen.queryByText("Archived at")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: "Relations" }));
     expect(
       screen.getByText("Dependency · Status: Archived"),
     ).toBeInTheDocument();
@@ -120,7 +122,7 @@ describe("AssetDetailDialog", () => {
   });
   it.each([true, false])(
     "shows archive metadata and honest legacy fallback (%s)",
-    (hasMetadata) => {
+    async (hasMetadata) => {
       useAssetDetailMock.mockReturnValue({
         isPending: false,
         isError: false,
@@ -156,6 +158,7 @@ describe("AssetDetailDialog", () => {
           onClose={vi.fn()}
         />,
       );
+      await userEvent.click(screen.getByRole("tab", { name: "Record" }));
       expect(screen.getByText("Archived by")).toBeVisible();
       expect(screen.getByText("Archive reason")).toBeVisible();
       if (hasMetadata) {
@@ -206,13 +209,14 @@ describe("AssetDetailDialog", () => {
         onClose={vi.fn()}
       />,
     );
+    await userEvent.click(screen.getByRole("tab", { name: "Classification" }));
     expect(
       screen.getByText("An outage stops the essential public service."),
     ).toBeVisible();
     expect(screen.getByLabelText("Impact scores")).toHaveTextContent(
       "Availability5 / 5",
     );
-    expect(screen.getByText(/Assessed by Security Officer/)).toBeVisible();
+    expect(screen.getByText("Security Officer")).toBeVisible();
     expect(screen.getByText(/SECURAAI-ASSET-IMPACT-v1/)).not.toBeVisible();
     await userEvent.click(screen.getByText("Methodology and references"));
     expect(screen.getByText(/SECURAAI-ASSET-IMPACT-v1/)).toBeVisible();
@@ -247,7 +251,7 @@ describe("AssetDetailDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(refetch).toHaveBeenCalledOnce();
   });
-  it("keeps nullable classification and service visible without invented levels", () => {
+  it("keeps nullable classification and service visible without invented levels", async () => {
     useAssetDetailMock.mockReturnValue({
       isPending: false,
       isError: false,
@@ -282,6 +286,7 @@ describe("AssetDetailDialog", () => {
     expect(within(overview).getAllByText("—")).toHaveLength(2);
     expect(within(overview).getByText("Business service")).toBeVisible();
     expect(within(overview).getAllByText("Unassigned")).toHaveLength(2);
+    await userEvent.click(screen.getByRole("tab", { name: "Relations" }));
     expect(screen.getByText("No dependencies linked.")).toBeVisible();
   });
 });

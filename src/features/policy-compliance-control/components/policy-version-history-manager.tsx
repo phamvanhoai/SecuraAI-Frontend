@@ -1,5 +1,12 @@
 "use client";
-import { BookOpenCheck, Eye, History, Search } from "lucide-react";
+import {
+  BookOpenCheck,
+  Eye,
+  FileText,
+  History,
+  Info,
+  Search,
+} from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Pagination } from "@/components/data-display/pagination";
 import {
@@ -13,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   usePolicyVersionHistory,
   usePolicyVersionHistoryDetail,
@@ -150,24 +158,25 @@ export function PolicyVersionHistoryManager({
         }
       >
         <form
-          className="border-border flex flex-col gap-2 border-b p-4 sm:flex-row"
+          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
           onSubmit={submit}
         >
-          <label className="relative min-w-0 flex-1">
+          <label className="relative min-w-[220px] max-w-md flex-1 block">
             <span className="sr-only">Search version history</span>
             <Search
               aria-hidden="true"
               className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              strokeWidth={1.8}
             />
             <Input
-              className="w-full pl-9"
+              className="bg-background min-h-10 pl-9"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by policy code or title"
             />
           </label>
           <Select
-            className="w-full sm:w-52"
+            className="min-h-10 w-40"
             aria-label="Version status"
             value={query.status}
             onChange={(event) =>
@@ -183,7 +192,9 @@ export function PolicyVersionHistoryManager({
             <option value="published">Published</option>
             <option value="archived">Archived</option>
           </Select>
-          <Button type="submit">Search</Button>
+          <Button className="min-h-10" type="submit">
+            Search
+          </Button>
         </form>
         <div className="p-4">
           {list.isPending ? (
@@ -272,6 +283,7 @@ export function PolicyVersionHistoryManager({
                         </td>
                         <td className="px-4 py-3">
                           <Button
+                            className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
                             variant="secondary"
                             onClick={() =>
                               setSelected({
@@ -280,7 +292,7 @@ export function PolicyVersionHistoryManager({
                               })
                             }
                           >
-                            <Eye aria-hidden="true" className="size-4" />
+                            <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
                             View details
                           </Button>
                         </td>
@@ -309,29 +321,82 @@ export function PolicyVersionHistoryManager({
           </div>
         ) : null}
       </ProductPanel>
+
+      {/* ── Policy version details dialog ── */}
       <Dialog
         dialogRef={dialogRef}
-        title="Policy version details"
+        title="Policy Version Details"
         className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
         onClose={() => setSelected(null)}
       >
         {detail.isPending ? (
-          <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
+          /* Loading skeleton */
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label="Loading version details"
+            className="space-y-5"
+          >
+            <span className="sr-only">Loading version details…</span>
+            {/* Context bar skeleton */}
+            <Skeleton className="h-11 w-full rounded-lg" />
+            {/* Fact grid skeleton */}
+            <Skeleton className="h-24 w-full rounded-xl" />
+            {/* Change summary skeleton */}
+            <Skeleton className="h-5 w-40 rounded" />
+            <Skeleton className="h-16 w-full rounded-xl" />
+            {/* Content skeleton */}
+            <Skeleton className="h-5 w-32 rounded" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
         ) : detail.isError ? (
-          <Alert>Unable to load this policy version.</Alert>
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <FileText
+              className="mt-0.5 size-4 shrink-0 text-danger"
+              strokeWidth={1.8}
+            />
+            <p className="text-danger text-xs leading-5">
+              Unable to load this policy version. Please close and try again.
+            </p>
+          </div>
         ) : detail.data ? (
           <div className="space-y-5">
-            <div>
-              <p className="text-muted text-xs font-semibold uppercase">
-                {detail.data.policyCode} · v{detail.data.version.versionNumber}
-              </p>
-              <h3 className="mt-1 text-lg font-semibold">
-                {detail.data.title}
-              </h3>
+
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <FileText className="size-3.5 shrink-0 text-brand" strokeWidth={1.8} />
+              <code className="font-mono font-semibold">
+                {detail.data.policyCode}
+              </code>
+              <span className="text-muted">·</span>
+              <span className="text-muted">
+                Version:{" "}
+                <strong className="text-foreground font-mono">
+                  v{detail.data.version.versionNumber}
+                </strong>
+              </span>
+              <span className="text-muted">·</span>
+              <StatusBadge tone={tone(detail.data.version.status)}>
+                {detail.data.version.status}
+              </StatusBadge>
             </div>
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+
+            {/* Title */}
+            <div>
+              <h3 className="text-base font-semibold">{detail.data.title}</h3>
+              {detail.data.description ? (
+                <p className="text-muted mt-1 text-sm">
+                  {detail.data.description}
+                </p>
+              ) : null}
+            </div>
+
+            {/* Fact grid */}
+            <dl className="border-border bg-neutral-soft/30 grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-4">
               <div>
-                <dt className="text-muted">Status</dt>
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Status
+                </dt>
                 <dd className="mt-1">
                   <StatusBadge tone={tone(detail.data.version.status)}>
                     {detail.data.version.status}
@@ -339,39 +404,75 @@ export function PolicyVersionHistoryManager({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted">Created</dt>
-                <dd className="mt-1 font-medium">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Created
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
                   {formatDate(detail.data.version.createdAt)}
                 </dd>
               </div>
               <div>
-                <dt className="text-muted">Created by</dt>
-                <dd className="mt-1 font-medium">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Created by
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
                   {detail.data.version.createdBy?.name ?? "System"}
                 </dd>
               </div>
               <div>
-                <dt className="text-muted">Published</dt>
-                <dd className="mt-1 font-medium">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Published
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
                   {formatDate(detail.data.version.publishedAt)}
                 </dd>
               </div>
             </dl>
+
+            {/* Change summary */}
             {detail.data.version.changeSummary ? (
-              <section>
-                <h4 className="text-sm font-semibold">Change summary</h4>
-                <p className="text-muted mt-1 text-sm whitespace-pre-wrap">
-                  {detail.data.version.changeSummary}
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <History
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h4 className="text-sm font-semibold">Change summary</h4>
+                </div>
+                <div className="border-border bg-neutral-soft/30 rounded-xl border p-3.5">
+                  <p className="text-muted text-xs leading-5 whitespace-pre-wrap">
+                    {detail.data.version.changeSummary}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <Info
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <p className="text-muted text-xs leading-5">
+                  No change summary was recorded for this version.
                 </p>
-              </section>
-            ) : null}
-            <section>
-              <h4 className="text-sm font-semibold">Policy content</h4>
-              <div className="border-border bg-background mt-2 max-h-80 overflow-y-auto rounded-lg border p-4 text-sm leading-6 whitespace-pre-wrap">
+              </div>
+            )}
+
+            {/* Policy content */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <FileText
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h4 className="text-sm font-semibold">Policy content</h4>
+              </div>
+              <div className="border-border bg-background max-h-80 overflow-y-auto rounded-xl border p-4 text-sm leading-6 whitespace-pre-wrap font-mono">
                 {detail.data.version.content}
               </div>
-            </section>
-            <div className="flex justify-end">
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end border-t border-border pt-4">
               <Button variant="secondary" onClick={() => setSelected(null)}>
                 Close
               </Button>

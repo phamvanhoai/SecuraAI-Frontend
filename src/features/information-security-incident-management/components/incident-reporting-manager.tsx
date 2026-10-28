@@ -38,7 +38,6 @@ import {
 } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
 import { FormField } from "@/components/forms/form-field";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -917,7 +916,10 @@ export function IncidentReportingManager() {
     );
   if (!allowed && !canRead)
     return (
-      <Alert>You do not have permission to access incident management.</Alert>
+      <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.8} />
+        <p className="text-sm text-muted">You do not have permission to access incident management.</p>
+      </div>
     );
   return (
     <>
@@ -1050,7 +1052,10 @@ export function IncidentReportingManager() {
               className="bg-neutral-soft h-56 animate-pulse rounded-xl"
             />
           ) : displayedList.isError && !displayedItems.length ? (
-            <Alert>Unable to load incident reports.</Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-muted">Unable to load incident reports.</p>
+            </div>
           ) : displayedItems.length ? (
             <DataTable
               columns={columns}
@@ -1117,17 +1122,23 @@ export function IncidentReportingManager() {
       >
         <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
           {message ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              {message}
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-danger">{message}</p>
+            </div>
           ) : null}
           <input type="hidden" {...register("creationMode")} />
-          {isSecurityOfficer ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Creation method</p>
+
+          {/* ── Creation method ─────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Creation method</h3>
+            </div>
+            {isSecurityOfficer ? (
               <div
                 aria-label="Incident creation methods"
-                className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs sm:w-auto"
+                className="border-border bg-surface inline-flex w-full items-center gap-1 rounded-xl border p-1 shadow-xs"
                 role="tablist"
               >
                 {(
@@ -1150,7 +1161,7 @@ export function IncidentReportingManager() {
                     <button
                       aria-selected={selected}
                       className={cn(
-                        "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors sm:flex-none",
+                        "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
                         selected
                           ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                           : "text-muted hover:bg-neutral-soft hover:text-foreground",
@@ -1167,153 +1178,182 @@ export function IncidentReportingManager() {
                       role="tab"
                       type="button"
                     >
-                      <Icon
-                        aria-hidden="true"
-                        className="size-4 shrink-0"
-                        strokeWidth={1.8}
-                      />
+                      <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2} />
                       <span>{option.label}</span>
                     </button>
                   );
                 })}
               </div>
+            ) : (
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                <p className="text-xs text-muted">
+                  Submit the information you observed. The security team will review
+                  and investigate this report.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Source selection ─────────────────────────────────────── */}
+          {creationMode === "source" ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Link2 className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                <h3 className="text-sm font-semibold">Confirmed source</h3>
+              </div>
+              <div className="border-border bg-neutral-soft/30 space-y-3 rounded-xl border p-4">
+                {sourceOptions.isError ? (
+                  <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                    <p className="text-xs text-muted">
+                      Unable to load confirmed alerts and findings. Close and reopen the dialog to retry.
+                    </p>
+                  </div>
+                ) : sourceOptions.data?.items.length === 0 ? (
+                  <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.8} />
+                    <p className="text-xs text-muted">
+                      No eligible confirmed alerts or findings are available.
+                    </p>
+                  </div>
+                ) : null}
+                <FormField
+                  id="incident-source"
+                  label="Confirmed alert or finding"
+                  error={errors.sourceId?.message}
+                >
+                  <Select
+                    id="incident-source"
+                    disabled={sourceOptions.isPending || sourceOptions.isError}
+                    {...register("sourceId", {
+                      onChange: (event) => {
+                        const source = sourceOptions.data?.items.find(
+                          (item) => item.findingId === event.target.value,
+                        );
+                        if (!source) return;
+                        setValue("title", source.title, { shouldValidate: true });
+                        setValue("description", source.description ?? "", {
+                          shouldValidate: true,
+                        });
+                        setValue("severity", source.severity, {
+                          shouldValidate: true,
+                        });
+                        setValue("occurredAt", source.detectedAt.slice(0, 16));
+                      },
+                    })}
+                  >
+                    <option value="">
+                      {sourceOptions.isPending
+                        ? "Loading eligible sources…"
+                        : "Select a source"}
+                    </option>
+                    {sourceOptions.data?.items.map((source) => (
+                      <option key={source.findingId} value={source.findingId}>
+                        {source.title} · Alert{" "}
+                        {source.alertId.slice(0, 8).toUpperCase()}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="text-muted text-xs">
+                    Only confirmed sources that are not already linked to an
+                    incident are shown.
+                  </p>
+                </FormField>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <p className="text-xs text-muted">
+                    Creating the incident permanently links it to the selected
+                    security finding for audit traceability.
+                  </p>
+                </div>
+              </div>
             </div>
-          ) : (
-            <Alert>
-              Submit the information you observed. The security team will review
-              and investigate this report.
-            </Alert>
-          )}
-          {creationMode === "source" && sourceOptions.isError ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              Unable to load confirmed alerts and findings. Close and reopen the
-              dialog to retry.
-            </Alert>
-          ) : null}
-          {creationMode === "source" ? (
-            <FormField
-              id="incident-source"
-              label="Confirmed alert or finding"
-              error={errors.sourceId?.message}
-            >
-              <Select
-                id="incident-source"
-                disabled={sourceOptions.isPending || sourceOptions.isError}
-                {...register("sourceId", {
-                  onChange: (event) => {
-                    const source = sourceOptions.data?.items.find(
-                      (item) => item.findingId === event.target.value,
-                    );
-                    if (!source) return;
-                    setValue("title", source.title, { shouldValidate: true });
-                    setValue("description", source.description ?? "", {
-                      shouldValidate: true,
-                    });
-                    setValue("severity", source.severity, {
-                      shouldValidate: true,
-                    });
-                    setValue("occurredAt", source.detectedAt.slice(0, 16));
-                  },
-                })}
-              >
-                <option value="">
-                  {sourceOptions.isPending
-                    ? "Loading eligible sources…"
-                    : "Select a source"}
-                </option>
-                {sourceOptions.data?.items.map((source) => (
-                  <option key={source.findingId} value={source.findingId}>
-                    {source.title} · Alert{" "}
-                    {source.alertId.slice(0, 8).toUpperCase()}
-                  </option>
-                ))}
-              </Select>
-              <p className="text-muted text-xs">
-                Only confirmed sources that are not already linked to an
-                incident are shown.
-              </p>
-            </FormField>
           ) : isSecurityOfficer ? (
-            <Alert>
-              Create manually only when no confirmed alert or finding exists.
-              The incident will have no originating-source link.
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" strokeWidth={1.8} />
+              <p className="text-xs text-muted">
+                Create manually only when no confirmed alert or finding exists.
+                The incident will have no originating-source link.
+              </p>
+            </div>
           ) : null}
-          {creationMode === "source" &&
-          sourceOptions.data?.items.length === 0 ? (
-            <Alert>
-              No eligible confirmed alerts or findings are available.
-            </Alert>
-          ) : null}
-          <FormField
-            id="incident-title"
-            label="Incident title"
-            error={errors.title?.message}
-          >
-            <Input
-              id="incident-title"
-              maxLength={255}
-              aria-invalid={Boolean(errors.title)}
-              aria-describedby={
-                errors.title ? "incident-title-error" : undefined
-              }
-              placeholder="Concise incident title"
-              {...register("title")}
-            />
-          </FormField>
-          <FormField
-            id="incident-severity"
-            label="Severity"
-            error={errors.severity?.message}
-          >
-            <Select id="incident-severity" {...register("severity")}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </Select>
-          </FormField>
-          <FormField
-            id="occurred-at"
-            label="Detected at (optional)"
-            error={errors.occurredAt?.message}
-          >
-            <Input
-              id="occurred-at"
-              type="datetime-local"
-              {...register("occurredAt")}
-            />
-            <p className="text-muted text-xs">
-              {creationMode === "source"
-                ? "Defaults to the source finding time when left blank."
-                : "Defaults to the current time when left blank."}
-            </p>
-          </FormField>
-          <FormField
-            id="incident-description"
-            label="Description"
-            error={errors.description?.message}
-          >
-            <Textarea
-              id="incident-description"
-              className="min-h-36"
-              maxLength={10000}
-              aria-invalid={Boolean(errors.description)}
-              aria-describedby={
-                errors.description ? "incident-description-error" : undefined
-              }
-              placeholder="Record the confirmed event, affected scope, and relevant investigation context."
-              {...register("description")}
-            />
-          </FormField>
-          {creationMode === "source" ? (
-            <Alert>
-              Creating the incident permanently links it to the selected
-              security finding for audit traceability.
-            </Alert>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={close}>
+
+          {/* ── Incident details ─────────────────────────────────────── */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <FileText className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Incident details</h3>
+            </div>
+            <div className="border-border bg-neutral-soft/30 grid gap-4 rounded-xl border p-4">
+              <FormField
+                id="incident-title"
+                label="Incident title"
+                error={errors.title?.message}
+              >
+                <Input
+                  id="incident-title"
+                  maxLength={255}
+                  aria-invalid={Boolean(errors.title)}
+                  aria-describedby={
+                    errors.title ? "incident-title-error" : undefined
+                  }
+                  placeholder="Concise incident title"
+                  {...register("title")}
+                />
+              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  id="incident-severity"
+                  label="Severity"
+                  error={errors.severity?.message}
+                >
+                  <Select id="incident-severity" {...register("severity")}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </Select>
+                </FormField>
+                <FormField
+                  id="occurred-at"
+                  label="Detected at (optional)"
+                  error={errors.occurredAt?.message}
+                >
+                  <Input
+                    id="occurred-at"
+                    type="datetime-local"
+                    {...register("occurredAt")}
+                  />
+                  <p className="text-muted text-xs">
+                    {creationMode === "source"
+                      ? "Defaults to the source finding time when left blank."
+                      : "Defaults to the current time when left blank."}
+                  </p>
+                </FormField>
+              </div>
+              <FormField
+                id="incident-description"
+                label="Description"
+                error={errors.description?.message}
+              >
+                <Textarea
+                  id="incident-description"
+                  className="min-h-36"
+                  maxLength={10000}
+                  aria-invalid={Boolean(errors.description)}
+                  aria-describedby={
+                    errors.description ? "incident-description-error" : undefined
+                  }
+                  placeholder="Record the confirmed event, affected scope, and relevant investigation context."
+                  {...register("description")}
+                />
+              </FormField>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button variant="secondary" type="button" onClick={close}>
               Cancel
             </Button>
             <Button
@@ -1324,7 +1364,14 @@ export function IncidentReportingManager() {
                   (!selectedSource || sourceOptions.isPending))
               }
             >
-              {mutation.isPending ? "Creating…" : "Create incident"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Creating…
+                </>
+              ) : (
+                "Create incident"
+              )}
             </Button>
           </div>
         </form>
@@ -1500,16 +1547,20 @@ export function IncidentReportingManager() {
             >
               {/* Alerts */}
               {assignmentMutation.isError ? (
-                <Alert className="border-danger/25 bg-danger-soft text-danger">
-                  {assignmentMutation.error instanceof Error
-                    ? assignmentMutation.error.message
-                    : "Unable to assign this incident. Review the values and try again."}
-                </Alert>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm text-danger">
+                    {assignmentMutation.error instanceof Error
+                      ? assignmentMutation.error.message
+                      : "Unable to assign this incident. Review the values and try again."}
+                  </p>
+                </div>
               ) : null}
               {assignmentOptions.isError ? (
-                <Alert>
-                  Unable to load eligible handlers. Try reopening this dialog.
-                </Alert>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm text-muted">Unable to load eligible handlers. Try reopening this dialog.</p>
+                </div>
               ) : null}
 
               {/* Section 1 — Handler selection */}
@@ -1760,7 +1811,10 @@ export function IncidentReportingManager() {
                   aria-label="Loading incident evidence"
                 />
               ) : evidence.isError ? (
-                <Alert>Unable to load incident evidence.</Alert>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm text-muted">Unable to load incident evidence.</p>
+                </div>
               ) : evidence.data?.items.length ? (
                 <ul className="border-border divide-border divide-y rounded-lg border">
                   {evidence.data.items.map((item) => (
@@ -1844,9 +1898,10 @@ export function IncidentReportingManager() {
               >
                 <h3 className="text-sm font-semibold">Attach a file</h3>
                 {evidenceError ? (
-                  <Alert className="border-danger/25 bg-danger-soft text-danger">
-                    {evidenceError}
-                  </Alert>
+                  <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                    <p className="text-sm text-danger">{evidenceError}</p>
+                  </div>
                 ) : null}
                 <FormField
                   id="incident-evidence-file"
@@ -1882,11 +1937,14 @@ export function IncidentReportingManager() {
                     placeholder="Describe the source, collection time and relevance of this evidence."
                   />
                 </FormField>
-                <Alert>
-                  Files are checksum-protected and retained with uploader and
-                  audit information.
-                </Alert>
-                <div className="flex justify-end gap-2">
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <p className="text-xs text-muted">
+                    Files are checksum-protected and retained with uploader and
+                    audit information.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
                   <Button
                     type="button"
                     variant="secondary"
@@ -1898,24 +1956,32 @@ export function IncidentReportingManager() {
                     type="submit"
                     disabled={!evidenceFile || evidenceMutation.isPending}
                   >
-                    <Paperclip
-                      aria-hidden="true"
-                      className="size-4"
-                      strokeWidth={1.8}
-                    />
-                    {evidenceMutation.isPending ? "Uploading…" : "Attach file"}
+                    {evidenceMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                        Uploading…
+                      </>
+                    ) : (
+                      <>
+                        <Paperclip aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                        Attach file
+                      </>
+                    )}
                   </Button>
                 </div>
               </form>
             ) : (
               <div className="space-y-4">
-                <Alert>
-                  {evidenceTarget.status === "closed"
-                    ? "Closed incidents are read-only. Existing evidence remains available for download."
-                    : "Only the active incident handler or an incident coordinator can attach files. Existing evidence remains available for download."}
-                </Alert>
-                <div className="flex justify-end">
-                  <Button variant="secondary" onClick={closeEvidence}>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <p className="text-xs text-muted">
+                    {evidenceTarget.status === "closed"
+                      ? "Closed incidents are read-only. Existing evidence remains available for download."
+                      : "Only the active incident handler or an incident coordinator can attach files. Existing evidence remains available for download."}
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+                  <Button variant="secondary" type="button" onClick={closeEvidence}>
                     Close
                   </Button>
                 </div>
@@ -1936,11 +2002,14 @@ export function IncidentReportingManager() {
             noValidate
             onSubmit={removalForm.handleSubmit(submitRemoval)}
           >
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              This permanently removes the evidence record and stored file. The
-              file metadata and your reason remain in the audit log.
-            </Alert>
-            <div className="border-border bg-neutral-soft rounded-lg border p-4">
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-xs text-muted">
+                This permanently removes the evidence record and stored file. The
+                file metadata and your reason remain in the audit log.
+              </p>
+            </div>
+            <div className="border-border bg-neutral-soft/30 rounded-xl border p-4">
               <p className="text-muted text-xs font-medium tracking-wide uppercase">
                 {evidenceTarget.incidentCode}
               </p>
@@ -1953,11 +2022,14 @@ export function IncidentReportingManager() {
               </p>
             </div>
             {removalMutation.isError ? (
-              <Alert className="border-danger/25 bg-danger-soft text-danger">
-                {removalMutation.error instanceof Error
-                  ? removalMutation.error.message
-                  : "Unable to remove the evidence."}
-              </Alert>
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                <p className="text-sm text-danger">
+                  {removalMutation.error instanceof Error
+                    ? removalMutation.error.message
+                    : "Unable to remove the evidence."}
+                </p>
+              </div>
             ) : null}
             <FormField
               id="incident-evidence-removal-reason"
@@ -2050,16 +2122,16 @@ export function IncidentReportingManager() {
               incidentId={progressTarget.id}
             />
 
-            {/* Error alert */}
+            {/* Error banner */}
             {progressMutation.isError ? (
-              <Alert
-                role="alert"
-                className="border-danger/25 bg-danger-soft text-danger"
-              >
-                {progressMutation.error instanceof Error
-                  ? progressMutation.error.message
-                  : "Unable to update incident progress."}
-              </Alert>
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5" role="alert">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                <p className="text-sm text-danger">
+                  {progressMutation.error instanceof Error
+                    ? progressMutation.error.message
+                    : "Unable to update incident progress."}
+                </p>
+              </div>
             ) : null}
 
             {progressOptions[progressTarget.status]?.length ? (
@@ -2513,17 +2585,20 @@ export function IncidentReportingManager() {
                 </div>
               )}
 
-              {/* Error alert */}
+              {/* Error banner */}
               {classificationMutation.isError ? (
-                <Alert className="border-danger/25 bg-danger-soft text-danger">
-                  {classificationMutation.error instanceof Error
-                    ? classificationMutation.error.message
-                    : "Unable to classify this incident. Review the values and try again."}
-                  {classificationMutation.error instanceof ApiError &&
-                  [403, 409].includes(classificationMutation.error.status)
-                    ? " Close this dialog and reopen the incident from the refreshed list before trying again."
-                    : null}
-                </Alert>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm text-danger">
+                    {classificationMutation.error instanceof Error
+                      ? classificationMutation.error.message
+                      : "Unable to classify this incident. Review the values and try again."}
+                    {classificationMutation.error instanceof ApiError &&
+                    [403, 409].includes(classificationMutation.error.status)
+                      ? " Close this dialog and reopen the incident from the refreshed list before trying again."
+                      : null}
+                  </p>
+                </div>
               ) : null}
 
               {/* Section 1 — Severity */}
@@ -2758,9 +2833,10 @@ export function IncidentReportingManager() {
           </div>
         ) : detail.isError ? (
           <div className="space-y-5">
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              Unable to load this incident report.
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-muted">Unable to load this incident report.</p>
+            </div>
             <div className="flex items-center justify-between border-t border-border pt-4">
               <div />
               <div className="flex items-center gap-3">

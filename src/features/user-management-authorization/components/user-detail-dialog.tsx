@@ -1,11 +1,17 @@
 "use client";
 
-import { Activity, KeyRound, Mail, UserRound } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  KeyRound,
+  Mail,
+  UserRound,
+} from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUserDetail } from "../hooks/use-user-detail";
 import type { UserDetail } from "../schemas/user-schema";
 
@@ -25,13 +31,16 @@ export function UserDetailDialog({
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const detail = useUserDetail(userId);
+
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (userId && !dialog.open) dialog.showModal();
     if (!userId && dialog.open) dialog.close();
   }, [userId]);
+
   const status = detail.data ? statusPresentation[detail.data.status] : null;
+
   return (
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
@@ -39,59 +48,81 @@ export function UserDetailDialog({
       onClose={onClose}
       title="User details"
     >
+      {/* Loading skeleton */}
       {detail.isPending ? (
-        <p className="text-muted py-10 text-center" role="status">
-          Loading user details...
-        </p>
+        <div
+          className="space-y-5"
+          role="status"
+          aria-label="Loading user details"
+        >
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-36 rounded" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-32 rounded" />
+            <Skeleton className="h-20 w-full rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-32 rounded" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+          </div>
+          <div className="flex justify-end border-t border-border pt-4">
+            <Skeleton className="h-9 w-20 rounded-lg" />
+          </div>
+        </div>
       ) : null}
+
+      {/* Error banner */}
       {detail.isError ? (
-        <Alert>
-          <strong className="block">Unable to load user details</strong>
-          <span>
-            The account may no longer exist or you may not have access.
-          </span>
+        <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+          <div className="flex gap-2.5">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-danger"
+              strokeWidth={1.8}
+            />
+            <div>
+              <p className="text-sm font-medium text-danger">
+                Unable to load user details
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                The account may no longer exist or you may not have access.
+              </p>
+            </div>
+          </div>
           <Button
-            className="mt-3"
             onClick={() => void detail.refetch()}
             variant="secondary"
+            type="button"
+            className="min-h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
           >
             Try again
           </Button>
-        </Alert>
+        </div>
       ) : null}
+
       {detail.data && status ? (
         <div className="space-y-5">
-          <div className="bg-neutral-soft flex flex-col gap-4 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="bg-brand-soft text-brand grid size-12 shrink-0 place-items-center rounded-xl font-semibold">
-                {initials(detail.data.fullName)}
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-xl font-semibold tracking-[-0.02em]">
-                  {detail.data.fullName}
-                </h3>
-                <p className="text-muted mt-1 flex items-center gap-1.5 text-sm [overflow-wrap:anywhere]">
-                  <Mail
-                    aria-hidden="true"
-                    className="size-4 shrink-0"
-                    strokeWidth={1.8}
-                  />
-                  {detail.data.email}
-                </p>
-              </div>
-            </div>
+          {/* Context bar — identity */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <span className="bg-brand-soft text-brand grid size-8 shrink-0 place-items-center rounded-lg text-sm font-semibold">
+              {initials(detail.data.fullName)}
+            </span>
+            <span className="font-medium text-foreground text-sm">
+              {detail.data.fullName}
+            </span>
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1 font-mono text-muted">
+              <Mail className="size-3.5 shrink-0" strokeWidth={1.8} />
+              {detail.data.email}
+            </span>
+            <span className="text-border">·</span>
             <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
           </div>
-          <DetailSection
-            icon={
-              <UserRound
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-            }
-            title="Account information"
-          >
+
+          {/* Account information */}
+          <DetailSection icon={<UserRound className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />} title="Account information">
             <Detail label="Full name" value={detail.data.fullName} />
             <Detail label="Username" value={detail.data.username} />
             <Detail
@@ -108,29 +139,15 @@ export function UserDetailDialog({
               value={detail.data.department?.code ?? "Not assigned"}
             />
           </DetailSection>
-          <DetailSection
-            icon={
-              <KeyRound
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-            }
-            title="Access assignment"
-          >
+
+          {/* Access assignment */}
+          <DetailSection icon={<KeyRound className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />} title="Access assignment">
             <Detail label="Role" value={detail.data.role.name} />
             <Detail label="Role code" value={detail.data.role.code} />
           </DetailSection>
-          <DetailSection
-            icon={
-              <Activity
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-            }
-            title="Account activity"
-          >
+
+          {/* Account activity */}
+          <DetailSection icon={<Activity className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />} title="Account activity">
             <Detail
               label="Last login"
               value={formatDate(detail.data.lastLoginAt)}
@@ -147,11 +164,17 @@ export function UserDetailDialog({
           </DetailSection>
         </div>
       ) : null}
-      <div className="mt-6 flex justify-end">
-        <Button onClick={() => dialogRef.current?.close()} variant="secondary">
-          Close
-        </Button>
-      </div>
+
+      {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+          <Button
+            onClick={() => dialogRef.current?.close()}
+            variant="secondary"
+            type="button"
+          >
+            Close
+          </Button>
+        </div>
     </Dialog>
   );
 }
@@ -165,25 +188,22 @@ function DetailSection({
   icon: ReactNode;
   children: ReactNode;
 }) {
-  const id = `${title.toLowerCase().replaceAll(" ", "-")}-heading`;
+  const id = title.toLowerCase().replaceAll(" ", "-") + "-heading";
   return (
-    <section
-      aria-labelledby={id}
-      className="border-border rounded-xl border p-4"
-    >
-      <h4
-        className="mb-4 flex items-center gap-2 text-sm font-semibold"
-        id={id}
-      >
-        <span className="bg-brand-soft text-brand grid size-7 place-items-center rounded-lg">
-          {icon}
-        </span>
-        {title}
-      </h4>
-      <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{children}</dl>
+    <section aria-labelledby={id} className="space-y-3">
+      <div className="flex items-start gap-2 border-b border-border pb-2">
+        {icon}
+        <h4 className="text-sm font-semibold" id={id}>
+          {title}
+        </h4>
+      </div>
+      <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+        {children}
+      </dl>
     </section>
   );
 }
+
 function Detail({
   label,
   value,
@@ -193,7 +213,7 @@ function Detail({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
+      <dt className="text-muted text-xs font-medium uppercase tracking-wide">
         {label}
       </dt>
       <dd className="mt-1.5 text-sm font-medium [overflow-wrap:anywhere]">
@@ -202,6 +222,7 @@ function Detail({
     </div>
   );
 }
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -211,6 +232,7 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+
 function formatDate(value: UserDetail["lastLoginAt"]): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat("en-US", {

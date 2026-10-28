@@ -1,27 +1,24 @@
 "use client";
 
 import {
+  AlertTriangle,
   Calendar,
   Check,
   Clock,
   Copy,
   FileCode,
-  Globe,
   Key,
-  Laptop,
   Server,
   ShieldCheck,
   User,
-  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { StatusBadge } from "@/components/data-display/static-product";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuditLogDetail } from "../hooks/use-audit-logs";
 import type { AuditLogItem } from "../schemas/audit-log-schema";
-import { cn } from "@/lib/utils";
 
 function getActionTone(action: string): "success" | "warning" | "danger" | "info" | "neutral" {
   const upper = action.toUpperCase();
@@ -132,150 +129,158 @@ export function AuditLogDetailDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(54rem,calc(100%-2rem))] overflow-y-auto"
     >
       {isLoading && !log ? (
-        <div className="py-12 text-center text-muted" role="status">
-          <p className="text-sm">Loading audit record details…</p>
+        <div className="space-y-4" role="status" aria-label="Loading audit record details">
+          <Skeleton className="h-14 w-full rounded-lg" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Skeleton className="h-36 w-full rounded-xl" />
+            <Skeleton className="h-36 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-lg" />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="flex justify-end pt-4 border-t border-border">
+            <Skeleton className="h-9 w-20 rounded-lg" />
+          </div>
         </div>
       ) : isError && !log ? (
-        <Alert className="border-danger/30 bg-danger-soft text-danger">
-          <div className="flex items-center justify-between">
-            <span>Failed to load audit record details: {error?.message}</span>
-            <Button type="button" variant="secondary" onClick={() => void refetch()}>
-              Retry
-            </Button>
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-danger">Failed to load audit record details</p>
+            {error?.message && (
+              <p className="mt-0.5 text-xs text-muted">{error.message}</p>
+            )}
           </div>
-        </Alert>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void refetch()}
+            className="min-h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+          >
+            Retry
+          </Button>
+        </div>
       ) : log ? (
         <div className="space-y-6">
-          {/* Top Summary Banner */}
-          <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <StatusBadge tone={getActionTone(log.action)}>
-                  <span className="font-mono text-xs font-bold">{log.action}</span>
-                </StatusBadge>
-                <span className="text-xs text-muted">ID: {log.id}</span>
-              </div>
-              <p className="text-xs text-muted flex items-center gap-1.5 pt-1">
-                <Clock className="size-3.5 text-muted shrink-0" />
-                <span>Occurred: <strong className="text-foreground">{formatExactTime(log.occurredAt)}</strong></span>
-                <span className="text-muted/60">•</span>
-                <span>Logged: <strong className="text-foreground">{formatExactTime(log.createdAt)}</strong></span>
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-2.5 py-1 text-xs font-medium text-success">
-                <ShieldCheck className="size-3.5" />
-                <span>Cryptographically Verified</span>
-              </span>
-            </div>
+          {/* Context Bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <StatusBadge tone={getActionTone(log.action)}>
+              <span className="font-mono font-bold">{log.action}</span>
+            </StatusBadge>
+            <span className="text-muted font-mono">{log.id}</span>
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1 text-muted">
+              <Clock className="size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>Occurred: <strong className="text-foreground">{formatExactTime(log.occurredAt)}</strong></span>
+            </span>
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1 text-muted">
+              <Calendar className="size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>Logged: <strong className="text-foreground">{formatExactTime(log.createdAt)}</strong></span>
+            </span>
+            <span className="ml-auto inline-flex items-center gap-1 rounded-md border border-success/30 bg-success-soft px-2 py-0.5 font-medium text-success">
+              <ShieldCheck className="size-3.5" strokeWidth={1.8} />
+              <span>Cryptographically Verified</span>
+            </span>
           </div>
 
           {/* 2-Column Info Grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Actor Details Card */}
-            <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
-              <div className="flex items-center gap-2 border-b border-border/60 pb-2">
-                <User className="size-4 text-brand" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                  Actor Information
-                </h4>
+            {/* Actor Details */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <User className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                <h3 className="text-sm font-semibold">Actor Information</h3>
               </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted">Actor Type:</span>
-                  <span className="rounded bg-neutral-soft px-1.5 py-0.5 font-mono font-medium text-foreground">
-                    {log.actorType}
-                  </span>
+              <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-3 rounded-xl border p-4">
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Actor Type</dt>
+                  <dd className="mt-1 text-sm font-medium font-mono">
+                    <span className="rounded bg-neutral-soft px-1.5 py-0.5 text-xs">{log.actorType}</span>
+                  </dd>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Name:</span>
-                  <span className="font-medium text-foreground text-right truncate max-w-[200px]">
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Name</dt>
+                  <dd className="mt-1 text-sm font-medium truncate">
                     {log.actor?.name ?? (log.actorType === "SYSTEM" ? "System Engine" : "Unknown")}
-                  </span>
+                  </dd>
                 </div>
                 {log.actor?.email && (
-                  <div className="flex justify-between">
-                    <span className="text-muted">Email:</span>
-                    <span className="font-medium text-foreground text-right truncate max-w-[200px]">
-                      {log.actor.email}
-                    </span>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Email</dt>
+                    <dd className="mt-1 text-sm font-medium truncate">{log.actor.email}</dd>
                   </div>
                 )}
                 {log.actor?.role && (
-                  <div className="flex justify-between">
-                    <span className="text-muted">Assigned Role:</span>
-                    <span className="font-mono text-foreground">{log.actor.role}</span>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Assigned Role</dt>
+                    <dd className="mt-1 text-sm font-medium font-mono">{log.actor.role}</dd>
                   </div>
                 )}
                 {log.actor?.keyPrefix && (
-                  <div className="flex justify-between">
-                    <span className="text-muted">API Key Prefix:</span>
-                    <span className="font-mono text-foreground">{log.actor.keyPrefix}***</span>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">API Key Prefix</dt>
+                    <dd className="mt-1 text-sm font-medium font-mono">{log.actor.keyPrefix}***</dd>
                   </div>
                 )}
                 {log.actorUserId && (
-                  <div className="flex justify-between">
-                    <span className="text-muted">Actor User ID:</span>
-                    <span className="font-mono text-[11px] text-muted truncate max-w-[180px]" title={log.actorUserId}>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Actor User ID</dt>
+                    <dd className="mt-1 font-mono text-xs text-muted truncate" title={log.actorUserId}>
                       {log.actorUserId}
-                    </span>
+                    </dd>
                   </div>
                 )}
-              </div>
+              </dl>
             </div>
 
-            {/* Affected Resource & Request Context */}
-            <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
-              <div className="flex items-center gap-2 border-b border-border/60 pb-2">
-                <Server className="size-4 text-brand" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                  Resource & Context
-                </h4>
+            {/* Resource & Context */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Server className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                <h3 className="text-sm font-semibold">Resource & Context</h3>
               </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted">Resource Type:</span>
-                  <span className="font-mono font-semibold text-foreground">
-                    {log.resourceType}
-                  </span>
+              <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-3 rounded-xl border p-4">
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Resource Type</dt>
+                  <dd className="mt-1 text-sm font-medium font-mono">{log.resourceType}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Resource ID:</span>
-                  <span className="font-mono text-[11px] text-foreground truncate max-w-[200px]" title={log.resourceId ?? "None"}>
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Resource ID</dt>
+                  <dd className="mt-1 font-mono text-xs truncate" title={log.resourceId ?? "None"}>
                     {log.resourceId ?? "—"}
-                  </span>
+                  </dd>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Source IP:</span>
-                  <span className="font-mono text-foreground">{log.sourceIp ?? "—"}</span>
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Source IP</dt>
+                  <dd className="mt-1 text-sm font-medium font-mono">{log.sourceIp ?? "—"}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Client / Source:</span>
-                  <span className="text-foreground">{log.source ?? "System"}</span>
+                <div>
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">Client / Source</dt>
+                  <dd className="mt-1 text-sm font-medium">{log.source ?? "System"}</dd>
                 </div>
                 {log.userAgent && (
-                  <div className="flex flex-col gap-0.5 pt-1">
-                    <span className="text-muted">User Agent:</span>
-                    <span className="font-mono text-[10px] text-muted line-clamp-2" title={log.userAgent}>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">User Agent</dt>
+                    <dd className="mt-1 font-mono text-[10px] text-muted line-clamp-2" title={log.userAgent}>
                       {log.userAgent}
-                    </span>
+                    </dd>
                   </div>
                 )}
-              </div>
+              </dl>
             </div>
           </div>
 
-          {/* Correlation ID Banner */}
+          {/* Correlation ID */}
           {log.correlationId && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-surface-subtle px-3.5 py-2.5 text-xs">
-              <div className="flex items-center gap-2 truncate">
-                <span className="text-muted">Correlation ID:</span>
-                <span className="font-mono font-semibold text-foreground truncate">
-                  {log.correlationId}
-                </span>
+            <div className="border-border bg-neutral-soft/30 flex items-center justify-between gap-3 rounded-lg border p-3.5 text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <Key className="size-3.5 shrink-0 text-brand" strokeWidth={1.8} />
+                <span className="text-muted shrink-0">Correlation ID:</span>
+                <span className="font-mono font-semibold text-foreground truncate">{log.correlationId}</span>
               </div>
               <Button
                 type="button"
@@ -293,84 +298,92 @@ export function AuditLogDetailDialog({
             </div>
           )}
 
-          {/* State Parameters (beforeData vs afterData) */}
+          {/* State Changes & Parameters */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <FileCode className="size-4 text-brand" />
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                State Changes & Parameters
-              </h4>
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <FileCode className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">State Changes & Parameters</h3>
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {/* Before Data */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-medium text-muted">
                   <span>State Before (beforeData)</span>
                   {log.beforeData && (
                     <button
                       type="button"
                       onClick={() => handleCopy(JSON.stringify(log.beforeData, null, 2), "beforeData")}
-                      className="text-muted hover:text-foreground text-[11px] flex items-center gap-1"
+                      className="text-muted hover:text-foreground flex items-center gap-1"
                     >
                       {copiedField === "beforeData" ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                       <span>Copy</span>
                     </button>
                   )}
                 </div>
-                <div className="rounded-lg border border-border bg-surface-subtle/80 p-3 font-mono text-[11px] overflow-x-auto max-h-48">
-                  {log.beforeData && Object.keys(log.beforeData).length > 0 ? (
-                    <pre className="text-foreground whitespace-pre-wrap">
-                      {JSON.stringify(log.beforeData, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="text-muted italic">No previous state recorded</span>
-                  )}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-b border-border bg-neutral-soft/30 px-3 py-1.5 text-[11px] font-medium text-muted">
+                    beforeData
+                  </div>
+                  <div className="overflow-x-auto p-3 font-mono text-[11px] max-h-48">
+                    {log.beforeData && Object.keys(log.beforeData).length > 0 ? (
+                      <pre className="text-foreground whitespace-pre-wrap">
+                        {JSON.stringify(log.beforeData, null, 2)}
+                      </pre>
+                    ) : (
+                      <span className="text-muted italic">No previous state recorded</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* After Data */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-medium text-muted">
                   <span>State After (afterData)</span>
                   {log.afterData && (
                     <button
                       type="button"
                       onClick={() => handleCopy(JSON.stringify(log.afterData, null, 2), "afterData")}
-                      className="text-muted hover:text-foreground text-[11px] flex items-center gap-1"
+                      className="text-muted hover:text-foreground flex items-center gap-1"
                     >
                       {copiedField === "afterData" ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                       <span>Copy</span>
                     </button>
                   )}
                 </div>
-                <div className="rounded-lg border border-border bg-surface-subtle/80 p-3 font-mono text-[11px] overflow-x-auto max-h-48">
-                  {log.afterData && Object.keys(log.afterData).length > 0 ? (
-                    <pre className="text-foreground whitespace-pre-wrap">
-                      {JSON.stringify(log.afterData, null, 2)}
-                    </pre>
-                  ) : (
-                    <span className="text-muted italic">No new state recorded</span>
-                  )}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-b border-border bg-neutral-soft/30 px-3 py-1.5 text-[11px] font-medium text-muted">
+                    afterData
+                  </div>
+                  <div className="overflow-x-auto p-3 font-mono text-[11px] max-h-48">
+                    {log.afterData && Object.keys(log.afterData).length > 0 ? (
+                      <pre className="text-foreground whitespace-pre-wrap">
+                        {JSON.stringify(log.afterData, null, 2)}
+                      </pre>
+                    ) : (
+                      <span className="text-muted italic">No new state recorded</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Cryptographic Hash Chain Card */}
-          <div className="rounded-xl border border-success/30 bg-success-soft/30 p-4 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-success" />
-              <h4 className="text-xs font-semibold text-foreground">
-                Cryptographic Hash Chain (SHA-256)
-              </h4>
+          {/* Cryptographic Hash Chain */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Cryptographic Hash Chain (SHA-256)</h3>
             </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                <span className="text-muted">Record Hash:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[11px] text-foreground bg-surface px-2 py-0.5 rounded border border-border max-w-[340px] truncate" title={log.recordHash}>
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4">
+              <div>
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Record Hash</dt>
+                <dd className="mt-1 flex items-center gap-2">
+                  <span
+                    className="font-mono text-[11px] text-foreground bg-surface px-2 py-0.5 rounded border border-border flex-1 truncate min-w-0"
+                    title={log.recordHash}
+                  >
                     {log.recordHash}
                   </span>
                   <Button
@@ -382,13 +395,15 @@ export function AuditLogDetailDialog({
                   >
                     {copiedField === "recordHash" ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                   </Button>
-                </div>
+                </dd>
               </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                <span className="text-muted">Previous Hash:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[11px] text-foreground bg-surface px-2 py-0.5 rounded border border-border max-w-[340px] truncate" title={log.previousHash ?? "Genesis Record (0)"}>
+              <div>
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Previous Hash</dt>
+                <dd className="mt-1 flex items-center gap-2">
+                  <span
+                    className="font-mono text-[11px] text-foreground bg-surface px-2 py-0.5 rounded border border-border flex-1 truncate min-w-0"
+                    title={log.previousHash ?? "Genesis Record (0)"}
+                  >
                     {log.previousHash ?? "0000000000000000000000000000000000000000000000000000000000000000 (Genesis)"}
                   </span>
                   {log.previousHash && (
@@ -402,13 +417,13 @@ export function AuditLogDetailDialog({
                       {copiedField === "previousHash" ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
                     </Button>
                   )}
-                </div>
+                </dd>
               </div>
-            </div>
+            </dl>
           </div>
 
-          {/* Close Action */}
-          <div className="flex justify-end pt-2 border-t border-border">
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="secondary" onClick={onClose}>
               Close
             </Button>

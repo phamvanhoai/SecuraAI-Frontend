@@ -1,5 +1,13 @@
 "use client";
-import { Eye, RotateCcw, Search, Settings2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Eye,
+  GitCompare,
+  RotateCcw,
+  Search,
+  Settings2,
+  User,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -18,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api/api-client";
+
 type RecordItem = {
   id: string;
   setting: string;
@@ -36,12 +45,14 @@ type Result = {
   items: RecordItem[];
   pagination: { page: number; pageCount: number; total: number };
 };
+
 const text = (v: unknown) =>
   v == null
     ? "Not recorded"
     : typeof v === "string"
       ? v
       : JSON.stringify(v, null, 2);
+
 const time = (v: string) =>
   new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -51,6 +62,7 @@ const time = (v: string) =>
     minute: "2-digit",
     timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date(v));
+
 async function load(page: number, q: string, actor: string) {
   const value = await apiRequest<unknown>(
     "/api/system-logs/configuration-history",
@@ -73,6 +85,15 @@ async function load(page: number, q: string, actor: string) {
     throw new Error("Invalid response");
   return value as Result;
 }
+
+function outcomeTone(outcome: RecordItem["outcome"]) {
+  return outcome === "SUCCESS"
+    ? ("success" as const)
+    : outcome === "DENIED"
+      ? ("warning" as const)
+      : ("danger" as const);
+}
+
 export function SystemConfigurationHistory() {
   const [page, setPage] = useState(1),
     [draft, setDraft] = useState(""),
@@ -85,6 +106,7 @@ export function SystemConfigurationHistory() {
     queryFn: () => load(page, q, actor),
   });
   const rows = query.data?.items ?? [];
+
   const cols: readonly DataTableColumn<RecordItem>[] = [
     {
       key: "setting",
@@ -94,7 +116,7 @@ export function SystemConfigurationHistory() {
           <p className="font-medium">{r.setting}</p>
           <p className="mt-1 text-sm">
             {r.resourceDetails
-              ? `${r.resourceDetails.name} · ${r.resourceDetails.email} · ${r.resourceDetails.role}`
+              ? r.resourceDetails.name + " · " + r.resourceDetails.email + " · " + r.resourceDetails.role
               : r.action}
           </p>
           {r.resourceId ? (
@@ -125,9 +147,7 @@ export function SystemConfigurationHistory() {
       header: "Recorded change",
       cell: (r) => (
         <div className="min-w-64 text-sm">
-          <span className="text-muted line-through">
-            {text(r.previousValue)}
-          </span>
+          <span className="text-muted line-through">{text(r.previousValue)}</span>
           <span className="mx-2">→</span>
           <span className="font-medium">{text(r.newValue)}</span>
         </div>
@@ -137,17 +157,7 @@ export function SystemConfigurationHistory() {
       key: "status",
       header: "Status",
       cell: (r) => (
-        <StatusBadge
-          tone={
-            r.outcome === "SUCCESS"
-              ? "success"
-              : r.outcome === "DENIED"
-                ? "warning"
-                : "danger"
-          }
-        >
-          {r.outcome}
-        </StatusBadge>
+        <StatusBadge tone={outcomeTone(r.outcome)}>{r.outcome}</StatusBadge>
       ),
     },
     {
@@ -155,6 +165,7 @@ export function SystemConfigurationHistory() {
       header: "Actions",
       cell: (r) => (
         <Button
+          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
           type="button"
           variant="secondary"
           onClick={() => {
@@ -162,19 +173,20 @@ export function SystemConfigurationHistory() {
             dialog.current?.showModal();
           }}
         >
-          <Eye className="size-4" />
+          <Eye className="size-3.5" strokeWidth={1.8} />
           View
         </Button>
       ),
     },
   ];
+
   return (
     <>
       <ProductPanel
         title="Configuration change history"
         description={
           query.data
-            ? `${query.data.pagination.total} append-only configuration changes found`
+            ? query.data.pagination.total + " append-only configuration changes found"
             : "Append-only configuration changes from the backend audit trail"
         }
       >
@@ -191,7 +203,10 @@ export function SystemConfigurationHistory() {
             htmlFor="configuration-history-search"
           >
             <span className="sr-only">Search configuration changes</span>
-            <Search className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Search
+              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              strokeWidth={1.8}
+            />
             <Input
               id="configuration-history-search"
               className="pl-9"
@@ -222,7 +237,7 @@ export function SystemConfigurationHistory() {
                 setPage(1);
               }}
             >
-              <RotateCcw aria-hidden="true" className="size-4" />
+              <RotateCcw aria-hidden="true" className="size-4" strokeWidth={1.8} />
               Reset
             </Button>
           ) : null}
@@ -249,7 +264,7 @@ export function SystemConfigurationHistory() {
             <div className="py-12 text-center">
               <Settings2
                 aria-hidden="true"
-                className="text-muted mx-auto mb-3 size-10"
+                className="text-muted mx-auto mb-3 size-10 stroke-1"
               />
               <h3 className="text-foreground text-base font-semibold">
                 {q || actor
@@ -289,50 +304,204 @@ export function SystemConfigurationHistory() {
           </div>
         ) : null}
       </ProductPanel>
-      <Dialog dialogRef={dialog} title="Configuration change details">
+
+      {/* ── Configuration change details dialog ── */}
+      <Dialog
+        className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
+        dialogRef={dialog}
+        title="Configuration change details"
+        onClose={() => setSelected(null)}
+      >
         {selected ? (
           <div className="space-y-5">
-            <div className="flex justify-between">
-              <span className="font-mono text-sm">{selected.id}</span>
-              <StatusBadge
-                tone={
-                  selected.outcome === "SUCCESS"
-                    ? "success"
-                    : selected.outcome === "DENIED"
-                      ? "warning"
-                      : "danger"
-                }
-              >
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Settings2 className="size-3.5 text-brand" strokeWidth={1.8} />
+                {selected.setting}
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-muted font-mono">{selected.action}</span>
+              <span className="text-border">·</span>
+              <StatusBadge tone={outcomeTone(selected.outcome)}>
                 {selected.outcome}
               </StatusBadge>
             </div>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <Detail label="Affected setting" value={selected.setting} />
-              <Detail label="Action" value={selected.action} />
-              {selected.resourceDetails ? (
-                <Detail
-                  label="Affected user"
-                  value={`${selected.resourceDetails.name} · ${selected.resourceDetails.email} · ${selected.resourceDetails.role}`}
-                />
-              ) : null}
-              {selected.resourceId ? (
-                <Detail
-                  label="Technical resource ID"
-                  value={selected.resourceId}
-                />
-              ) : null}
-              <Detail
-                label="Actor"
-                value={`${selected.actor}${selected.actorRole ? ` (${selected.actorRole})` : ""}`}
-              />
-              <Detail label="Timestamp" value={time(selected.changedAt)} />
-              <Detail
-                label="Previous value"
-                value={text(selected.previousValue)}
-              />
-              <Detail label="New value" value={text(selected.newValue)} />
+
+            {/* Metadata fact grid */}
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Affected setting
+                </dt>
+                <dd className="mt-1 text-sm font-medium break-words">
+                  {selected.setting}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Action
+                </dt>
+                <dd className="mt-1 text-sm font-medium font-mono">
+                  {selected.action}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Timestamp
+                </dt>
+                <dd className="mt-1 text-sm font-medium">
+                  <time dateTime={selected.changedAt}>{time(selected.changedAt)}</time>
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Record ID
+                </dt>
+                <dd className="mt-1 text-sm font-medium font-mono break-all">
+                  {selected.id}
+                </dd>
+              </div>
             </dl>
-            <div className="flex justify-end">
+
+            {/* Actor section */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <User
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Actor</h3>
+              </div>
+              <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                    Name
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium">{selected.actor}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                    Email
+                  </dt>
+                  <dd className="mt-1 text-sm font-medium">
+                    {selected.actorEmail ?? (
+                      <span className="text-muted font-normal">Not recorded</span>
+                    )}
+                  </dd>
+                </div>
+                {selected.actorRole ? (
+                  <div className="min-w-0">
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                      Role
+                    </dt>
+                    <dd className="mt-1 text-sm font-medium">{selected.actorRole}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+
+            {/* Affected resource section (conditional) */}
+            {selected.resourceDetails || selected.resourceId ? (
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Settings2
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Affected resource</h3>
+                </div>
+                <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+                  {selected.resourceDetails ? (
+                    <>
+                      <div className="min-w-0">
+                        <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                          Name
+                        </dt>
+                        <dd className="mt-1 text-sm font-medium">
+                          {selected.resourceDetails.name}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                          Email
+                        </dt>
+                        <dd className="mt-1 text-sm font-medium">
+                          {selected.resourceDetails.email}
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                          Role
+                        </dt>
+                        <dd className="mt-1 text-sm font-medium">
+                          {selected.resourceDetails.role}
+                        </dd>
+                      </div>
+                    </>
+                  ) : null}
+                  {selected.resourceId ? (
+                    <div className="min-w-0 sm:col-span-2">
+                      <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                        Technical resource ID
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium font-mono break-all">
+                        {selected.resourceId}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            ) : null}
+
+            {/* Recorded change section */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <GitCompare
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Recorded change</h3>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {/* Previous value */}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-border bg-neutral-soft/30 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                    Previous value
+                  </div>
+                  <pre className="max-h-48 overflow-auto p-3 text-xs break-all whitespace-pre-wrap text-muted">
+                    {text(selected.previousValue)}
+                  </pre>
+                </div>
+                {/* New value */}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="border-border bg-neutral-soft/30 border-b px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                    New value
+                  </div>
+                  <pre className="max-h-48 overflow-auto p-3 text-xs break-all whitespace-pre-wrap font-medium">
+                    {text(selected.newValue)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning for failed/denied outcomes */}
+            {selected.outcome !== "SUCCESS" ? (
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                <AlertTriangle
+                  className="mt-0.5 size-4 shrink-0 text-warning"
+                  strokeWidth={1.8}
+                />
+                <p className="text-sm leading-relaxed">
+                  This change attempt was recorded with outcome{" "}
+                  <strong>{selected.outcome}</strong>. The configuration may not
+                  have been applied.
+                </p>
+              </div>
+            ) : null}
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
               <Button
                 type="button"
                 variant="secondary"
@@ -345,15 +514,5 @@ export function SystemConfigurationHistory() {
         ) : null}
       </Dialog>
     </>
-  );
-}
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted text-xs font-medium uppercase">{label}</dt>
-      <dd className="mt-1 max-h-40 overflow-auto text-sm break-words whitespace-pre-wrap">
-        {value}
-      </dd>
-    </div>
   );
 }

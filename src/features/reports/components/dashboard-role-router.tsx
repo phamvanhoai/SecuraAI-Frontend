@@ -1,11 +1,12 @@
 "use client";
 
 import {
-  ArrowRight,
+  ArrowUpRight,
   Bell,
   Boxes,
   ClipboardCheck,
   FileText,
+  Shield,
   ShieldAlert,
   Siren,
   type LucideIcon,
@@ -136,9 +137,27 @@ function EmployeeDashboard({
     loading: notificationsQuery.isPending,
   });
 
+  const attentionCount =
+    (pendingPolicies ?? 0) + (unreadNotifications ?? 0);
+  const hasAttentionItems = attentionCount > 0;
+
+  const workspaceBadge = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="border-border bg-surface text-muted inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+        <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+        Status: <strong className="text-foreground">Active</strong>
+      </span>
+      <span className="border-border bg-surface text-muted inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium">
+        <Shield className="text-brand size-3.5" />
+        Role: <strong className="text-foreground">Employee</strong>
+      </span>
+    </div>
+  );
+
   return (
     <>
       <ProductPageHeader
+        additionalActions={workspaceBadge}
         title={`Welcome back, ${fullName}`}
         description="Your personal security workspace. Below you'll find your assigned modules and a live summary of items requiring attention."
       />
@@ -153,7 +172,7 @@ function EmployeeDashboard({
       >
         <nav
           aria-label="Employee workspace"
-          className="bg-border grid gap-px sm:grid-cols-2 xl:grid-cols-3"
+          className="divide-y divide-border"
         >
           {destinations.map((item) => {
             const Icon = item.icon;
@@ -171,13 +190,13 @@ function EmployeeDashboard({
 
             return (
               <Link
-                className="bg-surface hover:bg-neutral-soft focus-visible:outline-brand group relative flex items-start gap-4 p-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+                className="hover:bg-neutral-soft/60 focus-visible:outline-brand group flex items-center gap-4 px-5 py-3.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
                 href={item.href}
                 key={item.href}
               >
                 <span
                   className={cn(
-                    "grid size-10 shrink-0 place-items-center rounded-lg transition-colors",
+                    "grid size-9 shrink-0 place-items-center rounded-lg transition-colors",
                     hasBadge
                       ? "bg-warning-soft text-warning"
                       : "bg-brand-soft text-brand",
@@ -185,7 +204,7 @@ function EmployeeDashboard({
                 >
                   <Icon
                     aria-hidden="true"
-                    className="size-5"
+                    className="size-4"
                     strokeWidth={1.8}
                   />
                 </span>
@@ -202,19 +221,31 @@ function EmployeeDashboard({
                       </span>
                     ) : null}
                   </span>
-                  <span className="text-muted mt-1 block text-sm leading-5">
+                  <span className="text-muted mt-0.5 block text-xs leading-5">
                     {item.description}
                   </span>
                 </span>
-                <ArrowRight
+                <ArrowUpRight
                   aria-hidden="true"
-                  className="text-muted mt-0.5 size-4 shrink-0 translate-x-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100"
+                  className="text-muted size-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                   strokeWidth={1.8}
                 />
               </Link>
             );
           })}
         </nav>
+        <div className="border-border bg-neutral-soft/20 flex items-center border-t px-5 py-2.5 text-xs">
+          <span className="text-muted">
+            {hasAttentionItems ? (
+              <>
+                Items requiring attention:{" "}
+                <strong className="text-foreground">{attentionCount}</strong>
+              </>
+            ) : (
+              <span>No pending items in your workspace.</span>
+            )}
+          </span>
+        </div>
       </ProductPanel>
     </>
   );

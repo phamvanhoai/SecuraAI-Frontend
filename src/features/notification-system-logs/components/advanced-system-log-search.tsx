@@ -1,15 +1,22 @@
 "use client";
 
 import {
+  Activity,
+  AlertTriangle,
   CalendarDays,
   Download,
   Eye,
   Filter,
+  GitBranch,
+  Info,
+  Loader2,
   RotateCcw,
   Search,
+  Shield,
+  User,
   X,
 } from "lucide-react";
-import { useRef, useState, type ComponentProps, type ReactNode } from "react";
+import React, { useRef, useState, type ComponentProps, type ReactNode } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -29,6 +36,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/feedback/toast";
+import { cn } from "@/lib/utils";
 import { exportInvestigationLogs } from "../api/export-investigation-logs";
 import { useSystemLogSearch } from "../hooks/use-system-log-search";
 import { useSystemLogDetail } from "../hooks/use-system-log-detail";
@@ -219,6 +227,7 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
       header: "Actions",
       cell: (log) => (
         <Button
+          className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
           variant="secondary"
           type="button"
           onClick={() => {
@@ -226,7 +235,7 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             dialog.current?.showModal();
           }}
         >
-          <Eye aria-hidden="true" className="size-4" />
+          <Eye aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
           View
         </Button>
       ),
@@ -446,56 +455,73 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
         onClose={() => setSelected(null)}
       >
         {selected ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-sm font-semibold">
+          <div className="space-y-5">
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-mono font-semibold">
+                <Activity className="size-3.5 text-brand" strokeWidth={1.8} />
                 {selected.eventType}
               </span>
+              <span className="text-border">·</span>
               <LogStatusBadge status={selected.status} />
+              <span className="text-border">·</span>
+              <time className="text-muted font-mono" dateTime={selected.occurredAt}>
+                {formatTime(selected.occurredAt)}
+              </time>
             </div>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <Detail
-                label="Timestamp"
-                value={formatTime(selected.occurredAt)}
-              />
-              <Detail label="Source" value={selected.source} />
-              <Detail
-                label="Actor"
-                value={
-                  selected.actorDetail
-                    ? `${selected.actor} · ${selected.actorDetail}`
-                    : selected.actor
-                }
-              />
-              <Detail
-                label="Resource"
-                value={humanize(selected.resourceType)}
-              />
-              <Detail
-                label="Correlation ID"
-                value={selected.correlationId ?? "Not recorded"}
-              />
-              <Detail label="Error code" value={selected.errorCode ?? "None"} />
+            {/* Summary fact grid */}
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Source</dt>
+                <dd className="mt-1 text-sm font-medium break-words">{selected.source}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Actor</dt>
+                <dd className="mt-1 text-sm font-medium break-words">
+                  {selected.actorDetail && selected.actorDetail !== selected.actor
+                    ? selected.actor + " · " + selected.actorDetail
+                    : selected.actor}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Resource</dt>
+                <dd className="mt-1 text-sm font-medium">{humanize(selected.resourceType)}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Correlation ID</dt>
+                <dd className="mt-1 text-sm font-medium font-mono break-all">
+                  {selected.correlationId ?? <span className="text-muted font-sans font-normal">Not recorded</span>}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">Error code</dt>
+                <dd className="mt-1 text-sm font-medium">
+                  {selected.errorCode ?? <span className="text-muted font-normal">None</span>}
+                </dd>
+              </div>
             </dl>
+            {/* Detail sections */}
             {detail.isPending ? (
               <SystemLogDetailSkeleton />
             ) : detail.isError ? (
-              <Alert>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span>Unable to load the complete log record.</span>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => void detail.refetch()}
-                  >
-                    Retry
-                  </Button>
+              <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+                <div className="flex gap-2.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm">Unable to load the complete log record.</p>
                 </div>
-              </Alert>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void detail.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
             ) : detail.data ? (
               <CompleteSystemLogDetail log={detail.data} />
             ) : null}
-            <div className="flex justify-end">
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
               <Button
                 type="button"
                 variant="secondary"
@@ -507,7 +533,7 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
           </div>
         ) : null}
       </Dialog>
-      <Dialog dialogRef={exportDialog} title="Export Investigation Logs">
+            <Dialog dialogRef={exportDialog} title="Export Investigation Logs">
         <form
           className="space-y-5"
           onSubmit={async (event) => {
@@ -577,54 +603,81 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
             }
           }}
         >
+          {/* Request error banner */}
           {exportErrors.request ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">
-              {exportErrors.request}
-            </Alert>
+            <div role="alert" className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-danger">{exportErrors.request}</p>
+            </div>
           ) : null}
+
+          {/* Audit notice */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+            <p className="text-xs text-muted">
+              This export is logged as an audited investigation action. Provide an accurate investigation purpose — it will be stored with the export record.
+            </p>
+          </div>
           <fieldset
             className="space-y-3"
             aria-describedby={
               exportErrors.scope ? "export-scope-error" : undefined
             }
           >
-            <legend className="text-sm font-semibold">Export scope</legend>
-            <label className="border-border flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
-              <input
-                checked={exportScope === "SELECTED"}
-                name="export-scope"
-                type="radio"
-                onChange={() => {
-                  setExportScope("SELECTED");
-                  setExportErrors((current) => ({ ...current, scope: "" }));
-                }}
-              />
-              <span>
-                <span className="block text-sm font-medium">Selected logs</span>
-                <span className="text-muted text-xs">
-                  {selectedIds.length} selected records
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Download className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <legend className="text-sm font-semibold">Export scope</legend>
+            </div>
+            <div className="border-border overflow-hidden rounded-xl border divide-y divide-border">
+              <label
+                className={cn(
+                  "flex min-h-11 cursor-pointer items-start gap-3 p-3.5 transition-colors",
+                  exportScope === "SELECTED" ? "bg-brand/5" : "hover:bg-neutral-soft/40",
+                )}
+              >
+                <input
+                  checked={exportScope === "SELECTED"}
+                  name="export-scope"
+                  type="radio"
+                  className="mt-0.5 accent-brand"
+                  onChange={() => {
+                    setExportScope("SELECTED");
+                    setExportErrors((current) => ({ ...current, scope: "" }));
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-medium">Selected logs</span>
+                  <span className="text-muted text-xs">
+                    {selectedIds.length} selected records
+                  </span>
                 </span>
-              </span>
-            </label>
-            <label className="border-border flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border p-3">
-              <input
-                checked={exportScope === "FILTERED"}
-                name="export-scope"
-                type="radio"
-                onChange={() => {
-                  setExportScope("FILTERED");
-                  setExportErrors((current) => ({ ...current, scope: "" }));
-                }}
-              />
-              <span>
-                <span className="block text-sm font-medium">
-                  All matching results
+              </label>
+              <label
+                className={cn(
+                  "flex min-h-11 cursor-pointer items-start gap-3 p-3.5 transition-colors",
+                  exportScope === "FILTERED" ? "bg-brand/5" : "hover:bg-neutral-soft/40",
+                )}
+              >
+                <input
+                  checked={exportScope === "FILTERED"}
+                  name="export-scope"
+                  type="radio"
+                  className="mt-0.5 accent-brand"
+                  onChange={() => {
+                    setExportScope("FILTERED");
+                    setExportErrors((current) => ({ ...current, scope: "" }));
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    All matching results
+                  </span>
+                  <span className="text-muted text-xs">
+                    {pagination?.total ?? 0} records match the applied filters
+                  </span>
                 </span>
-                <span className="text-muted text-xs">
-                  {pagination?.total ?? 0} records match the applied filters
-                </span>
-              </span>
-            </label>
+              </label>
+            </div>
             {exportErrors.scope ? (
               <p
                 id="export-scope-error"
@@ -635,62 +688,74 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
               </p>
             ) : null}
           </fieldset>
-          <Label className="space-y-1" htmlFor="export-format">
-            <span className="text-sm font-medium">File format</span>
-            <Select
-              id="export-format"
-              value={exportFormat}
-              onChange={(event) =>
-                setExportFormat(
-                  event.target.value as "CSV" | "JSON" | "XLSX" | "PDF",
-                )
-              }
-            >
-              <option value="CSV">CSV</option>
-              <option value="JSON">JSON</option>
-              <option value="XLSX">XLSX — evidence workbook</option>
-              <option value="PDF">PDF — formatted evidence report</option>
-            </Select>
-          </Label>
-          <Label className="space-y-1" htmlFor="export-reason">
-            <span id="export-reason-label" className="text-sm font-medium">
-              Investigation purpose
-            </span>
-            <Textarea
-              id="export-reason"
-              aria-labelledby="export-reason-label"
-              aria-invalid={Boolean(exportErrors.reason)}
-              aria-describedby={
-                exportErrors.reason
-                  ? "export-reason-help export-reason-error"
-                  : "export-reason-help"
-              }
-              maxLength={500}
-              value={exportReason}
-              onChange={(event) => {
-                setExportReason(event.target.value);
-                setExportErrors((current) => ({
-                  ...current,
-                  reason: "",
-                  request: "",
-                }));
-              }}
-              placeholder="Explain why these logs are required"
-            />
-            <span id="export-reason-help" className="text-muted block text-xs">
-              Required · 10–500 characters
-            </span>
-            {exportErrors.reason ? (
-              <span
-                id="export-reason-error"
-                role="alert"
-                className="text-danger block text-sm"
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Filter className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">File format</h3>
+            </div>
+            <Label className="space-y-1.5" htmlFor="export-format">
+              <span className="text-xs font-medium text-muted">Select output format</span>
+              <Select
+                id="export-format"
+                value={exportFormat}
+                onChange={(event) =>
+                  setExportFormat(
+                    event.target.value as "CSV" | "JSON" | "XLSX" | "PDF",
+                  )
+                }
               >
-                {exportErrors.reason}
+                <option value="CSV">CSV</option>
+                <option value="JSON">JSON</option>
+                <option value="XLSX">XLSX — evidence workbook</option>
+                <option value="PDF">PDF — formatted evidence report</option>
+              </Select>
+            </Label>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Shield className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Investigation purpose</h3>
+            </div>
+            <Label className="space-y-1.5" htmlFor="export-reason">
+              <span id="export-reason-label" className="text-xs font-medium text-muted">
+                Investigation purpose
               </span>
-            ) : null}
-          </Label>
-          <div className="flex justify-end gap-2">
+              <Textarea
+                id="export-reason"
+                aria-labelledby="export-reason-label"
+                aria-invalid={Boolean(exportErrors.reason)}
+                aria-describedby={
+                  exportErrors.reason
+                    ? "export-reason-help export-reason-error"
+                    : "export-reason-help"
+                }
+                maxLength={500}
+                value={exportReason}
+                onChange={(event) => {
+                  setExportReason(event.target.value);
+                  setExportErrors((current) => ({
+                    ...current,
+                    reason: "",
+                    request: "",
+                  }));
+                }}
+                placeholder="Explain why these logs are required for this investigation"
+              />
+              <span id="export-reason-help" className="text-muted block text-xs">
+                Required · 10–500 characters
+              </span>
+              {exportErrors.reason ? (
+                <span
+                  id="export-reason-error"
+                  role="alert"
+                  className="text-danger block text-sm"
+                >
+                  {exportErrors.reason}
+                </span>
+              ) : null}
+            </Label>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button
               type="button"
               variant="secondary"
@@ -700,7 +765,14 @@ export function AdvancedSystemLogSearch({ canExport }: { canExport: boolean }) {
               Cancel
             </Button>
             <Button type="submit" disabled={exporting}>
-              {exporting ? "Generating…" : "Generate export"}
+              {exporting ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Generating…
+                </>
+              ) : (
+                "Generate export"
+              )}
             </Button>
           </div>
         </form>
@@ -816,23 +888,23 @@ function LogStatusBadge({ status }: { status: SystemLogStatus }) {
 }
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
+    <div className="min-w-0">
+      <dt className="text-muted text-xs font-medium uppercase tracking-wide">
         {label}
       </dt>
-      <dd className="mt-1 text-sm break-words">{value}</dd>
+      <dd className="mt-1 text-sm font-medium break-words">{value}</dd>
     </div>
   );
 }
 function CompleteSystemLogDetail({ log }: { log: SystemLogDetail }) {
   return (
     <div className="space-y-5">
-      <DetailSection title="Event overview">
+      <DetailSection title="Event overview" icon={Info}>
         <Detail label="Recorded at" value={formatTime(log.createdAt)} />
         <Detail label="Source" value={log.source ?? "Application"} />
         <Detail label="Resource ID" value={log.resourceId ?? "Not recorded"} />
       </DetailSection>
-      <DetailSection title="Actor and request context">
+      <DetailSection title="Actor and request context" icon={User}>
         <Detail label="Actor" value={log.actor?.name ?? "Unknown actor"} />
         <Detail label="Actor type" value={humanize(log.actorType)} />
         <Detail
@@ -851,16 +923,17 @@ function CompleteSystemLogDetail({ log }: { log: SystemLogDetail }) {
         <Detail label="IP address" value={log.sourceIp ?? "Not recorded"} />
         <Detail label="User agent" value={log.userAgent ?? "Not recorded"} />
       </DetailSection>
-      <section aria-labelledby="recorded-changes-heading" className="space-y-3">
-        <h3 id="recorded-changes-heading" className="text-sm font-semibold">
-          Recorded changes
-        </h3>
+      <div className="space-y-3">
+        <div className="flex items-start gap-2 border-b border-border pb-2">
+          <GitBranch className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+          <h3 className="text-sm font-semibold">Recorded changes</h3>
+        </div>
         <div className="grid gap-3 lg:grid-cols-2">
           <JsonSnapshot label="Before" value={log.beforeData} />
           <JsonSnapshot label="After" value={log.afterData} />
         </div>
-      </section>
-      <DetailSection title="Integrity chain">
+      </div>
+      <DetailSection title="Integrity chain" icon={Shield}>
         <Detail label="Log ID" value={log.id} />
         <Detail
           label="Previous record hash"
@@ -873,16 +946,23 @@ function CompleteSystemLogDetail({ log }: { log: SystemLogDetail }) {
 }
 function DetailSection({
   title,
+  icon: Icon,
   children,
 }: {
   title: string;
+  icon: React.ElementType;
   children: ReactNode;
 }) {
   return (
-    <section className="border-border rounded-lg border p-4">
-      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
-    </section>
+    <div className="space-y-3">
+      <div className="flex items-start gap-2 border-b border-border pb-2">
+        <Icon className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-3">
+        {children}
+      </dl>
+    </div>
   );
 }
 function JsonSnapshot({ label, value }: { label: string; value: unknown }) {

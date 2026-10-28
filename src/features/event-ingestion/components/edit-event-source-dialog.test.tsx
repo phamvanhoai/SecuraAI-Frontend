@@ -193,7 +193,10 @@ describe("EditEventSourceDialog", () => {
           endpoint: "https://wazuh.internal:55000",
         }),
       });
-      expect(mockToastSuccess).toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        "Event source configuration updated",
+        'Configuration changes for "Wazuh Updated Cluster" have been saved successfully.',
+      );
       expect(handleSuccess).toHaveBeenCalledWith(updatedResult);
       expect(handleClose).toHaveBeenCalled();
     });

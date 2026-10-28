@@ -1,6 +1,14 @@
 "use client";
 
-import { Link2, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  FileText,
+  Info,
+  Link2,
+  Loader2,
+  Search,
+  Shield,
+} from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -15,11 +23,11 @@ import {
 import { EmptyState } from "@/components/feedback/empty-state";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   useComplianceFrameworks,
@@ -293,26 +301,53 @@ export function PolicyControlMappingManager({
         onClose={() => setSelectedPolicy(undefined)}
       >
         <form className="space-y-5" onSubmit={save}>
+          {/* Context bar */}
+          {selectedPolicy ? (
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+                {selectedPolicy.policyCode}
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-muted">v{selectedPolicy.versionNumber}</span>
+            </div>
+          ) : null}
+
+          {/* Error banner */}
           {message ? (
-            <Alert
-              className="border-danger/25 bg-danger-soft text-danger"
-              role="alert"
-            >
-              {message}
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5" role="alert">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm text-danger">{message}</p>
+            </div>
           ) : null}
+
+          {/* Frameworks error */}
           {frameworks.isError ? (
-            <Alert>Unable to load compliance frameworks.</Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+              <p className="text-sm">Unable to load compliance frameworks.</p>
+            </div>
           ) : null}
+
+          {/* No frameworks hint */}
           {frameworks.data?.length === 0 ? (
-            <Alert>
-              No compliance frameworks are available. Import a framework and its
-              controls before creating mappings.
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <p className="text-sm text-muted">
+                No compliance frameworks are available. Import a framework and its
+                controls before creating mappings.
+              </p>
+            </div>
           ) : null}
-          <label className="block space-y-2">
-            <span className="text-sm font-medium">Standard framework</span>
-            <Select
+
+          {/* Framework selector */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-muted uppercase tracking-wide" htmlFor="ctrl-framework-select">
+              Standard framework
+            </label>
+            <select
+              id="ctrl-framework-select"
+              className="border-border bg-background focus:ring-brand/30 w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
               value={frameworkId ?? ""}
               onChange={(event) => selectFramework(event.target.value)}
               required
@@ -325,17 +360,32 @@ export function PolicyControlMappingManager({
                   {framework.controlCount} controls
                 </option>
               ))}
-            </Select>
-          </label>
+            </select>
+          </div>
+
+          {/* Framework controls */}
           {frameworkId ? (
-            <fieldset className="space-y-3">
-              <legend className="font-medium">Framework controls</legend>
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Shield className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                <h3 className="text-sm font-semibold">Framework controls</h3>
+              </div>
+
+              {/* Control search */}
               <div className="flex gap-2">
-                <Input
-                  aria-label="Search framework controls"
-                  value={controlSearch}
-                  onChange={(event) => setControlSearch(event.target.value)}
-                />
+                <div className="relative flex-1">
+                  <Search
+                    aria-hidden="true"
+                    className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    strokeWidth={1.8}
+                  />
+                  <Input
+                    aria-label="Search framework controls"
+                    className="pl-9"
+                    value={controlSearch}
+                    onChange={(event) => setControlSearch(event.target.value)}
+                  />
+                </div>
                 <Button
                   type="button"
                   onClick={() => {
@@ -346,78 +396,84 @@ export function PolicyControlMappingManager({
                   Search
                 </Button>
               </div>
+
+              {/* Controls list */}
               {controls.isPending ? (
-                <div
-                  aria-label="Loading framework controls"
-                  className="bg-neutral-soft h-48 animate-pulse rounded-xl"
-                />
+                <div className="space-y-2" aria-label="Loading framework controls" role="status">
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                </div>
               ) : controls.isError ? (
-                <Alert>Unable to load framework controls.</Alert>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+                  <p className="text-sm">Unable to load framework controls.</p>
+                </div>
               ) : controls.data?.items.length === 0 ? (
-                <EmptyState
-                  title="No controls found"
-                  description="This framework has no matching controls."
-                />
+                <div className="py-8 text-center">
+                  <Shield className="mx-auto size-8 stroke-1 text-muted" />
+                  <h4 className="mt-3 text-sm font-medium">No controls found</h4>
+                  <p className="text-muted mt-1 text-xs">This framework has no matching controls.</p>
+                </div>
               ) : (
-                <div className="border-border max-h-96 space-y-1 overflow-y-auto rounded-lg border p-2">
-                  {controls.data?.items.map((control) => {
-                    const selected = selectedMappings.find(
-                      (mapping) => mapping.controlId === control.id,
-                    );
-                    return (
-                      <div
-                        className="hover:bg-neutral-soft rounded-lg p-3"
-                        key={control.id}
-                      >
-                        <label className="flex min-h-10 cursor-pointer items-start gap-3">
-                          <Checkbox
-                            checked={Boolean(selected)}
-                            onChange={() =>
-                              setSelectedMappings((current) =>
-                                selected
-                                  ? current.filter(
-                                      (mapping) =>
-                                        mapping.controlId !== control.id,
-                                    )
-                                  : [
-                                      ...current,
-                                      { controlId: control.id, notes: "" },
-                                    ],
-                              )
-                            }
-                          />
-                          <span className="min-w-0">
-                            <strong className="block text-sm">
-                              {control.code} — {control.title}
-                            </strong>
-                            {control.description ? (
-                              <span className="text-muted block text-xs">
-                                {control.description}
-                              </span>
-                            ) : null}
-                          </span>
-                        </label>
-                        {selected ? (
-                          <Input
-                            aria-label={`Mapping notes for ${control.code}`}
-                            className="mt-2"
-                            maxLength={1000}
-                            placeholder="Optional mapping notes"
-                            value={selected.notes}
-                            onChange={(event) =>
-                              setSelectedMappings((current) =>
-                                current.map((mapping) =>
-                                  mapping.controlId === control.id
-                                    ? { ...mapping, notes: event.target.value }
-                                    : mapping,
-                                ),
-                              )
-                            }
-                          />
-                        ) : null}
-                      </div>
-                    );
-                  })}
+                <div className="border-border overflow-hidden rounded-xl border">
+                  <div className="divide-y divide-border max-h-96 overflow-y-auto">
+                    {controls.data?.items.map((control) => {
+                      const selected = selectedMappings.find(
+                        (mapping) => mapping.controlId === control.id,
+                      );
+                      return (
+                        <div key={control.id} className="px-3 py-2.5 hover:bg-neutral-soft/60">
+                          <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+                            <Checkbox
+                              checked={Boolean(selected)}
+                              onChange={() =>
+                                setSelectedMappings((current) =>
+                                  selected
+                                    ? current.filter(
+                                        (mapping) =>
+                                          mapping.controlId !== control.id,
+                                      )
+                                    : [
+                                        ...current,
+                                        { controlId: control.id, notes: "" },
+                                      ],
+                                )
+                              }
+                            />
+                            <span className="min-w-0">
+                              <strong className="block font-medium">
+                                {control.code} — {control.title}
+                              </strong>
+                              {control.description ? (
+                                <span className="text-muted block mt-0.5">
+                                  {control.description}
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                          {selected ? (
+                            <Input
+                              aria-label={`Mapping notes for ${control.code}`}
+                              className="mt-2"
+                              maxLength={1000}
+                              placeholder="Optional mapping notes"
+                              value={selected.notes}
+                              onChange={(event) =>
+                                setSelectedMappings((current) =>
+                                  current.map((mapping) =>
+                                    mapping.controlId === control.id
+                                      ? { ...mapping, notes: event.target.value }
+                                      : mapping,
+                                  ),
+                                )
+                              }
+                            />
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               {controls.data ? (
@@ -427,13 +483,15 @@ export function PolicyControlMappingManager({
                   onPageChange={setControlPage}
                 />
               ) : null}
-              <p className="text-muted text-sm">
+              <p className="text-muted text-xs">
                 {selectedMappings.length} controls selected. Saving replaces
                 mappings only for this framework.
               </p>
-            </fieldset>
+            </div>
           ) : null}
-          <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button
               type="button"
               variant="secondary"
@@ -443,7 +501,14 @@ export function PolicyControlMappingManager({
               Cancel
             </Button>
             <Button type="submit" disabled={!frameworkId || mutation.isPending}>
-              {mutation.isPending ? "Saving mappings…" : "Save mappings"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Saving…
+                </>
+              ) : (
+                "Save mappings"
+              )}
             </Button>
           </div>
         </form>

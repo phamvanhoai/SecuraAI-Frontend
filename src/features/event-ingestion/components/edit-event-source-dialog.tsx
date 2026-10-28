@@ -228,8 +228,8 @@ function EditEventSourceForm({
         values: validation.data,
       });
       toast.success(
-        "Cấu hình đã được cập nhật",
-        `Đã lưu thay đổi cấu hình kết nối cho nguồn sự kiện "${updated.name}".`,
+        "Event source configuration updated",
+        `Configuration changes for "${updated.name}" have been saved successfully.`,
       );
       onSuccess?.(updated);
       onClose();
@@ -237,9 +237,9 @@ function EditEventSourceForm({
       const message =
         err instanceof Error
           ? err.message
-          : "Không thể cập nhật cấu hình nguồn sự kiện. Vui lòng thử lại.";
+          : "Unable to update event source configuration. Please try again.";
       setSubmitError(message);
-      toast.error("Cập nhật thất bại", message);
+      toast.error("Update failed", message);
     }
   };
 
