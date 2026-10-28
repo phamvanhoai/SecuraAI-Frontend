@@ -88,7 +88,7 @@ describe("Business Services directory", () => {
   });
   it("shows real data, explicit inactive owner and read-only actions", async () => {
     render(<BusinessServicesShell />);
-    expect(screen.getByText("Service Owner (Inactive)")).toBeInTheDocument();
+    expect(screen.getByText("Service Owner")).toBeInTheDocument();
     expect(
       screen.getByText("Inactive", { selector: "span" }),
     ).toBeInTheDocument();

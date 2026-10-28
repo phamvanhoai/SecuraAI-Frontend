@@ -1,11 +1,18 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  AlertTriangle,
+  FileText,
+  HardDrive,
+  Info,
+  Loader2,
+  User,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/feedback/toast";
-import { FormField } from "@/components/forms/form-field";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { AssetOwnerPicker } from "./asset-owner-picker";
@@ -34,6 +41,7 @@ export function AssignAssetOwnerDialog({
   const [stale, setStale] = useState(false);
   const mutation = useAssignAssetOwner(asset?.id ?? null);
   const toast = useToast();
+
   const {
     register,
     handleSubmit,
@@ -64,6 +72,7 @@ export function AssignAssetOwnerDialog({
     setStale(false);
     onClose();
   };
+
   const submit = async (values: AssignAssetOwnerRequest): Promise<void> => {
     if (!asset) return;
     if (asset.status !== "active" || stale || mutation.isPending) return;
@@ -88,9 +97,7 @@ export function AssignAssetOwnerDialog({
     } catch (error: unknown) {
       if (error instanceof ApiError && [403, 404, 409].includes(error.status)) setStale(true);
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to update owner. Please try again.",
+        error instanceof Error ? error.message : "Unable to update owner. Please try again.",
       );
     }
   };
@@ -98,7 +105,9 @@ export function AssignAssetOwnerDialog({
   const disposed = asset?.status === "disposed";
   const locked = asset?.status !== "active" || stale || mutation.isPending;
   const selectedOwner = useWatch({ control, name: "ownerUserId" });
-  const removingOwner = Boolean(asset?.owner) && (selectedOwner === "" || selectedOwner === null);
+  const removingOwner =
+    Boolean(asset?.owner) && (selectedOwner === "" || selectedOwner === null);
+
   return (
     <Dialog
       title="Assign Asset Owner"
@@ -107,58 +116,201 @@ export function AssignAssetOwnerDialog({
       className="w-[min(40rem,calc(100%-2rem))]"
     >
       {asset ? (
-        <form className="space-y-4" noValidate onSubmit={handleSubmit(submit)}>
-          <p className="text-sm">
-            <strong>{asset.assetCode}</strong> – {asset.name}. Current owner: {asset.owner?.fullName ?? "Unassigned"}.
-          </p>
-          {disposed ? <Alert>Disposed assets cannot be assigned an owner.</Alert> : null}
-          {asset.status === "archived" ? <Alert>Archived assets cannot be assigned an owner.</Alert> : null}
-          {stale ? <Alert>Asset state or permissions changed. Close and reopen this form to review the latest data.</Alert> : null}
-          {message ? (
-            <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert>
+        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <HardDrive className="size-3.5 shrink-0 text-brand" strokeWidth={1.8} />
+            <span className="font-semibold tabular-nums">{asset.assetCode}</span>
+            <span className="text-muted">·</span>
+            <span className="text-muted truncate">{asset.name}</span>
+            <span className="text-muted">·</span>
+            <span className="text-muted">
+              Current owner:{" "}
+              <strong className="text-foreground">
+                {asset.owner?.fullName ?? "Unassigned"}
+              </strong>
+            </span>
+          </div>
+
+          {/* Status banners */}
+          {disposed ? (
+            <div role="alert" className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-warning"
+                strokeWidth={1.8}
+              />
+              <p className="text-xs leading-5">
+                <strong className="text-foreground block">Disposed asset</strong>
+                <span className="text-muted">
+                  Disposed assets cannot be assigned an owner.
+                </span>
+              </p>
+            </div>
           ) : null}
-          <FormField id="asset-owner" label="New owner" error={errors.ownerUserId?.message}>
-            <Controller name="ownerUserId" control={control} render={({ field }) => (
-              <AssetOwnerPicker key={asset.id} id="asset-owner" value={field.value ?? ""}
-                initialLabel={asset.owner?.fullName ?? ""} enabled={!locked}
-                invalid={Boolean(errors.ownerUserId)} inputRef={field.ref} onBlur={field.onBlur}
-                onChange={(value) => { setRemovalConfirmed(false); field.onChange(value); }} />
-            )} />
-          </FormField>
-          <FormField id="owner-assignment-reason" label="Reason for change" error={errors.reason?.message}>
-            <Textarea
-              id="owner-assignment-reason"
-              maxLength={1000}
-              disabled={locked}
-              {...register("reason")}
-            />
-          </FormField>
-          <p className="text-muted text-xs">
-            The owner is responsible for this asset. Changing ownership does not transfer ownership of related risks or controls.
-          </p>
+
+          {asset.status === "archived" ? (
+            <div role="alert" className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-warning"
+                strokeWidth={1.8}
+              />
+              <p className="text-xs leading-5">
+                <strong className="text-foreground block">Archived asset</strong>
+                <span className="text-muted">
+                  Archived assets cannot be assigned an owner.
+                </span>
+              </p>
+            </div>
+          ) : null}
+
+          {stale ? (
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-warning"
+                strokeWidth={1.8}
+              />
+              <p className="text-muted text-xs leading-5">
+                Asset state or permissions changed. Close and reopen this form to review
+                the latest data.
+              </p>
+            </div>
+          ) : null}
+
+          {message ? (
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-danger"
+                strokeWidth={1.8}
+              />
+              <p className="text-danger text-xs leading-5">{message}</p>
+            </div>
+          ) : null}
+
+          {/* Owner picker */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <User className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+              <h3 className="text-sm font-semibold">Owner assignment</h3>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="asset-owner" className="block text-sm font-medium">
+                New owner
+              </label>
+              <Controller
+                name="ownerUserId"
+                control={control}
+                render={({ field }) => (
+                  <AssetOwnerPicker
+                    key={asset.id}
+                    id="asset-owner"
+                    value={field.value ?? ""}
+                    initialLabel={asset.owner?.fullName ?? ""}
+                    enabled={!locked}
+                    invalid={Boolean(errors.ownerUserId)}
+                    inputRef={field.ref}
+                    onBlur={field.onBlur}
+                    onChange={(value) => {
+                      setRemovalConfirmed(false);
+                      field.onChange(value);
+                    }}
+                  />
+                )}
+              />
+              {errors.ownerUserId && (
+                <p role="alert" className="text-danger text-xs">
+                  {errors.ownerUserId.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Reason textarea */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <FileText
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Reason for change</h3>
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="owner-assignment-reason"
+                className="block text-sm font-medium"
+              >
+                Reason for change
+              </label>
+              <Textarea
+                id="owner-assignment-reason"
+                maxLength={1000}
+                disabled={locked}
+                aria-invalid={Boolean(errors.reason)}
+                aria-describedby={errors.reason ? "owner-reason-error" : undefined}
+                {...register("reason")}
+              />
+              {errors.reason && (
+                <p id="owner-reason-error" role="alert" className="text-danger text-xs">
+                  {errors.reason.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Removal confirmation */}
           {removingOwner ? (
-            <div className="space-y-2 rounded-lg border border-warning/25 bg-warning/10 p-3">
-              <p className="text-sm">Removing the owner leaves this asset unassigned.</p>
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input type="checkbox" checked={removalConfirmed} disabled={locked}
-                  onChange={(event) => setRemovalConfirmed(event.target.checked)} />
+            <div className="border-border bg-neutral-soft/30 rounded-xl border p-3.5 space-y-3">
+              <div className="flex gap-2.5">
+                <AlertTriangle
+                  className="mt-0.5 size-4 shrink-0 text-warning"
+                  strokeWidth={1.8}
+                />
+                <p className="text-xs leading-5">
+                  <strong className="text-foreground block">Remove current owner?</strong>
+                  <span className="text-muted">
+                    Removing the owner leaves this asset unassigned.
+                  </span>
+                </p>
+              </div>
+              <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium">
+                <input
+                  type="checkbox"
+                  checked={removalConfirmed}
+                  disabled={locked}
+                  onChange={(event) => setRemovalConfirmed(event.target.checked)}
+                  className="size-4 shrink-0"
+                />
                 I confirm removing the current owner
               </label>
             </div>
           ) : null}
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              className="bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-              onClick={close}
-            >
+
+          {/* Info hint */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+            <p className="text-muted text-xs leading-5">
+              The owner is responsible for this asset. Changing ownership does not transfer
+              ownership of related risks or controls.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button type="button" variant="secondary" onClick={close}>
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={locked || (removingOwner && !removalConfirmed)}
+              className={cn(mutation.isPending && "opacity-80")}
             >
-              {mutation.isPending ? "Saving…" : "Save owner"}
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                  Saving…
+                </>
+              ) : (
+                "Save owner"
+              )}
             </Button>
           </div>
         </form>

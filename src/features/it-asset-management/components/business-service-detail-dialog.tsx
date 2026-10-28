@@ -2,6 +2,12 @@
 import { assetTypeLabel } from "../schemas/asset-type-schema";
 import { useEffect, useRef, useState } from "react";
 import {
+  Boxes,
+  Building2,
+  Clock,
+  Info,
+} from "lucide-react";
+import {
   DataTable,
   type DataTableColumn,
 } from "@/components/data-display/data-table";
@@ -40,6 +46,7 @@ const columns: readonly DataTableColumn<BusinessServiceAsset>[] = [
     ),
   },
 ];
+
 const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     dateStyle: "short",
@@ -64,10 +71,13 @@ export function BusinessServiceDetailDialog({
     page,
     enabled && detail.isSuccess === true,
   );
+
   useEffect(() => {
     ref.current?.showModal();
   }, []);
+
   const service = detail.data;
+
   return (
     <Dialog
       title={service?.name ?? "Business service details"}
@@ -76,15 +86,33 @@ export function BusinessServiceDetailDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(60rem,calc(100%-2rem))] overflow-y-auto [&>h2]:break-words"
     >
       {!enabled ? (
-        <p>Business service access is no longer available.</p>
+        <div className="border-border bg-neutral-soft/30 rounded-xl border p-6 text-center space-y-2">
+          <Building2 className="text-muted mx-auto size-7" strokeWidth={1.5} />
+          <p className="text-sm font-medium">Access unavailable</p>
+          <p className="text-muted text-xs">
+            Business service access is no longer available.
+          </p>
+        </div>
       ) : detail.isPending ? (
         <div
           role="status"
           aria-label="Loading business service details"
-          className="space-y-4"
+          aria-busy="true"
+          className="space-y-5"
         >
-          <Skeleton className="h-16" />
-          <Skeleton className="h-32" />
+          <span className="sr-only">Loading business service details…</span>
+          {/* Context bar skeleton */}
+          <Skeleton className="h-11 w-full rounded-lg" />
+          {/* Fact grid skeleton */}
+          <Skeleton className="h-6 w-40 rounded" />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
+          {/* Table skeleton */}
+          <Skeleton className="h-6 w-32 rounded" />
+          <TableSkeleton rows={4} columns={3} />
         </div>
       ) : detail.isError ? (
         <BusinessServiceError
@@ -93,56 +121,124 @@ export function BusinessServiceDetailDialog({
         />
       ) : service ? (
         <div className="space-y-5">
-          <p className="text-muted [overflow-wrap:anywhere] whitespace-pre-wrap">
-            {service.description || "No description provided."}
-          </p>
-          <dl className="border-border bg-neutral-soft/40 grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <dt className="text-muted text-xs">Status</dt>
-              <dd className="mt-1">
-                <StatusBadge
-                  tone={service.status === "active" ? "success" : "neutral"}
-                >
-                  {service.status === "active" ? "Active" : "Inactive"}
-                </StatusBadge>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted text-xs">Responsible owner</dt>
-              <dd className="mt-1 break-words">
-                {service.owner?.fullName ?? "Unassigned"}
-                {service.owner?.inactive ? " (Inactive)" : ""}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted text-xs">
-                Linked assets (all statuses)
-              </dt>
-              <dd className="mt-1 tabular-nums">{service.linkedAssetsCount}</dd>
-            </div>
-            <div>
-              <dt className="text-muted text-xs">Created at (UTC+7)</dt>
-              <dd className="mt-1 tabular-nums">{date(service.createdAt)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted text-xs">Last updated (UTC+7)</dt>
-              <dd className="mt-1 tabular-nums">{date(service.updatedAt)}</dd>
-            </div>
-          </dl>
-          {service.status === "inactive" ? (
-            <p className="text-muted text-sm">
-              Inactive services remain available for review, but cannot be newly
-              selected in Link Asset Context.
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <Building2 className="size-3.5 shrink-0 text-brand" strokeWidth={1.8} />
+            <span className="font-semibold">{service.name}</span>
+            <span className="text-muted">·</span>
+            <StatusBadge tone={service.status === "active" ? "success" : "neutral"}>
+              {service.status === "active" ? "Active" : "Inactive"}
+            </StatusBadge>
+          </div>
+
+          {/* Description */}
+          {service.description ? (
+            <p className="text-muted text-sm leading-6 [overflow-wrap:anywhere] whitespace-pre-wrap">
+              {service.description}
             </p>
           ) : null}
-          <section aria-labelledby="linked-service-assets">
-            <h3 id="linked-service-assets" className="mb-2 font-semibold">
-              Linked assets
-            </h3>
-            <p className="text-muted mb-3 text-sm">
-              Current links, including archived assets. Viewing this list does
-              not update any existing Risk scope or asset snapshot.
+
+          {/* Overview section */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Building2
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Service overview</h3>
+            </div>
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Status
+                </dt>
+                <dd className="mt-1">
+                  <StatusBadge tone={service.status === "active" ? "success" : "neutral"}>
+                    {service.status === "active" ? "Active" : "Inactive"}
+                  </StatusBadge>
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Responsible owner
+                </dt>
+                <dd className="mt-1 text-sm font-medium break-words">
+                  {service.owner?.fullName ?? "Unassigned"}
+                  {service.owner?.inactive ? (
+                    <span className="text-muted font-normal"> (Inactive)</span>
+                  ) : null}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Linked assets
+                </dt>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {service.linkedAssetsCount}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Record information */}
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Clock
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Record information</h3>
+            </div>
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Created at (UTC+7)
+                </dt>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {date(service.createdAt)}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                  Last updated (UTC+7)
+                </dt>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {date(service.updatedAt)}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          {/* Inactive notice */}
+          {service.status === "inactive" ? (
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <p className="text-muted text-xs leading-5">
+                Inactive services remain available for review, but cannot be newly
+                selected in Link Asset Context.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Linked assets section */}
+          <section aria-labelledby="linked-service-assets" className="space-y-3">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Boxes
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 id="linked-service-assets" className="text-sm font-semibold">
+                Linked assets
+              </h3>
+            </div>
+            <p className="text-muted text-xs leading-5">
+              Current links, including archived assets. Viewing this list does not
+              update any existing Risk scope or asset snapshot.
             </p>
+
             {assets.isPending ? (
               <TableSkeleton rows={4} columns={3} />
             ) : assets.isError ? (
@@ -175,6 +271,7 @@ export function BusinessServiceDetailDialog({
                 }
               />
             )}
+
             {page > 1 &&
             !assets.data?.items.length &&
             !assets.isPending &&
@@ -186,7 +283,9 @@ export function BusinessServiceDetailDialog({
           </section>
         </div>
       ) : null}
-      <div className="mt-5 flex justify-end">
+
+      {/* Footer */}
+      <div className="mt-5 flex items-center justify-end border-t border-border pt-4">
         <Button variant="secondary" onClick={() => ref.current?.close()}>
           Close
         </Button>
