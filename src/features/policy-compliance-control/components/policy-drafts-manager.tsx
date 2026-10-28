@@ -1,17 +1,22 @@
 "use client";
 
 import {
+  AlertTriangle,
   Building2,
   Ellipsis,
   Eye,
   FilePenLine,
+  FileText,
   History,
+  Info,
+  Loader2,
   Pencil,
   Search,
   Send,
   Link2,
   Files,
   BookOpenCheck,
+  Tag,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -34,6 +39,7 @@ import {
   StatusBadge,
 } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/feedback/toast";
@@ -790,18 +796,63 @@ function SubmitPolicyDraftDialog({
     >
       {draft ? (
         <div className="space-y-5">
-          <p className="text-muted text-sm leading-6">
-            Submit <strong className="text-foreground">{draft.title}</strong> (v
-            {draft.version.versionNumber}) to Admin for review. The draft can no
-            longer be edited after submission.
-          </p>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <span className="flex items-center gap-1.5 font-medium">
+              <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+              {draft.policyCode}
+            </span>
+            <span className="text-border">·</span>
+            <span className="text-muted">v{draft.version.versionNumber}</span>
+            <span className="text-border">·</span>
+            <span className="bg-neutral-soft text-muted inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium">
+              Draft
+            </span>
+          </div>
+
+          {/* Info hint */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+            <p className="text-sm text-muted leading-relaxed">
+              Submit{" "}
+              <strong className="text-foreground">{draft.title}</strong> to Admin
+              for review. The draft can no longer be edited after submission.
+            </p>
+          </div>
+
+          {/* Warning — irreversible action */}
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-warning"
+              strokeWidth={1.8}
+            />
+            <p className="text-sm leading-relaxed">
+              Once submitted, this draft will be locked and sent to the review
+              queue. Ensure the content, applicability and change summary are
+              complete before proceeding.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
             <Button variant="secondary" disabled={pending} onClick={onClose}>
               Cancel
             </Button>
             <Button disabled={pending} onClick={() => void onSubmit(draft)}>
-              <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              {pending ? "Submitting…" : "Submit for review"}
+              {pending ? (
+                <>
+                  <Loader2
+                    className="mr-1.5 size-3.5 animate-spin"
+                    strokeWidth={2}
+                  />
+                  Submitting…
+                </>
+              ) : (
+                <>
+                  <Send className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                  Submit for review
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -860,74 +911,154 @@ function PolicyDraftDetailDialog({
       }}
       onClose={onClose}
     >
+      {/* ── Loading skeleton ── */}
       {pending ? (
-        <p className="text-muted py-10 text-center">Loading content…</p>
-      ) : null}
-      {error ? (
-        <Alert className="border-danger/25 bg-danger-soft text-danger mt-4">
-          {error instanceof Error
-            ? error.message
-            : "Unable to load the policy draft."}
-        </Alert>
-      ) : null}
-      {draft ? (
-        <div className="space-y-5">
-          <PolicyRevisionNotice request={draft.revisionRequest} />
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h3 className="text-xl font-semibold">{draft.title}</h3>
-              <p className="text-muted mt-1 text-sm break-all">
-                {draft.policyCode}
-              </p>
-            </div>
-            <StatusBadge tone="neutral">Draft</StatusBadge>
+        <div className="space-y-5" role="status" aria-label="Loading draft">
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-3/4 rounded" />
+            <Skeleton className="h-4 w-1/3 rounded" />
           </div>
-          <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            <Detail label="Policy code" value={draft.policyCode} />
-            <Detail label="Version" value={`v${draft.version.versionNumber}`} />
-            <Detail label="Created" value={formatDate(draft.createdAt)} />
-            <Detail label="Updated" value={formatDate(draft.updatedAt)} />
-          </dl>
-          <div>
-            <p className="text-muted text-xs font-semibold uppercase">
-              Description
-            </p>
-            <p className="mt-1 text-sm leading-6">
-              {draft.description || "No description"}
-            </p>
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
           </div>
-          <div>
-            <p className="text-muted text-xs font-semibold uppercase">
-              Content
-            </p>
-            <pre className="border-border bg-background mt-2 max-h-80 overflow-auto rounded-lg border p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
-              {draft.version.content}
-            </pre>
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <Skeleton className="h-40 w-full rounded-lg" />
+          <div className="flex justify-end gap-2 border-t border-border pt-4">
+            <Skeleton className="h-9 w-20 rounded-lg" />
+            <Skeleton className="h-9 w-16 rounded-lg" />
           </div>
         </div>
       ) : null}
-      <div className="mt-6 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose}>
-          Close
-        </Button>
-        {draft ? (
-          <Button onClick={() => onEdit(draft)}>
-            <Pencil className="size-4" aria-hidden="true" />
-            Edit
-          </Button>
-        ) : null}
-      </div>
-    </Dialog>
-  );
-}
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm font-medium">{value}</dd>
-    </div>
+      {/* ── Error ── */}
+      {error ? (
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-danger"
+            strokeWidth={1.8}
+          />
+          <p className="text-sm">
+            {error instanceof Error
+              ? error.message
+              : "Unable to load the policy draft."}
+          </p>
+        </div>
+      ) : null}
+
+      {/* ── Content ── */}
+      {draft ? (
+        <div className="space-y-5">
+          <PolicyRevisionNotice request={draft.revisionRequest} />
+
+          {/* Context bar */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+            <span className="flex items-center gap-1.5 font-medium">
+              <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+              {draft.policyCode}
+            </span>
+            <span className="text-border">·</span>
+            <span className="text-muted">v{draft.version.versionNumber}</span>
+            <span className="text-border">·</span>
+            <StatusBadge tone="neutral">Draft</StatusBadge>
+          </div>
+
+          {/* Title */}
+          <div className="min-w-0">
+            <h3 className="text-xl font-semibold">{draft.title}</h3>
+          </div>
+
+          {/* Metadata fact grid */}
+          <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
+            <div className="min-w-0">
+              <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                Policy code
+              </dt>
+              <dd className="mt-1 text-sm font-medium break-all">
+                {draft.policyCode}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                Version
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                v{draft.version.versionNumber}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                Created
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {formatDate(draft.createdAt)}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-muted text-xs font-medium uppercase tracking-wide">
+                Updated
+              </dt>
+              <dd className="mt-1 text-sm font-medium">
+                {formatDate(draft.updatedAt)}
+              </dd>
+            </div>
+          </dl>
+
+          {/* Description section */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <Tag
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Description</h3>
+            </div>
+            <p className="text-sm leading-6">
+              {draft.description || (
+                <span className="text-muted italic">No description provided.</span>
+              )}
+            </p>
+          </div>
+
+          {/* Content section */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 border-b border-border pb-2">
+              <FileText
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <h3 className="text-sm font-semibold">Content</h3>
+            </div>
+            <pre className="border-border bg-background max-h-80 overflow-auto rounded-lg border p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
+              {draft.version.content}
+            </pre>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+            <Button onClick={() => onEdit(draft)}>
+              <Pencil className="size-4" aria-hidden="true" strokeWidth={1.8} />
+              Edit
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Footer when no draft loaded yet */}
+      {!pending && !draft ? (
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      ) : null}
+    </Dialog>
   );
 }

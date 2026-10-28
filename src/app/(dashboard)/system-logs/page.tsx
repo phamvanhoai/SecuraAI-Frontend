@@ -1,9 +1,9 @@
 "use client";
 
-import { History, Search } from "lucide-react";
+import { AlertTriangle, History, Search } from "lucide-react";
 import { useState } from "react";
 import { ProductPageHeader } from "@/components/data-display/static-product";
-import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   AdvancedSystemLogSearch,
@@ -22,6 +22,7 @@ export default function SystemLogsPage() {
     session.data?.permissions.includes("system-logs.export") ?? false;
   const isAdmin =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+
   return (
     <div className="space-y-5">
       <ProductPageHeader
@@ -32,36 +33,62 @@ export default function SystemLogsPage() {
       {session.isPending ? (
         <div
           aria-label="Loading system log access"
-          className="bg-neutral-soft h-72 animate-pulse rounded-xl"
-        />
+          className="space-y-4"
+          role="status"
+        >
+          {/* Tab bar skeleton */}
+          <div className="flex gap-1">
+            <Skeleton className="h-10 w-28 rounded-lg" />
+            <Skeleton className="h-10 w-48 rounded-lg" />
+          </div>
+          {/* Content skeleton */}
+          <Skeleton className="h-12 w-full rounded-lg" />
+          <Skeleton className="h-72 w-full rounded-xl" />
+        </div>
       ) : session.isError ? (
-        <Alert>Unable to verify your system-log access.</Alert>
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-danger"
+            strokeWidth={1.8}
+          />
+          <p className="text-sm text-muted">
+            Unable to verify your system-log access. Please refresh the page.
+          </p>
+        </div>
       ) : !allowed ? (
-        <Alert>
-          System log search is available to administrators and Security Officers
-          only.
-        </Alert>
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-warning"
+            strokeWidth={1.8}
+          />
+          <p className="text-sm text-muted">
+            System log search is available to administrators and Security
+            Officers only.
+          </p>
+        </div>
       ) : (
         <div className="space-y-5">
-          <div
-            className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs"
-            role="tablist"
-            aria-label="System log functions"
-          >
-            <ViewTab
-              active={activeView === "search"}
-              icon={Search}
-              label="Log Search"
-              onClick={() => setActiveView("search")}
-            />
-            {isAdmin ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div
+              className="border-border bg-surface inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border p-1 shadow-xs"
+              role="tablist"
+              aria-label="System log functions"
+            >
               <ViewTab
-                active={activeView === "configuration-history"}
-                icon={History}
-                label="Configuration Change History"
-                onClick={() => setActiveView("configuration-history")}
+                active={activeView === "search"}
+                icon={Search}
+                label="Log Search"
+                onClick={() => setActiveView("search")}
               />
-            ) : null}
+              {isAdmin ? (
+                <ViewTab
+                  active={activeView === "configuration-history"}
+                  icon={History}
+                  label="Configuration Change History"
+                  onClick={() => setActiveView("configuration-history")}
+                />
+              ) : null}
+            </div>
           </div>
           <div aria-live="polite" role="tabpanel">
             {activeView === "configuration-history" && isAdmin ? (
@@ -93,14 +120,21 @@ function ViewTab({
       className={cn(
         "focus-visible:outline-brand inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all focus-visible:outline-2 focus-visible:outline-offset-2",
         active
-          ? "bg-brand text-white shadow-sm"
+          ? "bg-brand text-brand-contrast font-semibold shadow-xs"
           : "text-muted hover:bg-neutral-soft hover:text-foreground",
       )}
       onClick={onClick}
       role="tab"
       type="button"
     >
-      <Icon aria-hidden="true" className="size-4" strokeWidth={1.8} />
+      <Icon
+        aria-hidden="true"
+        className={cn(
+          "size-4",
+          active ? "text-brand-contrast" : "text-muted",
+        )}
+        strokeWidth={2}
+      />
       {label}
     </button>
   );

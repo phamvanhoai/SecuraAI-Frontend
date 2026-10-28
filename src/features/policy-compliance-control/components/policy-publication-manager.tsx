@@ -1,6 +1,22 @@
 "use client";
 
-import { Ellipsis, Eye, History, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  BookOpen,
+  CheckCircle2,
+  Ellipsis,
+  Eye,
+  FileText,
+  History,
+  Info,
+  Loader2,
+  RotateCcw,
+  ScrollText,
+  Search,
+  Send,
+  Tag,
+  XCircle,
+} from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -26,7 +42,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TableSkeleton } from "@/components/ui/skeleton";
+import { Skeleton, TableSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   usePolicyReview,
@@ -609,46 +625,122 @@ export function PolicyPublicationManager({
         onClose={closeReview}
         title="Review policy version"
       >
+        {/* ── Loading skeleton ── */}
         {review.isPending ? (
-          <div aria-label="Loading policy content" className="space-y-3">
-            <div className="bg-neutral-soft h-5 animate-pulse rounded" />
-            <div className="bg-neutral-soft h-40 animate-pulse rounded" />
+          <div className="space-y-5" role="status" aria-label="Loading policy content">
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-3/4 rounded" />
+              <Skeleton className="h-4 w-1/2 rounded" />
+            </div>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Skeleton className="h-9 w-20 rounded-lg" />
+              <Skeleton className="h-9 w-32 rounded-lg" />
+            </div>
           </div>
-        ) : review.isError ? (
-          <Alert>{errorMessage(review.error)}</Alert>
-        ) : review.data ? (
+        ) : null}
+
+        {/* ── Error ── */}
+        {review.isError ? (
           <div className="space-y-5">
-            <div>
-              <p className="text-muted text-xs font-semibold uppercase">
-                {review.data.policyCode} · v{review.data.version.versionNumber}
-              </p>
-              <h3 className="mt-1 text-base font-semibold">
-                {review.data.title}
-              </h3>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <AlertTriangle
+                className="mt-0.5 size-4 shrink-0 text-danger"
+                strokeWidth={1.8}
+              />
+              <p className="text-sm">{errorMessage(review.error)}</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <Button variant="secondary" onClick={closeReview}>
+                Close
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* ── Main review content ── */}
+        {review.data ? (
+          <div className="space-y-5">
+            {/* Context bar */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <FileText className="size-3.5 text-brand" strokeWidth={1.8} />
+                {review.data.policyCode}
+              </span>
+              <span className="text-border">·</span>
+              <span className="text-muted">v{review.data.version.versionNumber}</span>
+              <span className="text-border">·</span>
+              {review.data.version.status === "approved" ? (
+                <StatusBadge tone="success">Approved</StatusBadge>
+              ) : review.data.version.status === "waiting_approval" ? (
+                <StatusBadge tone="success">Reviewed</StatusBadge>
+              ) : (
+                <StatusBadge tone="warning">In review</StatusBadge>
+              )}
+            </div>
+
+            {/* Title & description */}
+            <div className="min-w-0">
+              <h3 className="text-xl font-semibold">{review.data.title}</h3>
               {review.data.description ? (
-                <p className="text-muted mt-1 text-sm">
+                <p className="text-muted mt-1.5 text-sm leading-relaxed">
                   {review.data.description}
                 </p>
               ) : null}
             </div>
-            <section
-              aria-label="Policy content"
-              className="border-border bg-background max-h-72 overflow-y-auto rounded-lg border p-4 text-sm leading-6 whitespace-pre-wrap"
-            >
-              {review.data.version.content}
-            </section>
+
+            {/* Policy content section */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <ScrollText
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">Policy content</h3>
+              </div>
+              <pre className="border-border bg-background max-h-72 overflow-y-auto rounded-lg border p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
+                {review.data.version.content}
+              </pre>
+            </div>
+
+            {/* Change summary section */}
             {review.data.version.changeSummary ? (
-              <p className="text-muted text-sm">
-                <strong className="text-foreground">Change summary:</strong>{" "}
-                {review.data.version.changeSummary}
-              </p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Tag
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Change summary</h3>
+                </div>
+                <p className="text-sm leading-relaxed">
+                  {review.data.version.changeSummary}
+                </p>
+              </div>
             ) : null}
+
+            {/* ── Revision request panel ── */}
             {requestingRevision ? (
-              <div className="border-border bg-neutral-soft space-y-2 rounded-lg border p-4">
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <RotateCcw
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Revision instructions</h3>
+                </div>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <p className="text-sm text-muted leading-relaxed">
+                    Describe the changes required before this policy can be
+                    approved. Your instructions will be recorded with the review
+                    decision.
+                  </p>
+                </div>
                 <label className="block" htmlFor="policy-revision-comment">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    Revision instructions
-                  </span>
+                  <span className="sr-only">Revision instructions</span>
                   <Textarea
                     aria-describedby={
                       revisionError ? "policy-revision-error" : undefined
@@ -665,22 +757,38 @@ export function PolicyPublicationManager({
                   />
                 </label>
                 {revisionError ? (
-                  <p className="text-danger text-sm" id="policy-revision-error">
+                  <p
+                    className="text-danger text-xs"
+                    id="policy-revision-error"
+                    role="alert"
+                  >
                     {revisionError}
                   </p>
-                ) : (
-                  <p className="text-muted text-xs">
-                    These instructions will be recorded with the review
-                    decision.
-                  </p>
-                )}
+                ) : null}
               </div>
             ) : rejecting ? (
-              <div className="border-danger/30 bg-danger/5 space-y-2 rounded-lg border p-4">
+              /* ── Rejection panel ── */
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <XCircle
+                    className="mt-0.5 size-4 shrink-0 text-danger"
+                    strokeWidth={1.8}
+                  />
+                  <h3 className="text-sm font-semibold">Rejection reason</h3>
+                </div>
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0 text-warning"
+                    strokeWidth={1.8}
+                  />
+                  <p className="text-sm leading-relaxed">
+                    Rejection is{" "}
+                    <strong>final for this version</strong> and will be
+                    permanently recorded in the audit trail.
+                  </p>
+                </div>
                 <label className="block" htmlFor="policy-rejection-reason">
-                  <span className="mb-1.5 block text-sm font-medium">
-                    Rejection reason
-                  </span>
+                  <span className="sr-only">Rejection reason</span>
                   <Textarea
                     aria-describedby={
                       rejectionError ? "policy-rejection-error" : undefined
@@ -698,28 +806,40 @@ export function PolicyPublicationManager({
                 </label>
                 {rejectionError ? (
                   <p
-                    className="text-danger text-sm"
+                    className="text-danger text-xs"
                     id="policy-rejection-error"
+                    role="alert"
                   >
                     {rejectionError}
                   </p>
-                ) : (
-                  <p className="text-muted text-xs">
-                    Rejection is final for this version and will be recorded in
-                    the audit trail.
-                  </p>
-                )}
+                ) : null}
               </div>
             ) : (
-              <Alert>
-                {review.data.version.status === "approved"
-                  ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
-                  : review.data.version.status === "waiting_approval"
-                    ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
-                    : "Confirm that you have reviewed the complete policy content before making an approval decision."}
-              </Alert>
+              /* ── Status info banner ── */
+              <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                {review.data.version.status === "approved" ? (
+                  <CheckCircle2
+                    className="mt-0.5 size-4 shrink-0 text-success"
+                    strokeWidth={1.8}
+                  />
+                ) : (
+                  <Info
+                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    strokeWidth={1.8}
+                  />
+                )}
+                <p className="text-sm text-muted leading-relaxed">
+                  {review.data.version.status === "approved"
+                    ? "This approved version is ready to become the current official policy. Publishing will supersede the previous official version, if one exists."
+                    : review.data.version.status === "waiting_approval"
+                      ? "Review completed. Approval records a separate auditable decision and does not publish the policy immediately."
+                      : "Confirm that you have reviewed the complete policy content before making an approval decision."}
+                </p>
+              </div>
             )}
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+
+            {/* ── Footer actions ── */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
               {requestingRevision ? (
                 <>
                   <Button
@@ -736,9 +856,20 @@ export function PolicyPublicationManager({
                     disabled={requestRevision.isPending}
                     onClick={confirmRevisionRequest}
                   >
-                    {requestRevision.isPending
-                      ? "Sending..."
-                      : "Send revision request"}
+                    {requestRevision.isPending ? (
+                      <>
+                        <Loader2
+                          className="mr-1.5 size-3.5 animate-spin"
+                          strokeWidth={2}
+                        />
+                        Sending…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="size-3.5" strokeWidth={1.8} />
+                        Send revision request
+                      </>
+                    )}
                   </Button>
                 </>
               ) : rejecting ? (
@@ -758,7 +889,20 @@ export function PolicyPublicationManager({
                     onClick={confirmRejection}
                     variant="danger"
                   >
-                    {reject.isPending ? "Rejecting..." : "Confirm rejection"}
+                    {reject.isPending ? (
+                      <>
+                        <Loader2
+                          className="mr-1.5 size-3.5 animate-spin"
+                          strokeWidth={2}
+                        />
+                        Rejecting…
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="size-3.5" strokeWidth={1.8} />
+                        Confirm rejection
+                      </>
+                    )}
                   </Button>
                 </>
               ) : (
@@ -772,12 +916,14 @@ export function PolicyPublicationManager({
                         onClick={() => setRequestingRevision(true)}
                         variant="secondary"
                       >
+                        <RotateCcw className="size-3.5" strokeWidth={1.8} />
                         Request revision
                       </Button>
                       <Button
                         onClick={() => setRejecting(true)}
                         variant="danger"
                       >
+                        <XCircle className="size-3.5" strokeWidth={1.8} />
                         Reject policy
                       </Button>
                     </>
@@ -787,27 +933,60 @@ export function PolicyPublicationManager({
                       disabled={publishVersion.isPending}
                       onClick={confirmPublication}
                     >
-                      {publishVersion.isPending
-                        ? "Publishing..."
-                        : "Publish official version"}
+                      {publishVersion.isPending ? (
+                        <>
+                          <Loader2
+                            className="mr-1.5 size-3.5 animate-spin"
+                            strokeWidth={2}
+                          />
+                          Publishing…
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="size-3.5" strokeWidth={1.8} />
+                          Publish official version
+                        </>
+                      )}
                     </Button>
                   ) : review.data.version.status === "waiting_approval" ? (
                     <Button
                       disabled={approve.isPending}
                       onClick={confirmApproval}
                     >
-                      {approve.isPending
-                        ? "Approving..."
-                        : "Approve for publication"}
+                      {approve.isPending ? (
+                        <>
+                          <Loader2
+                            className="mr-1.5 size-3.5 animate-spin"
+                            strokeWidth={2}
+                          />
+                          Approving…
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.8} />
+                          Approve for publication
+                        </>
+                      )}
                     </Button>
                   ) : (
                     <Button
                       disabled={completeReview.isPending}
                       onClick={confirmReview}
                     >
-                      {completeReview.isPending
-                        ? "Recording review..."
-                        : "Complete review"}
+                      {completeReview.isPending ? (
+                        <>
+                          <Loader2
+                            className="mr-1.5 size-3.5 animate-spin"
+                            strokeWidth={2}
+                          />
+                          Recording…
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="size-3.5" strokeWidth={1.8} />
+                          Complete review
+                        </>
+                      )}
                     </Button>
                   )}
                 </>

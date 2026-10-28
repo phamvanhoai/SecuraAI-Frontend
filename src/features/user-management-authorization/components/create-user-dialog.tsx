@@ -1,12 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ShieldCheck, UserRound } from "lucide-react";
+import { AlertTriangle, Info, Loader2, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { FormField } from "@/components/forms/form-field";
 import { useToast } from "@/components/feedback/toast";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,6 +27,7 @@ const defaults: CreateUserInput = {
   departmentId: "",
   role: "EMPLOYEE",
 };
+
 const roles = [
   { value: "EMPLOYEE", label: "Employee" },
   { value: "SECURITY_OFFICER", label: "Security Officer" },
@@ -95,34 +95,40 @@ export function CreateUserDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] overflow-y-auto"
     >
       <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+        {/* Submit error banner */}
         {mutation.error ? (
-          <Alert
-            className="border-danger/25 bg-danger-soft text-danger"
-            role="alert"
-          >
-            {mutation.error instanceof Error
-              ? mutation.error.message
-              : "Unable to create the user account. Please try again."}
-          </Alert>
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5" role="alert">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
+            <p className="text-sm text-danger">
+              {mutation.error instanceof Error
+                ? mutation.error.message
+                : "Unable to create the user account. Please try again."}
+            </p>
+          </div>
         ) : null}
-        <section
-          aria-labelledby="new-user-account-heading"
-          className="border-border rounded-xl border p-4"
-        >
-          <h3
-            className="mb-4 flex items-center gap-2 text-sm font-semibold"
-            id="new-user-account-heading"
-          >
-            <span className="bg-brand-soft text-brand grid size-7 place-items-center rounded-lg">
-              <UserRound
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-            </span>
-            Account information
-          </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
+
+        {/* Info hint */}
+        <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+          <Info className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+          <p className="text-xs text-muted">
+            A temporary password and login instructions will be sent to the
+            user&apos;s email address upon account creation.
+          </p>
+        </div>
+
+        {/* Account information */}
+        <section aria-labelledby="new-user-account-heading" className="space-y-3">
+          <div className="flex items-start gap-2 border-b border-border pb-2">
+            <UserRound
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0 text-brand"
+              strokeWidth={1.8}
+            />
+            <h3 className="text-sm font-semibold" id="new-user-account-heading">
+              Account information
+            </h3>
+          </div>
+          <div className="border-border bg-neutral-soft/30 grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
             <FormField
               id="user-email"
               label="Email"
@@ -195,39 +201,39 @@ export function CreateUserDialog({
             </div>
           </div>
         </section>
-        <section
-          aria-labelledby="new-user-access-heading"
-          className="border-border rounded-xl border p-4"
-        >
-          <h3
-            className="mb-1 flex items-center gap-2 text-sm font-semibold"
-            id="new-user-access-heading"
-          >
-            <span className="bg-brand-soft text-brand grid size-7 place-items-center rounded-lg">
-              <ShieldCheck
-                aria-hidden="true"
-                className="size-4"
-                strokeWidth={1.8}
-              />
-            </span>
-            Access assignment
-          </h3>
-          <FormField id="user-role" label="Role" error={errors.role?.message}>
-            <Select
-              id="user-role"
-              aria-invalid={Boolean(errors.role)}
-              aria-describedby={errors.role ? "user-role-error" : undefined}
-              {...register("role")}
-            >
-              {roles.map((role) => (
-                <option key={role.value} value={role.value}>
-                  {role.label}
-                </option>
-              ))}
-            </Select>
-          </FormField>
+
+        {/* Access assignment */}
+        <section aria-labelledby="new-user-access-heading" className="space-y-3">
+          <div className="flex items-start gap-2 border-b border-border pb-2">
+            <ShieldCheck
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0 text-brand"
+              strokeWidth={1.8}
+            />
+            <h3 className="text-sm font-semibold" id="new-user-access-heading">
+              Access assignment
+            </h3>
+          </div>
+          <div className="border-border bg-neutral-soft/30 rounded-xl border p-4">
+            <FormField id="user-role" label="Role" error={errors.role?.message}>
+              <Select
+                id="user-role"
+                aria-invalid={Boolean(errors.role)}
+                aria-describedby={errors.role ? "user-role-error" : undefined}
+                {...register("role")}
+              >
+                {roles.map((role) => (
+                  <option key={role.value} value={role.value}>
+                    {role.label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
         </section>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
           <Button
             disabled={mutation.isPending}
             onClick={close}
@@ -237,7 +243,14 @@ export function CreateUserDialog({
             Cancel
           </Button>
           <Button disabled={mutation.isPending} type="submit">
-            {mutation.isPending ? "Saving…" : "Save"}
+            {mutation.isPending ? (
+              <>
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" strokeWidth={2} />
+                Saving…
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </div>
       </form>
