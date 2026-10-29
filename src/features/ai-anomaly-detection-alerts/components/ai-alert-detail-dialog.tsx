@@ -191,8 +191,11 @@ export function AiAlertDetailDialog({
               title="Decision explanation"
             />
             <Alert className="border-info/25 bg-info-soft text-foreground">
-              The deployed scoring configuration calculates the anomaly score
-              and decides whether to create an alert. Ollama only turns the
+              The detection engine evaluates event-family rules and contextual
+              signals. A matching rule can create an alert independently of the
+              behavioral threshold. Scores indicate signal strength, not attack
+              probability. Repeated matches may be grouped in the recorded evidence.
+              Ollama only turns the
               stored evidence into analyst-readable text; when unavailable, a
               deterministic fallback explanation is shown.
             </Alert>
