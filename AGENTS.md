@@ -130,3 +130,5 @@ Risk workflow actions consume backend canAssessResidual/canDefineTarget/canManag
 Explicit Risk Owner eligibility exposes My Risks even with zero assigned records. Keep ownership-scoped APIs and show the No risks assigned empty state; eligibility is not organization-wide register access.
 
 Explicit Control Owner, Asset Owner and Risk Acceptance Approver eligibility also exposes their workspace with no assigned/pending records. Empty workspaces must remain visible after their last item is removed/completed. Data APIs retain ownership and pending-request scope.
+
+Contextual detection v1 may create alerts from matched rules even below the behavioral threshold. Scores are signal strength, not probability. Show alertsGrouped separately; preserve stored explanation and correlated evidence. Ollama never determines scores or alert creation.

@@ -16,6 +16,7 @@ export const anomalyDetectionRunResultSchema = z.object({
   anomaliesDetected: z.number().int().nonnegative(),
   detectionsCreated: z.number().int().nonnegative(),
   alertsCreated: z.number().int().nonnegative(),
+  alertsGrouped: z.number().int().nonnegative().default(0),
   threshold: z.number().min(0).max(1),
   completedAt: z.iso.datetime(),
 });
