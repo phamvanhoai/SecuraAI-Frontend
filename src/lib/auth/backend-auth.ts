@@ -52,10 +52,7 @@ export async function requestLogin(
 }
 
 export async function requestTokenPair(
-  path:
-    | "/auth/login"
-    | "/auth/google"
-    | "/auth/refresh",
+  path: "/auth/login" | "/auth/google" | "/auth/refresh",
   body: unknown,
   request: Request,
 ): Promise<{ response: Response; tokens?: AuthTokenPair }> {
@@ -88,6 +85,40 @@ export async function requestCurrentUser(
   if (!response.ok) return null;
   const parsed = userEnvelopeSchema.safeParse(await response.json());
   return parsed.success ? parsed.data.data : null;
+}
+
+export async function publicLoginError(response: Response): Promise<{
+  code: string;
+  message: string;
+}> {
+  if (response.status === 401) {
+    const body: unknown = await response.json().catch(() => undefined);
+    const parsed = z
+      .object({
+        success: z.literal(false),
+        error: z.object({
+          code: z.enum([
+            "ACCOUNT_LOCKED",
+            "ACCOUNT_NOT_FOUND",
+            "ACCOUNT_INACTIVE",
+          ]),
+        }),
+      })
+      .safeParse(body);
+    if (parsed.success) {
+      const code = parsed.data.error.code;
+      return {
+        code,
+        message:
+          code === "ACCOUNT_LOCKED"
+            ? "Account is LOCKED"
+            : code === "ACCOUNT_INACTIVE"
+              ? "Account is INACTIVE"
+              : "Account does not exist",
+      };
+    }
+  }
+  return publicAuthError(response.status);
 }
 
 export function publicAuthError(status: number): {
