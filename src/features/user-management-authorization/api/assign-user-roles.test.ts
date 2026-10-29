@@ -7,7 +7,7 @@ describe("user access assignment API", () => {
   it("loads role, scope, and ownership options", async () => {
     const options = {
       roles: [{ code: "EMPLOYEE", name: "Employee" }],
-      scopeCodes: [{ code: "AUDIT_VIEW", name: "View audit information" }], targetTypes: ["GLOBAL", "BUSINESS_SERVICE", "ASSET"],
+      scopeCodes: [{ code: "RISK_OWNER", name: "Risk Owner" }], targetTypes: ["GLOBAL"],
       businessServices: [], assets: [],
     };
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
@@ -19,13 +19,13 @@ describe("user access assignment API", () => {
   });
 
   it("replaces the complete access assignment", async () => {
-    const result = { changed: true, role: "EXECUTIVE", scopeCount: 1 };
+    const result = { changed: true, role: "EMPLOYEE", scopeCount: 1 };
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
       JSON.stringify({ success: true, data: result }),
       { status: 200, headers: { "content-type": "application/json" } },
     ));
     const id = "00000000-0000-4000-8000-000000000010";
-    const payload = { role: "EXECUTIVE" as const, scopes: [{ scopeCode: "AUDIT_VIEW", targetType: "GLOBAL" as const, expiresAt: null }] };
+    const payload = { role: "EMPLOYEE" as const, scopes: [{ scopeCode: "RISK_OWNER", targetType: "GLOBAL" as const, expiresAt: null }] };
     await expect(assignUserAccess(id, payload)).resolves.toEqual(result);
     expect(fetchMock).toHaveBeenCalledWith(`/api/users/${id}/access-assignment`, expect.objectContaining({ method: "PUT", body: JSON.stringify(payload) }));
   });
