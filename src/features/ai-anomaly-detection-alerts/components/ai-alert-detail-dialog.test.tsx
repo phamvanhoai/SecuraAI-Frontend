@@ -98,6 +98,171 @@ beforeEach(() => {
 });
 
 describe("AiAlertDetailDialog", () => {
+  it("shows score changes separately without dumping scoring snapshots", async () => {
+    explanationState.current.data = {
+      explanationText: "Updated priority.",
+      featureContributions: [
+        {
+          featureName: "alert_score_update",
+          featureValue:
+            '{"previousScore":0.57,"score":0.81,"updatedAt":"2026-10-30T01:00:00Z","features":[]}',
+          contributionScore: null,
+          rank: 101,
+        },
+      ],
+      baselineData: null,
+      createdAt: "2026-10-30T01:00:00Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    await userEvent.setup().click(screen.getByText("Score history (1)"));
+    expect(screen.getByText("57% → 81%")).toBeVisible();
+    expect(screen.queryByText(/"features":/)).not.toBeInTheDocument();
+  });
+  it("presents a legacy fallback without dumping internal evidence", () => {
+    explanationState.current.data = {
+      explanationText:
+        'Detection rule matched: ["VPN_SSO_NEW_CONTEXT_OFF_HOURS"]. The signal score is 0.6700; rule-based detection is independent of the behavioral threshold 0.7000. Evidence: rule_score_breakdown: {"base":0.55}',
+      featureContributions: [],
+      baselineData: null,
+      createdAt: "2026-09-11T03:00:01.000Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    expect(
+      screen.queryByText(/Evidence: rule_score_breakdown/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/Priority score: 67%/)).toBeInTheDocument();
+  });
+  it("summarizes SSO evidence without suggesting failed attempts and explains priority points", () => {
+    explanationState.current.data = {
+      explanationText: "Stored technical explanation.",
+      featureContributions: [
+        {
+          featureName: "matched_rules",
+          featureValue: '["VPN_SSO_NEW_CONTEXT_OFF_HOURS"]',
+          contributionScore: 0.67,
+          rank: 1,
+        },
+        {
+          featureName: "failure_count_in_window",
+          featureValue: '{"count":0,"windowMinutes":5}',
+          contributionScore: 0,
+          rank: 2,
+        },
+        {
+          featureName: "working_hours",
+          featureValue:
+            '{"offHours":true,"localHour":1,"timeZone":"Asia/Ho_Chi_Minh"}',
+          contributionScore: 0,
+          rank: 3,
+        },
+        {
+          featureName: "baseline_context",
+          featureValue: '{"ready":true,"successfulEvents":20,"newIp":true}',
+          contributionScore: 0,
+          rank: 4,
+        },
+        {
+          featureName: "rule_score_breakdown",
+          featureValue:
+            '{"base":0.55,"sourceSeverity":0.020000000000000004,"offHours":0.05,"newIp":0.05,"cap":0.99}',
+          contributionScore: 0,
+          rank: 5,
+        },
+      ],
+      baselineData: { threshold: 0.7 },
+      createdAt: "2026-09-11T03:00:01.000Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    expect(
+      screen.queryByText(/0 failed attempts within/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("IP address not seen in 20 previous successful events."),
+    ).toBeVisible();
+    expect(screen.getByText("55 points")).toBeVisible();
+    expect(screen.getByText("2 points")).toBeVisible();
+    expect(
+      screen.getByText("Recorded detection metadata").closest("details"),
+    ).not.toHaveAttribute("open");
+    expect(
+      screen.getByText("Stored explanation").closest("details"),
+    ).not.toHaveAttribute("open");
+  });
+
+  it("shows readable context and keeps grouped evidence and technical data collapsed", async () => {
+    explanationState.current.data = {
+      explanationText: "Authentication failures matched a rule.",
+      featureContributions: [
+        {
+          featureName: "matched_rules",
+          featureValue: '["AUTH_FAILURE_BURST"]',
+          contributionScore: 0.9,
+          rank: 1,
+        },
+        {
+          featureName: "failure_count_in_window",
+          featureValue: '{"count":5,"windowMinutes":5}',
+          contributionScore: 0,
+          rank: 2,
+        },
+        {
+          featureName: "engine_version",
+          featureValue: '"contextual-rules-v1"',
+          contributionScore: 0,
+          rank: 9,
+        },
+        {
+          featureName: "correlated_detection",
+          featureValue: '{"eventId":"extra-event","score":0.9}',
+          contributionScore: null,
+          rank: 100,
+        },
+      ],
+      baselineData: null,
+      createdAt: "2026-09-11T03:00:01.000Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    expect(screen.getByText("Repeated failed sign-ins")).toBeVisible();
+    expect(
+      screen.getByText("5 failed attempts within 5 minutes."),
+    ).toBeVisible();
+    expect(screen.queryByText("No score change")).not.toBeInTheDocument();
+    expect(screen.queryByText("Raises score")).not.toBeInTheDocument();
+    expect(screen.getByText("Rule score")).toBeVisible();
+    expect(screen.getByText("90%")).toBeVisible();
+    const grouped = screen.getByText("Grouped detections (1)");
+    expect(grouped.closest("details")).not.toHaveAttribute("open");
+    expect(
+      screen.getByText("Technical details").closest("details"),
+    ).not.toHaveAttribute("open");
+    await userEvent.setup().click(grouped);
+    expect(grouped.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText("extra-event")).toBeVisible();
+  });
+
+  it("renders correlated detections with repeated names and ranks without key warnings", () => {
+    const consoleError = vi.spyOn(console, "error");
+    try {
+      explanationState.current.data = {
+        explanationText: "Repeated authentication failures.",
+        featureContributions: ["event-one", "event-two"].map((eventId) => ({
+          featureName: "correlated_detection",
+          featureValue: eventId,
+          contributionScore: null,
+          rank: 100,
+        })),
+        baselineData: null,
+        createdAt: "2026-09-11T03:00:01.000Z",
+      };
+      render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+      expect(screen.getByText("event-one")).toBeInTheDocument();
+      expect(screen.getByText("event-two")).toBeInTheDocument();
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it("shows the stored explanation and influencing factors", () => {
     explanationState.current.data = {
       explanationText: "Five failed sign-ins exceeded the baseline.",
@@ -113,7 +278,7 @@ describe("AiAlertDetailDialog", () => {
       createdAt: "2026-09-11T03:00:01.000Z",
     };
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
-    expect(screen.getByText("Decision explanation")).toBeInTheDocument();
+    expect(screen.getByText("Alert explanation")).toBeInTheDocument();
     expect(
       screen.getByText(/Ollama only turns the stored evidence/i),
     ).toBeInTheDocument();
@@ -121,7 +286,7 @@ describe("AiAlertDetailDialog", () => {
       screen.getByText("Five failed sign-ins exceeded the baseline."),
     ).toBeInTheDocument();
     expect(screen.getByText("Failed Sign Ins")).toBeInTheDocument();
-    expect(screen.getByText("Influence rank 1")).toBeInTheDocument();
+    expect(screen.queryByText("Influence rank 1")).not.toBeInTheDocument();
     expect(screen.getByText("+0.4")).toBeInTheDocument();
     expect(screen.getByText("Raises score")).toBeInTheDocument();
     expect(screen.getByText("Normal Failed Sign Ins")).toBeInTheDocument();
@@ -155,7 +320,9 @@ describe("AiAlertDetailDialog", () => {
   it("explains when no stored explanation exists", () => {
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
     expect(
-      screen.getByText("No AI explanation has been recorded for this alert."),
+      screen.getByText(
+        "No alert explanation has been recorded for this alert.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -163,7 +330,7 @@ describe("AiAlertDetailDialog", () => {
     explanationState.current.isPending = true;
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
     expect(
-      screen.getByRole("status", { name: "Loading AI explanation" }),
+      screen.getByRole("status", { name: "Loading alert explanation" }),
     ).toBeInTheDocument();
   });
 
@@ -171,7 +338,7 @@ describe("AiAlertDetailDialog", () => {
     explanationState.current.isError = true;
     render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
     expect(
-      screen.getByText("Unable to load the AI explanation."),
+      screen.getByText("Unable to load the alert explanation."),
     ).toBeInTheDocument();
     await userEvent
       .setup()

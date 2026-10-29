@@ -167,7 +167,7 @@ export function ConfigureDetectionThresholdDialog({
           <FormField
             error={errors.thresholdPercent?.message}
             id="detection-threshold-percent"
-            label="Anomaly score threshold (%)"
+            label="Detection score threshold (%)"
           >
             <Input
               aria-invalid={Boolean(errors.thresholdPercent)}

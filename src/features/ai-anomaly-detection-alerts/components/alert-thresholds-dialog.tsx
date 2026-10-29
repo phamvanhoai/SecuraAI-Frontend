@@ -354,8 +354,8 @@ function ThresholdFormDialog({
     >
       <p className="text-muted -mt-2 mb-5 text-sm leading-5">
         {editing
-          ? "Update when this asset should generate an AI alert and whether the override is active."
-          : "Choose an active asset and define when its anomaly score should generate an AI alert."}
+          ? "Update when this asset should generate an anomaly alert and whether the override is active."
+          : "Choose an active asset and define when its detection score should generate an anomaly alert."}
       </p>
 
       <form className="space-y-6" noValidate onSubmit={handleSubmit(submit)}>
@@ -455,7 +455,7 @@ function ThresholdFormDialog({
             <FormField
               error={errors.thresholdPercent?.message}
               id="threshold-percent"
-              label="Anomaly score threshold (%) *"
+              label="Detection score threshold (%) *"
             >
               <Input
                 aria-describedby={
