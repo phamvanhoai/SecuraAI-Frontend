@@ -445,7 +445,7 @@ export function ControlAssessmentManager() {
                   className="text-muted mx-auto size-10 stroke-1"
                 />
                 <h3 className="mt-2 text-base font-semibold">
-                  {q ? "No matching controls found" : "No controls available"}
+                  {q ? "No matching controls found" : canCreate ? "No controls available" : "No controls assigned"}
                 </h3>
                 <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                   {q
@@ -538,7 +538,7 @@ export function ControlAssessmentManager() {
                   className="text-muted mx-auto size-10 stroke-1"
                 />
                 <h3 className="mt-2 text-base font-semibold">
-                  {q ? "No matching controls found" : "No controls available"}
+                  {q ? "No matching controls found" : canCreate ? "No controls available" : "No controls assigned"}
                 </h3>
                 <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                   {q

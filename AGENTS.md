@@ -126,3 +126,7 @@ Admin's Assign role, scope & ownership form uses the existing user_access_scopes
 Employee responsibility selection is exclusive: at most one of Risk Owner, Control Owner, Asset Owner or Authorized Approver per Employee. An Employee may have no inherited responsibility; click the selected checkbox again to clear it. Transfer conflicting owned records before changing responsibility; legacy multiple ownership is preserved until explicitly resolved.
 
 Risk workflow actions consume backend canAssessResidual/canDefineTarget/canManageTreatmentPlan and canReview/canReassess/canReject flags. Employee AUTHORIZED_APPROVER access is specific to pending Risk Acceptance work; do not expose reassessment actions or infer approval rights from the Employee role. Existing record ownership remains required for Owner workflows.
+
+Explicit Risk Owner eligibility exposes My Risks even with zero assigned records. Keep ownership-scoped APIs and show the No risks assigned empty state; eligibility is not organization-wide register access.
+
+Explicit Control Owner, Asset Owner and Risk Acceptance Approver eligibility also exposes their workspace with no assigned/pending records. Empty workspaces must remain visible after their last item is removed/completed. Data APIs retain ownership and pending-request scope.

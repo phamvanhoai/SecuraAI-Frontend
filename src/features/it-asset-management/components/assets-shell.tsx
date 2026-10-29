@@ -117,6 +117,7 @@ export function AssetsShell() {
   const parameters = useSearchParams();
   const query = useMemo(() => parse(parameters), [parameters]);
   const session = useSessionUser();
+  const isEmployee = session.data?.roles?.some((role) => role.code === "EMPLOYEE") ?? false;
   const canRead = session.data?.permissions.includes("assets.read") ?? false;
   const canCreate =
     session.data?.permissions.includes("assets.create") ?? false;
@@ -297,12 +298,12 @@ export function AssetsShell() {
               <h3 className="mt-2 text-base font-semibold">
                 {hasActiveFilters
                   ? "No matching assets found"
-                  : "No assets found"}
+                  : isEmployee ? "No assets assigned" : "No assets found"}
               </h3>
               <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                 {hasActiveFilters
                   ? "No assets match the current search and filter criteria. Try adjusting or clearing the filters."
-                  : "No IT assets have been registered yet."}
+                  : isEmployee ? "You haven’t been assigned any assets yet." : "No IT assets have been registered yet."}
               </p>
               {hasActiveFilters ? (
                 <Button

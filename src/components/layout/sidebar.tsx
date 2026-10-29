@@ -32,7 +32,7 @@ export function Sidebar() {
   // sidebar on the same shared dashboard navigation instead of falling back
   // to the admin menu merely because the URL has no panel prefix.
   const panel = getPanelKind(pathname, roles);
-  const navigation = getPanelNavigation(panel).filter((item) =>
+  const navigation = getPanelNavigation(panel, roles, permissions).filter((item) =>
     canAccessNavigationItem(permissions, item, roles),
   );
   const sections = sectionOrder
