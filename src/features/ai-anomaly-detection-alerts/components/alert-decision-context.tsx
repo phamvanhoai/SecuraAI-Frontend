@@ -38,7 +38,7 @@ export function AlertDecisionContext({ alert }: { alert: AiAlert }) {
       </div>
       <dl className="border-border mt-4 grid gap-3 border-t pt-3 sm:grid-cols-2">
         <div>
-          <dt className="text-muted text-xs font-medium">Anomaly score</dt>
+          <dt className="text-muted text-xs font-medium">Detection score</dt>
           <dd className="mt-1 text-sm font-semibold tabular-nums">
             {formatScore(alert.anomalyScore)}
           </dd>

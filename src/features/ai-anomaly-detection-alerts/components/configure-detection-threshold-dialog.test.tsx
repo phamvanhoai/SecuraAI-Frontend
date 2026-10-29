@@ -62,7 +62,7 @@ describe("ConfigureDetectionThresholdDialog", () => {
     expect(screen.getByText("secura-organizational-behavior 1.0.0")).toBeInTheDocument();
     expect(screen.getByText("Current threshold: 80%")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByLabelText("Anomaly score threshold (%)")).toHaveValue(80);
+      expect(screen.getByLabelText("Detection score threshold (%)")).toHaveValue(80);
     });
   });
 
@@ -74,7 +74,7 @@ describe("ConfigureDetectionThresholdDialog", () => {
     const onClose = vi.fn();
     render(<ConfigureDetectionThresholdDialog open onClose={onClose} />);
     const user = userEvent.setup();
-    const input = screen.getByLabelText("Anomaly score threshold (%)");
+    const input = screen.getByLabelText("Detection score threshold (%)");
 
     await user.clear(input);
     await user.type(input, "75");
@@ -93,7 +93,7 @@ describe("ConfigureDetectionThresholdDialog", () => {
   it("rejects thresholds below the backend boundary", async () => {
     render(<ConfigureDetectionThresholdDialog open onClose={vi.fn()} />);
     const user = userEvent.setup();
-    const input = screen.getByLabelText("Anomaly score threshold (%)");
+    const input = screen.getByLabelText("Detection score threshold (%)");
 
     await user.clear(input);
     await user.type(input, "40");
