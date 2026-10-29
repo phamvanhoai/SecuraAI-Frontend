@@ -113,3 +113,9 @@ Cần browser Playwright phù hợp; PLAYWRIGHT_CHANNEL=chrome cho phép dùng C
 Backend sibling SecuraAI-Backend cung cấp OpenAPI trong src/docs/openapi.ts, module notes trong src/modules/README.md và baseline/Project Tracking trong project-docs/new/. Contract V1 chưa port trả 501; không giả lập thành chức năng production.
 
 Tạo nhánh từ develop mới nhất, PR vào develop, phát hành qua PR develop → main. Không push trực tiếp/force-push hai nhánh dài hạn. Không commit environment secrets, .next, coverage hoặc test reports.
+
+## Employee business responsibilities
+
+Admin → Users → Assign role, scope & ownership now grants Employee business responsibilities (Risk Owner, Control Owner, Asset Owner, Authorized Approver), using the existing access-assignment API. Responsibilities are permanent eligibility, not organization-wide resource access. Assign records in their modules; existing owners retain their responsibility, and transfer is required before removal. Authorized Approver eligibility requires a workflow-specific assignment and never grants global approval access. No database migration.
+
+Employee responsibility selection is exclusive: at most one of Risk Owner, Control Owner, Asset Owner or Authorized Approver per Employee. An Employee may have no inherited responsibility; click the selected checkbox again to clear it. Transfer conflicting owned records before changing responsibility; legacy multiple ownership is preserved until explicitly resolved.

@@ -5,44 +5,24 @@ import {
   AlertTriangle,
   Info,
   Loader2,
-  Lock,
-  Plus,
-  Shield,
-  Trash2,
-  User,
+  ShieldCheck,
+  UserCog,
+  Briefcase,
 } from "lucide-react";
 import { useToast } from "@/components/feedback/toast";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   useAccessAssignmentOptions,
   useAssignUserAccess,
   useUserAccessAssignment,
 } from "../hooks/use-assign-user-roles";
-import type {
-  AccessAssignmentPayload,
-  AccessScopeInput,
-} from "../api/assign-user-roles";
+import type { AccessAssignmentPayload } from "../api/assign-user-roles";
 
 type RoleCode = AccessAssignmentPayload["role"];
-type DraftScope = AccessScopeInput & { key: string };
-
-const ownershipLabels = {
-  businessServices: "Business services",
-  assets: "Assets",
-  risks: "Risks",
-  treatmentPlans: "Treatment plans",
-  treatmentActions: "Treatment actions",
-  securityControls: "Security controls",
-  evidenceItems: "Evidence items",
-  policies: "Policies",
-} as const;
-
-const toDatetimeLocal = (value: string | null): string =>
-  value ? value.slice(0, 16) : "";
 
 export function AssignUserRolesDialog({
   userId,
@@ -51,19 +31,63 @@ export function AssignUserRolesDialog({
   userId: string | null;
   onClose: () => void;
 }) {
+  return <AssignmentForm key={userId} userId={userId} onClose={onClose} />;
+}
+
+function AssignmentForm({
+  userId,
+  onClose,
+}: {
+  userId: string | null;
+  onClose: () => void;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const initializedUserId = useRef<string | null>(null);
   const assignment = useUserAccessAssignment(userId);
-  // Load these requests sequentially. Both BFF calls may need to rotate the same
-  // refresh token, so starting them together can invalidate the user's session.
   const options = useAccessAssignmentOptions(
     userId !== null && assignment.isSuccess,
   );
   const mutation = useAssignUserAccess();
   const toast = useToast();
-  const [role, setRole] = useState<RoleCode>("EMPLOYEE");
-  const [scopes, setScopes] = useState<DraftScope[]>([]);
+  const [draft, setDraft] = useState<{ role: RoleCode; codes: string[] }>();
   const [message, setMessage] = useState<string>();
+
+  const role = draft?.role ?? assignment.data?.role ?? "EMPLOYEE";
+  const selectedCodes =
+    draft?.codes ??
+    assignment.data?.scopes.map((scope) => scope.scopeCode) ??
+    [];
+  const counts = assignment.data?.ownershipSummary;
+
+  const ownedCount = (code: string) =>
+    code === "RISK_OWNER"
+      ? (counts?.risks ?? 0)
+      : code === "CONTROL_OWNER"
+        ? (counts?.securityControls ?? 0)
+        : code === "ASSET_OWNER"
+          ? (counts?.assets ?? 0)
+          : 0;
+
+  const codes =
+    role === "EMPLOYEE"
+      ? [
+          ...new Set([
+            ...selectedCodes,
+            ...["RISK_OWNER", "CONTROL_OWNER", "ASSET_OWNER"].filter(
+              (code) => ownedCount(code) > 0,
+            ),
+          ]),
+        ]
+      : [];
+
+  const loading = assignment.isPending || options.isPending;
+  const failed = assignment.isError || options.isError;
+  const employeeOwnsRecords =
+    assignment.data?.role === "EMPLOYEE" &&
+    Boolean(counts && counts.risks + counts.securityControls + counts.assets);
+
+  const close = () => {
+    if (!mutation.isPending) onClose();
+  };
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -71,147 +95,102 @@ export function AssignUserRolesDialog({
     if (!userId && dialog?.open) dialog.close();
   }, [userId]);
 
-  useEffect(() => {
-    if (
-      !assignment.data ||
-      initializedUserId.current === assignment.data.user.id
-    )
-      return;
-    initializedUserId.current = assignment.data.user.id;
-    setRole(assignment.data.role);
-    setScopes(
-      assignment.data.scopes.map((scope) => ({
-        key: scope.id,
-        scopeCode: scope.scopeCode,
-        targetType: scope.targetType,
-        ...(scope.targetId ? { targetId: scope.targetId } : {}),
-        ...(scope.expiresAt
-          ? { expiresAt: toDatetimeLocal(scope.expiresAt) }
-          : {}),
-      })),
-    );
-  }, [assignment.data]);
-
-  function close(): void {
-    if (mutation.isPending) return;
-    initializedUserId.current = null;
-    setMessage(undefined);
-    mutation.reset();
-    onClose();
-  }
-
-  function updateScope(key: string, patch: Partial<DraftScope>): void {
-    setScopes((current) =>
-      current.map((scope) =>
-        scope.key === key ? { ...scope, ...patch } : scope,
-      ),
-    );
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!userId || mutation.isPending) return;
-    if (
-      scopes.some(
-        (scope) =>
-          !scope.scopeCode ||
-          (scope.targetType !== "GLOBAL" && !scope.targetId),
-      )
-    ) {
+    if (!userId || loading || failed || mutation.isPending) return;
+    if (codes.length > 1) {
       setMessage(
-        "Choose a permission code and target for every access scope.",
+        "Select only one responsibility. Transfer conflicting owned records first.",
       );
       return;
     }
-    const payloadScopes: AccessScopeInput[] = scopes.map((scope) => ({
-      scopeCode: scope.scopeCode,
-      targetType: scope.targetType,
-      ...(scope.targetType !== "GLOBAL" && scope.targetId
-        ? { targetId: scope.targetId }
-        : {}),
-      expiresAt: scope.expiresAt
-        ? new Date(scope.expiresAt).toISOString()
-        : null,
-    }));
+    setMessage(undefined);
     try {
       const result = await mutation.mutateAsync({
         userId,
-        payload: { role, scopes: payloadScopes },
+        payload: {
+          role,
+          scopes:
+            role === "EMPLOYEE"
+              ? codes.map((scopeCode) => ({
+                  scopeCode,
+                  targetType: "GLOBAL" as const,
+                  expiresAt: null,
+                }))
+              : [],
+        },
       });
       toast.success(
-        "Access assignment saved",
+        "Responsibilities saved",
         result.changed
-          ? "Role and supplemental access scopes were updated."
-          : "No access changes were needed.",
+          ? "Role and business responsibilities updated."
+          : "No changes were needed.",
       );
-      close();
+      onClose();
     } catch (error: unknown) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Unable to save access assignment.",
+          : "Unable to save responsibilities.",
       );
+      void assignment.refetch();
     }
   }
-
-  const loading = assignment.isPending || options.isPending;
-  const failed = assignment.isError || options.isError;
 
   return (
     <Dialog
       dialogRef={dialogRef}
-      title="Assign role, scope & ownership"
+      title="Assign role, scope &amp; ownership"
       onClose={close}
       onCancel={(event) => {
         event.preventDefault();
         close();
       }}
-      className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
+      className="max-h-[calc(100dvh-2rem)] w-[min(44rem,calc(100%-2rem))] overflow-y-auto"
     >
-      {userId ? (
-        <form
-          className="space-y-5"
-          onSubmit={(event) => void submit(event)}
-        >
-          {/* Context bar — user identity */}
-          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
-            <User className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
-            {assignment.data ? (
-              <>
-                <span className="font-medium text-foreground">
-                  {assignment.data.user.fullName}
-                </span>
-                <span className="text-border">·</span>
-                <span className="font-mono text-muted">
-                  {assignment.data.user.email}
-                </span>
-              </>
-            ) : (
-              <Skeleton className="h-4 w-48 rounded" />
-            )}
+      <form onSubmit={(event) => void submit(event)} className="space-y-5">
+        {/* ── Context bar ── */}
+        <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
+          <UserCog className="size-4 shrink-0 text-brand" strokeWidth={1.8} />
+          <div className="min-w-0 flex-1">
+            <div className="text-foreground truncate text-sm font-semibold">
+              {loading ? (
+                <Skeleton className="h-4 w-40" />
+              ) : (
+                (assignment.data?.user.fullName ?? "User access")
+              )}
+            </div>
+            <div className="text-muted mt-0.5 truncate">
+              {loading ? (
+                <Skeleton className="mt-1 h-3 w-56" />
+              ) : (
+                (assignment.data?.user.email ?? "")
+              )}
+            </div>
           </div>
+          {!loading && assignment.data?.role ? (
+            <span className="bg-neutral-soft border-border inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
+              {assignment.data.role}
+            </span>
+          ) : null}
+        </div>
 
-          {/* Load error */}
-          {failed ? (
-            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
-              <div className="flex gap-2.5">
-                <AlertTriangle
-                  className="mt-0.5 size-4 shrink-0 text-danger"
-                  strokeWidth={1.8}
-                />
-                <div>
-                  <p className="text-sm font-medium text-danger">
-                    Unable to load access settings
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    Refresh the page or try again.
-                  </p>
-                </div>
-              </div>
+        {/* ── Error state ── */}
+        {failed ? (
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-warning"
+              strokeWidth={1.8}
+            />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-medium">Failed to load responsibilities</p>
+              <p className="text-muted mt-0.5 text-xs">
+                Check your connection and try again.
+              </p>
               <Button
                 type="button"
                 variant="secondary"
-                className="min-h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
+                className="mt-2"
                 onClick={() => {
                   void assignment.refetch();
                   void options.refetch();
@@ -220,362 +199,265 @@ export function AssignUserRolesDialog({
                 Try again
               </Button>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {/* Loading skeleton */}
-          {loading ? (
-            <div
-              className="space-y-5"
-              role="status"
-              aria-label="Loading access settings"
-            >
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-16 rounded" />
-                <Skeleton className="h-10 w-full rounded-lg" />
-              </div>
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-40 rounded" />
-                <Skeleton className="h-20 w-full rounded-xl" />
-              </div>
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-36 rounded" />
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
-                  ))}
+        {/* ── Loading skeleton ── */}
+        {loading ? (
+          <div
+            role="status"
+            aria-label="Loading responsibilities"
+            className="space-y-4"
+          >
+            {/* Role section skeleton */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-11 w-full rounded-lg" />
+            </div>
+            {/* Responsibilities section skeleton */}
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-48" />
+              <div className="border-border divide-border overflow-hidden rounded-xl border divide-y">
+                <div className="flex items-start gap-3 p-3.5">
+                  <Skeleton className="mt-0.5 size-4 rounded" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border pt-4">
-                <Skeleton className="h-9 w-20 rounded-lg" />
-                <Skeleton className="h-9 w-16 rounded-lg" />
+                <div className="flex items-start gap-3 p-3.5">
+                  <Skeleton className="mt-0.5 size-4 rounded" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-3.5">
+                  <Skeleton className="mt-0.5 size-4 rounded" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
               </div>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {!loading && !failed && options.data && assignment.data ? (
-            <>
-              {/* ── Role ─────────────────────────────────────────────── */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 border-b border-border pb-2">
-                  <Shield
-                    className="mt-0.5 size-4 shrink-0 text-brand"
-                    strokeWidth={1.8}
-                  />
-                  <h3 className="text-sm font-semibold">Role</h3>
+        {/* ── Main form ── */}
+        {!loading && !failed && assignment.data && options.data ? (
+          <>
+            {/* Section: System Role */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <ShieldCheck
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <h3 className="text-sm font-semibold">System role</h3>
+              </div>
+              <div className="border-border bg-neutral-soft/30 rounded-xl border p-4 space-y-3">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="assignment-role"
+                    className="block text-xs font-medium uppercase tracking-wide text-muted"
+                  >
+                    Assigned role
+                  </label>
+                  <Select
+                    id="assignment-role"
+                    value={role}
+                    disabled={mutation.isPending || employeeOwnsRecords}
+                    onChange={(event) =>
+                      setDraft({
+                        role: event.target.value as RoleCode,
+                        codes: [],
+                      })
+                    }
+                  >
+                    {options.data.roles.map((item) => (
+                      <option value={item.code} key={item.code}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
-                <Select
-                  aria-label="Role"
-                  value={role}
-                  onChange={(event) =>
-                    setRole(event.target.value as RoleCode)
-                  }
-                >
-                  {options.data.roles.map((item) => (
-                    <option key={item.code} value={item.code}>
-                      {item.name}
-                    </option>
-                  ))}
-                </Select>
-                {role === "ADMIN" ? (
-                  <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                {employeeOwnsRecords ? (
+                  <div className="flex gap-2.5">
                     <AlertTriangle
                       className="mt-0.5 size-4 shrink-0 text-warning"
                       strokeWidth={1.8}
                     />
                     <p className="text-xs text-muted">
-                      Administrator grants broad system access including sensitive
-                      configuration, user management and audit capabilities.
+                      Transfer all owned records before changing this
+                      Employee&apos;s system role.
                     </p>
                   </div>
                 ) : null}
               </div>
+            </div>
 
-              {/* ── Supplemental access scopes ───────────────────────── */}
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3 border-b border-border pb-2">
-                  <div className="flex items-start gap-2">
-                    <Lock
-                      className="mt-0.5 size-4 shrink-0 text-brand"
-                      strokeWidth={1.8}
-                    />
-                    <div>
-                      <h3 className="text-sm font-semibold">
-                        Supplemental access scopes
-                      </h3>
-                      <p className="mt-0.5 text-xs text-muted">
-                        Each scope grants one allow-listed permission globally or
-                        for one business service or asset.
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="min-h-8 shrink-0 gap-1.5 px-2.5 text-xs font-medium"
-                    onClick={() =>
-                      setScopes((current) => [
-                        ...current,
-                        {
-                          key: crypto.randomUUID(),
-                          scopeCode:
-                            options.data!.scopeCodes[0]?.code ?? "",
-                          targetType: "GLOBAL",
-                        },
-                      ])
-                    }
-                  >
-                    <Plus className="size-3.5" strokeWidth={2} />
-                    Add scope
-                  </Button>
+            {/* Section: Business Responsibility */}
+            <fieldset
+              disabled={mutation.isPending || role !== "EMPLOYEE"}
+              className="space-y-3"
+            >
+              <div className="flex items-start gap-2 border-b border-border pb-2">
+                <Briefcase
+                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  strokeWidth={1.8}
+                />
+                <div className="min-w-0 flex-1">
+                  <legend className="text-sm font-semibold">
+                    Business responsibility
+                  </legend>
+                  <p className="text-muted mt-0.5 text-xs">
+                    Select at most one contextual responsibility for this
+                    Employee. Individual records are assigned within their
+                    respective modules.
+                  </p>
                 </div>
-
-                {scopes.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-neutral-soft/20 py-10 text-center">
-                    <Lock
-                      className="size-10 stroke-1 text-muted/50"
-                    />
-                    <h4 className="mt-3 text-sm font-semibold text-foreground">
-                      No supplemental scopes
-                    </h4>
-                    <p className="mt-1 text-xs text-muted">
-                      This user&apos;s access is determined solely by their role.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="mt-4 min-h-8 gap-1.5 px-2.5 text-xs font-medium"
-                      onClick={() =>
-                        setScopes((current) => [
-                          ...current,
-                          {
-                            key: crypto.randomUUID(),
-                            scopeCode:
-                              options.data!.scopeCodes[0]?.code ?? "",
-                            targetType: "GLOBAL",
-                          },
-                        ])
-                      }
-                    >
-                      <Plus className="size-3.5" strokeWidth={2} />
-                      Add first scope
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-border overflow-hidden rounded-xl border">
-                    <div className="divide-y divide-border">
-                      {scopes.map((scope, index) => (
-                        <div
-                          key={scope.key}
-                          className="grid gap-3 p-3.5 md:grid-cols-[1.4fr_1fr_1.4fr_1fr_auto]"
-                        >
-                          <label>
-                            <span className="mb-1.5 block text-xs font-medium text-muted uppercase tracking-wide">
-                              Permission
-                            </span>
-                            <Select
-                              aria-label={"Permission scope " + String(index + 1)}
-                              value={scope.scopeCode}
-                              onChange={(event) =>
-                                updateScope(scope.key, {
-                                  scopeCode: event.target.value,
-                                })
-                              }
-                            >
-                              {options.data.scopeCodes.map((item) => (
-                                <option key={item.code} value={item.code}>
-                                  {item.name} ({item.code})
-                                </option>
-                              ))}
-                            </Select>
-                          </label>
-                          <label>
-                            <span className="mb-1.5 block text-xs font-medium text-muted uppercase tracking-wide">
-                              Target type
-                            </span>
-                            <Select
-                              aria-label={"Target type scope " + String(index + 1)}
-                              value={scope.targetType}
-                              onChange={(event) =>
-                                updateScope(scope.key, {
-                                  targetType: event.target
-                                    .value as DraftScope["targetType"],
-                                  targetId: undefined,
-                                })
-                              }
-                            >
-                              <option value="GLOBAL">Global</option>
-                              <option value="BUSINESS_SERVICE">
-                                Business service
-                              </option>
-                              <option value="ASSET">Asset</option>
-                            </Select>
-                          </label>
-                          <label>
-                            <span className="mb-1.5 block text-xs font-medium text-muted uppercase tracking-wide">
-                              Target
-                            </span>
-                            <Select
-                              aria-label={"Target scope " + String(index + 1)}
-                              value={scope.targetId ?? ""}
-                              disabled={scope.targetType === "GLOBAL"}
-                              onChange={(event) =>
-                                updateScope(scope.key, {
-                                  targetId:
-                                    event.target.value || undefined,
-                                })
-                              }
-                            >
-                              <option value="">
-                                {scope.targetType === "GLOBAL"
-                                  ? "Whole organization"
-                                  : "Select target"}
-                              </option>
-                              {scope.targetType === "BUSINESS_SERVICE"
-                                ? options.data.businessServices.map(
-                                    (item) => (
-                                      <option key={item.id} value={item.id}>
-                                        {item.name}
-                                      </option>
-                                    ),
-                                  )
-                                : null}
-                              {scope.targetType === "ASSET"
-                                ? options.data.assets.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                      {item.code} — {item.name}
-                                    </option>
-                                  ))
-                                : null}
-                            </Select>
-                          </label>
-                          <label>
-                            <span className="mb-1.5 block text-xs font-medium text-muted uppercase tracking-wide">
-                              Expires
-                            </span>
-                            <Input
-                              aria-label={"Expiry scope " + String(index + 1)}
-                              type="datetime-local"
-                              value={scope.expiresAt ?? ""}
-                              onChange={(event) =>
-                                updateScope(scope.key, {
-                                  expiresAt: event.target.value || null,
-                                })
-                              }
-                            />
-                          </label>
-                          <div className="flex items-end">
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              aria-label={"Remove scope " + scope.scopeCode}
-                              className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
-                              onClick={() =>
-                                setScopes((current) =>
-                                  current.filter(
-                                    (item) => item.key !== scope.key,
-                                  ),
-                                )
-                              }
-                            >
-                              <Trash2 className="size-3.5" strokeWidth={1.8} />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* ── Ownership overview ───────────────────────────────── */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-2 border-b border-border pb-2">
-                  <User
-                    className="mt-0.5 size-4 shrink-0 text-brand"
-                    strokeWidth={1.8}
-                  />
-                  <div>
-                    <h3 className="text-sm font-semibold">
-                      Ownership overview
-                    </h3>
-                    <p className="mt-0.5 text-xs text-muted">
-                      Ownership is managed in each responsible module to protect
-                      business workflows. This panel shows current totals only.
-                    </p>
-                  </div>
-                </div>
-
+              {role !== "EMPLOYEE" ? (
                 <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
                   <Info
                     className="mt-0.5 size-4 shrink-0 text-brand"
                     strokeWidth={1.8}
                   />
-                  <p className="text-xs text-muted">
-                    To transfer ownership of individual records, open the
-                    relevant module and use the reassign action.
+                  <p className="text-xs">
+                    Business responsibilities apply only to Employees. Other
+                    system roles retain their existing workflow rules.
                   </p>
-                </div>
-
-                <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                  {Object.entries(ownershipLabels).map(([key, label]) => (
-                    <div
-                      className="border-border bg-neutral-soft/30 rounded-xl border p-3.5"
-                      key={key}
-                    >
-                      <dt className="text-xs font-medium text-muted uppercase tracking-wide">
-                        {label}
-                      </dt>
-                      <dd className="mt-1.5 text-2xl font-semibold text-foreground">
-                        {
-                          assignment.data.ownershipSummary[
-                            key as keyof typeof ownershipLabels
-                          ]
-                        }
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              {/* Validation / submit error */}
-              {message ? (
-                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
-                  <AlertTriangle
-                    className="mt-0.5 size-4 shrink-0 text-danger"
-                    strokeWidth={1.8}
-                  />
-                  <p className="text-sm text-danger">{message}</p>
                 </div>
               ) : null}
 
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={mutation.isPending}
-                  onClick={close}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={mutation.isPending}>
-                  {mutation.isPending ? (
-                    <>
-                      <Loader2
-                        className="mr-1.5 size-3.5 animate-spin"
-                        strokeWidth={2}
+              {codes.length > 1 ? (
+                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0 text-warning"
+                    strokeWidth={1.8}
+                  />
+                  <p className="text-xs">
+                    Select only one responsibility. Transfer records belonging
+                    to other responsibilities before saving.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="border-border divide-border overflow-hidden rounded-xl border divide-y">
+                {options.data.scopeCodes.map((item) => {
+                  const count = role === "EMPLOYEE" ? ownedCount(item.code) : 0;
+                  const isChecked =
+                    role === "EMPLOYEE" && codes.includes(item.code);
+                  const isLocked =
+                    count > 0 ||
+                    (employeeOwnsRecords &&
+                      ["RISK_OWNER", "CONTROL_OWNER", "ASSET_OWNER"].some(
+                        (code) =>
+                          code !== item.code && ownedCount(code) > 0,
+                      ));
+                  return (
+                    <label
+                      key={item.code}
+                      className={cn(
+                        "flex min-h-[3rem] cursor-pointer items-start gap-3 p-3.5 transition-colors",
+                        isChecked
+                          ? "bg-brand/5"
+                          : "hover:bg-neutral-soft/50",
+                        isLocked && "cursor-not-allowed opacity-60",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 size-4 accent-brand"
+                        checked={isChecked}
+                        disabled={isLocked}
+                        onChange={() =>
+                          setDraft({
+                            role,
+                            codes: codes.includes(item.code)
+                              ? []
+                              : [item.code],
+                          })
+                        }
                       />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save"
-                  )}
-                </Button>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">
+                          {item.name}
+                        </span>
+                        <span className="text-muted block text-xs mt-0.5">
+                          {count > 0
+                            ? count + " owned record" + (count !== 1 ? "s" : "") + " — transfer before removing."
+                            : "No owned records"}
+                        </span>
+                      </span>
+                      {isChecked ? (
+                        <span className="bg-brand/10 text-brand mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                          Active
+                        </span>
+                      ) : null}
+                    </label>
+                  );
+                })}
               </div>
-            </>
-          ) : null}
-        </form>
-      ) : null}
+            </fieldset>
+
+            {/* Info banner */}
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info
+                className="mt-0.5 size-4 shrink-0 text-brand"
+                strokeWidth={1.8}
+              />
+              <p className="text-xs">
+                All business responsibilities retain the Employee system role.
+                Authorized Approver eligibility still requires assignment within
+                the relevant approval workflow and does not grant global approval
+                access.
+              </p>
+            </div>
+          </>
+        ) : null}
+
+        {/* ── Inline submit error ── */}
+        {message ? (
+          <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+            <AlertTriangle
+              className="mt-0.5 size-4 shrink-0 text-danger"
+              strokeWidth={1.8}
+            />
+            <p className="text-xs">{message}</p>
+          </div>
+        ) : null}
+
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={mutation.isPending}
+            onClick={close}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading || failed || mutation.isPending}
+          >
+            {mutation.isPending ? (
+              <>
+                <Loader2
+                  className="mr-1.5 size-3.5 animate-spin"
+                  strokeWidth={2}
+                />
+                Saving…
+              </>
+            ) : (
+              "Save assignment"
+            )}
+          </Button>
+        </div>
+      </form>
     </Dialog>
   );
 }
