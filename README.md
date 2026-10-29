@@ -1,141 +1,115 @@
 # SecuraAI Frontend
 
-Acceptance is unavailable while Current review is open. Detail and the submission dialog instruct the Owner to Complete Risk Review first; backend enforces the same guard under the Risk lock with 409 RISK_REVIEW_IN_PROGRESS. After completion, normal eligibility/Control/Evidence checks still apply. Older decisions remain historical.
+Giao diện SecuraAI cho quản lý rủi ro an toàn thông tin, tài sản, controls, chính sách, sự cố và cảnh báo bất thường.
 
-Current review includes Complete Risk Review for server-authorized Owners. Requires review conclusion and a new residual after opening; next deadline is suggested from the internal 1/3/6/12-month residual cycle in Vietnam time, allowing earlier dates. Backend revalidates all evidence/revisions. Completion refreshes register/detail, retains status/acceptance and moves the snapshot into Review history. No migration or automatic notifications.
+## Công nghệ
 
-Risk Detail shows server-confirmed Current review beneath overview (opener snapshot, Vietnam opening time, prior review deadline, rationale). Register shows Review in progress. Owner-only Open Review is backend-driven for Open/Under treatment/Accepted, with duplicate/pending guards. Complete Review records the conclusion and sets the Next review date. UI UX Pro Max shared panel/badge patterns apply.
+Next.js 16 App Router, React 19, TypeScript strict, Tailwind CSS v4, TanStack Query, React Hook Form và Zod. Vitest/Testing Library kiểm thử component; Playwright kiểm thử trình duyệt.
 
-Risk Register and Risk Detail retain the review date and show Due today / Overdue — X days using Vietnam calendar days (Asia/Ho_Chi_Minh, UTC+7). Missing dates show Not scheduled; upcoming dates retain the date alone. The display refreshes while open and on browser focus; it never mutates Risk ratings, workflow states or acceptance. No backend or migration change.
+## Chạy local
 
-Assign Asset Owner uses debounced server search by name/email (`GET /api/assets/owner-options`), showing up to 10 name/email matches and keyboard selection like Risk Owner. Typed text never becomes an ID; owner removal still needs explicit confirmation and a reason. Uses UI UX Pro Max and the existing combobox interaction pattern.
+Yêu cầu Node.js 22+ và pnpm theo [package.json](package.json). Khởi chạy backend trước.
 
-Risk Detail has separate server-confirmed advisories for changed Asset classification and Asset context. Both can appear together near Related assets; neither appears without evidence. Link Asset Context saves invalidate Risk Register queries. Existing ratings remain historical.
-
-Link Asset Context displays server-confirmed circular dependency paths beside Dependencies using the shared Alert pattern. Failed saves preserve selections, and each save validates the remaining graph again. Business service and event sources remain editable.
-
-Risk Detail shows a shared Alert (UI UX Pro Max) near Related assets only when the backend confirms `assetClassificationReviewRequired`. Classification saves refresh Risk Register queries. Historical ratings and workflow permissions remain unchanged.
-
-Asset classification: **Classify Asset | History (n)** inside the existing dialog shows paginated read-only Before/After snapshots from `GET /api/assets/:assetId/classify-criticality/history`. Uses the established shared dialog/pagination pattern and UI UX Pro Max keyboard/focus guidance. Tabs preserve unsaved inputs; saving refreshes list, detail and classification history queries. Archived assets are history-only. Earlier unlogged events are not reconstructed. Changes are audited atomically in existing audit_logs; no migration.
-
-Asset context: **Assets → Manage links** has **Link Asset Context | History (n)** tabs using the established risk-context Before/After pattern and UI UX Pro Max keyboard/responsive guidance. History reads paginated `GET /api/assets/:assetId/context/history` via the authenticated BFF; names/codes are immutable server snapshots, not resolved from current options. Tab changes preserve unsaved selections. Saves invalidate list, detail and history queries. Empty/loading/retry states and keyboard tab navigation are supported. History starts when tracking was introduced; prior changes are not reconstructed. Backend uses existing `audit_logs` with no schema migration.
-
-Policy revision feedback: Security Officers can read the latest Admin revision reason, requester and time in Draft details and Edit draft. Uses the backend revisionRequest field and existing inline feedback pattern (UI UX Pro Max); no new tabs/actions or schema changes. Older API responses without the field remain readable. The latest request is retained after saving edits and is not an additional workflow status.
-
-UC23 Risk acceptance: Owner submits through Risk Detail → Review and submit acceptance; the proposed residual is shown live and exceeding appetite/tolerance warns without silently approving. Plan status is read-only. Backend-derived canSubmit/canDecide flags control actions; expired or stale requests expose Reject but disable Approve with an explanation. Request justification and decision rationale display separately; legacy overwritten justification is not reconstructed. Accepted Risks expose Open risk review to the assigned Owner, with required reason and revision. Review preserves prior approvals as historical and requires new Residual before resubmission. Uses existing audit storage; no schema migration. Approver group remains active Security Officers/Executives; no named assignment/email routing. Validity is an inclusive UTC date. Component and Playwright tests cover expiry/review at 375px and 1440px.
-
-UC63: **Incidents → Actions → Close incident** opens backend-derived closure review in the shared dialog pattern (UI UX Pro Max). The action appears in Lessons learned; the backend requires saved root cause/lessons/improvement recommendations and an officer's completion attestation. Enter a closure summary and confirm required response/recovery work is complete. Server records closure time; queries refresh without F5 and the dialog shows the real closure record. Closed incidents expose View closure record rather than another close action. No fake history, classification or client-selected closure time. Existing histories remain accessible. No schema changes; no reopening.
-
-Incident workflow: **Incidents → Actions → Update handling phase** records an officer's readiness assessment for forward transitions (Open, Triage, Containment, Eradication, Recovery, Lessons learned). Classification, assignment and action journals do not change phase. A note and confirmation are required; the number of recorded actions is not a completion gate. Emergency skips/deferred completion require a reason and are audited without marking skipped work complete. Leaving Recovery requires an officer's restoration/validation attestation, not automated verification by the application. Exact transition restrictions are SecuraAI product rules. The dialog includes audited transition history; mutations refresh incident queries without F5. Closed incidents remain read-only, backward transitions/reopening are not implemented, and closing is a separate use case. No schema changes or rewrites of existing statuses.
-
-UC62: **Incidents → Actions → Root cause & lessons learned** replaces preview findings with the V2 API. GET/PATCH `/api/v1/incidents/:incidentId/analysis` reads/saves the unique `incident_analysis` (root cause, lessons learned, recommended improvements); GET `/analysis/history` paginates before/after audit snapshots. Active Security Officers write only in LESSONS_LEARNED; CLOSED findings and history are read-only; Security Officers and Executives can read. Required `expectedUpdatedAt` (null initially) prevents stale overwrites. Authenticated analyst and save time are server-owned. Findings/History tabs refresh after save; unsaved input survives tab changes and failed saves. Saving never changes incident status or completes recommendations. No schema changes. 71 legacy routes remain pending after progress migration.
-
-UC61: Record Recovery Actions uses POST/GET `/api/v1/incidents/:incidentId/recovery-actions` and existing V2 `incident_actions` with phase `RECOVERY`. Active Security Officers record completed restoration steps and performed time; the authenticated performer and audit are saved atomically. History is paginated and refreshes after saving. Closed incidents are read-only; recording requires RECOVERY or LESSONS_LEARNED and never changes phase. Verified completion is confirmed separately through PATCH /incidents/:incidentId/progress. No schema changes; 71 legacy contracts remain pending.
-
-UC60: **Incidents → Actions → Record eradication action** records completed removal of root causes, malicious components or threats with a 10–4000 character description and local performed time. The signed-in Security Officer is recorded as performer. **Record action | History** preserves unsaved inputs and refreshes saved history without F5. Closed incidents open read-only history. Existing V2 `incident_actions` with `ERADICATION` is the source; saving does not resolve or close the incident. The previous preview-only fields and example history have been replaced by the published V2 API contract.
-
-UC59: **Incidents → Actions → Record containment action** provides **Record action | History** tabs. Enter completed containment steps and local performed time; the backend records the signed-in Security Officer. Saves refresh incident list/detail and paginated containment history immediately. Closed incidents expose read-only containment history. Existing V2 `incident_actions` is the data source; recording requires CONTAINMENT or a later non-closed phase and never changes phase.
-
-The assignment dialog includes **Assignment | History** tabs matching severity classification and UI UX Pro Max keyboard/focus guidance. History shows previous/new handler, assigning officer, time and note with pagination, loading, error and empty states. Switching tabs retains unsaved fields. Saving refreshes cached history pages even when the History tab is inactive; reopening History shows the new assignment without a page reload. History requests bypass the browser HTTP cache. Closed incidents open read-only history through the same action; no separate History button is added.
-
-UC58: Security Officers use **Incidents → Actions → Assign handler / Reassign handler** to select an active Security Officer and enter a 10–2000 character assignment note. Existing BFF routes connect the V2 assignment-options and assignee APIs. Saves invalidate incident list/detail queries immediately; stale or forbidden responses refresh incident queries and keep the form error visible. First assignment advances OPEN to TRIAGE; later phases are preserved; the backend records an atomic audit trail in existing V2 tables. The dialog keeps the established SecuraAI UI UX Pro Max form pattern.
-
-Incident severity: Security Officers use **Classification | History** in the classification dialog, without a separate History action in the incident menu. History reads paginated audit-backed transitions through `GET /api/incidents/:incidentId/severity`. Switching tabs preserves unsaved classification inputs. Saving invalidates incident lists, detail and history queries. No client-generated history is used.
-
-## Controls and Evidence references
-
-`/controls` uses the existing Control Effectiveness API. Security Officers can Create/Edit Control metadata; assigned Employee Control Owners see only their own Controls. Module discovery uses `compliance.assess-controls`; catalog writes additionally require `controls.create`/`controls.update`. All ownership and status rules are enforced again by BE.
-
-Each accessible Control exposes **Evidence** with **Linked evidence**, **Add evidence** and **Link existing evidence**. BFF routes proxy `GET`/`POST /compliance/controls/:controlId/evidence` and `POST /compliance/controls/:controlId/evidence-links`. Add registers a stable, credential-free HTTPS document reference plus collection metadata and links it atomically; Link reuses an accessible record and records the relevance reason. Search/pagination is backend-scoped and limited to 10 per page. Dates entered here are explicitly Asia/Bangkok (UTC+7). Evidence ownership/linker are recorded by BE, not user-selected; review, uploaded-file metadata and integrity hashes are not fabricated. Identical Add request replay and repeated Link are idempotent; mutations never automatically retry.
-
-This is reference management, **not file upload, document verification, external permission management or a per-assessment immutable file snapshot**. Linked expired/invalid records remain visible for history but are ineligible for a new assessment. Add/Link never automatically marks reviewed, saves an effectiveness result or changes Risk. Review the supporting document, then use **Assess** separately. External repositories must grant the reviewer their own access; documents need not be public. UI uses the established shared dialogs/forms/toasts, preserves failed drafts, confirms discard and refreshes contextual queries/session after authorization or conflict outcomes. No database schema change is needed.
-
-## View Login History
-
-Admin opens `/admin/login-history`; Security Officer opens `/login-history`. Menu visibility and direct navigation require the matching system role plus `login-history.read`. Other accounts redirect to `/forbidden`, and unauthorized accounts never fetch history. The table uses Backend records with search, result/date/IP/user filters and pagination. See [feature documentation](src/features/login-history/README.md). Deploy the Backend implementation and provision its permission, then sign in again before testing.
-
-Frontend repository độc lập cho nền tảng quản lý rủi ro an toàn thông tin SecuraAI. Đây là foundation dùng Next.js App Router, React, TypeScript strict và Tailwind CSS v4; các domain chưa có API thật chỉ hiển thị “Chưa triển khai”.
-
-## Yêu cầu và chạy local
-
-- Node.js 22+ (đang phát triển với 22.15.0)
-- pnpm 11.25.0 qua Corepack
-
-```bash
+```powershell
 corepack enable
-pnpm install
+corepack pnpm install
 Copy-Item .env.example .env.local
-pnpm dev
+corepack pnpm dev
 ```
 
-Mở `http://localhost:3001`. Backend API mặc định chạy tại `http://localhost:3000/api/v1`. Các lệnh kiểm tra: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm test:e2e`.
+Chỉ sao chép environment khi chưa có cấu hình local. FE: http://localhost:3001. Backend mặc định: http://localhost:3000/api/v1.
 
-## Environment
+| Biến | Mục đích |
+| --- | --- |
+| NEXT_PUBLIC_APP_NAME | Tên ứng dụng |
+| NEXT_PUBLIC_API_BASE_URL | Backend URL, gồm /api/v1 |
+| NEXT_PUBLIC_GOOGLE_CLIENT_ID | Google OAuth client ID, nếu sử dụng |
 
-```dotenv
-NEXT_PUBLIC_APP_NAME=SecuraAI
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1
-```
+Không đưa token, mật khẩu hoặc database URL vào biến NEXT_PUBLIC_*.
 
-Chỉ cấu hình công khai mới được đặt trong `NEXT_PUBLIC_*`; không đặt token hoặc secret tại đây.
+## Các khu vực chức năng
 
-## Kiến trúc
+| Route | Nội dung |
+| --- | --- |
+| /login, /forgot-password | Đăng nhập, mã reset/resend và đặt lại mật khẩu |
+| /profile, /change-password | Hồ sơ và đổi mật khẩu |
+| /dashboard | Dashboard theo tài khoản |
+| /admin | Quản lý người dùng, phòng ban, import, role và scope |
+| /assets, /assets/business-services | Assets, owner, phân loại, archive, context/history và business services |
+| /risks | Register/detail, inherent/residual, treatment, target, acceptance, review và reassessment requests |
+| /controls | Controls, effectiveness và evidence |
+| /policies | Draft, review, revision, approval, publish, applicability, acknowledgement và version history |
+| /incidents | Báo cáo, classification, handler, response actions, RCA, close và liên kết Risk/Control/Asset |
+| /event-logs | Event sources, import, normalized events và entity mapping |
+| /anomaly-monitoring | Manual detection, alerts, triage và feedback |
+| /ai-models | Model versions, metrics và thresholds |
+| /audits, /reports | Audit records và reporting |
+| /integrations | Tích hợp và API-key lifecycle |
+| /notifications | Inbox, gửi notification/email và cấu hình kênh |
+| /system-logs, /login-history | Tra cứu/export logs, configuration history và login activity |
+
+Navigation và actions phụ thuộc quyền, ownership và trạng thái backend. Route tồn tại không bảo đảm mọi contract lịch sử đã được triển khai.
+
+## Phân quyền và authentication
+
+Bốn role cố định: ADMIN, SECURITY_OFFICER, EXECUTIVE, EMPLOYEE. Risk Owner, Control Owner và Asset Owner là trách nhiệm theo bản ghi, không phải role đăng nhập riêng.
+
+Capabilities từ backend phục vụ hiển thị giao diện. Backend kiểm tra role, scope, ownership và trạng thái khi thực hiện thao tác. Chức năng Configure Detailed Permissions đã được loại bỏ.
+
+Next.js BFF dùng route handlers /api/* để trao đổi với backend. Access/refresh token được giữ trong cookie HttpOnly, Secure ở production; không lưu trong localStorage/sessionStorage.
+
+Login History hỗ trợ phạm vi cá nhân; Admin/Security Officer có phạm vi tổ chức, Employee/Executive bị giới hạn ở dữ liệu cá nhân theo backend.
+
+## Luồng chính
+
+- Event → backend detection chấm điểm → vượt ngưỡng tạo alert → analyst triage → true positive/false positive/further investigation và feedback.
+- Alert xác nhận đúng → incident draft → response/investigation → RCA/lessons learned → close.
+- Incident → link Asset/Control/Risk → Control Weakness → reassessment request → Risk Owner review → reassess residual.
+- Risk review → residual assessment mới → complete review và ngày review tiếp theo; acceptance có kiểm tra riêng.
+- Policy draft → Admin review/approval → publish → đọc và acknowledge.
+
+Ollama hỗ trợ viết explanation; thuật toán backend hiện tính anomaly score. LLM không tự thay Risk hoặc quyết định thay analyst.
+
+## Cấu trúc
 
 ```text
-src/
-  app/                 routing, layouts, composition, route handlers
-  components/          UI, layout, form, feedback, data-display dùng lại
-  config/              site và navigation
-  features/            domain code, chỉ export qua index.ts
-  lib/                 API, auth/session, env, query client, utilities
-  providers/           application và TanStack Query providers
-  test/                test setup
-e2e/                   Playwright smoke tests
+src/app/          Routes, layouts, BFF
+src/features/     Component, hooks, API, schemas theo domain
+src/components/   Shared UI, forms, dialogs, tables và feedback
+src/lib/          API client, auth, env và utilities
+src/config/       Navigation và cấu hình
+src/providers/    Application/query providers
+e2e/              Playwright scenarios
+design-system/    Design system SecuraAI
 ```
 
-Dependency flow: `page/layout -> feature component -> feature hook -> feature API -> shared API client -> Express backend`.
+Luồng: page → feature component → hook → feature API → shared client → BFF → backend.
 
-## Ánh xạ backend
+## Kiểm thử và build
 
-Permission code cụ thể chưa được backend công bố; cột permission vì vậy ghi “chờ contract”, không tự tạo code production.
+```powershell
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm test
+corepack pnpm build
+corepack pnpm start
+```
 
-| Backend module                                                                | API route hiện có/prefix                                                                  | Frontend feature  | Navigation                         | Permission                                                                                             |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| auth                                                                          | `/auth/login`, `/auth/refresh`, `/auth/logout`                                            | `auth`            | `/login`                           | public; refresh/logout theo session                                                                    |
-| users                                                                         | `/users/me`, `/admin/users`, `/admin/users/{userId}/lock`, `/admin/users/{userId}/unlock` | `users`           | `/admin/users`, `/users`           | `users.read`; ADMIN và `users.lock` / `users.unlock` cho UC7                                           |
-| it-asset-management                                                           | `/assets`, `/assets/business-services`                                                    | `assets`          | `/assets`, `/business-services`    | Asset workflows; Business Services List/Search, Detail, Create, Edit and Deactivate (Security Officer) |
-| risk-management                                                               | `/risks` (skeleton)                                                                       | `risks`           | `/risks`                           | chờ contract                                                                                           |
-| incident-management                                                           | `/incidents` (skeleton)                                                                   | `incidents`       | `/incidents`                       | chờ contract                                                                                           |
-| policy-compliance                                                             | `/compliance` (skeleton)                                                                  | `compliance`      | `/controls`, `/compliance`         | chờ contract                                                                                           |
-| audit-settings                                                                | `/administration` (skeleton)                                                              | `audits`          | `/audits`, `/settings`             | chờ contract                                                                                           |
-| reporting                                                                     | `/reports` (skeleton)                                                                     | `reports`         | `/dashboard`, `/reports`           | chờ contract                                                                                           |
-| notifications                                                                 | `/notifications` (skeleton)                                                               | `notifications`   | `/notifications`                   | chờ contract                                                                                           |
-| file-management                                                               | `/files` (skeleton)                                                                       | `file-management` | `/files`                           | chờ contract                                                                                           |
-| organization, integrations, security-monitoring, ai-alerts, approval-workflow | module prefix skeleton                                                                    | future features   | chưa đưa vào navigation foundation | chờ contract                                                                                           |
+.test.ts/.test.tsx là kiểm thử tự động. Mock data chỉ dùng trong test, không được insert vào database.
 
-Health endpoints `/health/live` và `/health/ready` không phải feature navigation.
+Playwright mặc định dùng port 3000, trùng backend local. Để dùng FE đang chạy:
 
-## API và authentication
+```powershell
+$env:PLAYWRIGHT_PORT = "3001"
+corepack pnpm test:e2e
+```
 
-`apiRequest<T>` kiểm tra status, parse JSON an toàn, hỗ trợ query/`AbortSignal`, chuẩn hóa lỗi và đọc response `{ success, data }`. Mutation không tự retry.
+Cần browser Playwright phù hợp; PLAYWRIGHT_CHANNEL=chrome cho phép dùng Chrome đã cài. Chuyển nhánh khi dev server đang chạy có thể để lại types cũ trong .next; khởi động lại server và sinh lại types/build khi gặp lỗi route sinh tự động.
 
-Backend nhận refresh token và trả token pair trong JSON. Next.js BFF trao đổi contract này ở server, giữ access/refresh token trong cookie `HttpOnly`, bật `Secure` ở production và xoay refresh token qua `/api/auth/session` hoặc `/api/auth/refresh`. Frontend không lưu token trong `localStorage`, `sessionStorage` hay cookie đọc được bằng JavaScript. Fixed roles và contextual ownership do backend kiểm tra; hệ thống không còn UI hoặc API cấu hình detailed permissions. OpenAPI hiện là khai báo nội tuyến và chưa đủ để sinh toàn bộ domain types; khi spec đầy đủ nên dùng `openapi-typescript` trong CI thay vì sao chép Prisma schema.
+## Tài liệu và đóng góp
 
-## Khóa và mở khóa tài khoản (UC7)
+Đọc [AGENTS.md](AGENTS.md), [DESIGN.md](DESIGN.md) và [design system](design-system/securaai/MASTER.md). Dùng shared components và kiểm tra loading/error/empty, keyboard và responsive.
 
-Danh sách người dùng có nút Lock/Unlock trên từng tài khoản đủ điều kiện. Cả hai thao tác yêu cầu ADMIN, quyền tương ứng và lý do 10–1000 ký tự. Backend kiểm tra trạng thái, chặn tự khóa/mở khóa và bảo vệ quản trị viên cuối cùng; mở khóa yêu cầu đăng nhập lại. Chi tiết contract và kiểm thử tại [features/user-management-authorization/README.md](./src/features/user-management-authorization/README.md).
+Backend sibling SecuraAI-Backend cung cấp OpenAPI trong src/docs/openapi.ts, module notes trong src/modules/README.md và baseline/Project Tracking trong project-docs/new/. Contract V1 chưa port trả 501; không giả lập thành chức năng production.
 
-Smoke test riêng: `pnpm test:e2e user-account-lock.spec.ts --workers=1`. Có thể đặt `PLAYWRIGHT_PORT=3001` để tránh cổng backend; nếu chưa tải Chromium của Playwright, đặt `PLAYWRIGHT_CHANNEL=chrome` để dùng Chrome đã cài. Screenshot fixture xem trước được ghi vào `test-results/`.
-
-## Phạm vi chưa triển khai
-
-Các trang nghiệp vụ chưa tích hợp API thật vẫn là prototype giao diện với dữ liệu mẫu; không được xem là chức năng production. Những trang đó chưa có domain CRUD hoặc KPI lấy từ backend; các nút và bộ lọc trên trang mẫu chưa thực thi hành động. UC7 trong danh sách người dùng gọi API backend thật. Xem [AGENTS.md](./AGENTS.md) trước khi phát triển.
-
-Quy tắc visual, design dials và nguyên tắc UI được ghi tại [DESIGN.md](./DESIGN.md).
-
-
-Notification feedback: The shared header bell reads the current account's unread count from the existing inbox API, polls every 10 seconds while the tab is active, and refreshes on window focus. Inbox read actions refresh both the list and bell only after successful responses. Query keys are scoped by account. No backend API/schema changes or push transport were added.
-
-Modal feedback: Shared toasts render inside the active native dialog so other forms' feedback stays above the modal backdrop and remains operable. Investigation log exports keep selection, purpose and request errors inside the form, preserve entered values and focus the first invalid control.
-
-The notification bell opens a responsive preview of the latest ten notifications without navigating or marking them read. Selecting an item opens `/notifications#notification-<recipient-id>`, focuses the matching inbox entry and marks only that item read. The current inbox API has no business-resource destination URL, so arbitrary asset/policy links are not inferred. Escape/outside-click closes the shared dropdown.
+Tạo nhánh từ develop mới nhất, PR vào develop, phát hành qua PR develop → main. Không push trực tiếp/force-push hai nhánh dài hạn. Không commit environment secrets, .next, coverage hoặc test reports.

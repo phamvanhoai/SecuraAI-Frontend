@@ -70,7 +70,7 @@ Keep strict mode, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. N
 
 ## Product interface and visual consistency
 
-Treat SecuraAI as a trust-first enterprise security dashboard for administrators and security officers. Preserve the established product design system instead of inventing a new visual language for each feature. UI UX Pro Max is the primary UI/UX methodology for this repository. Read `.agents/skills/ui-ux-pro-max/SKILL.md` completely before UI work and use its Quick Reference, relevant domain guidance, stack guidance and pre-delivery checks. Use these fixed design dials as the default: `DESIGN_VARIANCE: 3`, `MOTION_INTENSITY: 2`, and `VISUAL_DENSITY: 7`.
+Treat SecuraAI as a trust-first enterprise security dashboard for administrators and security officers. Preserve the established product design system instead of inventing a new visual language for each feature. Use the verified SecuraAI master design system and existing shared components as the primary UI/UX guidance. Use these fixed design dials as the default: `DESIGN_VARIANCE: 3`, `MOTION_INTENSITY: 2`, and `VISUAL_DENSITY: 7`.
 
 - Audit nearby implemented product pages and shared components before designing or changing a feature. A new page must look and behave like part of the same application.
 - Prefer the shared page header, metric strip, panel, data table, pagination, dialog, form controls, status badge, alert, empty state, skeleton and toast patterns. Extend a shared component when several features need the same behavior; do not create a page-specific imitation.
@@ -79,8 +79,8 @@ Treat SecuraAI as a trust-first enterprise security dashboard for administrators
 - Forms use visible labels above controls, helper or error text below controls, consistent field spacing and inline validation. Never use placeholder text as the only label.
 - Every data view implements matching loading skeletons, actionable empty states, contextual error states, responsive behavior and complete keyboard/focus interaction.
 - Before shipping, compare the page at desktop, tablet and mobile widths with at least two existing production-connected pages. Check header placement, actions, filters, table density, pagination, dialogs and feedback states for consistency.
-- Keep the UI UX Pro Max installation under `.agents/skills/` versioned with the repository so every contributor and coding agent uses the same guidance. Read the verified master design system at `design-system/securaai/MASTER.md`; page files may only document intentional deviations from that master.
-- Use the audit-first and anti-generic principles from [Taste Skill](https://github.com/Leonxlnx/taste-skill) only as a secondary review layer. Its default `design-taste-frontend` skill explicitly targets landing pages, portfolios and redesigns rather than dashboards/data tables, so UI UX Pro Max and the SecuraAI master design system take precedence for product pages.
+- Read the verified master design system at `design-system/securaai/MASTER.md`; page files may only document intentional deviations from that master.
+- Use the audit-first and anti-generic principles from [Taste Skill](https://github.com/Leonxlnx/taste-skill) only as a secondary review layer. Its default `design-taste-frontend` skill explicitly targets landing pages, portfolios and redesigns rather than dashboards/data tables, so the SecuraAI master design system takes precedence for product pages.
 
 ## Accessibility
 
