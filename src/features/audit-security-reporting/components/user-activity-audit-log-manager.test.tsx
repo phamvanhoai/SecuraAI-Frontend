@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const useAudit = vi.hoisted(() => vi.fn());
+vi.mock("@/components/feedback/toast", () => ({ useToast: () => ({ error: vi.fn() }) }));
 vi.mock("../hooks/use-user-activity-audit", () => ({
   useUserActivityAudit: useAudit,
 }));
@@ -97,7 +98,7 @@ describe("UserActivityAuditLogManager", () => {
     fireEvent.click(screen.getByRole("button", { name: "View" }));
     expect(
       screen.queryByText("bcecbb23-e122-4ab0-a92a-ee41880e44f9"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Technical resource ID")).not.toBeInTheDocument();
+    ).toBeInTheDocument();
+    expect(screen.getByText("Resource ID")).toBeInTheDocument();
   });
 });
