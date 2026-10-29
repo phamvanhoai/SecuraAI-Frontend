@@ -69,7 +69,7 @@ test("a security officer creates a new draft policy version", async ({
             title: "Information Security Policy",
             description: null,
             ownerUserId: "00000000-0000-4000-8000-000000000001",
-            policyStatus: "draft",
+            policyStatus: "active",
             version: {
               id: "00000000-0000-4000-8000-000000000011",
               versionNumber: "1.1",
@@ -86,16 +86,18 @@ test("a security officer creates a new draft policy version", async ({
     },
   );
 
+  await page.route("**/api/compliance/policies/published/mine", async (route) => {
+    await route.fulfill({ json: { success: true, data: [{
+      id: policyId, policyCode: "ISP-001", title: "Information Security Policy",
+      description: null, currentVersion: "1.0", eligibleForNewVersion: true,
+      updatedAt: "2026-10-30T00:00:00.000Z",
+    }] } });
+  });
   await page.goto("/policies");
-  await page.getByRole("button", { name: "Create new version" }).click();
-  await expect(
-    page.getByRole("heading", {
-      level: 1,
-      name: "Update policy and create new version",
-    }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: "New version", exact: true }).click();
+  await page.getByRole("button", { name: "Create new version", exact: true }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
 
-  await page.getByLabel("Policy ID").fill(policyId);
   await page.getByLabel("New version number").fill("1.1");
   await page.getByLabel("Policy content").fill("Updated policy content");
   await page
@@ -103,10 +105,8 @@ test("a security officer creates a new draft policy version", async ({
     .fill("Added access review requirements");
   await page.getByRole("button", { name: "Create draft version" }).click();
 
-  await expect(
-    page.getByRole("heading", { name: "Version created" }),
-  ).toBeVisible();
-  await expect(page.getByText("ISP-001")).toBeVisible();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.getByText("New policy version created", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(
       () =>

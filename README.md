@@ -1,5 +1,7 @@
 # SecuraAI Frontend
 
+Create new version consumes the V2 policy version endpoint. A newly created version is a draft while its parent policy stays active, keeping the current publication available until the replacement is published.
+
 Giao diện SecuraAI cho quản lý rủi ro an toàn thông tin, tài sản, controls, chính sách, sự cố và cảnh báo bất thường.
 
 ## Công nghệ

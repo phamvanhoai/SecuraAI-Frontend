@@ -14,6 +14,28 @@ const validForm = {
 };
 
 describe("update policy version schemas", () => {
+  it("accepts a new draft under a policy that remains active", () => {
+    expect(
+      newPolicyVersionSchema.safeParse({
+        policyId: validForm.policyId,
+        policyCode: "ISP-001",
+        title: "Security policy",
+        description: null,
+        ownerUserId: null,
+        policyStatus: "active",
+        version: {
+          id: "00000000-0000-4000-8000-000000000011",
+          versionNumber: "2.0",
+          content: validForm.content,
+          changeSummary: validForm.changeSummary,
+          status: "draft",
+          createdByUserId: null,
+          createdAt: "2026-10-30T00:00:00.000Z",
+        },
+        updatedAt: "2026-10-30T00:00:00.000Z",
+      }).success,
+    ).toBe(true);
+  });
   it("normalizes the form and leaves blank optional policy fields unchanged", () => {
     expect(updatePolicyVersionFormSchema.parse(validForm)).toEqual({
       ...validForm,
