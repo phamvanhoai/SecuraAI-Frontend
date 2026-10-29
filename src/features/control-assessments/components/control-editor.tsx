@@ -99,7 +99,7 @@ function ControlFields({
     name: baseline?.name ?? "",
     description: baseline?.description ?? "",
     ownerUserId: baseline?.owner?.id ?? null,
-    applicability: baseline?.applicability ?? "under_review",
+    applicability: baseline?.applicability ?? "applicable",
     implementationStatus: baseline?.implementationStatus ?? "not_implemented",
   };
   const [values, setValues] = useState<FormValues>(defaults);
@@ -366,7 +366,7 @@ function ControlFields({
           ) : null}
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
+          {baseline ? <div>
             <Label htmlFor="control-applicability">Applicability *</Label>
             <Select
               {...attributes("applicability")}
@@ -387,7 +387,7 @@ function ControlFields({
               ))}
             </Select>
             {message("applicability")}
-          </div>
+          </div> : null}
           <div>
             <Label htmlFor="control-implementationStatus">
               Implementation status *
@@ -413,6 +413,7 @@ function ControlFields({
             {message("implementationStatus")}
           </div>
         </div>
+        {!baseline ? <p className="text-muted text-sm">New controls are Applicable to the assessed scope.</p> : null}
         {baseline?.configurationLocked ? (
           <Alert>
             Applicability and implementation are locked because assessments
