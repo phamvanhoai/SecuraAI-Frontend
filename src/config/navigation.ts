@@ -323,8 +323,8 @@ export function getPanelKind(
 
 export function getPanelNavigation(
   panel: PanelKind,
-  _roleCodes: readonly string[] = [],
-  _permissions: readonly string[] = [],
+  roleCodes: readonly string[] = [],
+  permissions: readonly string[] = [],
 ): readonly NavigationItem[] {
   const base: NavigationItem[] = [
     {
@@ -350,7 +350,12 @@ export function getPanelNavigation(
     });
   }
 
-  return base;
+  return base.map((item) => {
+    if (!roleCodes.includes("EMPLOYEE")) return item;
+    if (item.href === "/risks" && permissions.includes("risks.review-reassessment")) return { ...item, title: "My Risks" };
+    if (item.href === "/risks" && permissions.includes("risks.approve-acceptance")) return { ...item, title: "Risk Acceptance Requests" };
+    return item;
+  });
 }
 
 export function panelHasModule(panel: PanelKind, slug: string): boolean {

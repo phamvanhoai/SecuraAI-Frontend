@@ -91,6 +91,9 @@ export function RiskAssessmentsShell() {
   const canReviewRequests = (session.data?.permissions.includes("risks.review-reassessment") ?? false) ||
     (session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false);
   const canCreate = session.data?.permissions.includes("risks.create") ?? false;
+  const myRisks = Boolean(session.data?.roles.some((role) => role.code === "EMPLOYEE") && session.data.permissions.includes("risks.review-reassessment"));
+  const approvalWorkspace = !myRisks && Boolean(session.data?.roles.some((role) => role.code === "EMPLOYEE") && session.data.permissions.includes("risks.approve-acceptance"));
+  const registerTitle = myRisks ? "My Risks" : approvalWorkspace ? "Risk Acceptance Requests" : "Risk Register";
   const [view, setView] = useState<"register" | "requests">("register");
   const currentView = canReviewRequests ? view : "register";
   const risks = useRiskRegister(query, canRead && currentView === "register");
@@ -304,11 +307,11 @@ export function RiskAssessmentsShell() {
       <div className="space-y-5">
         <ProductPageHeader
           title={
-            currentView === "register" ? "Risk Register" : "Reassessment Requests"
+            currentView === "register" ? registerTitle : "Reassessment Requests"
           }
           description={
             currentView === "register"
-              ? "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
+              ? myRisks ? "Review and manage risks assigned to you." : approvalWorkspace ? "Review risks with pending acceptance requests within your approval scope." : "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
               : "Review incident-driven reassessment requests for risks assigned to you."
           }
           additionalActions={
@@ -343,7 +346,7 @@ export function RiskAssessmentsShell() {
                 )}
                 strokeWidth={2}
               />
-              <span className="truncate">Risk Register</span>
+              <span className="truncate">{registerTitle}</span>
               {risks.data ? (
                 <span
                   className={cn(
@@ -505,12 +508,12 @@ export function RiskAssessmentsShell() {
                   <h3 className="mt-2 text-base font-semibold">
                     {hasActiveFilters
                       ? "No matching risks found"
-                      : "No risks found"}
+                      : myRisks ? "No risks assigned" : approvalWorkspace ? "No pending acceptance requests" : "No risks found"}
                   </h3>
                   <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                     {hasActiveFilters
                       ? "No risks match the current search and filter criteria. Try adjusting or clearing the filters."
-                      : "No risk records have been created yet."}
+                      : myRisks ? "You haven’t been assigned any risks yet." : approvalWorkspace ? "There are no risk acceptance requests awaiting your decision." : "No risk records have been created yet."}
                   </p>
                   {hasActiveFilters ? (
                     <Button
