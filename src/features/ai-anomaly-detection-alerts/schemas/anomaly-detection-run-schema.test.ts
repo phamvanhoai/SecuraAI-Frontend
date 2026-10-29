@@ -31,10 +31,11 @@ describe("anomaly detection run result", () => {
       anomaliesDetected: 20,
       detectionsCreated: 100,
       alertsCreated: 20,
+      alertsGrouped: 3,
       threshold: 0.8,
       completedAt: "2026-09-25T00:00:00.000Z",
     });
 
-    expect(result).toMatchObject({ scope: "ALL_PENDING", hasMore: true });
+    expect(result).toMatchObject({ scope: "ALL_PENDING", hasMore: true, alertsGrouped: 3 });
   });
 });
