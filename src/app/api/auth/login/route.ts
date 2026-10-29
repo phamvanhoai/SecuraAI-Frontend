@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { loginSchema } from "@/features/authentication-account";
 import { setAuthCookies } from "@/lib/auth/auth-cookies";
-import { publicAuthError, requestLogin } from "@/lib/auth/backend-auth";
+import { publicLoginError, requestLogin } from "@/lib/auth/backend-auth";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const input = loginSchema.safeParse(
@@ -24,7 +24,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const result = await requestLogin(input.data, request);
     if (!result.tokens) {
       return NextResponse.json(
-        { success: false, error: publicAuthError(result.response.status) },
+        { success: false, error: await publicLoginError(result.response) },
         { status: result.response.status },
       );
     }
