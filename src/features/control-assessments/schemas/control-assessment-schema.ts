@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { implementationSchema } from "./control-catalog-schema";
 const assessment = z.object({
   id: z.uuid(),
   testMethod: z.string().nullable(),
@@ -19,7 +20,7 @@ export const controlAssessmentListSchema = z.object({
       description: z.string().nullable(),
       canManageEvidence: z.boolean().default(false),
       applicability: z.string(),
-      implementationStatus: z.string(),
+      implementationStatus: implementationSchema,
       owner: z.object({ id: z.uuid(), fullName: z.string() }).nullable(),
       evidence: z.array(
         z.object({
@@ -40,12 +41,52 @@ export const controlAssessmentListSchema = z.object({
     totalPages: z.number().int(),
   }),
 });
-export const createAssessmentSchema = z.object({
-  testMethod: z.string().trim().min(3).max(1000),
-  result: z.enum(["effective", "partially_effective", "ineffective"]),
-  effectiveness: z.number().min(0).max(100),
-  notes: z.string().trim().min(10).max(5000),
-});
+export function resultForEffectiveness(
+  score: number,
+): "effective" | "partially_effective" | "ineffective" {
+  return score >= 80
+    ? "effective"
+    : score >= 50
+      ? "partially_effective"
+      : "ineffective";
+}
+export const createAssessmentSchema = z
+  .object({
+    testMethod: z.string().trim().min(3).max(1000),
+    result: z.enum(["effective", "partially_effective", "ineffective"]),
+    effectiveness: z.number().min(0).max(100).multipleOf(0.01),
+    notes: z.string().trim().min(10).max(5000),
+    implementationStatus: implementationSchema.optional(),
+    expectedImplementationStatus: implementationSchema.optional(),
+    implementationChangeReason: z.string().trim().min(10).max(2000).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.result !== resultForEffectiveness(value.effectiveness))
+      context.addIssue({
+        code: "custom",
+        path: ["result"],
+        message:
+          "Result must match effectiveness: below 50% Ineffective, below 80% Partially effective, otherwise Effective.",
+      });
+    if (
+      (value.implementationStatus === undefined) !==
+      (value.expectedImplementationStatus === undefined)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["implementationStatus"],
+        message: "Provide both the baseline and selected implementation status",
+      });
+    if (
+      value.implementationStatus !== value.expectedImplementationStatus &&
+      !value.implementationChangeReason
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["implementationChangeReason"],
+        message: "Explain the implementation change in at least 10 characters",
+      });
+  });
 export type ControlAssessmentList = z.infer<typeof controlAssessmentListSchema>;
 export type ControlAssessmentItem = ControlAssessmentList["items"][number];
 export type CreateAssessment = z.infer<typeof createAssessmentSchema>;
