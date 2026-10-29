@@ -8,6 +8,8 @@ export const riskReassessmentReviewItemSchema = z.object({
   reviewedAt: z.iso.datetime({ offset: true }).nullable(),
   reviewComment: z.string().nullable(),
   canReject: z.boolean(),
+  canReview: z.boolean().optional(),
+  canReassess: z.boolean().optional(),
   risk: z.object({
     id: z.uuid(),
     riskCode: z.string(),
