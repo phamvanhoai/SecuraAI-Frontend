@@ -31,6 +31,7 @@ export function useCompleteRiskReassessment() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: key });
       void client.invalidateQueries({ queryKey: ["risks"] });
+      void client.invalidateQueries({ queryKey: ["risk-register"] });
     },
   });
 }
@@ -43,6 +44,7 @@ export function useStartRiskReassessmentReview() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: key });
       void client.invalidateQueries({ queryKey: ["risks"] });
+      void client.invalidateQueries({ queryKey: ["risk-register"] });
     },
   });
 }
@@ -55,6 +57,7 @@ export function useRejectRiskReassessment() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: key });
       void client.invalidateQueries({ queryKey: ["risks"] });
+      void client.invalidateQueries({ queryKey: ["risk-register"] });
       void client.invalidateQueries({ queryKey: ["incidents"] });
     },
   });

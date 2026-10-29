@@ -11,7 +11,7 @@ export function useOpenRiskAcceptanceReview(riskId: string) {
   return useMutation({
     mutationFn: (input: Parameters<typeof openRiskAcceptanceReview>[1]) =>
       openRiskAcceptanceReview(riskId, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["risk-register"] }),
+    onSuccess: async () => { await client.invalidateQueries({ queryKey: ["risk-register"] }); await client.invalidateQueries({ queryKey: ["auth", "session"] }); },
     onError: async (error) => {
       if (error instanceof ApiError && [403, 409].includes(error.status))
         await client.invalidateQueries({ queryKey: ["risk-register"] });
@@ -23,7 +23,7 @@ export function useSubmitRiskAcceptance(riskId: string) {
   return useMutation({
     mutationFn: (input: Parameters<typeof submitRiskAcceptance>[1]) =>
       submitRiskAcceptance(riskId, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["risk-register"] }),
+    onSuccess: async () => { await client.invalidateQueries({ queryKey: ["risk-register"] }); await client.invalidateQueries({ queryKey: ["auth", "session"] }); },
     onError: async (error) => {
       if (error instanceof ApiError && [403, 409].includes(error.status))
         await client.invalidateQueries({ queryKey: ["risk-register"] });
@@ -35,7 +35,7 @@ export function useDecideRiskAcceptance(acceptanceId: string) {
   return useMutation({
     mutationFn: (input: Parameters<typeof decideRiskAcceptance>[1]) =>
       decideRiskAcceptance(acceptanceId, input),
-    onSuccess: () => client.invalidateQueries({ queryKey: ["risk-register"] }),
+    onSuccess: async () => { await client.invalidateQueries({ queryKey: ["risk-register"] }); await client.invalidateQueries({ queryKey: ["auth", "session"] }); },
     onError: async (error) => {
       if (error instanceof ApiError && [403, 409].includes(error.status))
         await client.invalidateQueries({ queryKey: ["risk-register"] });
