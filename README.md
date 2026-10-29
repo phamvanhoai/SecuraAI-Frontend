@@ -1,5 +1,7 @@
 # SecuraAI Frontend
 
+Create new version consumes the V2 policy version endpoint. A newly created version is a draft while its parent policy stays active, keeping the current publication available until the replacement is published.
+
 Incident creation is Security Officer-only (manual and confirmed-source modes). Executive retains incident list/detail access without create/handling actions. Other roles retain access to their historical reports without a create prompt. Losing the officer role closes the creation dialog. No new reporting workflow or database changes.
 
 Giao diện SecuraAI cho quản lý rủi ro an toàn thông tin, tài sản, controls, chính sách, sự cố và cảnh báo bất thường.

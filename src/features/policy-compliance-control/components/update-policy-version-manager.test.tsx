@@ -50,7 +50,7 @@ const createdVersion = {
   title: "Information Security Policy",
   description: null,
   ownerUserId: null,
-  policyStatus: "draft" as const,
+  policyStatus: "active" as const,
   version: {
     id: "00000000-0000-4000-8000-000000000011",
     versionNumber: "1.1",
@@ -134,6 +134,23 @@ describe("UpdatePolicyVersionManager", () => {
       "New policy version created",
       "ISP-001 version 1.1 is ready for review as a draft.",
     );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("keeps the dialog and entered values when creation fails", async () => {
+    const user = userEvent.setup();
+    mocks.mutateAsync.mockRejectedValue(new Error("Request failed"));
+    render(<UpdatePolicyVersionManager />);
+    await user.click(screen.getByRole("button", { name: "Create new version" }));
+    fireEvent.change(screen.getByLabelText("New version number"), { target: { value: "2.0" } });
+    fireEvent.change(screen.getByLabelText("Policy content"), { target: { value: "Updated content" } });
+    fireEvent.change(screen.getByLabelText("Change summary"), { target: { value: "Updated requirements" } });
+    await user.click(screen.getByRole("button", { name: "Create draft version" }));
+    expect(await screen.findByText("Unable to create the new version. Please try again.")).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("Policy content")).toHaveValue("Updated content");
+    expect(screen.getByLabelText("New version number")).toHaveValue("2.0");
+    expect(mocks.success).not.toHaveBeenCalled();
   });
 
   it("does not expose the form without policies.update", () => {
