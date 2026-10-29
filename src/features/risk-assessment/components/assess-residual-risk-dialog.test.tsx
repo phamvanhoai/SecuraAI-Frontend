@@ -1,9 +1,11 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AssessResidualRiskDialog } from "./assess-residual-risk-dialog";
 
 const state = vi.hoisted(() => ({
   status: "accepted",
+  ready: false,
+  mutateAsync: vi.fn().mockResolvedValue({ riskCode: "RSK-001", score: 12, rating: "high", withinTolerance: false }),
   isError: false,
   isPending: false,
   refetch: vi.fn(),
@@ -28,8 +30,8 @@ vi.mock("../hooks/use-risk-register", () => ({
     data: {
       status: state.status,
       acceptances: [],
-      controls: [],
-      latestAssessment: null,
+      controls: state.ready ? [{ id: "control", name: "MFA", latestEffectiveness: 80 }] : [],
+      latestAssessment: state.ready ? { inherentRating: "critical" } : null,
       assessments: Array.from({ length: 6 }, (_, index) => ({
         ...record,
         id: `assessment-${index}`,
@@ -42,7 +44,7 @@ vi.mock("../hooks/use-risk-register", () => ({
   }),
 }));
 vi.mock("../hooks/use-assess-residual-risk", () => ({
-  useAssessResidualRisk: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useAssessResidualRisk: () => ({ isPending: false, mutateAsync: state.mutateAsync }),
 }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: vi.fn() }),
@@ -58,9 +60,20 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   state.isError = false;
+  state.status = "accepted";
+  state.ready = false;
   vi.clearAllMocks();
 });
 describe("residual assessment history", () => {
+  it("submits numeric scores after changing radio choices", async () => {
+    state.status = "open"; state.ready = true;
+    render(<AssessResidualRiskDialog riskId="risk" riskLabel="RSK-001" onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: /^4Likely/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^3Moderate/ }));
+    fireEvent.change(screen.getByLabelText(/Assessment basis/), { target: { value: "Verified the remaining likelihood and impact after control testing." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save residual assessment" }));
+    await waitFor(() => expect(state.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ likelihood: 4, impact: 3 })));
+  });
   it("allows an accepted Risk to view paginated history and close", () => {
     const close = vi.fn();
     render(

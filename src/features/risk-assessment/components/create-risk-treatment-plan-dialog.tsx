@@ -170,7 +170,7 @@ export function CreateRiskTreatmentPlanDialog({
 
   const blocked = Boolean(
     risk.data &&
-      (![" open", "under_treatment"].includes(risk.data.status) ||
+      (!["open", "under_treatment"].includes(risk.data.status) ||
         risk.data.acceptances.some((item) => item.decision === "pending") ||
         risk.data.activeTreatmentPlan),
   );

@@ -28,14 +28,19 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { implementationSchema } from "../schemas/control-catalog-schema";
 import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api/api-error";
 import {
   useControlAssessments,
   useCreateControlAssessment,
 } from "../hooks/use-control-assessments";
-import type { ControlAssessmentItem } from "../schemas/control-assessment-schema";
+import {
+  resultForEffectiveness,
+  type ControlAssessmentItem,
+} from "../schemas/control-assessment-schema";
 import { ControlEvidenceDialog } from "./control-evidence-dialog";
 import { ControlEditor } from "./control-editor";
 
@@ -75,19 +80,31 @@ export function ControlAssessmentManager() {
   const ref = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState<ControlAssessmentItem>();
   const [method, setMethod] = useState("");
-  const [result, setResult] = useState<keyof typeof labels>("effective");
   const [effectiveness, setEffectiveness] = useState("100");
+  const validScore =
+    effectiveness.trim() !== "" &&
+    Number.isFinite(Number(effectiveness)) &&
+    Number(effectiveness) >= 0 &&
+    Number(effectiveness) <= 100;
+  const result = resultForEffectiveness(Number(effectiveness));
   const [notes, setNotes] = useState("");
+  const [implementationStatus, setImplementationStatus] =
+    useState<ControlAssessmentItem["implementationStatus"]>("not_implemented");
+  const [implementationChangeReason, setImplementationChangeReason] =
+    useState("");
   const [assessmentTab, setAssessmentTab] = useState<"assess" | "history">(
     "assess",
   );
   const [historyPage, setHistoryPage] = useState(1);
   const historyPageSize = 5;
   const [error, setError] = useState<string>();
+  const [stale, setStale] = useState(false);
   const open = (item: ControlAssessmentItem) => {
+    setStale(false);
     setSelected(item);
+    setImplementationStatus(item.implementationStatus);
+    setImplementationChangeReason("");
     setMethod("");
-    setResult("effective");
     setEffectiveness(item.assessments[0]?.effectiveness?.toString() ?? "100");
     setNotes("");
     setAssessmentTab("assess");
@@ -97,9 +114,18 @@ export function ControlAssessmentManager() {
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selected) return;
+    if (!selected || stale || mutation.isPending) return;
+    if (
+      implementationStatus !== selected.implementationStatus &&
+      implementationChangeReason.trim().length < 10
+    ) {
+      setError("Explain the implementation change in at least 10 characters.");
+      return;
+    }
     const score = Number(effectiveness);
     if (
+      !effectiveness.trim() ||
+      !Number.isFinite(score) ||
       method.trim().length < 3 ||
       notes.trim().length < 10 ||
       score < 0 ||
@@ -118,6 +144,11 @@ export function ControlAssessmentManager() {
           result,
           effectiveness: score,
           notes: notes.trim(),
+          implementationStatus,
+          expectedImplementationStatus: selected.implementationStatus,
+          ...(implementationStatus !== selected.implementationStatus
+            ? { implementationChangeReason: implementationChangeReason.trim() }
+            : {}),
         },
       });
       ref.current?.close();
@@ -126,6 +157,8 @@ export function ControlAssessmentManager() {
         `${selected.controlCode} was recorded as ${labels[result].toLowerCase()}.`,
       );
     } catch (cause: unknown) {
+      if (cause instanceof ApiError && [401, 403, 409].includes(cause.status))
+        setStale(true);
       setError(
         cause instanceof Error
           ? cause.message
@@ -445,7 +478,11 @@ export function ControlAssessmentManager() {
                   className="text-muted mx-auto size-10 stroke-1"
                 />
                 <h3 className="mt-2 text-base font-semibold">
-                  {q ? "No matching controls found" : canCreate ? "No controls available" : "No controls assigned"}
+                  {q
+                    ? "No matching controls found"
+                    : canCreate
+                      ? "No controls available"
+                      : "No controls assigned"}
                 </h3>
                 <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                   {q
@@ -538,7 +575,11 @@ export function ControlAssessmentManager() {
                   className="text-muted mx-auto size-10 stroke-1"
                 />
                 <h3 className="mt-2 text-base font-semibold">
-                  {q ? "No matching controls found" : canCreate ? "No controls available" : "No controls assigned"}
+                  {q
+                    ? "No matching controls found"
+                    : canCreate
+                      ? "No controls available"
+                      : "No controls assigned"}
                 </h3>
                 <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                   {q
@@ -774,6 +815,63 @@ export function ControlAssessmentManager() {
               </div>
             </section>
             <div>
+              <Label htmlFor="assessmentImplementation">
+                Implementation status *
+              </Label>
+              <Select
+                id="assessmentImplementation"
+                className="mt-1.5"
+                value={implementationStatus}
+                required
+                onChange={(event) => {
+                  const parsed = implementationSchema.safeParse(
+                    event.target.value,
+                  );
+                  if (parsed.success) setImplementationStatus(parsed.data);
+                }}
+                aria-describedby="implementation-help"
+              >
+                {implementationSchema.options.map((value) => (
+                  <option key={value} value={value}>
+                    {value.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </Select>
+              <p id="implementation-help" className="text-muted mt-1.5 text-sm">
+                Record actual implementation progress. Evidence and
+                effectiveness results do not change this status automatically.
+                Changes are saved with this assessment.
+              </p>
+            </div>
+            {implementationStatus !== selected?.implementationStatus ? (
+              <div>
+                <Label htmlFor="implementationChangeReason">
+                  Reason for implementation change *
+                </Label>
+                <Textarea
+                  id="implementationChangeReason"
+                  className="mt-1.5"
+                  rows={3}
+                  required
+                  minLength={10}
+                  maxLength={2000}
+                  value={implementationChangeReason}
+                  onChange={(event) =>
+                    setImplementationChangeReason(event.target.value)
+                  }
+                  aria-describedby="implementation-reason-help"
+                />
+                <p
+                  id="implementation-reason-help"
+                  className="text-muted mt-1.5 text-sm"
+                >
+                  Explain what was deployed or changed (at least 10 characters).
+                  The previous and new statuses, your identity and reason are
+                  recorded in the audit log.
+                </p>
+              </div>
+            ) : null}
+            <div>
               <Label htmlFor="testMethod">Test method</Label>
               <Textarea
                 id="testMethod"
@@ -789,11 +887,30 @@ export function ControlAssessmentManager() {
                 <Select
                   id="testResult"
                   className="mt-1.5"
-                  value={result}
-                  onChange={(event) =>
-                    setResult(event.target.value as keyof typeof labels)
-                  }
+                  value={validScore ? result : ""}
+                  required
+                  aria-describedby="effectiveness-policy"
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (
+                      (next === "ineffective" ||
+                        next === "partially_effective" ||
+                        next === "effective") &&
+                      (!validScore || next !== result)
+                    ) {
+                      setEffectiveness(
+                        next === "ineffective"
+                          ? "0"
+                          : next === "partially_effective"
+                            ? "50"
+                            : "80",
+                      );
+                    }
+                  }}
                 >
+                  <option value="" disabled>
+                    Select a testing result
+                  </option>
                   {Object.entries(labels).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -809,11 +926,22 @@ export function ControlAssessmentManager() {
                   type="number"
                   min={0}
                   max={100}
+                  step="0.01"
+                  required
+                  aria-describedby="effectiveness-policy"
                   value={effectiveness}
                   onChange={(event) => setEffectiveness(event.target.value)}
                 />
               </div>
             </div>
+            <p id="effectiveness-policy" className="text-muted text-sm">
+              Internal scoring policy: below 50% Ineffective; 50% to below 80%
+              Partially effective; 80% to 100% Effective. Enter a percentage or
+              choose a result. Choosing a different result sets the percentage
+              to 0%, 50% or 80%; a score already within the selected range is
+              retained. Explain the score using testing and Evidence in the
+              notes.
+            </p>
             <div>
               <Label htmlFor="controlNotes">Assessment notes</Label>
               <Textarea
@@ -832,7 +960,7 @@ export function ControlAssessmentManager() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={mutation.isPending || stale}>
                 {mutation.isPending ? "Saving…" : "Save assessment"}
               </Button>
             </div>

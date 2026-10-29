@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AssessInherentRiskDialog } from "./assess-inherent-risk-dialog";
 
+const mutateAsync = vi.hoisted(() => vi.fn().mockResolvedValue({ riskCode: "RSK-001", score: 12, rating: "high" }));
 const onClose = vi.fn();
 const assessment = {
   id: "00000000-0000-4000-8000-000000000010",
@@ -41,7 +42,7 @@ vi.mock("../hooks/use-risk-register", () => ({
   }),
 }));
 vi.mock("../hooks/use-assess-inherent-risk", () => ({
-  useAssessInherentRisk: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useAssessInherentRisk: () => ({ isPending: false, mutateAsync }),
 }));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: vi.fn() }),
@@ -61,6 +62,14 @@ afterEach(() => {
 });
 
 describe("Assess Inherent Risk history", () => {
+  it("submits numeric scores after changing radio choices", async () => {
+    render(<AssessInherentRiskDialog riskId="risk" riskLabel="RSK-001" onClose={onClose} />);
+    fireEvent.click(screen.getByRole("radio", { name: /^4Likely/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /^3Moderate/ }));
+    fireEvent.change(screen.getByLabelText(/Assessment basis/), { target: { value: "Access testing confirmed the likelihood and impact across the assessed scope." } });
+    fireEvent.click(screen.getByRole("button", { name: "Save assessment" }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({ likelihood: 4, impact: 3 })));
+  });
   it("explains the scoring criteria and methodology", () => {
     render(
       <AssessInherentRiskDialog
