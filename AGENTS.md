@@ -131,4 +131,4 @@ Explicit Risk Owner eligibility exposes My Risks even with zero assigned records
 
 Explicit Control Owner, Asset Owner and Risk Acceptance Approver eligibility also exposes their workspace with no assigned/pending records. Empty workspaces must remain visible after their last item is removed/completed. Data APIs retain ownership and pending-request scope.
 
-Contextual detection v1 may create alerts from matched rules even below the behavioral threshold. Scores are signal strength, not probability. Show alertsGrouped separately; preserve stored explanation and correlated evidence. Ollama never determines scores or alert creation.
+All new contextual detection alerts require score >= the applicable model threshold or enabled asset override. Rules supply scoring evidence and never bypass the threshold. Historical RULE_MATCH alerts remain unchanged. Scores are signal strength, not probability. Show alertsGrouped separately; preserve stored explanation and correlated evidence. Ollama never determines scores or alert creation.

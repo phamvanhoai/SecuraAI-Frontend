@@ -192,10 +192,10 @@ export function AiAlertDetailDialog({
             />
             <Alert className="border-info/25 bg-info-soft text-foreground">
               The detection engine evaluates event-family rules and contextual
-              signals. A matching rule can create an alert independently of the
-              behavioral threshold. Scores indicate signal strength, not attack
-              probability. Repeated matches may be grouped in the recorded
-              evidence. Ollama only turns the stored evidence into
+              signals. Alerts are created only when the detection score meets
+              the applicable threshold. Scores indicate signal strength, not
+              attack probability. Repeated matches may be grouped in the
+              recorded evidence. Ollama only turns the stored evidence into
               analyst-readable text; when unavailable, a deterministic fallback
               explanation is shown.
             </Alert>
@@ -683,7 +683,7 @@ function readableStoredExplanation(text: string): string {
       !Number.isFinite(threshold)
     )
       return text;
-    return `${rules.map((rule) => ruleLabels[rule] ?? "Configured detection rule matched").join("; ")}.\n\nPriority score: ${formatScore(score)}. This measures signal strength, not attack probability.\n\nThis alert was created because a detection rule matched. The behavioral threshold (${formatScore(threshold)}) is not required for this rule.\n\nReview the key evidence below to confirm whether the activity was expected. The original record remains stored; supporting parameters are available in Technical details.`;
+    return `${rules.map((rule) => ruleLabels[rule] ?? "Configured detection rule matched").join("; ")}.\n\nPriority score: ${formatScore(score)}. This measures signal strength, not attack probability.\n\nHistorical record from the previous rule-based policy. New alerts require the detection score to meet the configured threshold (${formatScore(threshold)}).\n\nReview the key evidence below to confirm whether the activity was expected. The original record remains stored; supporting parameters are available in Technical details.`;
   } catch {
     return text;
   }
