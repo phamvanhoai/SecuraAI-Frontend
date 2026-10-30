@@ -119,3 +119,9 @@ Tạo nhánh từ develop mới nhất, PR vào develop, phát hành qua PR deve
 Admin → Users → Assign role, scope & ownership now grants Employee business responsibilities (Risk Owner, Control Owner, Asset Owner, Authorized Approver), using the existing access-assignment API. Responsibilities are permanent eligibility, not organization-wide resource access. Assign records in their modules; existing owners retain their responsibility, and transfer is required before removal. Authorized Approver eligibility requires a workflow-specific assignment and never grants global approval access. No database migration.
 
 Employee responsibility selection is exclusive: at most one of Risk Owner, Control Owner, Asset Owner or Authorized Approver per Employee. An Employee may have no inherited responsibility; click the selected checkbox again to clear it. Transfer conflicting owned records before changing responsibility; legacy multiple ownership is preserved until explicitly resolved.
+
+Password changes sign out all devices: the BFF clears authentication cookies on success, and active application sessions are checked every five seconds (also on window focus) so revoked sessions return to Login. Browser background throttling or a suspended/offline tab can delay the redirect.
+
+Notification images: both Send in-system and Send email provide Add images, removable previews and client-side PNG normalization for up to three PNG/JPEG/WebP source files (5 MiB each). Image payloads remain below the existing 1 MiB JSON limit. Received images use authenticated, unoptimized same-origin image URLs; no token is exposed to JavaScript or in image links. The backend notification_image_references migration must be deployed first.
+
+Recipients can open View details to read the complete message and private images. Closing a successfully loaded unread detail marks it read; failed loads do not. The bell requests unread items only, while My Notifications retains read items.

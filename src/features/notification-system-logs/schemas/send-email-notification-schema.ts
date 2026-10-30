@@ -1,9 +1,11 @@
+import { notificationImagesSchema } from "../types/notification-image";
 import { z } from "zod";
 
 export const sendEmailNotificationInputSchema = z
   .object({
     subject: z.string().trim().min(1).max(160),
     message: z.string().trim().min(1).max(4000),
+    images: notificationImagesSchema,
     userIds: z.array(z.uuid()).min(1).max(20),
   })
   .strict();
