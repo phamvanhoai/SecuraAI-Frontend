@@ -1,3 +1,4 @@
+import { notificationImagesSchema } from "../types/notification-image";
 import { z } from "zod";
 
 const roleSchema = z.enum([
@@ -11,6 +12,7 @@ export const sendInSystemNotificationInputSchema = z
   .object({
     title: z.string().trim().min(1).max(160),
     message: z.string().trim().min(1).max(2000),
+    images: notificationImagesSchema,
     priority: z.enum(["NORMAL", "IMPORTANT", "URGENT"]),
     audience: z.discriminatedUnion("type", [
       z.object({

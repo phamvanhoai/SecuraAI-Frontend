@@ -44,7 +44,7 @@ describe("POST /api/auth/change-password", () => {
     vi.restoreAllMocks();
   });
 
-  it("forwards the access token and preserves the browser session after success", async () => {
+  it("forwards the access token and clears the browser session after success", async () => {
     mocks.cookieGet.mockImplementation((name: string) =>
       name === "securaai_access" ? { value: "access-token" } : undefined,
     );
@@ -69,7 +69,7 @@ describe("POST /api/auth/change-password", () => {
         }),
       }),
     );
-    expect(mocks.clearAuthCookies).not.toHaveBeenCalled();
+    expect(mocks.clearAuthCookies).toHaveBeenCalledWith(response);
     expect(mocks.setAuthCookies).not.toHaveBeenCalled();
   });
 
@@ -106,12 +106,8 @@ describe("POST /api/auth/change-password", () => {
     expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual(
       expect.objectContaining({ Authorization: "Bearer fresh-token" }),
     );
-    expect(mocks.clearAuthCookies).not.toHaveBeenCalled();
-    expect(mocks.setAuthCookies).toHaveBeenCalledWith(response, {
-      accessToken: "fresh-token",
-      refreshToken: "fresh-refresh-token",
-      expiresIn: "15m",
-    });
+    expect(mocks.clearAuthCookies).toHaveBeenCalledWith(response);
+    expect(mocks.setAuthCookies).not.toHaveBeenCalled();
   });
 
   it("returns 401 and clears stale cookies when no session is available", async () => {

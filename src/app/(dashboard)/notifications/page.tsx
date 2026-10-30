@@ -1,4 +1,5 @@
 "use client";
+import { NotificationDetail } from "@/features/notification-system-logs/components/notification-detail";
 import {
   BellRing,
   CheckCheck,
@@ -141,6 +142,7 @@ function NotificationInbox() {
   const { read, markAll } = useReadNotifications(session.data?.id);
   const readError = read.error ?? markAll.error;
   const focusedNotification = useRef("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
     const focusNotification = (event?: Event) => {
       const hash = window.location.hash;
@@ -165,6 +167,12 @@ function NotificationInbox() {
       title="My Notifications"
       description={`${inbox.data?.unreadCount ?? 0} unread notifications`}
     >
+      {selectedId ? <NotificationDetail key={selectedId} id={selectedId} userId={session.data?.id} onClose={(readId) => {
+        setSelectedId(null);
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        focusedNotification.current = "";
+        if (readId) read.mutate(readId);
+      }} /> : null}
       {inbox.isError ? (
         <Alert>Unable to load notifications. Please try again.</Alert>
       ) : null}
@@ -223,7 +231,7 @@ function NotificationInbox() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold">{item.title}</h3>
+                        <h3 className="font-semibold"><button type="button" className="text-left hover:underline" onClick={() => setSelectedId(item.id)}>{item.title}</button></h3>
                         <span className="border-border bg-surface text-muted rounded-full border px-2 py-0.5 text-[11px] font-medium uppercase">
                           {item.priority}
                         </span>
@@ -233,6 +241,7 @@ function NotificationInbox() {
                         {new Date(item.createdAt).toLocaleString("en-GB")}
                       </p>
                     </div>
+                    <Button variant="secondary" type="button" className="min-h-9 shrink-0 px-2 text-xs" onClick={() => setSelectedId(item.id)}>View details</Button>
                     {item.readAt ? null : (
                       <Button
                         variant="secondary"

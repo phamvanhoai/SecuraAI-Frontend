@@ -18,7 +18,6 @@ import { FormField } from "@/components/forms/form-field";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { defaultPanelPath } from "@/config/navigation";
 import { ApiError } from "@/lib/api/api-error";
 import { useChangePassword } from "../hooks/use-change-password";
 import { useSessionUser } from "../hooks/use-session-user";
@@ -68,11 +67,9 @@ export function ChangePasswordForm({
       await mutation.mutateAsync(values);
       toast.success(
         "Password changed successfully",
-        "Your password has been updated.",
+        "Please sign in again on all devices.",
       );
-      router.replace(
-        defaultPanelPath(session.data?.roles.map((role) => role.code) ?? []),
-      );
+      router.replace("/login?passwordChanged=1");
     } catch (error: unknown) {
       if (error instanceof ApiError) {
         const code = backendErrorCode(error);

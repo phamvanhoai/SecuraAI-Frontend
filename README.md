@@ -124,6 +124,11 @@ Admin → Users → Assign role, scope & ownership now grants Employee business 
 
 Employee responsibility selection is exclusive: at most one of Risk Owner, Control Owner, Asset Owner or Authorized Approver per Employee. An Employee may have no inherited responsibility; click the selected checkbox again to clear it. Transfer conflicting owned records before changing responsibility; legacy multiple ownership is preserved until explicitly resolved.
 
+Password changes sign out all devices: the BFF clears authentication cookies on success, and active application sessions are checked every five seconds (also on window focus) so revoked sessions return to Login. Browser background throttling or a suspended/offline tab can delay the redirect.
+
+Notification images: both Send in-system and Send email provide Add images, removable previews and client-side PNG normalization for up to three PNG/JPEG/WebP source files (5 MiB each). Image payloads remain below the existing 1 MiB JSON limit. Received images use authenticated, unoptimized same-origin image URLs; no token is exposed to JavaScript or in image links. The backend notification_image_references migration must be deployed first.
+
+Recipients can open View details to read the complete message and private images. Closing a successfully loaded unread detail marks it read; failed loads do not. The bell requests unread items only, while My Notifications retains read items.
 Assess Control allows Security Officers and assigned Control Owners to record actual implementation progress alongside a new effectiveness assessment. A changed status requires a reason. The API saves the status, assessment and audit atomically and rejects a stale baseline; reopen the dialog after a stale or authorization response. Existing assessment history is preserved. No migration is required.
 
 New Control assessments derive Testing result from the internal scoring policy: below 50% Ineffective; 50% to below 80% Partially effective; 80% to 100% Effective. Users may enter a percentage or select Testing result. A different result initializes the score to 0/50/80; a score already in range is retained. The API rejects inconsistent pairs. Historical assessments are retained without applying this rule retroactively.
