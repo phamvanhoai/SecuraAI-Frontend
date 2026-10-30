@@ -40,7 +40,17 @@ vi.mock("../hooks/use-incidents", () => ({
     };
     return {
       data: {
-        assets: query.scope === "linked" ? [linkedAsset] : [availableAsset],
+        assets:
+          query.scope === "linked"
+            ? [linkedAsset]
+            : [
+                availableAsset,
+                {
+                  ...availableAsset,
+                  id: "33333333-3333-4333-8333-333333333333",
+                  assetCode: "AST-003",
+                },
+              ],
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
       isPending: false,
@@ -111,6 +121,57 @@ afterEach(() => {
 });
 
 describe("link incident asset dialog", () => {
+  it("preserves selections when searching available options", () => {
+    render(<LinkIncidentAssetDialog incident={incident} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /AST-002/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Search available assets" }),
+    );
+    expect(screen.getByRole("checkbox", { name: /AST-002/ })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Link selected (1)" }),
+    ).toBeEnabled();
+  });
+
+  it("links multiple selections and retains only failures for retry", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("Unavailable"));
+    render(<LinkIncidentAssetDialog incident={incident} onClose={onClose} />);
+    const first = screen.getByRole("checkbox", { name: /AST-002/ });
+    const second = screen.getByRole("checkbox", { name: /AST-003/ });
+    fireEvent.click(first);
+    fireEvent.click(second);
+    expect(
+      screen.getByRole("button", { name: "Link selected (2)" }),
+    ).toBeEnabled();
+    fireEvent.submit(first.closest("form") as HTMLFormElement);
+    await waitFor(() =>
+      expect(screen.getByText(/Could not link:/)).toHaveTextContent("AST-003"),
+    );
+    expect(mocks.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(first).not.toBeChecked();
+    expect(second).toBeChecked();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and clears the selection after linking", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync.mockResolvedValue({
+      asset: { assetCode: "AST-002" },
+      incident: { incidentCode: "INC-001" },
+    });
+    render(<LinkIncidentAssetDialog incident={incident} onClose={onClose} />);
+    const option = screen.getByRole("checkbox", { name: /AST-002/ });
+    fireEvent.click(option);
+    fireEvent.submit(option.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(mocks.success).toHaveBeenCalled());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveAttribute("open");
+    expect(option).not.toBeChecked();
+  });
+
   it("shows existing links and only offers assets that are not linked", () => {
     render(<LinkIncidentAssetDialog incident={incident} onClose={vi.fn()} />);
 
@@ -121,12 +182,14 @@ describe("link incident asset dialog", () => {
     expect(screen.getByText("Production API")).toBeVisible();
 
     expect(
-      screen.queryByRole("radio", { name: /AST-001/ }),
+      screen.queryByRole("checkbox", { name: /AST-001/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /AST-002/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("radio", { name: /AST-002/ }));
     expect(
-      screen.getByRole("button", { name: "Link another asset" }),
+      screen.getByRole("checkbox", { name: /AST-002/ }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /AST-002/ }));
+    expect(
+      screen.getByRole("button", { name: "Link selected (1)" }),
     ).toBeEnabled();
   });
 

@@ -1,5 +1,4 @@
 "use client";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CheckCircle2,
   Link2,
@@ -8,12 +7,12 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Pagination } from "@/components/data-display/pagination";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useIncidentLinkSelection } from "../hooks/use-incident-link-selection";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
@@ -21,10 +20,6 @@ import {
   useLinkIncidentToRisk,
   useUnlinkIncidentFromRisk,
 } from "../hooks/use-incidents";
-import {
-  linkIncidentRiskFormSchema,
-  type LinkIncidentRiskForm,
-} from "../schemas/incident-risk-schema";
 import type { Incident } from "../schemas/report-incident-schema";
 
 const title = (value: string) =>
@@ -60,23 +55,20 @@ export function LinkIncidentRiskDialog({
   const mutation = useLinkIncidentToRisk();
   const unlinkMutation = useUnlinkIncidentFromRisk();
   const toast = useToast();
-  const form = useForm<LinkIncidentRiskForm>({
-    resolver: zodResolver(linkIncidentRiskFormSchema),
-    defaultValues: { riskId: "" },
-  });
-  const selectedRiskId = form.watch("riskId");
+  const selection = useIncidentLinkSelection();
   const available = options.data?.risks ?? [];
   const linked = linkedOptions.data?.risks ?? [];
-  const hasLinked = incident ? incident.relatedCounts.risks > 0 : false;
+  const hasLinked = linked.length > 0 || Boolean(incident?.relatedCounts.risks);
 
   useEffect(() => {
     if (incident) {
-      form.reset({ riskId: "" });
       ref.current?.showModal();
     } else ref.current?.close();
-  }, [form, incident]);
+  }, [incident]);
 
   const close = () => {
+    if (selection.busy) return;
+    selection.reset();
     setUnlinkTargetId(undefined);
     setAvailableDraft("");
     setAvailableSearch("");
@@ -86,21 +78,30 @@ export function LinkIncidentRiskDialog({
     setLinkedPage(1);
     onClose();
   };
-  const submit = async (values: LinkIncidentRiskForm) => {
-    if (!incident) return;
-    try {
-      const linked = await mutation.mutateAsync({ id: incident.id, values });
+  const submit = async () => {
+    if (
+      !incident ||
+      selection.busy ||
+      unlinkMutation.isPending ||
+      !selection.count
+    )
+      return;
+    const result = await selection.submit((riskId) =>
+      mutation.mutateAsync({ id: incident.id, values: { riskId } }),
+    );
+    if (!result) return;
+    if (result.succeeded)
       toast.success(
-        "Risk linked",
-        `${linked.risk.riskCode} is now linked to ${linked.incident.incidentCode}.`,
+        "Links saved",
+        `${result.succeeded} risk(s) linked to ${incident.incidentCode}.`,
       );
-      close();
-    } catch {
-      /* normalized error remains visible */
-    }
+    setLinkedSearch("");
+    setLinkedDraft("");
+    setLinkedPage(1);
   };
+
   const unlink = async (riskId: string) => {
-    if (!incident) return;
+    if (!incident || selection.busy) return;
     const risk = linked.find((item) => item.id === riskId);
     try {
       await unlinkMutation.mutateAsync({ incidentId: incident.id, riskId });
@@ -120,13 +121,26 @@ export function LinkIncidentRiskDialog({
       title={hasLinked ? "Link another risk" : "Link incident to existing risk"}
       className="max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
       onClose={close}
+      onCancel={(event) => {
+        if (selection.busy) event.preventDefault();
+      }}
     >
       {incident ? (
         <form
           className="space-y-5"
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
         >
+          {selection.failures.length ? (
+            <Alert>
+              Could not link: {selection.failures.join(", ")}. Successful links
+              were saved. Failed items remain selected; refresh options or
+              retry.
+            </Alert>
+          ) : null}
           {/* Context bar */}
           <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
             <div className="flex flex-wrap items-center gap-3">
@@ -239,7 +253,9 @@ export function LinkIncidentRiskDialog({
                         {unlinkTargetId !== risk.id ? (
                           <button
                             className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
-                            disabled={unlinkMutation.isPending}
+                            disabled={
+                              selection.busy || unlinkMutation.isPending
+                            }
                             onClick={() => setUnlinkTargetId(risk.id)}
                             type="button"
                           >
@@ -266,7 +282,9 @@ export function LinkIncidentRiskDialog({
                             </Button>
                             <Button
                               className="min-h-9 px-3 text-xs"
-                              disabled={unlinkMutation.isPending}
+                              disabled={
+                                selection.busy || unlinkMutation.isPending
+                              }
                               onClick={() => void unlink(risk.id)}
                               type="button"
                               variant="danger"
@@ -337,7 +355,6 @@ export function LinkIncidentRiskDialog({
                       event.preventDefault();
                       setAvailableSearch(availableDraft.trim());
                       setAvailablePage(1);
-                      form.reset({ riskId: "" });
                     }
                   }}
                   placeholder="Search by risk code or title"
@@ -349,7 +366,6 @@ export function LinkIncidentRiskDialog({
                 onClick={() => {
                   setAvailableSearch(availableDraft.trim());
                   setAvailablePage(1);
-                  form.reset({ riskId: "" });
                 }}
                 type="button"
                 variant="secondary"
@@ -378,22 +394,19 @@ export function LinkIncidentRiskDialog({
             ) : (
               <ul
                 className="space-y-2"
-                role="radiogroup"
+                role="group"
                 aria-labelledby="available-risks-heading"
               >
                 {available.map((risk) => {
-                  const isSelected = selectedRiskId === risk.id;
+                  const isSelected = Boolean(selection.selected[risk.id]);
                   return (
                     <li key={risk.id}>
                       <button
                         type="button"
-                        role="radio"
+                        role="checkbox"
                         aria-checked={isSelected}
-                        onClick={() =>
-                          form.setValue("riskId", risk.id, {
-                            shouldValidate: true,
-                          })
-                        }
+                        onClick={() => selection.toggle(risk.id, risk.riskCode)}
+                        disabled={selection.busy || unlinkMutation.isPending}
                         className={cn(
                           "border-border focus-visible:outline-brand w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
                           isSelected
@@ -412,14 +425,17 @@ export function LinkIncidentRiskDialog({
                           </div>
                           <span
                             className={cn(
-                              "grid size-4 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                              "grid size-4 shrink-0 place-items-center rounded border-2 transition-colors",
                               isSelected
                                 ? "border-brand bg-brand"
                                 : "border-border bg-surface",
                             )}
                           >
                             {isSelected ? (
-                              <span className="size-1.5 rounded-full bg-white" />
+                              <CheckCircle2
+                                aria-hidden="true"
+                                className="size-3 text-white"
+                              />
                             ) : null}
                           </span>
                         </div>
@@ -431,18 +447,12 @@ export function LinkIncidentRiskDialog({
             )}
 
             {/* Validation error */}
-            {form.formState.errors.riskId ? (
-              <p className="text-danger text-sm">
-                {form.formState.errors.riskId.message}
-              </p>
-            ) : null}
 
             {/* Pagination */}
             {options.data && options.data.pagination.totalPages > 1 ? (
               <Pagination
                 onPageChange={(page) => {
                   setAvailablePage(page);
-                  form.reset({ riskId: "" });
                 }}
                 page={options.data.pagination.page}
                 pageCount={options.data.pagination.totalPages}
@@ -452,16 +462,25 @@ export function LinkIncidentRiskDialog({
 
           {/* Footer actions */}
           <div className="border-border flex items-center justify-between border-t pt-4">
-            <div />
+            <p className="text-muted text-xs" role="status">
+              {selection.count} selected across pages
+            </p>
             <div className="flex items-center gap-3">
-              <Button variant="secondary" onClick={close} type="button">
+              <Button
+                variant="secondary"
+                onClick={close}
+                disabled={selection.busy}
+                type="button"
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={mutation.isPending || !selectedRiskId}
+                disabled={
+                  selection.busy || unlinkMutation.isPending || !selection.count
+                }
               >
-                {mutation.isPending ? (
+                {selection.busy ? (
                   <>
                     <Loader2
                       aria-hidden="true"
@@ -476,7 +495,7 @@ export function LinkIncidentRiskDialog({
                       className="size-4"
                       strokeWidth={1.8}
                     />
-                    {hasLinked ? "Link another risk" : "Link risk"}
+                    {`Link selected (${selection.count})`}
                   </>
                 )}
               </Button>
