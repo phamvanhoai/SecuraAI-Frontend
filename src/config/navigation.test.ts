@@ -18,6 +18,15 @@ function visiblePaths(
 }
 
 describe("V2 role navigation", () => {
+  it("labels an Employee approver workspace without requiring pending data", () => {
+    const items = getPanelNavigation("employee", ["EMPLOYEE"], ["risks.read", "risks.approve-acceptance"]);
+    expect(items.find((item) => item.href === "/risks")?.title).toBe("Risk Acceptance Requests");
+  });
+  it("labels the Employee Risk Owner workspace My Risks", () => {
+    const items = getPanelNavigation("employee", ["EMPLOYEE"], ["risks.read", "risks.review-reassessment"]);
+    expect(items.find((item) => item.href === "/risks")?.title).toBe("My Risks");
+    expect(getPanelNavigation("security-officer", ["SECURITY_OFFICER"], ["risks.read"]).find((item) => item.href === "/risks")?.title).toBe("Risks");
+  });
   it("recognizes only the four database roles", () => {
     expect(allowedPanels(["ADMIN"])).toEqual(["admin"]);
     expect(allowedPanels(["SECURITY_OFFICER"])).toEqual(["dashboard"]);

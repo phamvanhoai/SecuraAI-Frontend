@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import { NextResponse } from "next/server";
 import { businessServiceListQuerySchema } from "@/features/it-asset-management/schemas/business-service-schema";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -6,7 +7,7 @@ import { createBusinessServiceSchema } from "@/features/it-asset-management/sche
 export async function POST(request: Request): Promise<Response> {
   // HttpOnly cookies authenticate this BFF: reject cross-origin writes before
   // forwarding a cookie-backed request as a backend Bearer request.
-  if (request.headers.get("origin") !== new URL(request.url).origin)
+  if (!isSameOriginRequest(request))
     return NextResponse.json(
       {
         success: false,

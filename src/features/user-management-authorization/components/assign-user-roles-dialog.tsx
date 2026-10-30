@@ -298,8 +298,9 @@ function AssignmentForm({
             </div>
 
             {/* Section: Business Responsibility */}
+            {role === "EMPLOYEE" ? <>
             <fieldset
-              disabled={mutation.isPending || role !== "EMPLOYEE"}
+              disabled={mutation.isPending}
               className="space-y-3"
             >
               <div className="flex items-start gap-2 border-b border-border pb-2">
@@ -319,18 +320,6 @@ function AssignmentForm({
                 </div>
               </div>
 
-              {role !== "EMPLOYEE" ? (
-                <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
-                  <Info
-                    className="mt-0.5 size-4 shrink-0 text-brand"
-                    strokeWidth={1.8}
-                  />
-                  <p className="text-xs">
-                    Business responsibilities apply only to Employees. Other
-                    system roles retain their existing workflow rules.
-                  </p>
-                </div>
-              ) : null}
 
               {codes.length > 1 ? (
                 <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
@@ -416,6 +405,7 @@ function AssignmentForm({
                 access.
               </p>
             </div>
+            </> : null}
           </>
         ) : null}
 

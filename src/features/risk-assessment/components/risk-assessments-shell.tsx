@@ -87,10 +87,16 @@ export function RiskAssessmentsShell() {
   const params = useSearchParams();
   const query = useMemo(() => fromParams(params), [params]);
   const session = useSessionUser();
-  const canRead = Boolean(session.data);
+  const canRead = session.data?.permissions.includes("risks.read") ?? false;
+  const canReviewRequests = (session.data?.permissions.includes("risks.review-reassessment") ?? false) ||
+    (session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false);
   const canCreate = session.data?.permissions.includes("risks.create") ?? false;
+  const myRisks = Boolean(session.data?.roles.some((role) => role.code === "EMPLOYEE") && session.data.permissions.includes("risks.review-reassessment"));
+  const approvalWorkspace = !myRisks && Boolean(session.data?.roles.some((role) => role.code === "EMPLOYEE") && session.data.permissions.includes("risks.approve-acceptance"));
+  const registerTitle = myRisks ? "My Risks" : approvalWorkspace ? "Risk Acceptance Requests" : "Risk Register";
   const [view, setView] = useState<"register" | "requests">("register");
-  const risks = useRiskRegister(query, canRead && view === "register");
+  const currentView = canReviewRequests ? view : "register";
+  const risks = useRiskRegister(query, canRead && currentView === "register");
   const [draft, setDraft] = useState(query.q ?? "");
   const hasActiveFilters = Boolean(query.q || query.status || query.riskRating);
   const [editingVulnerability, setEditingVulnerability] = useState<{
@@ -251,14 +257,14 @@ export function RiskAssessmentsShell() {
               onClick={() => setInherentRisk(item)}
             />
           ) : null}
-          {item.owner?.id === session.data?.id ? (
+          {item.canAssessResidual ? (
             <RiskAction
               icon={GaugeCircle}
               label="Assess residual risk"
               onClick={() => setResidualRisk(item)}
             />
           ) : null}
-          {canCreate || item.owner?.id === session.data?.id ? (
+          {item.canManageTreatmentPlan ? (
             item.activeTreatmentPlan ? (
               <RiskAction
                 icon={Pencil}
@@ -275,7 +281,7 @@ export function RiskAssessmentsShell() {
               />
             )
           ) : null}
-          {item.owner?.id === session.data?.id ? (
+          {item.canDefineTarget ? (
             <RiskAction
               icon={Target}
               label="Define target risk"
@@ -301,15 +307,15 @@ export function RiskAssessmentsShell() {
       <div className="space-y-5">
         <ProductPageHeader
           title={
-            view === "register" ? "Risk Register" : "Reassessment Requests"
+            currentView === "register" ? registerTitle : "Reassessment Requests"
           }
           description={
-            view === "register"
-              ? "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
+            currentView === "register"
+              ? myRisks ? "Review and manage risks assigned to you." : approvalWorkspace ? "Review risks with pending acceptance requests within your approval scope." : "Review risk ratings, ownership, linked assets, controls, treatment plans, review dates, and incidents."
               : "Review incident-driven reassessment requests for risks assigned to you."
           }
           additionalActions={
-            view === "register" && canCreate ? (
+            currentView === "register" && canCreate ? (
               <CreateRiskAssessmentDialog />
             ) : null
           }
@@ -323,29 +329,29 @@ export function RiskAssessmentsShell() {
             <button
               className={cn(
                 "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
-                view === "register"
+                currentView === "register"
                   ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground",
               )}
               type="button"
               role="tab"
-              aria-selected={view === "register"}
+              aria-selected={currentView === "register"}
               onClick={() => setView("register")}
             >
               <ShieldAlert
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0",
-                  view === "register" ? "text-brand-contrast" : "text-muted",
+                  currentView === "register" ? "text-brand-contrast" : "text-muted",
                 )}
                 strokeWidth={2}
               />
-              <span className="truncate">Risk Register</span>
+              <span className="truncate">{registerTitle}</span>
               {risks.data ? (
                 <span
                   className={cn(
                     "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
-                    view === "register"
+                    currentView === "register"
                       ? "text-brand-contrast bg-white/20"
                       : "border-border bg-neutral-soft text-muted border",
                   )}
@@ -354,31 +360,31 @@ export function RiskAssessmentsShell() {
                 </span>
               ) : null}
             </button>
-            <button
+            {canReviewRequests ? <button
               className={cn(
                 "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all sm:flex-none",
-                view === "requests"
+                currentView === "requests"
                   ? "bg-brand text-brand-contrast font-semibold shadow-xs"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground",
               )}
               type="button"
               role="tab"
-              aria-selected={view === "requests"}
+              aria-selected={currentView === "requests"}
               onClick={() => setView("requests")}
             >
               <ClipboardList
                 aria-hidden="true"
                 className={cn(
                   "size-4 shrink-0",
-                  view === "requests" ? "text-brand-contrast" : "text-muted",
+                  currentView === "requests" ? "text-brand-contrast" : "text-muted",
                 )}
                 strokeWidth={2}
               />
               <span className="truncate">Reassessment Requests</span>
-            </button>
+            </button> : null}
           </div>
         </div>
-        {view === "requests" ? (
+        {currentView === "requests" && canReviewRequests ? (
           <RiskReassessmentReviewPanel enabled={canRead} />
         ) : (
           <ProductPanel title="Risk records">
@@ -502,12 +508,12 @@ export function RiskAssessmentsShell() {
                   <h3 className="mt-2 text-base font-semibold">
                     {hasActiveFilters
                       ? "No matching risks found"
-                      : "No risks found"}
+                      : myRisks ? "No risks assigned" : approvalWorkspace ? "No pending acceptance requests" : "No risks found"}
                   </h3>
                   <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                     {hasActiveFilters
                       ? "No risks match the current search and filter criteria. Try adjusting or clearing the filters."
-                      : "No risk records have been created yet."}
+                      : myRisks ? "You haven’t been assigned any risks yet." : approvalWorkspace ? "There are no risk acceptance requests awaiting your decision." : "No risk records have been created yet."}
                   </p>
                   {hasActiveFilters ? (
                     <Button

@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import "server-only";
 import { z } from "zod";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -14,11 +15,7 @@ const fail = (status: number, message: string) =>
     { status },
   );
 export async function proxyControlWrite(request: Request, id?: string) {
-  const origin = request.headers.get("origin");
-  if (
-    origin !== new URL(request.url).origin ||
-    request.headers.get("sec-fetch-site") === "cross-site"
-  )
+  if (!isSameOriginRequest(request))
     return fail(403, "Same-origin request required");
   if (!request.headers.get("content-type")?.startsWith("application/json"))
     return fail(415, "JSON body required");

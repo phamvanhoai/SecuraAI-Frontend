@@ -215,7 +215,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
               View details
             </Button>
             <div className="border-border border-t" aria-hidden="true" />
-            {item.status === "pending" ? (
+            {item.canReview ? (
               <Button
                 className="w-full justify-start border-0"
                 variant="secondary"
@@ -229,7 +229,7 @@ export function RiskReassessmentReviewPanel({ enabled }: { enabled: boolean }) {
                 />
                 {review.isPending ? "Starting…" : "Start review"}
               </Button>
-            ) : item.status === "under_review" ? (
+            ) : item.canReassess ? (
               <Button
                 className="w-full justify-start border-0"
                 variant="secondary"

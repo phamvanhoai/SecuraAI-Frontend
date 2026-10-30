@@ -51,6 +51,40 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe("ModelConfigurationDetailDialog", () => {
+  it("includes the configured explanation runtime next to the deployed engine", () => {
+    render(
+      <ModelConfigurationDetailDialog
+        configuration={configuration}
+        explanationModel={{
+          model: "qwen3:4b",
+          provider: "Ollama",
+          enabled: true,
+          purpose: "EXPLANATION_ONLY",
+          connectionStatus: "NOT_CHECKED",
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/qwen3:4b/)).toBeInTheDocument();
+    expect(screen.getByText(/Engine calculates scores/)).toBeInTheDocument();
+    expect(screen.getByText(/Connection not checked/)).toBeInTheDocument();
+  });
+  it("does not present heuristic configuration as a trained model", () => {
+    render(
+      <ModelConfigurationDetailDialog
+        configuration={{
+          ...configuration,
+          modelType: "BEHAVIORAL_HEURISTIC",
+          dataset: null,
+          latestEvaluation: null,
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Not a trained model")).toBeInTheDocument();
+    expect(screen.queryByText("Latest evaluation")).not.toBeInTheDocument();
+    expect(screen.getByText(/It is not Qwen/)).toBeInTheDocument();
+  });
   it("shows model metadata and latest evaluation metrics", () => {
     render(
       <ModelConfigurationDetailDialog

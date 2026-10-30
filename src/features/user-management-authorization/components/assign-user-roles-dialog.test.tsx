@@ -148,6 +148,8 @@ describe("Employee responsibilities", () => {
     );
     await user.click(screen.getByRole("checkbox", { name: /Control Owner/ }));
     await user.selectOptions(screen.getByLabelText("Assigned role"), "EXECUTIVE");
+    expect(screen.queryByText("Business responsibility")).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save assignment" }));
     expect(mocks.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ payload: { role: "EXECUTIVE", scopes: [] } }),

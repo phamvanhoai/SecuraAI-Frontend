@@ -72,6 +72,7 @@ describe("ControlEditor", () => {
     detail.mockReturnValue({ data: undefined });
     const close = vi.fn();
     render(<ControlEditor onClose={close} />);
+    expect(screen.queryByLabelText("Applicability *")).not.toBeInTheDocument();
     await userEvent.type(
       screen.getByLabelText("Control name *"),
       "Administrator MFA",
@@ -89,11 +90,20 @@ describe("ControlEditor", () => {
         name: "Administrator MFA",
         description: "Require MFA for privileged access",
         ownerUserId: null,
-        applicability: "under_review",
+        applicability: "applicable",
         implementationStatus: "not_implemented",
       },
     });
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  });
+  it.each(["under_review", "not_applicable"])("retains legacy %s applicability in Edit", async (applicability) => {
+    detail.mockReturnValue({ data: { ...current, applicability }, isPending: false, isError: false });
+    render(<ControlEditor controlId={current.id} onClose={vi.fn()} />);
+    expect(screen.getByLabelText("Applicability *")).toHaveValue(applicability);
+    await userEvent.type(screen.getByLabelText("Control name *"), " updated");
+    await userEvent.type(screen.getByLabelText("Reason for change *"), "Correct control metadata");
+    await userEvent.click(screen.getByRole("button", { name: "Save control" }));
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ mode: "edit", body: expect.objectContaining({ applicability }) }));
   });
   it("keeps the code read-only and blocks no-op Edit", () => {
     render(<ControlEditor controlId={current.id} onClose={vi.fn()} />);

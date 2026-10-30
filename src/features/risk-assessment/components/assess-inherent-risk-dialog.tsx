@@ -10,7 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useController, useForm, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Pagination } from "@/components/data-display/pagination";
 import { StatusBadge } from "@/components/data-display/static-product";
@@ -131,6 +131,9 @@ export function AssessInherentRiskDialog({
     resolver: zodResolver(assessInherentRiskSchema),
     defaultValues: { likelihood: 3, impact: 3, assessmentReason: "" },
   });
+
+  const { field: likelihoodField } = useController({ control, name: "likelihood" });
+  const { field: impactField } = useController({ control, name: "impact" });
 
   const [likelihood, impact] = useWatch({
     control,
@@ -621,8 +624,10 @@ export function AssessInherentRiskDialog({
                       <input
                         type="radio"
                         className="sr-only"
+                        {...likelihoodField}
                         value={criterion.value}
-                        {...register("likelihood", { valueAsNumber: true })}
+                        checked={likelihoodField.value === criterion.value}
+                        onChange={(event) => likelihoodField.onChange(Number(event.target.value))}
                       />
                       <span className="font-semibold tabular-nums">
                         {criterion.value}
@@ -678,8 +683,10 @@ export function AssessInherentRiskDialog({
                       <input
                         type="radio"
                         className="sr-only"
+                        {...impactField}
                         value={criterion.value}
-                        {...register("impact", { valueAsNumber: true })}
+                        checked={impactField.value === criterion.value}
+                        onChange={(event) => impactField.onChange(Number(event.target.value))}
                       />
                       <span className="font-semibold tabular-nums">
                         {criterion.value}

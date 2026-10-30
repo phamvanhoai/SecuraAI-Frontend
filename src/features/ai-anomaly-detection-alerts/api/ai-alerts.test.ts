@@ -10,7 +10,7 @@ const analystId = "9a9bf33a-02db-48e4-a8ad-90517278d7f2";
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("AI alert triage API", () => {
+describe("anomaly alert triage API", () => {
   it("starts triage through the authenticated BFF route", async () => {
     const result = {
       id: alertId,

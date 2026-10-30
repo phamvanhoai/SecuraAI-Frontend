@@ -55,7 +55,7 @@ export const newPolicyVersionSchema = z
     title: z.string(),
     description: z.string().nullable(),
     ownerUserId: z.uuid().nullable(),
-    policyStatus: z.literal("draft"),
+    policyStatus: z.enum(["draft", "active"]),
     version: z.object({
       id: z.uuid(),
       versionNumber: z.string(),

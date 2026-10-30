@@ -14,7 +14,7 @@ const responseData = {
   title: "Information Security Policy",
   description: null,
   ownerUserId: "00000000-0000-4000-8000-000000000001",
-  policyStatus: "draft",
+  policyStatus: "active",
   version: {
     id: "00000000-0000-4000-8000-000000000011",
     versionNumber: "1.1",
