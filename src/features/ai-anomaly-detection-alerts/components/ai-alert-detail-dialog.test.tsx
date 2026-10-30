@@ -383,11 +383,11 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.getByRole("dialog")).toHaveAttribute("open");
     expect(screen.getByText(alert.title)).toBeInTheDocument();
     expect(screen.getByText("92%")).toBeInTheDocument();
-    expect(screen.getByText("Detection risk level")).toBeInTheDocument();
+    expect(screen.getByText("Risk level")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByText("8.5")).toBeInTheDocument();
     expect(screen.getByText("authentication.failed")).toBeInTheDocument();
-    expect(screen.getByText("Windows Authentication")).toBeInTheDocument();
+    expect(screen.getAllByText("Windows Authentication")).toHaveLength(2);
     expect(screen.getByText("anomaly-detector 1.0.0")).toBeInTheDocument();
   });
 
@@ -398,12 +398,8 @@ describe("AiAlertDetailDialog", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(
-      screen.getByText("Detection risk level").parentElement,
-    ).toHaveTextContent("Not available");
-    expect(
-      screen.getByText("Detection risk score").parentElement,
-    ).toHaveTextContent("Not available");
+    expect(screen.getByText("Risk level").parentElement).toHaveTextContent("—");
+    expect(screen.getByText("Risk score").parentElement).toHaveTextContent("—");
   });
 
   it("closes through the secondary action", async () => {
