@@ -274,6 +274,7 @@ export function AiAlertDetailDialog({
                   </p>
                 </details>
                 <ExplanationData
+                  initialEvent={alert.event}
                   label="Why this alert was created"
                   value={explanation.data.featureContributions}
                   variant="contributions"
@@ -429,6 +430,7 @@ export function AiAlertDetailDialog({
 }
 
 type ExplanationDataProps = {
+  initialEvent?: AiAlert["event"];
   label: string;
   value: unknown;
   variant?: "metrics" | "contributions";
@@ -488,6 +490,7 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
 }
 
 function ExplanationData({
+  initialEvent,
   label,
   value,
   variant = "metrics",
@@ -498,7 +501,13 @@ function ExplanationData({
     variant === "contributions" ? parseContributions(value) : null;
 
   if (contributions) {
-    return <ContributionDetails label={label} contributions={contributions} />;
+    return (
+      <ContributionDetails
+        label={label}
+        contributions={contributions}
+        {...(initialEvent ? { initialEvent } : {})}
+      />
+    );
   }
 
   return (
@@ -536,11 +545,13 @@ type Contribution = {
 };
 
 function ContributionDetails({
+  initialEvent,
   label,
   contributions,
 }: {
   label: string;
   contributions: Contribution[];
+  initialEvent?: AiAlert["event"];
 }) {
   const technicalNames = new Set([
     "alert_score_update",
@@ -564,9 +575,9 @@ function ContributionDetails({
         (item.score !== null && item.score !== 0),
     )
     .slice(0, 3);
-  const correlated = contributions.filter(
-    (item) => item.name === "correlated_detection",
-  );
+  const correlated = contributions
+    .filter((item) => item.name === "correlated_detection")
+    .sort((a, b) => detectionTime(a) - detectionTime(b));
   const scoreHistory = contributions.filter(
     (item) => item.name === "alert_score_update",
   );
@@ -669,7 +680,7 @@ function ContributionDetails({
                   </p>
                   {typeof change.updatedAt === "string" ? (
                     <p className="text-muted mt-1 text-xs">
-                      {formatDate(change.updatedAt)}
+                      Updated {formatPreciseDate(change.updatedAt)}
                     </p>
                   ) : null}
                 </li>
@@ -686,8 +697,28 @@ function ContributionDetails({
           <p className="text-muted px-3 pb-3 text-xs">
             These additional detections were grouped into this alert instead of
             creating separate alerts. Each row shows its own score and event
-            time; scores are not added together.
+            time; scores are not added together. Additional detections are
+            ordered by event time, oldest first. Equal timestamps do not
+            establish an order.
           </p>
+          {initialEvent ? (
+            <div className="border-border border-t p-3 text-sm">
+              <p className="font-medium">Original alert event</p>
+              <p className="text-muted mt-1 text-xs">
+                The event that created this alert; separate from the additional
+                detections below.
+              </p>
+              <time
+                className="mt-1 block text-xs tabular-nums"
+                dateTime={initialEvent.eventTime}
+              >
+                {formatPreciseDate(initialEvent.eventTime)}
+              </time>
+              <p className="text-muted mt-1 text-xs [overflow-wrap:anywhere]">
+                Event reference: {initialEvent.id}
+              </p>
+            </div>
+          ) : null}
           <ol className="border-border divide-border max-h-64 divide-y overflow-y-auto border-t">
             {correlated.map((feature, index) => (
               <li
@@ -725,6 +756,12 @@ function ContributionDetails({
   );
 }
 
+function detectionTime(contribution: Contribution): number {
+  const value = parsedEvidence(contribution.value).occurredAt;
+  const time = typeof value === "string" ? Date.parse(value) : NaN;
+  return Number.isFinite(time) ? time : Infinity;
+}
+
 function GroupedDetection({
   value,
   number,
@@ -758,7 +795,7 @@ function GroupedDetection({
           <p className="font-medium">Related detection {number}</p>
           <p className="text-muted mt-1 text-xs tabular-nums">
             {occurredAt ? (
-              <time dateTime={occurredAt}>{formatDate(occurredAt)}</time>
+              <time dateTime={occurredAt}>{formatPreciseDate(occurredAt)}</time>
             ) : (
               "Event time not recorded"
             )}
@@ -1178,4 +1215,19 @@ function formatDate(value: string): string {
     minute: "2-digit",
     hour12: false,
   }).format(new Date(value));
+}
+
+function formatPreciseDate(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Time not recorded";
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+    hour12: false,
+  }).format(date);
 }

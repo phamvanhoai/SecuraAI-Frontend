@@ -270,6 +270,43 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.getByText("extra-event")).toBeVisible();
   });
 
+  it("orders additional detections by precise event time and identifies the original event", async () => {
+    explanationState.current.data = {
+      explanationText: "Repeated failures.",
+      featureContributions: [
+        "2026-10-30T03:00:00.900Z",
+        "2026-10-30T03:00:00.100Z",
+      ].map((occurredAt, index) => ({
+        featureName: "correlated_detection",
+        featureValue: JSON.stringify({
+          occurredAt,
+          eventId: `ordered-${index}`,
+          score: 0.85,
+        }),
+        contributionScore: null,
+        rank: 100,
+      })),
+      baselineData: null,
+      createdAt: "2026-10-30T03:00:01.000Z",
+    };
+    const { container } = render(
+      <AiAlertDetailDialog alert={alert} onClose={vi.fn()} />,
+    );
+    await userEvent.setup().click(screen.getByText("Grouped detections (2)"));
+    expect(screen.getByText("Original alert event")).toBeVisible();
+    const times = Array.from(container.querySelectorAll("time")).map(
+      (item) => item.dateTime,
+    );
+    expect(times.slice(-2)).toEqual([
+      "2026-10-30T03:00:00.100Z",
+      "2026-10-30T03:00:00.900Z",
+    ]);
+    expect(
+      container.querySelector('time[datetime="2026-10-30T03:00:00.100Z"]')
+        ?.textContent,
+    ).toMatch(/:00\.100/);
+  });
+
   it("renders correlated detections with repeated names and ranks without key warnings", () => {
     const consoleError = vi.spyOn(console, "error");
     try {
