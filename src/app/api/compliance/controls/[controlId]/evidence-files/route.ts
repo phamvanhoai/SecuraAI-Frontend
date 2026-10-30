@@ -12,8 +12,12 @@ export async function POST(request: Request, { params }: Context) {
   const { controlId } = await params;
   if (!z.uuid().safeParse(controlId).success)
     return fail(400, "Invalid Control ID");
+  // Standalone Next.js may reconstruct request.url using the container's
+  // internal hostname. Host retains the browser-facing authority and port.
+  const url = new URL(request.url);
+  const host = request.headers.get("host") ?? url.host;
   if (
-    request.headers.get("origin") !== new URL(request.url).origin ||
+    request.headers.get("origin") !== `${url.protocol}//${host}` ||
     request.headers.get("sec-fetch-site") === "cross-site"
   )
     return fail(403, "Same-origin request required");
