@@ -127,3 +127,10 @@ Employee responsibility selection is exclusive: at most one of Risk Owner, Contr
 Assess Control allows Security Officers and assigned Control Owners to record actual implementation progress alongside a new effectiveness assessment. A changed status requires a reason. The API saves the status, assessment and audit atomically and rejects a stale baseline; reopen the dialog after a stale or authorization response. Existing assessment history is preserved. No migration is required.
 
 New Control assessments derive Testing result from the internal scoring policy: below 50% Ineffective; 50% to below 80% Partially effective; 80% to 100% Effective. Users may enter a percentage or select Testing result. A different result initializes the score to 0/50/80; a score already in range is retained. The API rejects inconsistent pairs. Historical assessments are retained without applying this rule retroactively.
+
+AI Models separates detection configurations (rules, behavioral scoring and thresholds) from the explanation-only Ollama runtime reported by the backend. The configured runtime model name is not a trained detection model. Enabled does not imply connected; connectionStatus is NOT_CHECKED. Dataset/evaluation columns are omitted from the registry overview; actual non-heuristic evaluations remain available in details. Heuristic details explicitly state that the application does not train this configuration.
+
+
+Historical detection scoring: empirical-history-v1 uses recorded reference counts, finite-sample smoothing and an explicit multiple-signal adjustment, not fixed rule/severity bonuses. New statistical alerts show Historical comparison; legacy alerts retain their original point explanations. Manual results expose insufficientBaseline and must never label unscored events as normal. No attack-probability or measured precision/recall claim is implied. Backend docs/history-baseline-scoring.md specifies scope and limitations.
+
+Security Events displays durable detection status when enabled by the backend. Worker deployment and baseline requirements: ../SecuraAI-Backend/docs/durable-detection-pipeline.md.

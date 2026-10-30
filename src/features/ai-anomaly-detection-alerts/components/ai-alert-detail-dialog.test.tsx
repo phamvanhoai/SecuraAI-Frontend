@@ -98,6 +98,29 @@ beforeEach(() => {
 });
 
 describe("AiAlertDetailDialog", () => {
+  it("explains statistical rarity using actual sample counts without fixed-point terms", () => {
+    explanationState.current.data = {
+      explanationText: "Unusual compared with prior activity.",
+      featureContributions: [
+        {
+          featureName: "statistical_baseline",
+          featureValue:
+            '{"method":"empirical-history-v1","status":"READY","activeWindows":40,"windowMinutes":5,"comparisons":[{"signal":"failures_per_window","observed":20,"samples":40,"equallyOrMoreUnusual":0}]}',
+          contributionScore: 0.97560976,
+          rank: 1,
+        },
+      ],
+      baselineData: null,
+      createdAt: "2026-10-30T01:00:00Z",
+    };
+    render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
+    expect(screen.getByText("Historical comparison")).toBeVisible();
+    expect(screen.getByText(/0 of 40 historical observations/)).toBeVisible();
+    expect(
+      screen.queryByText("How the score was calculated"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("55 points")).not.toBeInTheDocument();
+  });
   it("shows score changes separately without dumping scoring snapshots", async () => {
     explanationState.current.data = {
       explanationText: "Updated priority.",
@@ -213,7 +236,8 @@ describe("AiAlertDetailDialog", () => {
         },
         {
           featureName: "correlated_detection",
-          featureValue: '{"eventId":"extra-event","score":0.9}',
+          featureValue:
+            '{"eventId":"extra-event","score":0.87,"occurredAt":"2026-10-30T03:00:00Z"}',
           contributionScore: null,
           rank: 100,
         },
@@ -237,6 +261,12 @@ describe("AiAlertDetailDialog", () => {
     ).not.toHaveAttribute("open");
     await userEvent.setup().click(grouped);
     expect(grouped.closest("details")).toHaveAttribute("open");
+    expect(screen.getByText("Related detection 1")).toBeVisible();
+    expect(screen.getByText(/30\/10\/2026/)).toBeVisible();
+    expect(screen.getByText("extra-event")).not.toBeVisible();
+    await userEvent
+      .setup()
+      .click(screen.getByText("Technical identifiers for detection 1"));
     expect(screen.getByText("extra-event")).toBeVisible();
   });
 
@@ -257,6 +287,8 @@ describe("AiAlertDetailDialog", () => {
       render(<AiAlertDetailDialog alert={alert} onClose={vi.fn()} />);
       expect(screen.getByText("event-one")).toBeInTheDocument();
       expect(screen.getByText("event-two")).toBeInTheDocument();
+      expect(screen.getAllByText("Event time not recorded")).toHaveLength(2);
+      expect(screen.getAllByText("Not recorded")).toHaveLength(2);
       expect(consoleError).not.toHaveBeenCalled();
     } finally {
       consoleError.mockRestore();

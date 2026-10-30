@@ -130,7 +130,7 @@ export function AiAlertsManager() {
     void runDetection
       .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
       .then((result) => {
-        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.`;
+        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.${result.insufficientBaseline ? ` ${result.insufficientBaseline} events could not be scored: insufficient historical baseline.` : ""}`;
         if (result.hasMore) {
           toast.warning(
             "Manual detection batch completed",
@@ -674,8 +674,8 @@ export function AiAlertsManager() {
                 />
               ) : alerts.isError ? (
                 <Alert>
-                  Unable to load Anomaly alerts. Check your session, permission, and
-                  backend connection, then try again.
+                  Unable to load Anomaly alerts. Check your session, permission,
+                  and backend connection, then try again.
                 </Alert>
               ) : alerts.data?.items.length === 0 ? (
                 <div className="py-12 text-center">

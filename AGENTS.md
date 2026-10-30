@@ -132,3 +132,6 @@ Explicit Risk Owner eligibility exposes My Risks even with zero assigned records
 Explicit Control Owner, Asset Owner and Risk Acceptance Approver eligibility also exposes their workspace with no assigned/pending records. Empty workspaces must remain visible after their last item is removed/completed. Data APIs retain ownership and pending-request scope.
 
 All new contextual detection alerts require score >= the applicable model threshold or enabled asset override. Rules supply scoring evidence and never bypass the threshold. Historical RULE_MATCH alerts remain unchanged. Scores are signal strength, not probability. Show alertsGrouped separately; preserve stored explanation and correlated evidence. Ollama never determines scores or alert creation.
+
+
+Historical detection scoring: empirical-history-v1 uses recorded reference counts, finite-sample smoothing and an explicit multiple-signal adjustment, not fixed rule/severity bonuses. New statistical alerts show Historical comparison; legacy alerts retain their original point explanations. Manual results expose insufficientBaseline and must never label unscored events as normal. No attack-probability or measured precision/recall claim is implied. Backend docs/history-baseline-scoring.md specifies scope and limitations.

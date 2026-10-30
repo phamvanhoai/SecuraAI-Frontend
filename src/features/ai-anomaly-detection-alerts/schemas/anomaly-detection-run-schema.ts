@@ -13,6 +13,7 @@ export const anomalyDetectionRunResultSchema = z.object({
   scope: z.enum(["ALL_PENDING", "LOOKBACK_WINDOW"]).default("LOOKBACK_WINDOW"),
   hasMore: z.boolean().default(false),
   eventsEvaluated: z.number().int().nonnegative(),
+  insufficientBaseline: z.number().int().nonnegative().default(0),
   anomaliesDetected: z.number().int().nonnegative(),
   detectionsCreated: z.number().int().nonnegative(),
   alertsCreated: z.number().int().nonnegative(),
