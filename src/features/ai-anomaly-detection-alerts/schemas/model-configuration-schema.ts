@@ -46,6 +46,15 @@ export const modelConfigurationSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export const modelConfigurationListSchema = z.object({
+  explanationModel: z
+    .object({
+      provider: z.literal("Ollama"),
+      model: z.string(),
+      enabled: z.boolean(),
+      purpose: z.literal("EXPLANATION_ONLY"),
+      connectionStatus: z.literal("NOT_CHECKED"),
+    })
+    .optional(),
   items: z.array(modelConfigurationSchema),
   pagination: z.object({
     page: z.number().int(),

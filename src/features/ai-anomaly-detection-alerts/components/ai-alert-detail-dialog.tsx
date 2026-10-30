@@ -191,13 +191,14 @@ export function AiAlertDetailDialog({
               title="Alert explanation"
             />
             <Alert className="border-info/25 bg-info-soft text-foreground">
-              The detection engine evaluates event-family rules and contextual
-              signals. Alerts are created only when the detection score meets
-              the applicable threshold. Scores indicate signal strength, not
-              attack probability. Repeated matches may be grouped in the
-              recorded evidence. Ollama only turns the stored evidence into
-              analyst-readable text; when unavailable, a deterministic fallback
-              explanation is shown.
+              The current detection engine compares activity with historical
+              patterns. Rules provide context, not fixed bonus points. Events
+              without sufficient history remain unscored. Alerts are created
+              only when the detection score meets the applicable threshold.
+              Scores indicate signal strength, not attack probability. Repeated
+              matches may be grouped in the recorded evidence. Ollama only turns
+              the stored evidence into analyst-readable text; when unavailable,
+              a deterministic fallback explanation is shown.
             </Alert>
             {explanation.isPending ? (
               <div
@@ -485,6 +486,7 @@ function ContributionDetails({
 }) {
   const technicalNames = new Set([
     "alert_score_update",
+    "statistical_baseline",
     "evidence_event_ids",
     "detection_group",
     "engine_version",
@@ -498,7 +500,7 @@ function ContributionDetails({
   const factors = candidates
     .filter(
       (item) =>
-        item.name === "matched_rules" ||
+        (item.name === "matched_rules" && item.value !== "[]") ||
         (item.name === "failure_count_in_window" &&
           Number(parsedEvidence(item.value).count) > 0) ||
         (item.score !== null && item.score !== 0),
@@ -624,8 +626,9 @@ function ContributionDetails({
             Grouped detections ({correlated.length})
           </summary>
           <p className="text-muted px-3 pb-3 text-xs">
-            Additional detections linked to this alert. Their scores are not
-            added together.
+            These additional detections were grouped into this alert instead of
+            creating separate alerts. Each row shows its own score and event
+            time; scores are not added together.
           </p>
           <ol className="border-border divide-border max-h-64 divide-y overflow-y-auto border-t">
             {correlated.map((feature, index) => (
@@ -633,7 +636,7 @@ function ContributionDetails({
                 className="p-3 text-sm [overflow-wrap:anywhere]"
                 key={`correlated-${index}`}
               >
-                <RecordedValue value={feature.value} />
+                <GroupedDetection value={feature.value} number={index + 1} />
               </li>
             ))}
           </ol>
@@ -660,6 +663,70 @@ function ContributionDetails({
           </dl>
         </details>
       ) : null}
+    </div>
+  );
+}
+
+function GroupedDetection({
+  value,
+  number,
+}: {
+  value: string | null;
+  number: number;
+}) {
+  const evidence = parsedEvidence(value);
+  const score =
+    typeof evidence.score === "number" &&
+    Number.isFinite(evidence.score) &&
+    evidence.score >= 0 &&
+    evidence.score <= 1
+      ? evidence.score
+      : null;
+  const occurredAt =
+    typeof evidence.occurredAt === "string" &&
+    Number.isFinite(Date.parse(evidence.occurredAt))
+      ? evidence.occurredAt
+      : null;
+  const identifiers = Object.fromEntries(
+    ["eventId", "detectionId"].flatMap((key) =>
+      typeof evidence[key] === "string" ? [[key, evidence[key]]] : [],
+    ),
+  );
+
+  return (
+    <div className="min-w-0 space-y-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium">Related detection {number}</p>
+          <p className="text-muted mt-1 text-xs tabular-nums">
+            {occurredAt ? (
+              <time dateTime={occurredAt}>{formatDate(occurredAt)}</time>
+            ) : (
+              "Event time not recorded"
+            )}
+          </p>
+        </div>
+        <p className="text-muted text-xs">
+          Detection score{" "}
+          <span className="text-foreground ml-1 font-semibold tabular-nums">
+            {score === null ? "Not recorded" : formatScore(score)}
+          </span>
+        </p>
+      </div>
+      <details>
+        <summary className="focus-visible:outline-brand min-h-10 cursor-pointer py-2 text-xs font-medium">
+          Technical identifiers for detection {number}
+        </summary>
+        <div className="text-muted pb-1 text-xs [overflow-wrap:anywhere]">
+          <RecordedValue
+            value={
+              Object.keys(identifiers).length
+                ? JSON.stringify(identifiers)
+                : value
+            }
+          />
+        </div>
+      </details>
     </div>
   );
 }
@@ -706,6 +773,7 @@ function EvidenceSummary({ contributions }: { contributions: Contribution[] }) {
   const hours = evidence("working_hours");
   const baseline = evidence("baseline_context");
   const breakdown = evidence("rule_score_breakdown");
+  const statistical = evidence("statistical_baseline");
   const terms: Array<[string, unknown]> = [
     ["Matched rule", breakdown.base],
     ["Rapid sequence of attempts", breakdown.rapidSequence],
@@ -722,6 +790,40 @@ function EvidenceSummary({ contributions }: { contributions: Contribution[] }) {
   );
   return (
     <div className="space-y-3">
+      {statistical.method === "empirical-history-v1" ? (
+        <div className="border-border rounded-lg border p-3">
+          <h6 className="text-sm font-semibold">Historical comparison</h6>
+          <p className="text-muted mt-1 text-sm">
+            Compared with {String(statistical.activeWindows)} previous active{" "}
+            {String(statistical.windowMinutes)}-minute windows. No fixed rule
+            points are added.
+          </p>
+          {Array.isArray(statistical.comparisons) ? (
+            <dl className="mt-3 space-y-3">
+              {statistical.comparisons.filter(isRecord).map((item, index) => (
+                <div key={index}>
+                  <dt className="text-sm font-medium">
+                    {signalLabel(String(item.signal))}
+                  </dt>
+                  <dd className="text-muted text-sm">
+                    Observed: {String(item.observed)}.{" "}
+                    {String(item.equallyOrMoreUnusual)} of{" "}
+                    {String(item.samples)} historical observations were equally
+                    or more unusual.
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          <p className="text-muted mt-3 text-xs">
+            Score = 100 × (1 − adjusted historical tail fraction). Each tail
+            fraction = (equally or more unusual observations + 1) / (samples +
+            1). The smallest tail is multiplied by the number of comparisons,
+            capped at 1, to account for testing several signals. This is
+            historical rarity, not attack probability.
+          </p>
+        </div>
+      ) : null}
       {hours.offHours === true ||
       (baseline.ready === true &&
         (baseline.newIp === true || baseline.newDevice === true)) ? (
@@ -798,6 +900,10 @@ function FailureSummary({ value }: { value: string | null }) {
 }
 
 const signalLabels: Record<string, string> = {
+  failures_per_window: "Failed attempts per observation window",
+  ip_rarity: "IP recurrence in successful activity",
+  device_rarity: "Device recurrence in successful activity",
+  hour_rarity: "Access-hour recurrence in successful activity",
   matched_rules: "Reason for this alert",
   failure_count_in_window: "Repeated failed attempts",
   working_hours: "Time of activity",

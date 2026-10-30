@@ -77,7 +77,11 @@ export const updateEntityMappingSchema = z.object({
   userId: z.string().uuid().nullable().optional(),
   assetId: z.string().uuid().nullable().optional(),
   monitoredAccountId: z.string().uuid().nullable().optional(),
-  reason: z.string().trim().min(1, "Reason for correction is required").max(500),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Reason for correction is required")
+    .max(500),
   confidence: z.number().min(0).max(1).optional().default(1.0),
 });
 
@@ -115,6 +119,21 @@ export const mappingOptionsSchema = z.object({
 export type MappingOptions = z.infer<typeof mappingOptionsSchema>;
 
 export const normalizedEventItemSchema = z.object({
+  detection: z
+    .object({
+      status: z.enum([
+        "PENDING",
+        "PROCESSING",
+        "INSUFFICIENT_BASELINE",
+        "FAILED",
+        "LINKED_TO_ALERT",
+        "BELOW_THRESHOLD",
+        "PREVIOUSLY_EVALUATED",
+      ]),
+      score: z.number().min(0).max(1).nullable(),
+      alertId: z.uuid().nullable(),
+    })
+    .optional(),
   id: z.string().uuid(),
   eventSourceId: z.string().uuid(),
   eventSourceName: z.string(),

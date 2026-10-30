@@ -8,7 +8,6 @@ import {
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
 import {
-  MetricStrip,
   ProductPageHeader,
   ProductPanel,
   StatusBadge,
@@ -43,11 +42,7 @@ export function ModelConfigurationsManager() {
     ...(status === "all" ? {} : { status }),
   });
   const items = models.data?.items ?? [];
-  const evaluated = items.filter((item) => item.latestEvaluation !== null);
-  const deployed = items.filter((item) => item.status === "deployed").length;
-  const averageF1 = average(
-    evaluated.map((item) => item.latestEvaluation?.f1Score ?? null),
-  );
+  const explanationModel = models.data?.explanationModel;
   const isFiltered = Boolean(modelName || status !== "all");
 
   const clearFilters = (): void => {
@@ -60,7 +55,7 @@ export function ModelConfigurationsManager() {
   const columns: readonly DataTableColumn<ModelConfiguration>[] = [
     {
       key: "model",
-      header: "Model",
+      header: "Configuration",
       cell: (item) => (
         <div className="py-0.5">
           <strong className="text-foreground block font-medium [overflow-wrap:anywhere]">
@@ -69,6 +64,20 @@ export function ModelConfigurationsManager() {
           <span className="text-muted mt-0.5 block text-xs">
             {formatModelType(item.modelType)}
           </span>
+          {item.status === "deployed" ? (
+            <div className="text-muted mt-2 space-y-0.5 text-xs">
+              <p>
+                <span className="text-foreground font-medium">
+                  Explanation:{" "}
+                </span>
+                {explanationModel
+                  ? `${explanationModel.model} · ${explanationModel.provider} · ${explanationModel.enabled ? "Enabled" : "Disabled"}`
+                  : "Configuration unavailable"}
+              </p>
+              <p>LLM explains evidence only; this engine calculates scores.</p>
+              {explanationModel ? <p>Connection not checked.</p> : null}
+            </div>
+          ) : null}
         </div>
       ),
     },
@@ -80,38 +89,6 @@ export function ModelConfigurationsManager() {
           v{item.version}
         </span>
       ),
-    },
-    {
-      key: "dataset",
-      header: "Dataset",
-      cell: (item) =>
-        item.dataset ? (
-          <span className="block min-w-36">
-            <strong className="block text-sm font-medium">
-              {item.dataset.name}
-            </strong>
-            <span className="text-muted block text-xs tabular-nums">
-              v{item.dataset.version}
-            </span>
-          </span>
-        ) : (
-          <span className="text-muted text-sm">Not linked</span>
-        ),
-    },
-    {
-      key: "f1",
-      header: "F1 score",
-      cell: (item) => formatRatio(item.latestEvaluation?.f1Score ?? null),
-    },
-    {
-      key: "precision",
-      header: "Precision",
-      cell: (item) => formatRatio(item.latestEvaluation?.precision ?? null),
-    },
-    {
-      key: "recall",
-      header: "Recall",
-      cell: (item) => formatRatio(item.latestEvaluation?.recall ?? null),
     },
     {
       key: "status",
@@ -142,8 +119,8 @@ export function ModelConfigurationsManager() {
   return (
     <>
       <ProductPageHeader
-        title="Model versions & evaluation"
-        description="Review deployed and historical anomaly-scoring configurations and their measured performance. These versions calculate detection scores; Ollama is used only to explain stored alert evidence."
+        title="Detection & explanation models"
+        description="Detection rules and behavioral scoring calculate priority. The Ollama language model explains recorded evidence; it does not calculate scores or create alerts."
         additionalActions={
           canManageThreshold ? (
             <Button onClick={() => setThresholdOpen(true)}>
@@ -158,45 +135,8 @@ export function ModelConfigurationsManager() {
         }
         showSampleNotice={false}
       />
-      <MetricStrip
-        ariaLabel="Model version metrics"
-        metrics={[
-          {
-            label: "Model versions",
-            value: models.data ? String(models.data.pagination.total) : "—",
-            detail: "All registered versions",
-            tone: "brand",
-            loading: models.isPending,
-          },
-          {
-            label: "Deployed",
-            value: models.data ? String(deployed) : "—",
-            detail: "On this page",
-            tone: "brand",
-            loading: models.isPending,
-          },
-          {
-            label: "Evaluated",
-            value: models.data ? String(evaluated.length) : "—",
-            detail: "On this page",
-            tone: "neutral",
-            loading: models.isPending,
-          },
-          {
-            label: "Average F1",
-            value: models.data
-              ? averageF1 === null
-                ? "Not evaluated"
-                : formatRatio(averageF1)
-              : "—",
-            detail: "Latest evaluations on page",
-            tone: "neutral",
-            loading: models.isPending,
-          },
-        ]}
-      />
       <ProductPanel
-        title="Model versions"
+        title="Detection configurations"
         description={
           models.isPlaceholderData && models.isFetching
             ? "Updating model versions…"
@@ -261,23 +201,14 @@ export function ModelConfigurationsManager() {
           {models.isPending ||
           (models.isPlaceholderData && models.isFetching) ? (
             <TableSkeleton
-              headers={[
-                "Model",
-                "Version",
-                "Dataset",
-                "F1 score",
-                "Precision",
-                "Recall",
-                "Status",
-                "Actions",
-              ]}
+              headers={["Configuration", "Version", "Status", "Actions"]}
               label="Loading model versions"
               rows={4}
             />
           ) : models.isError ? (
             <Alert>
-              Unable to load model versions and evaluation metrics. Check your
-              session and backend connection.
+              Unable to load detection configurations. Check your session and
+              backend connection.
             </Alert>
           ) : items.length === 0 ? (
             <div className="py-12 text-center">
@@ -324,6 +255,7 @@ export function ModelConfigurationsManager() {
       </ProductPanel>
       <ModelConfigurationDetailDialog
         configuration={viewing}
+        explanationModel={explanationModel}
         onClose={() => setViewing(null)}
       />
       <ConfigureDetectionThresholdDialog
@@ -334,15 +266,6 @@ export function ModelConfigurationsManager() {
   );
 }
 
-function average(values: readonly (number | null)[]): number | null {
-  const available = values.filter((value): value is number => value !== null);
-  return available.length
-    ? available.reduce((total, value) => total + value, 0) / available.length
-    : null;
-}
-function formatRatio(value: number | null): string {
-  return value === null ? "Not evaluated" : `${(value * 100).toFixed(1)}%`;
-}
 function formatStatus(value: ModelStatus): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
