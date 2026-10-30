@@ -1,12 +1,16 @@
 "use client";
 
 import {
+  AlertTriangle,
   Box,
   BrainCircuit,
+  Clock,
   Database,
-  LoaderCircle,
+  Info,
+  Loader2,
   Radar,
   RefreshCw,
+  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -14,7 +18,6 @@ import { useToast } from "@/components/feedback/toast";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -103,47 +106,68 @@ export function AiAlertDetailDialog({
             </div>
           </div>
 
-          <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
-            <div className="flex items-start gap-3">
+          {/* ── Detection summary ── */}
+          <div className="space-y-3">
+            <div className="border-border flex items-start gap-2 border-b pb-2">
               <Radar
                 aria-hidden="true"
-                className="text-brand mt-0.5 size-5 shrink-0"
+                className="text-brand mt-0.5 size-4 shrink-0"
                 strokeWidth={1.8}
               />
-              <div className="min-w-0">
-                <h4 className="text-sm font-semibold">Detection summary</h4>
-                <p className="text-muted mt-1 text-sm leading-6">
-                  {alert.description}
-                </p>
-              </div>
+              <h3 className="text-sm font-semibold">Detection summary</h3>
+            </div>
+            <div className="border-border bg-neutral-soft/30 rounded-xl border p-4">
+              <p className="text-muted text-sm leading-6">
+                {alert.description}
+              </p>
             </div>
           </div>
 
-          <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
+          {/* ── Context bar ── */}
+          <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-3.5 text-xs">
+            <span className="text-muted inline-flex items-center gap-1.5">
+              <Zap className="text-brand size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>
+                Detected:{" "}
+                <strong className="text-foreground font-semibold">
+                  {formatDate(alert.detectedAt)}
+                </strong>
+              </span>
+            </span>
+            <span className="text-border hidden sm:inline">·</span>
+            <span className="text-muted inline-flex items-center gap-1.5">
+              <Clock className="size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>
+                Event:{" "}
+                <strong className="text-foreground font-semibold">
+                  {formatDate(alert.event.eventTime)}
+                </strong>
+              </span>
+            </span>
+            <span className="text-border hidden sm:inline">·</span>
+            <span className="text-muted">
+              Source:{" "}
+              <strong className="text-foreground font-semibold">
+                {alert.logSource.name}
+              </strong>
+            </span>
+          </div>
+
+          {/* ── Metric cards strip ── */}
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <SummaryMetric
               label="Detection score"
               value={formatScore(alert.anomalyScore)}
             />
             <SummaryMetric
-              label="Detection risk level"
-              value={
-                alert.riskLevel
-                  ? formatRiskLevel(alert.riskLevel)
-                  : "Not available"
-              }
+              label="Risk level"
+              value={alert.riskLevel ? formatRiskLevel(alert.riskLevel) : "—"}
             />
             <SummaryMetric
-              label="Detection risk score"
-              value={
-                alert.riskScore === null
-                  ? "Not available"
-                  : String(alert.riskScore)
-              }
+              label="Risk score"
+              value={alert.riskScore === null ? "—" : String(alert.riskScore)}
             />
-            <SummaryMetric
-              label="Detected"
-              value={formatDate(alert.detectedAt)}
-            />
+            <SummaryMetric label="Alert code" value={alert.alertCode} />
           </dl>
 
           <DetailSection
@@ -151,7 +175,7 @@ export function AiAlertDetailDialog({
             id="alert-detection-context"
             title="Detection context"
           >
-            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
               <Detail label="Event type" value={alert.event.eventType} />
               <Detail
                 label="Event time"
@@ -167,7 +191,7 @@ export function AiAlertDetailDialog({
             id="alert-asset-model-context"
             title="Asset & model context"
           >
-            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+            <dl className="border-border bg-neutral-soft/30 grid gap-x-6 gap-y-4 rounded-xl border p-4 sm:grid-cols-2">
               <Detail label="Asset" value={alert.asset?.name ?? "Not linked"} />
               <Detail
                 label="Asset code"
@@ -175,7 +199,7 @@ export function AiAlertDetailDialog({
               />
               <Detail
                 label="Scoring configuration"
-                value={`${alert.model.name} ${alert.model.version}`}
+                value={alert.model.name + " " + alert.model.version}
               />
               <Detail label="Detection method" value={alert.model.provider} />
             </dl>
@@ -190,16 +214,22 @@ export function AiAlertDetailDialog({
               id="ai-decision-explanation"
               title="Alert explanation"
             />
-            <Alert className="border-info/25 bg-info-soft text-foreground">
-              The current detection engine compares activity with historical
-              patterns. Rules provide context, not fixed bonus points. Events
-              without sufficient history remain unscored. Alerts are created
-              only when the detection score meets the applicable threshold.
-              Scores indicate signal strength, not attack probability. Repeated
-              matches may be grouped in the recorded evidence. Ollama only turns
-              the stored evidence into analyst-readable text; when unavailable,
-              a deterministic fallback explanation is shown.
-            </Alert>
+            <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
+              <Info
+                className="text-brand mt-0.5 size-4 shrink-0"
+                strokeWidth={1.8}
+              />
+              <p className="text-xs leading-5">
+                The detection engine compares activity with historical patterns.
+                Rules provide context, not fixed bonus points. Events without
+                sufficient history remain unscored. Alerts are created only when
+                the detection score meets the applicable threshold. Scores
+                indicate signal strength, not attack probability. Repeated
+                matches may be grouped in the recorded evidence. Ollama only
+                turns the stored evidence into analyst-readable text; when
+                unavailable, a deterministic fallback explanation is shown.
+              </p>
+            </div>
             {explanation.isPending ? (
               <div
                 aria-label="Loading alert explanation"
@@ -210,17 +240,27 @@ export function AiAlertDetailDialog({
                 <Skeleton className="h-4 w-4/5" />
               </div>
             ) : explanation.isError ? (
-              <Alert>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span>Unable to load the alert explanation.</span>
-                  <Button
-                    onClick={() => void explanation.refetch()}
-                    variant="secondary"
-                  >
-                    Try again
-                  </Button>
+              <div
+                role="alert"
+                className="border-border bg-neutral-soft/30 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5"
+              >
+                <div className="flex items-center gap-2.5">
+                  <AlertTriangle
+                    className="text-warning size-4 shrink-0"
+                    strokeWidth={1.8}
+                  />
+                  <span className="text-sm">
+                    Unable to load the alert explanation.
+                  </span>
                 </div>
-              </Alert>
+                <Button
+                  onClick={() => void explanation.refetch()}
+                  variant="secondary"
+                  className="shrink-0"
+                >
+                  Try again
+                </Button>
+              </div>
             ) : explanation.data === null ? (
               <p className="text-muted text-sm">
                 No alert explanation has been recorded for this alert.
@@ -304,9 +344,10 @@ export function AiAlertDetailDialog({
                             onClick={() => void submitRegeneration()}
                           >
                             {regenerate.isPending ? (
-                              <LoaderCircle
+                              <Loader2
                                 aria-hidden="true"
                                 className="size-4 animate-spin"
+                                strokeWidth={2}
                               />
                             ) : (
                               <RefreshCw
@@ -322,7 +363,16 @@ export function AiAlertDetailDialog({
                         </div>
                       </div>
                       {regenerateError ? (
-                        <Alert>{regenerateError}</Alert>
+                        <div
+                          role="alert"
+                          className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5"
+                        >
+                          <AlertTriangle
+                            className="text-danger mt-0.5 size-4 shrink-0"
+                            strokeWidth={1.8}
+                          />
+                          <p className="text-xs">{regenerateError}</p>
+                        </div>
                       ) : null}
                     </div>
                   ) : (
@@ -348,14 +398,26 @@ export function AiAlertDetailDialog({
             ) : null}
           </section>
 
-          <div className="border-border bg-neutral-soft/30 rounded-lg border p-3">
-            <dl className="grid gap-3 text-xs sm:grid-cols-2">
-              <Detail label="Alert ID" value={alert.id} mono />
-              <Detail label="Event ID" value={alert.event.id} mono />
-            </dl>
+          {/* ── Metadata footer bar ── */}
+          <div className="border-border bg-neutral-soft/20 text-muted flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-xs [overflow-wrap:anywhere]">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Radar className="size-3.5 shrink-0" strokeWidth={1.8} />
+              <span>
+                Alert ID:{" "}
+                <strong className="text-foreground font-mono font-medium">
+                  {alert.id}
+                </strong>
+              </span>
+            </div>
+            <span>
+              Event ID:{" "}
+              <strong className="text-foreground font-mono font-medium">
+                {alert.event.id}
+              </strong>
+            </span>
           </div>
 
-          <div className="border-border flex justify-end border-t pt-4">
+          <div className="border-border flex items-center justify-end gap-2 border-t pt-4">
             <Button
               onClick={() => dialogRef.current?.close()}
               type="button"
@@ -420,9 +482,9 @@ function SectionHeading({
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-surface min-w-0 p-3.5">
+    <div className="border-border bg-surface min-w-0 rounded-xl border p-3.5">
       <dt className="text-muted text-xs font-medium">{label}</dt>
-      <dd className="mt-1.5 text-base font-semibold [overflow-wrap:anywhere] tabular-nums">
+      <dd className="text-foreground mt-1.5 text-base font-bold [overflow-wrap:anywhere] tabular-nums">
         {value}
       </dd>
     </div>
