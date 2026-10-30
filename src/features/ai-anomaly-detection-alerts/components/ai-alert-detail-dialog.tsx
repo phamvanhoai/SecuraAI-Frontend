@@ -154,7 +154,7 @@ export function AiAlertDetailDialog({
           </div>
 
           {/* ── Metric cards strip ── */}
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <SummaryMetric
               label="Detection score"
               value={formatScore(alert.anomalyScore)}
@@ -162,10 +162,6 @@ export function AiAlertDetailDialog({
             <SummaryMetric
               label="Risk level"
               value={alert.riskLevel ? formatRiskLevel(alert.riskLevel) : "—"}
-            />
-            <SummaryMetric
-              label="Risk score"
-              value={alert.riskScore === null ? "—" : String(alert.riskScore)}
             />
             <SummaryMetric label="Alert code" value={alert.alertCode} />
           </dl>
