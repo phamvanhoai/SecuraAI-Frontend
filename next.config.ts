@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(process.env.DOCKER_BUILD === "true" ? { output: "standalone" as const } : {}),
   reactStrictMode: true,
   allowedDevOrigins: ["127.0.0.1"],
   async headers() {
