@@ -134,3 +134,5 @@ AI Models separates detection configurations (rules, behavioral scoring and thre
 Historical detection scoring: empirical-history-v1 uses recorded reference counts, finite-sample smoothing and an explicit multiple-signal adjustment, not fixed rule/severity bonuses. New statistical alerts show Historical comparison; legacy alerts retain their original point explanations. Manual results expose insufficientBaseline and must never label unscored events as normal. No attack-probability or measured precision/recall claim is implied. Backend docs/history-baseline-scoring.md specifies scope and limitations.
 
 Security Events displays durable detection status when enabled by the backend. Worker deployment and baseline requirements: ../SecuraAI-Backend/docs/durable-detection-pipeline.md.
+
+Docker: Dockerfile builds a standalone Next.js server. Full FE/BE/worker/PostgreSQL Compose setup is documented in ../SecuraAI-Backend/docs/docker-local-demo.md. BACKEND_API_BASE_URL overrides the server-side API address at runtime; the browser retains NEXT_PUBLIC_API_BASE_URL.
