@@ -79,6 +79,12 @@ describe("Assess Inherent Risk history", () => {
       />,
     );
 
+    const disclosure = screen.getByText("Inherent risk methodology").closest("details");
+    expect(disclosure).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Inherent risk methodology"));
+    expect(disclosure).toHaveAttribute("open");
+    expect(screen.getByText(/they are not prescribed by NIST/)).toBeVisible();
+    expect(screen.queryByRole("link", { name: /View reference/ })).not.toBeInTheDocument();
     expect(
       screen.getByText("Methodology: SECURAAI-RISK-MATRIX-v1"),
     ).toBeInTheDocument();
