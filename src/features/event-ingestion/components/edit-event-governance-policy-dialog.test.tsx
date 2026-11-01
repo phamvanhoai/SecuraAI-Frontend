@@ -155,4 +155,67 @@ describe("EditEventGovernancePolicyDialog", () => {
     ).toBeInTheDocument();
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
+
+  it("displays validation error 'Retention days must be at least 1' and blocks submission when retention days is less than 1", async () => {
+    render(
+      <EditEventGovernancePolicyDialog
+        policy={samplePolicy}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const retentionInput = screen.getByLabelText(/Active Retention Period/i);
+    fireEvent.change(retentionInput, { target: { value: "0" } });
+
+    const saveButton = screen.getByRole("button", { name: /Save Policy Changes/i });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("Retention days must be at least 1")).toBeInTheDocument();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("displays validation error 'Retention days must be at least 1' and blocks submission when retention days is empty", async () => {
+    render(
+      <EditEventGovernancePolicyDialog
+        policy={samplePolicy}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const retentionInput = screen.getByLabelText(/Active Retention Period/i);
+    fireEvent.change(retentionInput, { target: { value: "" } });
+
+    const saveButton = screen.getByRole("button", { name: /Save Policy Changes/i });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("Retention days must be at least 1")).toBeInTheDocument();
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("applies recommended retention and archival when clicking Apply Recommended Retention", () => {
+    render(
+      <EditEventGovernancePolicyDialog
+        policy={{
+          ...samplePolicy,
+          purpose:
+            "Maintain audit trails of user activities and security events to comply with ISO/IEC 27001:2022 Control A.8.15",
+          retentionDays: 120,
+          archiveAfterDays: 100,
+        }}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const applyButton = screen.getByRole("button", { name: /Apply Recommended Retention/i });
+    fireEvent.click(applyButton);
+
+    const retentionInput = screen.getByLabelText(/Active Retention Period/i) as HTMLInputElement;
+    const archiveInput = screen.getByLabelText(/Cold Storage Archival After/i) as HTMLInputElement;
+
+    expect(retentionInput.value).toBe("90");
+    expect(archiveInput.value).toBe("30");
+  });
 });
