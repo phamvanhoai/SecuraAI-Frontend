@@ -413,13 +413,13 @@ export const updateApiKeyFormSchema = z.object({
     .string()
     .trim()
     .min(1, "Key name is required")
-    .max(100, "Key name must not exceed 100 characters")
+    .max(255, "Key name must not exceed 255 characters")
     .optional(),
   name: z
     .string()
     .trim()
     .min(1, "Key name is required")
-    .max(100, "Key name must not exceed 100 characters")
+    .max(255, "Key name must not exceed 255 characters")
     .optional(),
   scopes: z
     .array(z.string())

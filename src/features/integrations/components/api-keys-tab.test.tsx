@@ -398,4 +398,37 @@ describe("ApiKeysTab", () => {
       );
     });
   });
+
+  it("disables reactivate button for revoked API keys with descriptive security tooltip", async () => {
+    const revokedKey = {
+      ...mockApiKeys[1],
+      id: "99999999-9999-4999-8999-999999999999",
+      keyName: "Revoked Secret Key",
+      status: "REVOKED" as const,
+      isActive: false,
+    };
+
+    fetchMock.mockImplementation(() => {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [revokedKey] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      const disabledBtn = screen.getByRole("button", {
+        name: `Cannot reactivate revoked API key ${revokedKey.keyName}`,
+      });
+      expect(disabledBtn).toBeInTheDocument();
+      expect(disabledBtn).toBeDisabled();
+      expect(disabledBtn).toHaveAttribute(
+        "title",
+        "Revoked API keys cannot be reactivated for security reasons",
+      );
+    });
+  });
 });

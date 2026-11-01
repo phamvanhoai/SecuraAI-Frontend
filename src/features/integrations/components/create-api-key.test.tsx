@@ -196,5 +196,21 @@ describe("Create Integration API Key Workflow", () => {
     expect(ingestCheckbox).toBeDisabled();
     expect(screen.getByText("Requires Event Source")).toBeInTheDocument();
   });
-});
 
+  it("displays validation error and blocks submission when key name exceeds 255 characters", async () => {
+    const onOpenChange = vi.fn();
+    renderModal({ onOpenChange });
+
+    const nameInput = screen.getByLabelText(/key identifier name/i);
+    fireEvent.change(nameInput, { target: { value: "A".repeat(256) } });
+
+    const submitBtn = screen.getByRole("button", { name: /^create api key$/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      await screen.findByText(/Key identifier name must not exceed 255 characters/i),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+});

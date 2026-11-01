@@ -168,6 +168,11 @@ export function ApiKeyModal({
           return;
         }
 
+        if (keyName.trim().length > 255) {
+          setFormError("Key identifier name must not exceed 255 characters.");
+          return;
+        }
+
         if (scopes.length === 0) {
           setFormError("At least one authorized scope must be selected.");
           return;
@@ -200,6 +205,11 @@ export function ApiKeyModal({
       } else if (mode === "edit" && apiKey) {
         if (!keyName.trim()) {
           setFormError("Key identifier name is required.");
+          return;
+        }
+
+        if (keyName.trim().length > 255) {
+          setFormError("Key identifier name must not exceed 255 characters.");
           return;
         }
 
@@ -301,7 +311,7 @@ export function ApiKeyModal({
         </div>
       </div>
 
-      <form className="space-y-4 p-5 text-xs" onSubmit={handleSubmit}>
+      <form className="space-y-4 p-5 text-xs" onSubmit={handleSubmit} noValidate>
         {formError ? (
           <Alert className="border-danger/30 bg-danger/10 text-danger">
             {formError}
@@ -329,10 +339,12 @@ export function ApiKeyModal({
               Key Identifier Name <span className="text-danger">*</span>
             </Label>
             <Input
-              className="text-xs"
+              className={`text-xs ${formError?.includes("Key identifier name") ? "border-danger focus:border-danger" : ""}`}
               id="key-name-input"
-              maxLength={100}
-              onChange={(e) => setKeyName(e.target.value)}
+              onChange={(e) => {
+                setFormError(null);
+                setKeyName(e.target.value);
+              }}
               placeholder="e.g., Wazuh Manager HEC Ingest Key"
               required
               value={keyName}

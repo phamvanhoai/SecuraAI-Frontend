@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useToast } from "@/components/feedback/toast";
+import { ApiError } from "@/lib/api/api-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -163,6 +164,14 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
   }
 
   async function handleReactivate(key: IntegrationApiKey) {
+    if (key.status === "REVOKED") {
+      toast.error("Revoked API keys cannot be reactivated for security reasons");
+      return;
+    }
+    if (key.status === "ROTATED") {
+      toast.error("Rotated API keys cannot be reactivated. Please generate a new key.");
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         integrationId: key.integrationId || effectiveIntegrationId,
@@ -172,8 +181,14 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
         },
       });
       toast.success(`API key "${key.keyName}" reactivated`);
-    } catch {
-      toast.error("Failed to reactivate API key");
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to reactivate API key";
+      toast.error(message);
     }
   }
 
@@ -451,6 +466,16 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                             className="size-7 p-0 text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
                             onClick={() => setKeyToRevoke(key)}
                             title="Revoke this API key"
+                            type="button"
+                          >
+                            <Ban className="size-3" />
+                          </Button>
+                        ) : key.status === "REVOKED" || key.status === "ROTATED" ? (
+                          <Button
+                            aria-label={`Cannot reactivate ${key.status.toLowerCase()} API key ${key.keyName}`}
+                            className="size-7 p-0 text-muted/40 cursor-not-allowed ring-border/30 bg-surface/50 ring-1 opacity-50"
+                            disabled
+                            title={`${key.status === "REVOKED" ? "Revoked" : "Rotated"} API keys cannot be reactivated for security reasons`}
                             type="button"
                           >
                             <Ban className="size-3" />
