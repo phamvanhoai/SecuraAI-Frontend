@@ -98,7 +98,7 @@ describe("Create Integration API Key Workflow", () => {
     const preset30Days = screen.getByRole("button", { name: "30 days" });
     fireEvent.click(preset30Days);
 
-    const expiryInput = screen.getByLabelText(/expiration settings/i) as HTMLInputElement;
+    const expiryInput = screen.getByLabelText(/expiration (settings|date)/i) as HTMLInputElement;
     expect(expiryInput.value).not.toBe("");
 
     // Click "Never" preset
@@ -138,6 +138,10 @@ describe("Create Integration API Key Workflow", () => {
 
     const nameInput = screen.getByLabelText(/key identifier name/i);
     fireEvent.change(nameInput, { target: { value: "Wazuh Agent HEC Key" } });
+
+    // Select 30 days preset since expiration date is required
+    const preset30Days = screen.getByRole("button", { name: "30 days" });
+    fireEvent.click(preset30Days);
 
     const submitBtn = screen.getByRole("button", { name: /^create api key$/i });
     fireEvent.click(submitBtn);
@@ -196,5 +200,26 @@ describe("Create Integration API Key Workflow", () => {
     expect(ingestCheckbox).toBeDisabled();
     expect(screen.getByText("Requires Event Source")).toBeInTheDocument();
   });
-});
 
+  it("displays validation error when submitting with empty expiration date or Never preset", async () => {
+    const onSecretGenerated = vi.fn();
+    const onOpenChange = vi.fn();
+
+    renderModal({ onSecretGenerated, onOpenChange });
+
+    const nameInput = screen.getByLabelText(/key identifier name/i);
+    fireEvent.change(nameInput, { target: { value: "Wazuh Agent HEC Key" } });
+
+    // Click "Never" preset explicitly
+    const presetNever = screen.getByRole("button", { name: "Never" });
+    fireEvent.click(presetNever);
+
+    const submitBtn = screen.getByRole("button", { name: /^create api key$/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      screen.getByText("Expiration date is required. Non-expiring API keys are not permitted."),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
