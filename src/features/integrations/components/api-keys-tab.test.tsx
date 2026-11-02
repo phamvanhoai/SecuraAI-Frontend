@@ -335,6 +335,9 @@ describe("ApiKeysTab", () => {
 
     expect(screen.getByText("Confirm API Key Revocation")).toBeInTheDocument();
 
+    const reasonInput = screen.getByPlaceholderText(/please enter a reason/i);
+    fireEvent.change(reasonInput, { target: { value: "Security compromise rotation" } });
+
     fireEvent.click(screen.getByRole("button", { name: /confirm revocation/i }));
 
     await waitFor(() => {

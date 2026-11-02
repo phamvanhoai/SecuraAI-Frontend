@@ -66,27 +66,8 @@ describe("Revoke Integration API Key Workflow", () => {
     );
   }
 
-  it("opens confirmation dialog when Revoke Key is clicked and sends POST revoke request", async () => {
+  it("shows validation error when confirming revocation without entering reason", async () => {
     fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
-      const method = (init?.method || "GET").toUpperCase();
-      if (method === "POST") {
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              success: true,
-              data: {
-                ...sampleActiveKey,
-                status: "REVOKED",
-                isActive: false,
-              },
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-        );
-      }
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [sampleActiveKey] }), {
           status: 200,
@@ -109,23 +90,43 @@ describe("Revoke Integration API Key Workflow", () => {
       screen.getByText(/Are you sure you want to revoke the key/i),
     ).toBeInTheDocument();
 
-    // Confirm revocation
+    // Confirm revocation without reason
     const confirmButton = screen.getByRole("button", { name: "Confirm Revocation" });
     fireEvent.click(confirmButton);
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining(
-          `/api/integrations/${integrationId}/api-keys/${sampleActiveKey.id}/revoke`,
-        ),
-        expect.objectContaining({
-          method: "POST",
+    // Validation error should show
+    expect(screen.getByText("Revocation reason is required.")).toBeInTheDocument();
+  });
+
+  it("shows validation error when reason exceeds 500 characters", async () => {
+    fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [sampleActiveKey] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
         }),
       );
     });
+
+    renderTab();
+
+    const revokeButton = await screen.findByRole("button", {
+      name: `Revoke API key ${sampleActiveKey.keyName}`,
+    });
+    fireEvent.click(revokeButton);
+
+    const reasonInput = screen.getByPlaceholderText(/please enter a reason/i);
+    fireEvent.change(reasonInput, {
+      target: { value: "a".repeat(501) },
+    });
+
+    const confirmButton = screen.getByRole("button", { name: "Confirm Revocation" });
+    fireEvent.click(confirmButton);
+
+    expect(screen.getByText("Reason must not exceed 500 characters")).toBeInTheDocument();
   });
 
-  it("submits optional revocation reason when provided by the user", async () => {
+  it("submits required revocation reason when provided by the user", async () => {
     fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
       const method = (init?.method || "GET").toUpperCase();
       if (method === "POST") {
