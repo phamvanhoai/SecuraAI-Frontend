@@ -77,8 +77,25 @@ export function ApiKeyStatusBadge({ status }: { status: ApiKeyStatus }) {
 export function ApiKeysTab({ integrationId }: { integrationId?: string | undefined }) {
   const toast = useToast();
   const effectiveIntegrationId = integrationId?.trim() || "all";
+  const [searchDraft, setSearchDraft] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSearchTerm(searchDraft.trim());
+  }
+
+  function handleClearSearch() {
+    setSearchDraft("");
+    setSearchTerm("");
+  }
+
+  function handleClearAllFilters() {
+    setSearchDraft("");
+    setSearchTerm("");
+    setStatusFilter("all");
+  }
 
   const apiKeysQuery = useApiKeys({
     integrationId: effectiveIntegrationId,
@@ -219,27 +236,40 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-2">
-            {/* Search Input */}
-            <div className="relative min-w-[14rem] flex-1 sm:max-w-xs">
-              <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 pointer-events-none" />
-              <Input
-                aria-label="Search API keys"
-                className="h-8 pl-8 pr-7 text-xs"
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by key name, scope, or creator..."
-                value={searchTerm}
-              />
-              {searchTerm ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
-                  aria-label="Clear search"
-                >
-                  <X className="size-3.5" />
-                </button>
-              ) : null}
-            </div>
+            {/* Search Input with Search Button */}
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center gap-2 min-w-[16rem] flex-1 sm:max-w-sm"
+            >
+              <div className="relative flex-1">
+                <Search className="text-muted absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 pointer-events-none" />
+                <Input
+                  aria-label="Search API keys"
+                  className="h-8 min-h-8 pl-8 pr-7 text-xs"
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                  placeholder="Search by key name, scope, or creator..."
+                  value={searchDraft}
+                />
+                {searchDraft ? (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
+                    aria-label="Clear search"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+              <Button
+                type="submit"
+                variant="secondary"
+                className="h-8 min-h-8 px-3 text-xs shrink-0"
+                aria-label="Search"
+              >
+                Search
+              </Button>
+            </form>
 
             {/* Status Pills */}
             <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
@@ -321,7 +351,17 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
               ? "No integration API keys match your active filter criteria. Try adjusting keywords or status."
               : "Generate API keys to authenticate data ingest pipelines, SIEM collectors, and security event log forwarders."}
           </p>
-          {!isFilteringActive ? (
+          {isFilteringActive ? (
+            <Button
+              className="mt-4 min-h-8 px-3 text-xs gap-1.5"
+              onClick={handleClearAllFilters}
+              variant="secondary"
+              type="button"
+            >
+              <X className="size-3.5" />
+              Clear all filters
+            </Button>
+          ) : (
             <Button
               className="mt-4 min-h-8 px-3 text-xs"
               onClick={handleOpenCreate}
@@ -330,7 +370,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
               <Plus className="mr-1.5 size-3.5" />
               Generate First API Key
             </Button>
-          ) : null}
+          )}
         </div>
       ) : (
         <div className="border-border overflow-hidden rounded-lg border">
