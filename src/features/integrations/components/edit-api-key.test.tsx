@@ -192,4 +192,21 @@ describe("Edit API Key Scope & Expiration Workflow", () => {
       screen.getByText("Expiration date is required. Non-expiring API keys are not permitted."),
     ).toBeInTheDocument();
   });
+
+  it("displays validation error and blocks submission when key name exceeds 255 characters", async () => {
+    const onOpenChange = vi.fn();
+    renderEditModal({ onOpenChange });
+
+    const nameInput = screen.getByLabelText(/key identifier name/i);
+    fireEvent.change(nameInput, { target: { value: "A".repeat(256) } });
+
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    fireEvent.click(saveButton);
+
+    expect(
+      await screen.findByText(/Key identifier name must not exceed 255 characters/i),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 });

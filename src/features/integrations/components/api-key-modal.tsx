@@ -165,6 +165,11 @@ export function ApiKeyModal({
         return;
       }
 
+      if (keyName.trim().length > 255) {
+        setFormError("Key identifier name must not exceed 255 characters.");
+        return;
+      }
+
       if (mode === "create" && !effectiveSourceId) {
         setFormError("Event source selection is required");
         return;
@@ -335,7 +340,7 @@ export function ApiKeyModal({
                   : ""
               }`}
               id="key-name-input"
-              maxLength={100}
+              maxLength={255}
               onChange={(e) => {
                 setKeyName(e.target.value);
                 if (formError && formError.toLowerCase().includes("key name")) {
