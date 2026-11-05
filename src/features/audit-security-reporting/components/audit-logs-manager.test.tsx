@@ -77,6 +77,11 @@ describe("AuditLogsManager Component", () => {
         this.removeAttribute("open");
       },
     });
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
     mockUseAuditLogs.mockReturnValue({
       isLoading: false,
       isFetching: false,
@@ -186,6 +191,9 @@ describe("AuditLogsManager Component", () => {
       screen.getByText(/Cryptographic Hash Chain \(SHA-256\)/i),
     ).toBeInTheDocument();
     expect(screen.getByText("corr-12345")).toBeInTheDocument();
+    const copyIdButton = screen.getByRole("button", { name: /Copy Record ID/i });
+    expect(copyIdButton).toBeInTheDocument();
+    fireEvent.click(copyIdButton);
   });
 
   it("opens before/after changes diff dialog when clicking the FileDiff action button", async () => {
