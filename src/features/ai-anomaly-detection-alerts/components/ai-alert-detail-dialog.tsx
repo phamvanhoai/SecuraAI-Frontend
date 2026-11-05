@@ -29,9 +29,11 @@ import type { AiAlert } from "../schemas/ai-alert-schema";
 export function AiAlertDetailDialog({
   alert,
   onClose,
+  onViewSourceEvent,
 }: {
   alert: AiAlert | null;
   onClose: () => void;
+  onViewSourceEvent?: (eventId: string) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [showRegenerate, setShowRegenerate] = useState(false);
@@ -83,7 +85,7 @@ export function AiAlertDetailDialog({
       className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={closeDialog}
-      title="Anomaly alert details"
+      title="AI-detected security alert details"
     >
       {alert ? (
         <div className="space-y-6">
@@ -275,6 +277,7 @@ export function AiAlertDetailDialog({
                 </details>
                 <ExplanationData
                   initialEvent={alert.event}
+                  {...(onViewSourceEvent ? { onViewSourceEvent } : {})}
                   label="Why this alert was created"
                   value={explanation.data.featureContributions}
                   variant="contributions"
@@ -431,6 +434,7 @@ export function AiAlertDetailDialog({
 
 type ExplanationDataProps = {
   initialEvent?: AiAlert["event"];
+  onViewSourceEvent?: (eventId: string) => void;
   label: string;
   value: unknown;
   variant?: "metrics" | "contributions";
@@ -491,6 +495,7 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
 
 function ExplanationData({
   initialEvent,
+  onViewSourceEvent,
   label,
   value,
   variant = "metrics",
@@ -506,6 +511,7 @@ function ExplanationData({
         label={label}
         contributions={contributions}
         {...(initialEvent ? { initialEvent } : {})}
+        {...(onViewSourceEvent ? { onViewSourceEvent } : {})}
       />
     );
   }
@@ -546,12 +552,14 @@ type Contribution = {
 
 function ContributionDetails({
   initialEvent,
+  onViewSourceEvent,
   label,
   contributions,
 }: {
   label: string;
   contributions: Contribution[];
   initialEvent?: AiAlert["event"];
+  onViewSourceEvent?: (eventId: string) => void;
 }) {
   const technicalNames = new Set([
     "alert_score_update",
@@ -692,18 +700,16 @@ function ContributionDetails({
       {correlated.length ? (
         <details className="border-border rounded-lg border">
           <summary className="focus-visible:outline-brand cursor-pointer p-3 text-sm font-medium">
-            Grouped detections ({correlated.length})
+            Events in this alert ({correlated.length + (initialEvent ? 1 : 0)})
           </summary>
           <p className="text-muted px-3 pb-3 text-xs">
-            These additional detections were grouped into this alert instead of
-            creating separate alerts. Each row shows its own score and event
-            time; scores are not added together. Additional detections are
-            ordered by event time, oldest first. Equal timestamps do not
-            establish an order.
+            This alert contains the event that created it and the related events
+            grouped afterward. Each event can be opened in Ingested Security
+            Events. Scores are not added together.
           </p>
           {initialEvent ? (
             <div className="border-border border-t p-3 text-sm">
-              <p className="font-medium">Original alert event</p>
+              <p className="font-medium">Event 1 (created alert)</p>
               <p className="text-muted mt-1 text-xs">
                 The event that created this alert; separate from the additional
                 detections below.
@@ -715,8 +721,18 @@ function ContributionDetails({
                 {formatPreciseDate(initialEvent.eventTime)}
               </time>
               <p className="text-muted mt-1 text-xs [overflow-wrap:anywhere]">
-                Event reference: {initialEvent.id}
+                Event reference: {initialEvent.externalEventId ?? initialEvent.id}
               </p>
+              {onViewSourceEvent ? (
+                <Button
+                  className="mt-3"
+                  onClick={() => onViewSourceEvent(initialEvent.id)}
+                  type="button"
+                  variant="secondary"
+                >
+                  View ingested event
+                </Button>
+              ) : null}
             </div>
           ) : null}
           <ol className="border-border divide-border max-h-64 divide-y overflow-y-auto border-t">
@@ -725,7 +741,11 @@ function ContributionDetails({
                 className="p-3 text-sm [overflow-wrap:anywhere]"
                 key={`correlated-${index}`}
               >
-                <GroupedDetection value={feature.value} number={index + 1} />
+                <GroupedDetection
+                  value={feature.value}
+                  number={index + (initialEvent ? 2 : 1)}
+                  {...(onViewSourceEvent ? { onViewSourceEvent } : {})}
+                />
               </li>
             ))}
           </ol>
@@ -765,9 +785,11 @@ function detectionTime(contribution: Contribution): number {
 function GroupedDetection({
   value,
   number,
+  onViewSourceEvent,
 }: {
   value: string | null;
   number: number;
+  onViewSourceEvent?: (eventId: string) => void;
 }) {
   const evidence = parsedEvidence(value);
   const score =
@@ -787,12 +809,13 @@ function GroupedDetection({
       typeof evidence[key] === "string" ? [[key, evidence[key]]] : [],
     ),
   );
+  const eventId = typeof evidence.eventId === "string" ? evidence.eventId : null;
 
   return (
     <div className="min-w-0 space-y-2">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-medium">Related detection {number}</p>
+          <p className="font-medium">Event {number} (grouped)</p>
           <p className="text-muted mt-1 text-xs tabular-nums">
             {occurredAt ? (
               <time dateTime={occurredAt}>{formatPreciseDate(occurredAt)}</time>
@@ -810,7 +833,7 @@ function GroupedDetection({
       </div>
       <details>
         <summary className="focus-visible:outline-brand min-h-10 cursor-pointer py-2 text-xs font-medium">
-          Technical identifiers for detection {number}
+          Technical identifiers for event {number}
         </summary>
         <div className="text-muted pb-1 text-xs [overflow-wrap:anywhere]">
           <RecordedValue
@@ -822,6 +845,15 @@ function GroupedDetection({
           />
         </div>
       </details>
+      {eventId && onViewSourceEvent ? (
+        <Button
+          onClick={() => onViewSourceEvent(eventId)}
+          type="button"
+          variant="secondary"
+        >
+          View ingested event
+        </Button>
+      ) : null}
     </div>
   );
 }

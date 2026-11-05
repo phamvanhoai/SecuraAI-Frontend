@@ -36,6 +36,10 @@ export const aiAlertSchema = z.object({
   }),
   event: z.object({
     id: z.uuid(),
+    externalEventId: z.string().nullable().optional(),
+    eventFamily: z
+      .enum(["AUTHENTICATION", "VPN_SSO", "APPLICATION_ACCESS"])
+      .optional(),
     eventType: z.string(),
     eventTime: z.iso.datetime(),
   }),
