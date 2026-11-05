@@ -80,7 +80,7 @@ export const updateEntityMappingSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, "Reason for correction is required")
+    .min(1, "Reason for mapping correction is required.")
     .max(500),
   confidence: z.number().min(0).max(1).optional().default(1.0),
 });

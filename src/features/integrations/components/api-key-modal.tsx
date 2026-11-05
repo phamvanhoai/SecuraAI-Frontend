@@ -142,6 +142,9 @@ export function ApiKeyModal({
   }
 
   function handleSetExpiryPreset(days: number | null) {
+    if (formError && formError.toLowerCase().includes("expiration")) {
+      setFormError(null);
+    }
     if (days === null) {
       setExpiresAt("");
       return;
@@ -156,33 +159,45 @@ export function ApiKeyModal({
 
     const formattedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : null;
 
-    if (formattedExpiresAt && new Date(formattedExpiresAt).getTime() <= Date.now()) {
-      setFormError("Expiration date must be in the future.");
-      return;
+    if (mode !== "rotate") {
+      if (!keyName.trim()) {
+        setFormError("Key name cannot be empty");
+        return;
+      }
+
+      if (keyName.trim().length > 255) {
+        setFormError("Key identifier name must not exceed 255 characters.");
+        return;
+      }
+
+      if (mode === "create" && !effectiveSourceId) {
+        setFormError("Event source selection is required");
+        return;
+      }
+
+      if (scopes.length === 0) {
+        setFormError("At least one authorized scope must be selected");
+        return;
+      }
+
+      if (mode === "edit" && scopes.includes("events:ingest") && !hasSource) {
+        setFormError("Event source selection is required");
+        return;
+      }
+
+      if (!formattedExpiresAt) {
+        setFormError("Expiration date is required. Non-expiring API keys are not permitted.");
+        return;
+      }
+
+      if (new Date(formattedExpiresAt).getTime() <= Date.now()) {
+        setFormError("Expiration date must be in the future");
+        return;
+      }
     }
 
     try {
       if (mode === "create") {
-        if (!keyName.trim()) {
-          setFormError("Key identifier name is required.");
-          return;
-        }
-
-        if (keyName.trim().length > 255) {
-          setFormError("Key identifier name must not exceed 255 characters.");
-          return;
-        }
-
-        if (scopes.length === 0) {
-          setFormError("At least one authorized scope must be selected.");
-          return;
-        }
-
-        if (scopes.includes("events:ingest") && !effectiveSourceId) {
-          setFormError("The scope 'events:ingest' requires an associated event source.");
-          return;
-        }
-
         const result = await createMutation.mutateAsync({
           integrationId: effectiveSourceId ?? integrationId,
           input: {
@@ -203,26 +218,6 @@ export function ApiKeyModal({
         onOpenChange(false);
         onSecretGenerated(result.keyName, result.secret);
       } else if (mode === "edit" && apiKey) {
-        if (!keyName.trim()) {
-          setFormError("Key identifier name is required.");
-          return;
-        }
-
-        if (keyName.trim().length > 255) {
-          setFormError("Key identifier name must not exceed 255 characters.");
-          return;
-        }
-
-        if (scopes.length === 0) {
-          setFormError("At least one authorized scope must be selected.");
-          return;
-        }
-
-        if (scopes.includes("events:ingest") && !hasSource) {
-          setFormError("The scope 'events:ingest' requires an associated event source.");
-          return;
-        }
-
         await updateMutation.mutateAsync({
           integrationId,
           keyId: apiKey.id,
@@ -339,14 +334,20 @@ export function ApiKeyModal({
               Key Identifier Name <span className="text-danger">*</span>
             </Label>
             <Input
-              className={`text-xs ${formError?.includes("Key identifier name") ? "border-danger focus:border-danger" : ""}`}
+              className={`text-xs ${
+                formError && formError.toLowerCase().includes("key name")
+                  ? "border-danger focus:border-danger focus:ring-danger/20"
+                  : ""
+              }`}
               id="key-name-input"
+              maxLength={255}
               onChange={(e) => {
-                setFormError(null);
                 setKeyName(e.target.value);
+                if (formError && formError.toLowerCase().includes("key name")) {
+                  setFormError(null);
+                }
               }}
               placeholder="e.g., Wazuh Manager HEC Ingest Key"
-              required
               value={keyName}
             />
             <p className="text-muted text-[11px]">
@@ -364,11 +365,14 @@ export function ApiKeyModal({
             <select
               id="event-source-select"
               aria-label="Associated Event Source"
-              className="border-border bg-surface text-foreground h-9 w-full rounded-md border px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-brand"
+              className={`bg-surface text-foreground h-9 w-full rounded-md border px-3 py-1.5 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-brand ${formError && formError.toLowerCase().includes("event source") ? "border-danger focus:border-danger focus:ring-danger/20" : "border-border"}`}
               value={selectedSourceId}
               onChange={(e) => {
                 const newSource = e.target.value;
                 setSelectedSourceId(newSource);
+                if (formError && formError.toLowerCase().includes("event source")) {
+                  setFormError(null);
+                }
                 if (!newSource) {
                   setScopes((prev) => {
                     const filtered = prev.filter((s) => s !== "events:ingest");
@@ -460,7 +464,7 @@ export function ApiKeyModal({
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5" htmlFor="expires-at-input">
                   <Clock className="size-3.5 text-muted" />
-                  Expiration Settings
+                  <span>Expiration Date <strong className="text-danger">*</strong></span>
                 </Label>
                 <div className="flex items-center gap-1">
                   <button
@@ -495,10 +499,19 @@ export function ApiKeyModal({
               </div>
               <div className="relative">
                 <Input
-                  className="text-xs"
+                  className={`text-xs ${
+                    formError && formError.toLowerCase().includes("expiration")
+                      ? "border-danger focus:border-danger focus:ring-danger/20"
+                      : ""
+                  }`}
                   id="expires-at-input"
                   min={minExpiryDateTime}
-                  onChange={(e) => setExpiresAt(e.target.value)}
+                  onChange={(e) => {
+                    setExpiresAt(e.target.value);
+                    if (formError && formError.toLowerCase().includes("expiration")) {
+                      setFormError(null);
+                    }
+                  }}
                   type="datetime-local"
                   value={expiresAt}
                 />
@@ -506,7 +519,7 @@ export function ApiKeyModal({
               <p className="text-muted text-[11px]">
                 {expiresAt
                   ? `Key will automatically expire on ${new Date(expiresAt).toLocaleString()}.`
-                  : "Non-expiring key. Click a preset button or choose a custom future date to set expiration."}
+                  : "Expiration date is required. Click a preset button or choose a custom future date."}
               </p>
             </div>
           </>
@@ -522,10 +535,7 @@ export function ApiKeyModal({
           </Button>
           <Button
             className="min-h-8 px-4 text-xs font-medium"
-            disabled={
-              isPending ||
-              (mode !== "rotate" && (!keyName.trim() || scopes.length === 0))
-            }
+            disabled={isPending}
             type="submit"
           >
             {isPending

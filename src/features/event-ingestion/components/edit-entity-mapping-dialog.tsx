@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   useMappingOptions,
   useUpdateEventMapping,
@@ -51,6 +52,7 @@ function EditEntityMappingForm({
   );
   const [reason, setReason] = useState<string>("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [reasonError, setReasonError] = useState<string | null>(null);
 
   const userSelectId = useId();
   const assetSelectId = useId();
@@ -61,6 +63,7 @@ function EditEntityMappingForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setReasonError(null);
 
     const hasEntity =
       selectedUserId !== "NONE" ||
@@ -76,7 +79,7 @@ function EditEntityMappingForm({
 
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
-      setFormError("Reason for mapping correction is required.");
+      setReasonError("Reason for mapping correction is required.");
       return;
     }
 
@@ -111,7 +114,7 @@ function EditEntityMappingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
         {formError ? <Alert>{formError}</Alert> : null}
 
         {/* Event Context Box */}
@@ -281,12 +284,35 @@ function EditEntityMappingForm({
           <textarea
             id={reasonTextareaId}
             rows={3}
-            required
             placeholder="Explain why this mapping was updated (e.g. verified Active Directory logon IP mapping with user)..."
-            className="border-border bg-surface text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/15 w-full rounded-lg border p-2.5 text-xs outline-none focus:ring-3"
+            className={cn(
+              "bg-surface text-foreground placeholder:text-muted w-full rounded-lg border p-2.5 text-xs outline-none focus:ring-3",
+              reasonError
+                ? "border-danger focus:border-danger focus:ring-danger/15"
+                : "border-border focus:border-brand focus:ring-brand/15",
+            )}
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              if (reasonError && e.target.value.trim()) {
+                setReasonError(null);
+              }
+              if (formError) {
+                setFormError(null);
+              }
+            }}
+            aria-invalid={Boolean(reasonError)}
+            aria-describedby={reasonError ? `${reasonTextareaId}-error` : undefined}
           />
+          {reasonError ? (
+            <p
+              id={`${reasonTextareaId}-error`}
+              className="text-danger text-[11px] font-medium"
+              role="alert"
+            >
+              {reasonError}
+            </p>
+          ) : null}
         </div>
 
         <div className="text-muted flex items-start gap-1.5 text-[11px]">

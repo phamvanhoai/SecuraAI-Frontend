@@ -254,19 +254,19 @@ describe("AiAlertDetailDialog", () => {
     expect(screen.queryByText("Raises score")).not.toBeInTheDocument();
     expect(screen.getByText("Rule score")).toBeVisible();
     expect(screen.getByText("90%")).toBeVisible();
-    const grouped = screen.getByText("Grouped detections (1)");
+    const grouped = screen.getByText("Events in this alert (2)");
     expect(grouped.closest("details")).not.toHaveAttribute("open");
     expect(
       screen.getByText("Technical details").closest("details"),
     ).not.toHaveAttribute("open");
     await userEvent.setup().click(grouped);
     expect(grouped.closest("details")).toHaveAttribute("open");
-    expect(screen.getByText("Related detection 1")).toBeVisible();
+    expect(screen.getByText("Event 2 (grouped)")).toBeVisible();
     expect(screen.getByText(/30\/10\/2026/)).toBeVisible();
     expect(screen.getByText("extra-event")).not.toBeVisible();
     await userEvent
       .setup()
-      .click(screen.getByText("Technical identifiers for detection 1"));
+      .click(screen.getByText("Technical identifiers for event 2"));
     expect(screen.getByText("extra-event")).toBeVisible();
   });
 
@@ -292,8 +292,8 @@ describe("AiAlertDetailDialog", () => {
     const { container } = render(
       <AiAlertDetailDialog alert={alert} onClose={vi.fn()} />,
     );
-    await userEvent.setup().click(screen.getByText("Grouped detections (2)"));
-    expect(screen.getByText("Original alert event")).toBeVisible();
+    await userEvent.setup().click(screen.getByText("Events in this alert (3)"));
+    expect(screen.getByText("Event 1 (created alert)")).toBeVisible();
     const times = Array.from(container.querySelectorAll("time")).map(
       (item) => item.dateTime,
     );

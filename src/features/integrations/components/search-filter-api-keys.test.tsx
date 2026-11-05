@@ -179,24 +179,30 @@ describe("Search & Filter Integration API Keys Workflow", () => {
 
     const searchInput = screen.getByLabelText(/search api keys/i);
 
-    // Search by key name
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
+    expect(searchBtn).toBeInTheDocument();
+
+    // Search by key name using Search button
     fireEvent.change(searchInput, { target: { value: "suricata" } });
+    fireEvent.click(searchBtn);
     await waitFor(() => {
       expect(screen.getByText("Suricata IDS Ingest")).toBeInTheDocument();
       expect(screen.queryByText("Wazuh Production Collector")).not.toBeInTheDocument();
       expect(screen.queryByText("Legacy Firewall Forwarder")).not.toBeInTheDocument();
     });
 
-    // Search by creator name
+    // Search by creator name using Enter / form submit
     fireEvent.change(searchInput, { target: { value: "Charlie" } });
+    fireEvent.submit(searchInput.closest("form")!);
     await waitFor(() => {
       expect(screen.getByText("Legacy Firewall Forwarder")).toBeInTheDocument();
       expect(screen.queryByText("Wazuh Production Collector")).not.toBeInTheDocument();
       expect(screen.queryByText("Suricata IDS Ingest")).not.toBeInTheDocument();
     });
 
-    // Search by creator email
+    // Search by creator email using Search button
     fireEvent.change(searchInput, { target: { value: "alex@secura.ai" } });
+    fireEvent.click(searchBtn);
     await waitFor(() => {
       expect(screen.getByText("Wazuh Production Collector")).toBeInTheDocument();
       expect(screen.getByText("Expired Audit Reader")).toBeInTheDocument();
@@ -247,8 +253,10 @@ describe("Search & Filter Integration API Keys Workflow", () => {
 
     const searchInput = screen.getByLabelText(/search api keys/i);
 
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
     // Search by scope "reports:export"
     fireEvent.change(searchInput, { target: { value: "reports:export" } });
+    fireEvent.click(searchBtn);
     await waitFor(() => {
       expect(screen.getByText("Legacy Firewall Forwarder")).toBeInTheDocument();
       expect(screen.queryByText("Wazuh Production Collector")).not.toBeInTheDocument();
@@ -262,7 +270,9 @@ describe("Search & Filter Integration API Keys Workflow", () => {
     await screen.findByText("Wazuh Production Collector");
 
     const searchInput = screen.getByLabelText(/search api keys/i);
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
     fireEvent.change(searchInput, { target: { value: "NonExistentKey123456" } });
+    fireEvent.click(searchBtn);
 
     await waitFor(() => {
       expect(screen.getByText("No Matching API Keys Found")).toBeInTheDocument();
@@ -274,6 +284,33 @@ describe("Search & Filter Integration API Keys Workflow", () => {
     // Click Clear Search button (X)
     const clearSearchBtn = screen.getByRole("button", { name: /clear search/i });
     fireEvent.click(clearSearchBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Wazuh Production Collector")).toBeInTheDocument();
+      expect(screen.getByText("Suricata IDS Ingest")).toBeInTheDocument();
+      expect(screen.getByText("Legacy Firewall Forwarder")).toBeInTheDocument();
+    });
+  });
+
+  it("allows clearing all filters from empty state button", async () => {
+    renderTab();
+
+    await screen.findByText("Wazuh Production Collector");
+
+    // Filter Active and search non-existent
+    fireEvent.click(screen.getByRole("button", { name: /^active$/i }));
+    const searchInput = screen.getByLabelText(/search api keys/i);
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
+    fireEvent.change(searchInput, { target: { value: "NonExistentKey123456" } });
+    fireEvent.click(searchBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("No Matching API Keys Found")).toBeInTheDocument();
+    });
+
+    const clearAllFiltersBtn = screen.getByRole("button", { name: /clear all filters/i });
+    expect(clearAllFiltersBtn).toBeInTheDocument();
+    fireEvent.click(clearAllFiltersBtn);
 
     await waitFor(() => {
       expect(screen.getByText("Wazuh Production Collector")).toBeInTheDocument();

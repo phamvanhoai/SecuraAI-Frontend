@@ -199,6 +199,8 @@ describe("ApiKeysTab", () => {
 
     const searchInput = screen.getByPlaceholderText("Search by key name, scope, or creator...");
     fireEvent.change(searchInput, { target: { value: "Staging" } });
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
+    fireEvent.click(searchBtn);
 
     await waitFor(() => {
       expect(screen.queryByText("Production Ingestion Key")).not.toBeInTheDocument();
@@ -334,6 +336,9 @@ describe("ApiKeysTab", () => {
     );
 
     expect(screen.getByText("Confirm API Key Revocation")).toBeInTheDocument();
+
+    const reasonInput = screen.getByPlaceholderText(/please enter a reason/i);
+    fireEvent.change(reasonInput, { target: { value: "Security compromise rotation" } });
 
     fireEvent.click(screen.getByRole("button", { name: /confirm revocation/i }));
 

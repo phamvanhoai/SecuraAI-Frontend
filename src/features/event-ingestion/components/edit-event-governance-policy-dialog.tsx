@@ -37,37 +37,42 @@ const accessScopeOptions = [
 const complianceTargetPresets = [
   {
     id: "ISO_27001",
-    label: "ISO/IEC 27001:2022 A.8.15 — Logging & Monitoring Compliance Target (90 Days Active + 365 Days Archive)",
+    label: "ISO/IEC 27001:2022 A.8.15 — Logging & Monitoring Compliance Target (90 Days Active + 30 Days Cold Archival)",
     defaultPurpose:
       "Maintain audit trails of user activities and security events to comply with ISO/IEC 27001:2022 Control A.8.15",
     suggestedRetention: 90,
+    suggestedArchive: 30,
   },
   {
     id: "SOC2_TYPE2",
-    label: "SOC 2 Type II Trust Services Criteria CC6.8 / CC7.2 (180 Days Active)",
+    label: "SOC 2 Type II Trust Services Criteria CC6.8 / CC7.2 (180 Days Active + 60 Days Cold Archival)",
     defaultPurpose:
       "Maintain access and authentication telemetry records for SOC 2 Type II audit examination and forensic readiness",
     suggestedRetention: 180,
+    suggestedArchive: 60,
   },
   {
     id: "PCI_DSS",
-    label: "PCI-DSS v4.0 Requirement 10.5 & 10.7 — Audit Log History (365 Days)",
+    label: "PCI-DSS v4.0 Requirement 10.5 & 10.7 — Audit Log History (365 Days Active + 90 Days Cold Archival)",
     defaultPurpose:
       "Retain cardholder data environment access logs for 365 days in compliance with PCI-DSS Req 10.5 & 10.7",
     suggestedRetention: 365,
+    suggestedArchive: 90,
   },
   {
     id: "INTERNAL_ISMS",
-    label: "Internal Corporate ISMS Policy — Operations & AI Anomaly Detection Baseline",
+    label: "Internal Corporate ISMS Policy — Operations & AI Anomaly Detection Baseline (90 Days Active + 30 Days Cold Archival)",
     defaultPurpose:
       "Internal information security policy baseline for continuous telemetry and AI anomaly detection",
     suggestedRetention: 90,
+    suggestedArchive: 30,
   },
   {
     id: "CUSTOM",
     label: "Custom / Other Compliance Mandate",
     defaultPurpose: "",
     suggestedRetention: 90,
+    suggestedArchive: 30,
   },
 ];
 
@@ -90,7 +95,7 @@ function EditPolicyForm({
   const [name, setName] = useState(policy.name);
   const [selectedPreset, setSelectedPreset] = useState(matchedPresetInit ? matchedPresetInit.id : "CUSTOM");
   const [purpose, setPurpose] = useState(policy.purpose);
-  const [retentionDays, setRetentionDays] = useState<number>(policy.retentionDays);
+  const [retentionDays, setRetentionDays] = useState<number | string>(policy.retentionDays);
   const [archiveAfterDays, setArchiveAfterDays] = useState<string>(
     policy.archiveAfterDays !== null ? String(policy.archiveAfterDays) : "",
   );
@@ -125,7 +130,20 @@ function EditPolicyForm({
     const found = complianceTargetPresets.find((p) => p.id === selectedPreset);
     if (found && found.suggestedRetention) {
       setRetentionDays(found.suggestedRetention);
-      toast.info(`Applied ${found.suggestedRetention} days retention recommendation`);
+      clearFieldError("retentionDays");
+
+      if (found.suggestedArchive !== undefined) {
+        setArchiveAfterDays(found.suggestedArchive !== null ? String(found.suggestedArchive) : "");
+        clearFieldError("archiveAfterDays");
+      }
+
+      const archiveMsg =
+        found.suggestedArchive !== undefined && found.suggestedArchive !== null
+          ? ` and ${found.suggestedArchive} days cold archival`
+          : "";
+      toast.info(
+        `Applied ${found.suggestedRetention} days retention${archiveMsg} recommendation`,
+      );
     }
   };
 
@@ -157,6 +175,17 @@ function EditPolicyForm({
       }
     }
 
+    const retentionNum =
+      typeof retentionDays === "string"
+        ? retentionDays.trim() === ""
+          ? NaN
+          : Number(retentionDays.trim())
+        : Number(retentionDays);
+
+    if (Number.isNaN(retentionNum) || retentionNum < 1) {
+      errors.retentionDays = "Retention days must be at least 1";
+    }
+
     const archiveVal =
       archiveAfterDays.trim() === "" ? null : Number(archiveAfterDays.trim());
 
@@ -164,8 +193,8 @@ function EditPolicyForm({
       errors.archiveAfterDays = "Archival days must be a positive integer";
     }
 
-    if (archiveVal !== null && archiveVal >= retentionDays) {
-      errors.archiveAfterDays = `Archival threshold (${archiveVal}d) must be less than retention period (${retentionDays}d)`;
+    if (archiveVal !== null && !errors.retentionDays && archiveVal >= retentionNum) {
+      errors.archiveAfterDays = `Archival threshold (${archiveVal}d) must be less than retention period (${retentionNum}d)`;
     }
 
     const resolvedScope =
@@ -175,6 +204,10 @@ function EditPolicyForm({
 
     if (selectedScopeOption === "CUSTOM" && !customScope.trim()) {
       errors.accessScope = "Custom access scope cannot be empty";
+    }
+
+    if (!name.trim()) {
+      errors.name = "Policy name is required";
     }
 
     if (!purpose.trim()) {
@@ -189,7 +222,7 @@ function EditPolicyForm({
     const payload = {
       name: name.trim(),
       purpose: purpose.trim(),
-      retentionDays: Number(retentionDays),
+      retentionDays: retentionNum,
       archiveAfterDays: archiveVal,
       deletionEnabled,
       exportAllowed,
@@ -227,7 +260,7 @@ function EditPolicyForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5 pt-2">
       {formError ? <Alert>{formError}</Alert> : null}
 
       {/* Basic Information */}
@@ -358,10 +391,11 @@ function EditPolicyForm({
               value={retentionDays}
               onChange={(e) => {
                 clearFieldError("retentionDays");
-                setRetentionDays(Number(e.target.value));
+                setRetentionDays(e.target.value);
               }}
-              className="text-xs"
-              required
+              aria-invalid={fieldErrors.retentionDays ? true : undefined}
+              aria-describedby={fieldErrors.retentionDays ? "gov-policy-retention-days-error" : undefined}
+              className={`text-xs ${fieldErrors.retentionDays ? "border-danger focus:border-danger" : ""}`}
             />
             <p className="text-[11px] text-muted mt-1">
               Number of days events are retained in operational database.
@@ -382,8 +416,10 @@ function EditPolicyForm({
                 clearFieldError("archiveAfterDays");
                 setArchiveAfterDays(e.target.value);
               }}
+              aria-invalid={fieldErrors.archiveAfterDays ? true : undefined}
+              aria-describedby={fieldErrors.archiveAfterDays ? "gov-policy-archive-days-error" : undefined}
               placeholder="e.g. 30 (Leave empty if no cold archival)"
-              className="text-xs"
+              className={`text-xs ${fieldErrors.archiveAfterDays ? "border-danger focus:border-danger" : ""}`}
             />
             <p className="text-[11px] text-muted mt-1">
               Optional: Days before archiving to cold storage (must be less than retention).

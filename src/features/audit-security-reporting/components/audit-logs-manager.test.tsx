@@ -77,6 +77,11 @@ describe("AuditLogsManager Component", () => {
         this.removeAttribute("open");
       },
     });
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
     mockUseAuditLogs.mockReturnValue({
       isLoading: false,
       isFetching: false,
@@ -125,6 +130,10 @@ describe("AuditLogsManager Component", () => {
     );
     fireEvent.change(searchInput, { target: { value: "LOGIN_FAILED" } });
 
+    const searchButton = screen.getByRole("button", { name: /^Search$/i });
+    expect(searchButton).toBeInTheDocument();
+    fireEvent.click(searchButton);
+
     expect(mockUseAuditLogs).toHaveBeenCalledWith(
       expect.objectContaining({
         search: "LOGIN_FAILED",
@@ -138,6 +147,32 @@ describe("AuditLogsManager Component", () => {
     expect(screen.getByLabelText(/Action Type/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Affected Resource/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Correlation ID/i)).toBeInTheDocument();
+  });
+
+  it("submits search on Enter and clears query when clicking reset", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<AuditLogsManager />);
+
+    const searchInput = screen.getByPlaceholderText(
+      /Search by action, resource, IP, user, correlation ID/i,
+    );
+    fireEvent.change(searchInput, { target: { value: "USER_LOGOUT" } });
+    fireEvent.submit(searchInput.closest("form")!);
+
+    expect(mockUseAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: "USER_LOGOUT",
+      }),
+    );
+
+    const clearButton = screen.getByLabelText(/Clear search input/i);
+    fireEvent.click(clearButton);
+
+    expect(mockUseAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search: undefined,
+      }),
+    );
   });
 
   it("opens audit log detail dialog when clicking the Eye action button", async () => {
@@ -156,6 +191,9 @@ describe("AuditLogsManager Component", () => {
       screen.getByText(/Cryptographic Hash Chain \(SHA-256\)/i),
     ).toBeInTheDocument();
     expect(screen.getByText("corr-12345")).toBeInTheDocument();
+    const copyIdButton = screen.getByRole("button", { name: /Copy Record ID/i });
+    expect(copyIdButton).toBeInTheDocument();
+    fireEvent.click(copyIdButton);
   });
 
   it("opens before/after changes diff dialog when clicking the FileDiff action button", async () => {
