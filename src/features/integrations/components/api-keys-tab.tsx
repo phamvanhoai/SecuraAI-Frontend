@@ -117,6 +117,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
   // Revoke confirm dialog state
   const [keyToRevoke, setKeyToRevoke] = useState<IntegrationApiKey | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
+  const [revokeReasonError, setRevokeReasonError] = useState<string | null>(null);
   const revokeDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -165,15 +166,25 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
 
   async function handleConfirmRevoke() {
     if (!keyToRevoke) return;
+    const trimmedReason = revokeReason.trim();
+    if (!trimmedReason) {
+      setRevokeReasonError("Revocation reason is required.");
+      return;
+    }
+    if (trimmedReason.length > 500) {
+      setRevokeReasonError("Reason must not exceed 500 characters");
+      return;
+    }
     try {
       await revokeMutation.mutateAsync({
         integrationId: keyToRevoke.integrationId || effectiveIntegrationId,
         keyId: keyToRevoke.id,
-        reason: revokeReason.trim() || undefined,
+        reason: trimmedReason,
       });
       toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
       setKeyToRevoke(null);
       setRevokeReason("");
+      setRevokeReasonError(null);
     } catch {
       toast.error("Failed to revoke API key");
     }
@@ -556,6 +567,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
           e.preventDefault();
           setKeyToRevoke(null);
           setRevokeReason("");
+          setRevokeReasonError(null);
         }}
         ref={revokeDialogRef}
       >
@@ -584,19 +596,28 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                   htmlFor="revoke-reason"
                   className="text-[11px] font-medium text-foreground block"
                 >
-                  Revocation Reason <span className="text-muted font-normal">(Optional)</span>
+                  Revocation Reason <span className="text-danger font-semibold">*</span>
                 </label>
                 <textarea
                   id="revoke-reason"
                   rows={2}
-                  maxLength={500}
                   value={revokeReason}
-                  onChange={(e) => setRevokeReason(e.target.value)}
+                  onChange={(e) => {
+                    setRevokeReason(e.target.value);
+                    if (revokeReasonError) setRevokeReasonError(null);
+                  }}
                   placeholder="Please enter a reason for revoking this API key..."
-                  className="border-border bg-neutral-soft text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/20 w-full rounded-lg border p-2.5 text-xs outline-none transition focus:ring-2 resize-none"
+                  className={`border-border bg-neutral-soft text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/20 w-full rounded-lg border p-2.5 text-xs outline-none transition focus:ring-2 resize-none ${
+                    revokeReasonError ? "border-danger focus:border-danger focus:ring-danger/20" : ""
+                  }`}
                   disabled={revokeMutation.isPending}
                 />
-                <div className="flex justify-end text-[10px] text-muted">
+                {revokeReasonError ? (
+                  <p className="text-[11px] text-danger font-medium mt-1">
+                    {revokeReasonError}
+                  </p>
+                ) : null}
+                <div className={`flex justify-end text-[10px] ${revokeReason.length > 500 ? "text-danger font-medium" : "text-muted"}`}>
                   {revokeReason.length}/500
                 </div>
               </div>
@@ -608,6 +629,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                   onClick={() => {
                     setKeyToRevoke(null);
                     setRevokeReason("");
+                    setRevokeReasonError(null);
                   }}
                   type="button"
                 >
