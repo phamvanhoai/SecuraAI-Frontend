@@ -126,9 +126,9 @@ describe("Edit API Key Scope & Expiration Workflow", () => {
     fireEvent.click(alertScopeCheckbox);
     expect(alertScopeCheckbox).toBeChecked();
 
-    // Change expiration to Never
-    const neverPreset = screen.getByRole("button", { name: "Never" });
-    fireEvent.click(neverPreset);
+    // Select 90 days preset
+    const preset90Days = screen.getByRole("button", { name: "90 days" });
+    fireEvent.click(preset90Days);
 
     // Click Save Changes
     const saveButton = screen.getByRole("button", { name: /save changes/i });
@@ -175,5 +175,21 @@ describe("Edit API Key Scope & Expiration Workflow", () => {
         screen.getByText("Cannot modify scopes or expiration for a revoked API key."),
       ).toBeInTheDocument();
     });
+  });
+
+  it("displays validation error when attempting to set expiration date to Never", async () => {
+    renderEditModal();
+
+    // Change expiration to Never
+    const neverPreset = screen.getByRole("button", { name: "Never" });
+    fireEvent.click(neverPreset);
+
+    // Click Save Changes
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
+    fireEvent.click(saveButton);
+
+    expect(
+      screen.getByText("Expiration date is required. Non-expiring API keys are not permitted."),
+    ).toBeInTheDocument();
   });
 });

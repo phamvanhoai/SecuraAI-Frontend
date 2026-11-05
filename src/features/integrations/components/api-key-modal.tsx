@@ -142,6 +142,9 @@ export function ApiKeyModal({
   }
 
   function handleSetExpiryPreset(days: number | null) {
+    if (formError && formError.toLowerCase().includes("expiration")) {
+      setFormError(null);
+    }
     if (days === null) {
       setExpiresAt("");
       return;
@@ -156,9 +159,16 @@ export function ApiKeyModal({
 
     const formattedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : null;
 
-    if (formattedExpiresAt && new Date(formattedExpiresAt).getTime() <= Date.now()) {
-      setFormError("Expiration date must be in the future.");
-      return;
+    if (mode !== "rotate") {
+      if (!formattedExpiresAt) {
+        setFormError("Expiration date is required. Non-expiring API keys are not permitted.");
+        return;
+      }
+
+      if (new Date(formattedExpiresAt).getTime() <= Date.now()) {
+        setFormError("Expiration date must be in the future.");
+        return;
+      }
     }
 
     try {
@@ -448,7 +458,7 @@ export function ApiKeyModal({
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium flex items-center gap-1.5" htmlFor="expires-at-input">
                   <Clock className="size-3.5 text-muted" />
-                  Expiration Settings
+                  <span>Expiration Date <strong className="text-danger">*</strong></span>
                 </Label>
                 <div className="flex items-center gap-1">
                   <button
@@ -483,10 +493,19 @@ export function ApiKeyModal({
               </div>
               <div className="relative">
                 <Input
-                  className="text-xs"
+                  className={`text-xs ${
+                    formError && formError.toLowerCase().includes("expiration")
+                      ? "border-danger focus:border-danger focus:ring-danger/20"
+                      : ""
+                  }`}
                   id="expires-at-input"
                   min={minExpiryDateTime}
-                  onChange={(e) => setExpiresAt(e.target.value)}
+                  onChange={(e) => {
+                    setExpiresAt(e.target.value);
+                    if (formError && formError.toLowerCase().includes("expiration")) {
+                      setFormError(null);
+                    }
+                  }}
                   type="datetime-local"
                   value={expiresAt}
                 />
@@ -494,7 +513,7 @@ export function ApiKeyModal({
               <p className="text-muted text-[11px]">
                 {expiresAt
                   ? `Key will automatically expire on ${new Date(expiresAt).toLocaleString()}.`
-                  : "Non-expiring key. Click a preset button or choose a custom future date to set expiration."}
+                  : "Expiration date is required. Click a preset button or choose a custom future date."}
               </p>
             </div>
           </>
