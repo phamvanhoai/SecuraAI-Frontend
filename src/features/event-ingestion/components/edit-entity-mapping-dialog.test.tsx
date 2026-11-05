@@ -188,7 +188,7 @@ describe("EditEntityMappingDialog", () => {
     fireEvent.click(submitBtn);
 
     expect(
-      await screen.findByText("Reason for Correction *"),
+      await screen.findByText("Reason for mapping correction is required."),
     ).toBeInTheDocument();
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
