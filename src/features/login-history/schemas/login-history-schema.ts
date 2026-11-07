@@ -37,6 +37,13 @@ export const loginHistoryItemSchema = z.object({
   failureReason: z.string().nullable(),
 });
 export const loginHistoryListSchema = z.object({
+  summary: z
+    .object({
+      successful: z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+      accounts: z.number().int().nonnegative(),
+    })
+    .optional(),
   items: z.array(loginHistoryItemSchema),
   pagination: z.object({
     page: z.number().int().positive(),

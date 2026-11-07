@@ -194,7 +194,9 @@ export function LoginHistoryShell() {
     const nextQuery = loginHistoryQuerySchema.safeParse({
       ...query,
       page: 1,
-      ...(nextScope === "mine" ? { userId: session.data?.id } : { userId: undefined }),
+      ...(nextScope === "mine"
+        ? { userId: session.data?.id }
+        : { userId: undefined }),
     });
     if (nextQuery.success) setQuery(nextQuery.data);
   }
@@ -210,14 +212,7 @@ export function LoginHistoryShell() {
     filters.to,
     filters.ipAddress,
   ].filter(Boolean).length;
-  const pageItems = history.data?.items ?? [];
-  const successfulOnPage = pageItems.filter(
-    (item) => item.status === "success",
-  ).length;
-  const failedOnPage = pageItems.length - successfulOnPage;
-  const uniqueAccountsOnPage = new Set(
-    pageItems.map((item) => item.userId ?? item.email),
-  ).size;
+  const summary = history.data?.summary;
 
   return (
     <>
@@ -257,22 +252,22 @@ export function LoginHistoryShell() {
           },
           {
             label: "Successful",
-            value: history.data ? String(successfulOnPage) : "—",
-            detail: "On this page",
+            value: summary ? String(summary.successful) : "—",
+            detail: "Matching current filters",
             tone: "neutral",
             loading: history.isPending,
           },
           {
             label: "Failed",
-            value: history.data ? String(failedOnPage) : "—",
-            detail: "On this page",
-            tone: failedOnPage > 0 ? "danger" : "neutral",
+            value: summary ? String(summary.failed) : "—",
+            detail: "Matching current filters",
+            tone: (summary?.failed ?? 0) > 0 ? "danger" : "neutral",
             loading: history.isPending,
           },
           {
             label: "Accounts",
-            value: history.data ? String(uniqueAccountsOnPage) : "—",
-            detail: "Unique accounts on this page",
+            value: summary ? String(summary.accounts) : "—",
+            detail: "Known accounts matching filters",
             tone: "neutral",
             loading: history.isPending,
           },
@@ -280,7 +275,11 @@ export function LoginHistoryShell() {
       />
       {!isEmployee ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs" role="tablist" aria-label="Login history scope">
+          <div
+            className="border-border bg-surface inline-flex items-center gap-1 rounded-xl border p-1 shadow-xs"
+            role="tablist"
+            aria-label="Login history scope"
+          >
             {(["organization", "mine"] as const).map((tab) => (
               <button
                 key={tab}
@@ -290,7 +289,9 @@ export function LoginHistoryShell() {
                 className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all ${scope === tab ? "bg-brand text-brand-contrast font-semibold shadow-xs" : "text-muted hover:bg-neutral-soft hover:text-foreground"}`}
                 onClick={() => changeScope(tab)}
               >
-                <span>{tab === "organization" ? "Organization" : "My activity"}</span>
+                <span>
+                  {tab === "organization" ? "Organization" : "My activity"}
+                </span>
               </button>
             ))}
           </div>

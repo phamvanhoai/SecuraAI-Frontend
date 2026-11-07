@@ -48,8 +48,10 @@ const mappingStatusTones = {
 } as const;
 
 const familyStyles: Record<string, string> = {
-  AUTHENTICATION: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
-  VPN_SSO: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+  AUTHENTICATION:
+    "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  VPN_SSO:
+    "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
   APPLICATION_ACCESS:
     "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20",
 };
@@ -95,7 +97,9 @@ export function NormalizedEventsList() {
     page,
     limit: 20,
     ...(searchQuery ? { q: searchQuery } : {}),
-    ...(familyFilter !== "ALL" ? { eventFamily: familyFilter as EventFamily } : {}),
+    ...(familyFilter !== "ALL"
+      ? { eventFamily: familyFilter as EventFamily }
+      : {}),
     ...(sourceFilter !== "ALL" ? { eventSourceId: sourceFilter } : {}),
     ...(statusFilter !== "ALL"
       ? { mappingStatus: statusFilter as MappingStatus }
@@ -111,14 +115,14 @@ export function NormalizedEventsList() {
 
   const hasActiveFilters = Boolean(
     searchQuery ||
-      familyFilter !== "ALL" ||
-      sourceFilter !== "ALL" ||
-      statusFilter !== "ALL" ||
-      sourceIpFilter ||
-      accountFilter ||
-      assetFilter ||
-      fromDateFilter ||
-      toDateFilter,
+    familyFilter !== "ALL" ||
+    sourceFilter !== "ALL" ||
+    statusFilter !== "ALL" ||
+    sourceIpFilter ||
+    accountFilter ||
+    assetFilter ||
+    fromDateFilter ||
+    toDateFilter,
   );
 
   const activeFilterCount = [
@@ -196,7 +200,7 @@ export function NormalizedEventsList() {
       header: "Source",
       cell: (item) => (
         <div className="py-0.5">
-          <strong className="text-foreground block font-medium text-xs">
+          <strong className="text-foreground block text-xs font-medium">
             {item.eventSourceName}
           </strong>
           <span className="text-muted font-mono text-[11px]">
@@ -211,7 +215,7 @@ export function NormalizedEventsList() {
       cell: (item) => (
         <span
           className={cn(
-            "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+            "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase",
             familyStyles[item.eventFamily] ??
               "border-border bg-neutral-soft/60 text-foreground",
           )}
@@ -224,8 +228,8 @@ export function NormalizedEventsList() {
       key: "eventType",
       header: "Event type",
       cell: (item) => (
-        <div className="py-0.5 flex items-center gap-1.5 flex-wrap">
-          <span className="text-foreground font-mono text-xs font-semibold block">
+        <div className="flex flex-wrap items-center gap-1.5 py-0.5">
+          <span className="text-foreground block font-mono text-xs font-semibold">
             {item.eventType}
           </span>
           {item.anomalyCount > 0 ? (
@@ -241,12 +245,12 @@ export function NormalizedEventsList() {
       key: "identity",
       header: "User / Account",
       cell: (item) => (
-        <div className="py-0.5 space-y-0.5">
-          <span className="text-foreground font-mono text-xs font-medium block">
+        <div className="space-y-0.5 py-0.5">
+          <span className="text-foreground block font-mono text-xs font-medium">
             {item.accountIdentifier ?? "—"}
           </span>
           {item.mappedUser ? (
-            <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-medium flex items-center gap-1">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               <UserCheck className="size-3" />
               <span>{item.mappedUser.fullName ?? item.mappedUser.email}</span>
             </span>
@@ -263,7 +267,7 @@ export function NormalizedEventsList() {
         <div className="py-0.5">
           {item.mappedAsset ? (
             <div className="space-y-0.5">
-              <span className="text-foreground font-medium text-xs block">
+              <span className="text-foreground block text-xs font-medium">
                 {item.mappedAsset.name}
               </span>
               <span className="text-muted font-mono text-[10px]">
@@ -286,9 +290,37 @@ export function NormalizedEventsList() {
       key: "status",
       header: "Processing status",
       cell: (item) => (
-        <StatusBadge tone={mappingStatusTones[item.mappingStatus] ?? "neutral"}>
-          {item.mappingStatus.replace(/_/g, " ")}
-        </StatusBadge>
+        <div className="space-y-1">
+          <StatusBadge
+            tone={mappingStatusTones[item.mappingStatus] ?? "neutral"}
+          >
+            {item.mappingStatus.replace(/_/g, " ")}
+          </StatusBadge>
+          {item.detection ? (
+            <div className="text-muted text-xs">
+              <p>
+                {item.detection.status === "BELOW_THRESHOLD"
+                  ? "Evaluated — below threshold"
+                  : item.detection.status === "LINKED_TO_ALERT"
+                    ? "Linked to alert"
+                    : item.detection.status
+                        .replaceAll("_", " ")
+                        .toLowerCase()
+                        .replace(/^./, (s) => s.toUpperCase())}
+              </p>
+              {item.detection.score !== null ? (
+                <p>
+                  Historical anomaly: {(item.detection.score * 100).toFixed(1)}%
+                </p>
+              ) : null}
+              {item.detection.alertId ? (
+                <p className="font-mono">
+                  ALT-{item.detection.alertId.slice(0, 8).toUpperCase()}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -298,7 +330,7 @@ export function NormalizedEventsList() {
         <Button
           type="button"
           variant="secondary"
-          className="min-h-7 py-0.5 px-2 text-xs flex items-center gap-1"
+          className="flex min-h-7 items-center gap-1 px-2 py-0.5 text-xs"
           onClick={() => {
             setSelectedEventId(item.id);
             setIsDetailOpen(true);
@@ -317,22 +349,22 @@ export function NormalizedEventsList() {
         title="Ingested Security Events"
         description="Centralized stream of normalized security events with source telemetry, identity, and asset resolution."
       >
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           {/* Top Filter Bar */}
           <div className="space-y-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               {/* Free Text Search */}
               <form
                 onSubmit={handleSearchSubmit}
-                className="flex items-center gap-2 flex-1 max-w-md"
+                className="flex max-w-md flex-1 items-center gap-2"
               >
                 <div className="relative flex-1">
-                  <Search className="text-muted absolute left-3 top-1/2 -translate-y-1/2 size-4 pointer-events-none" />
+                  <Search className="text-muted pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     id={searchInputId}
                     type="search"
                     placeholder="Search event type, account, IP, asset..."
-                    className="pl-9 pr-8"
+                    className="pr-8 pl-9"
                     value={searchDraft}
                     onChange={(e) => setSearchDraft(e.target.value)}
                   />
@@ -340,7 +372,7 @@ export function NormalizedEventsList() {
                     <button
                       type="button"
                       aria-label="Clear search text"
-                      className="text-muted hover:text-foreground absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5"
+                      className="text-muted hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 p-0.5"
                       onClick={() => {
                         setSearchDraft("");
                         setSearchQuery("");
@@ -351,7 +383,11 @@ export function NormalizedEventsList() {
                     </button>
                   ) : null}
                 </div>
-                <Button type="submit" variant="secondary" className="text-xs px-3">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  className="px-3 text-xs"
+                >
                   Search
                 </Button>
               </form>
@@ -425,13 +461,15 @@ export function NormalizedEventsList() {
                 <Button
                   type="button"
                   variant={isAdvancedFiltersOpen ? "primary" : "secondary"}
-                  className="h-9 text-xs flex items-center gap-1.5"
-                  onClick={() => setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)}
+                  className="flex h-9 items-center gap-1.5 text-xs"
+                  onClick={() =>
+                    setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)
+                  }
                 >
                   <Filter className="size-3.5" />
                   <span>Filters</span>
                   {activeFilterCount > 0 ? (
-                    <span className="inline-flex size-4 items-center justify-center rounded-full bg-brand-soft text-[10px] font-bold text-brand">
+                    <span className="bg-brand-soft text-brand inline-flex size-4 items-center justify-center rounded-full text-[10px] font-bold">
                       {activeFilterCount}
                     </span>
                   ) : null}
@@ -447,7 +485,7 @@ export function NormalizedEventsList() {
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-9 text-xs text-muted hover:text-foreground flex items-center gap-1"
+                    className="text-muted hover:text-foreground flex h-9 items-center gap-1 text-xs"
                     onClick={handleClearAllFilters}
                   >
                     <RotateCcw className="size-3.5" />
@@ -459,13 +497,13 @@ export function NormalizedEventsList() {
 
             {/* Collapsible Advanced Filters Panel */}
             {isAdvancedFiltersOpen ? (
-              <div className="rounded-lg border border-border bg-neutral-soft/30 p-3.5 space-y-3">
+              <div className="border-border bg-neutral-soft/30 space-y-3 rounded-lg border p-3.5">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {/* Time Range: From */}
                   <div>
                     <label
                       htmlFor={fromDateInputId}
-                      className="text-muted block text-xs font-medium mb-1"
+                      className="text-muted mb-1 block text-xs font-medium"
                     >
                       From Date
                     </label>
@@ -485,7 +523,7 @@ export function NormalizedEventsList() {
                   <div>
                     <label
                       htmlFor={toDateInputId}
-                      className="text-muted block text-xs font-medium mb-1"
+                      className="text-muted mb-1 block text-xs font-medium"
                     >
                       To Date
                     </label>
@@ -505,7 +543,7 @@ export function NormalizedEventsList() {
                   <div>
                     <label
                       htmlFor={sourceIpInputId}
-                      className="text-muted block text-xs font-medium mb-1"
+                      className="text-muted mb-1 block text-xs font-medium"
                     >
                       Source IP Address
                     </label>
@@ -518,7 +556,7 @@ export function NormalizedEventsList() {
                         setSourceIpFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="h-8 text-xs font-mono"
+                      className="h-8 font-mono text-xs"
                     />
                   </div>
 
@@ -526,7 +564,7 @@ export function NormalizedEventsList() {
                   <div>
                     <label
                       htmlFor={accountInputId}
-                      className="text-muted block text-xs font-medium mb-1"
+                      className="text-muted mb-1 block text-xs font-medium"
                     >
                       User Account
                     </label>
@@ -539,18 +577,18 @@ export function NormalizedEventsList() {
                         setAccountFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="h-8 text-xs font-mono"
+                      className="h-8 font-mono text-xs"
                     />
                   </div>
                 </div>
 
                 {/* Second row of advanced filters */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
+                <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {/* Associated Asset Filter */}
                   <div>
                     <label
                       htmlFor={assetInputId}
-                      className="text-muted block text-xs font-medium mb-1"
+                      className="text-muted mb-1 block text-xs font-medium"
                     >
                       Associated Asset
                     </label>
@@ -569,14 +607,14 @@ export function NormalizedEventsList() {
 
                   {/* Time Range Quick Presets */}
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <span className="text-muted block text-xs font-medium mb-1">
+                    <span className="text-muted mb-1 block text-xs font-medium">
                       Quick Time Presets
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Button
                         type="button"
                         variant="secondary"
-                        className="h-8 text-xs px-2.5 py-1 flex items-center gap-1"
+                        className="flex h-8 items-center gap-1 px-2.5 py-1 text-xs"
                         onClick={() => handleTimePreset("24h")}
                       >
                         <Calendar className="size-3" />
@@ -585,7 +623,7 @@ export function NormalizedEventsList() {
                       <Button
                         type="button"
                         variant="secondary"
-                        className="h-8 text-xs px-2.5 py-1 flex items-center gap-1"
+                        className="flex h-8 items-center gap-1 px-2.5 py-1 text-xs"
                         onClick={() => handleTimePreset("7d")}
                       >
                         <Calendar className="size-3" />
@@ -594,17 +632,17 @@ export function NormalizedEventsList() {
                       <Button
                         type="button"
                         variant="secondary"
-                        className="h-8 text-xs px-2.5 py-1 flex items-center gap-1"
+                        className="flex h-8 items-center gap-1 px-2.5 py-1 text-xs"
                         onClick={() => handleTimePreset("30d")}
                       >
                         <Calendar className="size-3" />
                         <span>Last 30 Days</span>
                       </Button>
-                      {(fromDateFilter || toDateFilter) ? (
+                      {fromDateFilter || toDateFilter ? (
                         <Button
                           type="button"
                           variant="secondary"
-                          className="h-8 text-xs px-2 text-muted hover:text-foreground"
+                          className="text-muted hover:text-foreground h-8 px-2 text-xs"
                           onClick={() => {
                             setFromDateFilter("");
                             setToDateFilter("");
@@ -623,11 +661,11 @@ export function NormalizedEventsList() {
             {/* Active Filter Tags */}
             {hasActiveFilters ? (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-muted text-[11px] font-medium mr-1">
+                <span className="text-muted mr-1 text-[11px] font-medium">
                   Active criteria:
                 </span>
                 {searchQuery ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>Query: &quot;{searchQuery}&quot;</span>
                     <button
                       type="button"
@@ -644,8 +682,10 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {familyFilter !== "ALL" ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
-                    <span>Family: {formatFamilyLabel[familyFilter] ?? familyFilter}</span>
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
+                    <span>
+                      Family: {formatFamilyLabel[familyFilter] ?? familyFilter}
+                    </span>
                     <button
                       type="button"
                       onClick={() => {
@@ -660,11 +700,13 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {sourceFilter !== "ALL" ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>
                       Source:{" "}
-                      {eventSourcesQuery.data?.items.find((s: { id: string; name?: string }) => s.id === sourceFilter)?.name ??
-                        sourceFilter}
+                      {eventSourcesQuery.data?.items.find(
+                        (s: { id: string; name?: string }) =>
+                          s.id === sourceFilter,
+                      )?.name ?? sourceFilter}
                     </span>
                     <button
                       type="button"
@@ -680,7 +722,7 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {statusFilter !== "ALL" ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>Status: {statusFilter.replace(/_/g, " ")}</span>
                     <button
                       type="button"
@@ -696,7 +738,7 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {sourceIpFilter ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>IP: {sourceIpFilter}</span>
                     <button
                       type="button"
@@ -712,7 +754,7 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {accountFilter ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>Account: {accountFilter}</span>
                     <button
                       type="button"
@@ -728,7 +770,7 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {assetFilter ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>Asset: {assetFilter}</span>
                     <button
                       type="button"
@@ -744,9 +786,10 @@ export function NormalizedEventsList() {
                   </span>
                 ) : null}
                 {fromDateFilter || toDateFilter ? (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-0.5 text-xs text-foreground">
+                  <span className="border-border bg-surface text-foreground inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs">
                     <span>
-                      Time: {fromDateFilter || "Start"} → {toDateFilter || "Now"}
+                      Time: {fromDateFilter || "Start"} →{" "}
+                      {toDateFilter || "Now"}
                     </span>
                     <button
                       type="button"
@@ -773,7 +816,7 @@ export function NormalizedEventsList() {
           ) : eventsQuery.data.items.length === 0 ? (
             <div className="py-12 text-center">
               <Layers className="text-muted mx-auto mb-3 size-10" />
-              <h3 className="text-foreground font-semibold text-base">
+              <h3 className="text-foreground text-base font-semibold">
                 {hasActiveFilters
                   ? "No matching security events found"
                   : "No security events found"}
@@ -798,7 +841,7 @@ export function NormalizedEventsList() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between text-xs text-muted">
+              <div className="text-muted flex items-center justify-between text-xs">
                 <span>
                   Showing {eventsQuery.data.items.length} of{" "}
                   {eventsQuery.data.pagination.total} security events
@@ -831,4 +874,3 @@ export function NormalizedEventsList() {
     </div>
   );
 }
-

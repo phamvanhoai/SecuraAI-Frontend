@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -7,7 +8,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ serviceId: string }> },
 ): Promise<Response> {
-  if (request.headers.get("origin") !== new URL(request.url).origin)
+  if (!isSameOriginRequest(request))
     return NextResponse.json(
       {
         success: false,

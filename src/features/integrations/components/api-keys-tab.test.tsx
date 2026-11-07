@@ -199,6 +199,8 @@ describe("ApiKeysTab", () => {
 
     const searchInput = screen.getByPlaceholderText("Search by key name, scope, or creator...");
     fireEvent.change(searchInput, { target: { value: "Staging" } });
+    const searchBtn = screen.getByRole("button", { name: /^Search$/i });
+    fireEvent.click(searchBtn);
 
     await waitFor(() => {
       expect(screen.queryByText("Production Ingestion Key")).not.toBeInTheDocument();
@@ -335,6 +337,9 @@ describe("ApiKeysTab", () => {
 
     expect(screen.getByText("Confirm API Key Revocation")).toBeInTheDocument();
 
+    const reasonInput = screen.getByPlaceholderText(/please enter a reason/i);
+    fireEvent.change(reasonInput, { target: { value: "Security compromise rotation" } });
+
     fireEvent.click(screen.getByRole("button", { name: /confirm revocation/i }));
 
     await waitFor(() => {
@@ -395,6 +400,39 @@ describe("ApiKeysTab", () => {
           method: "PATCH",
           body: JSON.stringify({ isActive: true }),
         }),
+      );
+    });
+  });
+
+  it("disables reactivate button for revoked API keys with descriptive security tooltip", async () => {
+    const revokedKey = {
+      ...mockApiKeys[1],
+      id: "99999999-9999-4999-8999-999999999999",
+      keyName: "Revoked Secret Key",
+      status: "REVOKED" as const,
+      isActive: false,
+    };
+
+    fetchMock.mockImplementation(() => {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [revokedKey] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      const disabledBtn = screen.getByRole("button", {
+        name: `Cannot reactivate revoked API key ${revokedKey.keyName}`,
+      });
+      expect(disabledBtn).toBeInTheDocument();
+      expect(disabledBtn).toBeDisabled();
+      expect(disabledBtn).toHaveAttribute(
+        "title",
+        "Revoked API keys cannot be reactivated for security reasons",
       );
     });
   });

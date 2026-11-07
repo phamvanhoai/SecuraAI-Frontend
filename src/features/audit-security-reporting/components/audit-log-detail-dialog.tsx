@@ -116,7 +116,9 @@ export function AuditLogDetailDialog({
 
   const handleCopy = (text: string, fieldName: string) => {
     if (!text) return;
-    void navigator.clipboard.writeText(text);
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(text);
+    }
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
   };
@@ -170,7 +172,23 @@ export function AuditLogDetailDialog({
             <StatusBadge tone={getActionTone(log.action)}>
               <span className="font-mono font-bold">{log.action}</span>
             </StatusBadge>
-            <span className="text-muted font-mono">{log.id}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted font-mono">{log.id}</span>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleCopy(log.id, "recordId")}
+                className="size-6 p-0 shrink-0"
+                title="Copy Record ID"
+                aria-label="Copy Record ID"
+              >
+                {copiedField === "recordId" ? (
+                  <Check className="size-3 text-success" />
+                ) : (
+                  <Copy className="size-3" />
+                )}
+              </Button>
+            </div>
             <span className="text-border">·</span>
             <span className="inline-flex items-center gap-1 text-muted">
               <Clock className="size-3.5 shrink-0" strokeWidth={1.8} />

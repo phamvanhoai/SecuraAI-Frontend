@@ -1,5 +1,9 @@
 # SecuraAI Frontend
 
+Create new version consumes the V2 policy version endpoint. A newly created version is a draft while its parent policy stays active, keeping the current publication available until the replacement is published.
+
+Incident creation is Security Officer-only (manual and confirmed-source modes). Executive retains incident list/detail access without create/handling actions. Other roles retain access to their historical reports without a create prompt. Losing the officer role closes the creation dialog. No new reporting workflow or database changes.
+
 Giao diện SecuraAI cho quản lý rủi ro an toàn thông tin, tài sản, controls, chính sách, sự cố và cảnh báo bất thường.
 
 ## Công nghệ
@@ -113,3 +117,27 @@ Cần browser Playwright phù hợp; PLAYWRIGHT_CHANNEL=chrome cho phép dùng C
 Backend sibling SecuraAI-Backend cung cấp OpenAPI trong src/docs/openapi.ts, module notes trong src/modules/README.md và baseline/Project Tracking trong project-docs/new/. Contract V1 chưa port trả 501; không giả lập thành chức năng production.
 
 Tạo nhánh từ develop mới nhất, PR vào develop, phát hành qua PR develop → main. Không push trực tiếp/force-push hai nhánh dài hạn. Không commit environment secrets, .next, coverage hoặc test reports.
+
+## Employee business responsibilities
+
+Admin → Users → Assign role, scope & ownership now grants Employee business responsibilities (Risk Owner, Control Owner, Asset Owner, Authorized Approver), using the existing access-assignment API. Responsibilities are permanent eligibility, not organization-wide resource access. Assign records in their modules; existing owners retain their responsibility, and transfer is required before removal. Authorized Approver eligibility requires a workflow-specific assignment and never grants global approval access. No database migration.
+
+Employee responsibility selection is exclusive: at most one of Risk Owner, Control Owner, Asset Owner or Authorized Approver per Employee. An Employee may have no inherited responsibility; click the selected checkbox again to clear it. Transfer conflicting owned records before changing responsibility; legacy multiple ownership is preserved until explicitly resolved.
+
+Password changes sign out all devices: the BFF clears authentication cookies on success, and active application sessions are checked every five seconds (also on window focus) so revoked sessions return to Login. Browser background throttling or a suspended/offline tab can delay the redirect.
+
+Notification images: both Send in-system and Send email provide Add images, removable previews and client-side PNG normalization for up to three PNG/JPEG/WebP source files (5 MiB each). Image payloads remain below the existing 1 MiB JSON limit. Received images use authenticated, unoptimized same-origin image URLs; no token is exposed to JavaScript or in image links. The backend notification_image_references migration must be deployed first.
+
+Recipients can open View details to read the complete message and private images. Closing a successfully loaded unread detail marks it read; failed loads do not. The bell requests unread items only, while My Notifications retains read items.
+Assess Control allows Security Officers and assigned Control Owners to record actual implementation progress alongside a new effectiveness assessment. A changed status requires a reason. The API saves the status, assessment and audit atomically and rejects a stale baseline; reopen the dialog after a stale or authorization response. Existing assessment history is preserved. No migration is required.
+
+New Control assessments derive Testing result from the internal scoring policy: below 50% Ineffective; 50% to below 80% Partially effective; 80% to 100% Effective. Users may enter a percentage or select Testing result. A different result initializes the score to 0/50/80; a score already in range is retained. The API rejects inconsistent pairs. Historical assessments are retained without applying this rule retroactively.
+
+AI Models separates detection configurations (rules, behavioral scoring and thresholds) from the explanation-only Ollama runtime reported by the backend. The configured runtime model name is not a trained detection model. Enabled does not imply connected; connectionStatus is NOT_CHECKED. Dataset/evaluation columns are omitted from the registry overview; actual non-heuristic evaluations remain available in details. Heuristic details explicitly state that the application does not train this configuration.
+
+
+Historical detection scoring: empirical-history-v1 uses recorded reference counts, finite-sample smoothing and an explicit multiple-signal adjustment, not fixed rule/severity bonuses. New statistical alerts show Historical comparison; legacy alerts retain their original point explanations. Manual results expose insufficientBaseline and must never label unscored events as normal. No attack-probability or measured precision/recall claim is implied. Backend docs/history-baseline-scoring.md specifies scope and limitations.
+
+Security Events displays durable detection status when enabled by the backend. Worker deployment and baseline requirements: ../SecuraAI-Backend/docs/durable-detection-pipeline.md.
+
+Docker: Dockerfile builds a standalone Next.js server. Full FE/BE/worker/PostgreSQL Compose setup is documented in ../SecuraAI-Backend/docs/docker-local-demo.md. BACKEND_API_BASE_URL overrides the server-side API address at runtime; the browser retains NEXT_PUBLIC_API_BASE_URL.

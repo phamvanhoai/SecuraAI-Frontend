@@ -128,6 +128,7 @@ export function AuditLogsManager() {
   const limit = 20;
 
   // Search and filter states
+  const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [actor, setActor] = useState("");
   const [actorType, setActorType] = useState<AuditActorType | "">("");
@@ -174,6 +175,7 @@ export function AuditLogsManager() {
   } = useAuditLogs(queryParams);
 
   const handleResetFilters = () => {
+    setSearchDraft("");
     setSearch("");
     setActor("");
     setActorType("");
@@ -377,33 +379,47 @@ export function AuditLogsManager() {
         <div className="border-b border-border p-4 space-y-3.5 bg-surface-subtle/50">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Keyword Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted pointer-events-none" />
-              <Input
-                id={searchInputId}
-                type="text"
-                placeholder="Search by action, resource, IP, user, correlation ID..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 pr-8"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-0.5"
-                  aria-label="Clear search input"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
-            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setSearch(searchDraft.trim());
+                setPage(1);
+              }}
+              className="flex items-center gap-2 flex-1 max-w-md"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted pointer-events-none" />
+                <Input
+                  id={searchInputId}
+                  type="text"
+                  placeholder="Search by action, resource, IP, user, correlation ID..."
+                  value={searchDraft}
+                  onChange={(e) => setSearchDraft(e.target.value)}
+                  className="pl-9 pr-8"
+                />
+                {searchDraft ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchDraft("");
+                      setSearch("");
+                      setPage(1);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground p-0.5"
+                    aria-label="Clear search input"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+              <Button
+                type="submit"
+                variant="secondary"
+                className="px-3 text-xs"
+              >
+                Search
+              </Button>
+            </form>
 
             {/* Filter Toggle & Reset Buttons */}
             <div className="flex items-center gap-2">
@@ -422,17 +438,6 @@ export function AuditLogsManager() {
                 )}
               </Button>
 
-              {activeFilterCount > 0 && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleResetFilters}
-                  className="gap-1.5 text-xs text-muted hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                  <span>Clear all</span>
-                </Button>
-              )}
             </div>
           </div>
 

@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import "server-only";
 import { z } from "zod";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -32,14 +33,12 @@ export async function proxyEvidence(
       { signal: request.signal },
     );
   }
-  if (
-    request.headers.get("origin") !== new URL(request.url).origin ||
-    request.headers.get("sec-fetch-site") === "cross-site"
-  )
+  if (!isSameOriginRequest(request))
     return fail(403, "Same-origin request required");
   if (operation === "unlink") {
     const evidenceId = new URL(request.url).searchParams.get("evidenceId");
-    if (!evidenceId || !z.uuid().safeParse(evidenceId).success) return fail(400, "Invalid Evidence ID");
+    if (!evidenceId || !z.uuid().safeParse(evidenceId).success)
+      return fail(400, "Invalid Evidence ID");
     if (!request.headers.get("content-type")?.startsWith("application/json"))
       return fail(415, "JSON body required");
     let body: unknown;
@@ -48,7 +47,9 @@ export async function proxyEvidence(
     } catch {
       return fail(400, "Invalid JSON body");
     }
-    const parsed = z.object({ reason: z.string().trim().min(10).max(2000) }).safeParse(body);
+    const parsed = z
+      .object({ reason: z.string().trim().min(10).max(2000) })
+      .safeParse(body);
     if (!parsed.success) return fail(400, "Invalid unlink reason");
     return proxyAuthenticatedRequest(
       `${path}/evidence-links/${encodeURIComponent(evidenceId)}`,

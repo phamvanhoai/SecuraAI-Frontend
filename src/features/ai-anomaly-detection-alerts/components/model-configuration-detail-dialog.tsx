@@ -5,13 +5,18 @@ import { BarChart3, Bot, Database } from "lucide-react";
 import { StatusBadge } from "@/components/data-display/static-product";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import type { ModelConfiguration } from "../schemas/model-configuration-schema";
+import type {
+  ModelConfiguration,
+  ModelConfigurationList,
+} from "../schemas/model-configuration-schema";
 
 export function ModelConfigurationDetailDialog({
   configuration,
+  explanationModel,
   onClose,
 }: {
   configuration: ModelConfiguration | null;
+  explanationModel?: ModelConfigurationList["explanationModel"];
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -22,6 +27,8 @@ export function ModelConfigurationDetailDialog({
     if (!configuration && dialog.open) dialog.close();
   }, [configuration]);
   const evaluation = configuration?.latestEvaluation;
+  const heuristic =
+    configuration?.modelType.toUpperCase().includes("HEURISTIC") ?? false;
   return (
     <Dialog
       className="max-h-[calc(100dvh-2rem)] w-[min(52rem,calc(100%-2rem))] overflow-y-auto"
@@ -48,6 +55,23 @@ export function ModelConfigurationDetailDialog({
                   <p className="text-muted mt-1 text-sm">
                     {formatModelType(configuration.modelType)}
                   </p>
+                  {configuration.status === "deployed" ? (
+                    <div className="text-muted mt-2 space-y-1 text-sm [overflow-wrap:anywhere]">
+                      <p>
+                        <span className="text-foreground font-medium">
+                          Explanation:{" "}
+                        </span>
+                        {explanationModel
+                          ? `${explanationModel.model} · ${explanationModel.provider} · ${explanationModel.enabled ? "Enabled" : "Disabled"}`
+                          : "Configuration unavailable"}
+                      </p>
+                      <p className="text-xs">
+                        Engine calculates scores; the LLM explains evidence
+                        only.{" "}
+                        {explanationModel ? "Connection not checked." : ""}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <p className="text-muted mt-3 font-mono text-xs [overflow-wrap:anywhere]">
@@ -72,9 +96,11 @@ export function ModelConfigurationDetailDialog({
               <Metric
                 label="Dataset"
                 value={
-                  configuration.dataset
-                    ? `${configuration.dataset.name} ${configuration.dataset.version}`
-                    : "Not linked"
+                  heuristic
+                    ? "Not a trained model"
+                    : configuration.dataset
+                      ? `${configuration.dataset.name} ${configuration.dataset.version}`
+                      : "Not linked"
                 }
               />
               <Metric
@@ -100,76 +126,97 @@ export function ModelConfigurationDetailDialog({
             </dl>
           </section>
 
-          <section aria-labelledby="evaluation-heading" className="space-y-4">
-            <SectionHeading
-              icon={BarChart3}
-              id="evaluation-heading"
-              title="Latest evaluation"
-            />
-            <p className="text-muted mt-1 text-sm">
-              The most recently recorded evaluation for this immutable model
-              version.
-            </p>
-            {evaluation ? (
-              <>
-                <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
-                  <Metric
-                    label="Precision"
-                    value={formatRatio(evaluation.precision)}
-                  />
-                  <Metric
-                    label="Recall"
-                    value={formatRatio(evaluation.recall)}
-                  />
-                  <Metric
-                    label="F1 score"
-                    value={formatRatio(evaluation.f1Score)}
-                  />
-                  <Metric
-                    label="PR-AUC"
-                    value={formatRatio(evaluation.prAuc)}
-                  />
-                  <Metric
-                    label="False-positive rate"
-                    value={formatRatio(evaluation.falsePositiveRate)}
-                  />
-                  <Metric
-                    label="Alerts / day"
-                    value={formatNumber(evaluation.alertsPerDay)}
-                  />
-                  <Metric
-                    label="Detection latency"
-                    value={
-                      evaluation.detectionLatencyMs === null
-                        ? "Not measured"
-                        : `${formatNumber(evaluation.detectionLatencyMs)} ms`
-                    }
-                  />
-                  <Metric
-                    label="Evaluated"
-                    value={formatDate(evaluation.evaluatedAt)}
-                  />
-                </dl>
-                {evaluation.notes ? (
-                  <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
-                    <p className="text-muted text-xs font-medium tracking-wide uppercase">
-                      Evaluation notes
-                    </p>
-                    <p className="mt-2 text-sm leading-6">{evaluation.notes}</p>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="border-border py-8 text-center">
-                <BarChart3 className="text-muted mx-auto size-8 stroke-1" />
-                <p className="mt-2 font-medium">No evaluation recorded</p>
-                <p className="text-muted mt-1 text-sm">
-                  Evaluation metrics have not been recorded for this model
-                  version.
-                </p>
-              </div>
-            )}
-          </section>
+          {heuristic ? (
+            <section className="space-y-3">
+              <h4 className="text-sm font-semibold">
+                Rule-based detection configuration
+              </h4>
+              <p className="text-muted text-sm">
+                This version supplies detection rules, scoring parameters and
+                thresholds. It is not Qwen and is not trained by this
+                application. Training dataset, F1, precision and recall are not
+                reported without an actual evaluation.
+              </p>
+              <p className="text-muted text-sm">
+                The explanation runtime shown above is separate from this
+                scoring configuration. It does not decide whether alerts are
+                created.
+              </p>
+            </section>
+          ) : (
+            <section aria-labelledby="evaluation-heading" className="space-y-4">
+              <SectionHeading
+                icon={BarChart3}
+                id="evaluation-heading"
+                title="Latest evaluation"
+              />
+              <p className="text-muted mt-1 text-sm">
+                The most recently recorded evaluation for this immutable model
+                version.
+              </p>
+              {evaluation ? (
+                <>
+                  <dl className="border-border bg-border grid gap-px overflow-hidden rounded-lg border sm:grid-cols-2 lg:grid-cols-4">
+                    <Metric
+                      label="Precision"
+                      value={formatRatio(evaluation.precision)}
+                    />
+                    <Metric
+                      label="Recall"
+                      value={formatRatio(evaluation.recall)}
+                    />
+                    <Metric
+                      label="F1 score"
+                      value={formatRatio(evaluation.f1Score)}
+                    />
+                    <Metric
+                      label="PR-AUC"
+                      value={formatRatio(evaluation.prAuc)}
+                    />
+                    <Metric
+                      label="False-positive rate"
+                      value={formatRatio(evaluation.falsePositiveRate)}
+                    />
+                    <Metric
+                      label="Alerts / day"
+                      value={formatNumber(evaluation.alertsPerDay)}
+                    />
+                    <Metric
+                      label="Detection latency"
+                      value={
+                        evaluation.detectionLatencyMs === null
+                          ? "Not measured"
+                          : `${formatNumber(evaluation.detectionLatencyMs)} ms`
+                      }
+                    />
+                    <Metric
+                      label="Evaluated"
+                      value={formatDate(evaluation.evaluatedAt)}
+                    />
+                  </dl>
+                  {evaluation.notes ? (
+                    <div className="border-border bg-neutral-soft/30 rounded-lg border p-4">
+                      <p className="text-muted text-xs font-medium tracking-wide uppercase">
+                        Evaluation notes
+                      </p>
+                      <p className="mt-2 text-sm leading-6">
+                        {evaluation.notes}
+                      </p>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="border-border py-8 text-center">
+                  <BarChart3 className="text-muted mx-auto size-8 stroke-1" />
+                  <p className="mt-2 font-medium">No evaluation recorded</p>
+                  <p className="text-muted mt-1 text-sm">
+                    Evaluation metrics have not been recorded for this model
+                    version.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
           <div className="border-border flex justify-end border-t pt-4">
             <Button
               onClick={() => dialogRef.current?.close()}

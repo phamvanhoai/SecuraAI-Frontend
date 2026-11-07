@@ -2,16 +2,12 @@
 import { Bell } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/components/feedback/toast";
 import {
   useNotificationInbox,
-  useReadNotifications,
 } from "../hooks/use-notification-inbox";
 
 export function NotificationBell({ userId }: { userId: string | undefined }) {
-  const inbox = useNotificationInbox(userId, 10);
-  const { read } = useReadNotifications(userId);
-  const toast = useToast();
+  const inbox = useNotificationInbox(userId, 10, true);
   const unread = userId ? inbox.data?.unreadCount : undefined;
   const label =
     unread === undefined ? "Notifications" : `Notifications, ${unread} unread`;
@@ -60,11 +56,11 @@ export function NotificationBell({ userId }: { userId: string | undefined }) {
           </div>
         ) : inbox.isPending ? (
           <p className="text-muted p-4 text-sm">Loading notifications...</p>
-        ) : !inbox.data?.items.length ? (
-          <p className="text-muted p-4 text-sm">No notifications yet.</p>
+        ) : !inbox.data?.items.some((item) => !item.readAt) ? (
+          <p className="text-muted p-4 text-sm">No unread notifications.</p>
         ) : (
           <ul className="divide-border divide-y">
-            {inbox.data.items.map((item) => (
+            {inbox.data.items.filter((item) => !item.readAt).map((item) => (
               <li key={item.id}>
                 <Link
                   href={`/notifications#notification-${item.id}`}
@@ -77,16 +73,6 @@ export function NotificationBell({ userId }: { userId: string | undefined }) {
                     } else {
                       window.location.hash = hash;
                     }
-                  }}
-                  onClick={() => {
-                    if (!item.readAt)
-                      read.mutate(item.id, {
-                        onError: () =>
-                          toast.error(
-                            "Unable to mark notification as read",
-                            "You can retry from My Notifications.",
-                          ),
-                      });
                   }}
                   className={`focus-visible:outline-brand hover:bg-neutral-soft block p-4 transition-colors focus-visible:outline-2 ${item.readAt ? "bg-surface" : "bg-info-soft/45"}`}
                 >

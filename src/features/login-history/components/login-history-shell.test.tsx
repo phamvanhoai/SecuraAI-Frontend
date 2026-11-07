@@ -57,6 +57,7 @@ beforeEach(() => {
       Response.json({
         success: true,
         data: {
+          summary: { successful: 118, failed: 22, accounts: 35 },
           items: [item],
           pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
         },
@@ -69,6 +70,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("LoginHistoryShell", () => {
+  it("uses server totals rather than counting the single displayed row", async () => {
+    mount();
+    expect(await screen.findByText("118")).toBeInTheDocument();
+    expect(screen.getByText("22")).toBeInTheDocument();
+    expect(screen.getByText("35")).toBeInTheDocument();
+    expect(screen.queryByText("On this page")).not.toBeInTheDocument();
+  });
+
   it("redirects a disallowed role without fetching history", async () => {
     if (mocks.user) mocks.user.roles = [{ code: "MANAGER", name: "Manager" }];
     mount();

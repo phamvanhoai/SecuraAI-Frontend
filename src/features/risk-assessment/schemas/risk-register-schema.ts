@@ -64,6 +64,9 @@ const assessment = z.object({
   methodologyVersion: z.string(),
 });
 export const riskRegisterItemSchema = z.object({
+  canAssessResidual: z.boolean().optional(),
+  canDefineTarget: z.boolean().optional(),
+  canManageTreatmentPlan: z.boolean().optional(),
   reviewInProgress: z.boolean().optional(),
   scope: z
     .discriminatedUnion("type", [

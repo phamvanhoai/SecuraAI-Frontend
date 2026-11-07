@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api/api-error";
 import {
   createControlAssessment,
   listControlAssessments,
@@ -27,9 +28,21 @@ export const useControlAssessments = (
   });
 export function useCreateControlAssessment() {
   const client = useQueryClient();
+  const refresh = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["compliance"] }),
+      client.invalidateQueries({ queryKey: ["risk-register"] }),
+      client.invalidateQueries({ queryKey: ["risks"] }),
+      client.invalidateQueries({ queryKey: ["auth", "session"] }),
+    ]);
+  };
   return useMutation({
     mutationFn: createControlAssessment,
     retry: false,
-    onSuccess: () => client.invalidateQueries({ queryKey: key }),
+    onSuccess: refresh,
+    onError: async (error) => {
+      if (error instanceof ApiError && [401, 403, 409].includes(error.status))
+        await refresh();
+    },
   });
 }

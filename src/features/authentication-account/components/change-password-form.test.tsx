@@ -58,7 +58,7 @@ describe("ChangePasswordForm", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows success feedback and returns to the dashboard after changing the password", async () => {
+  it("shows success feedback and returns to login after changing the password", async () => {
     const user = userEvent.setup();
     mocks.mutateAsync.mockResolvedValue(undefined);
     render(<ChangePasswordForm />);
@@ -73,9 +73,9 @@ describe("ChangePasswordForm", () => {
 
     expect(mocks.success).toHaveBeenCalledWith(
       "Password changed successfully",
-      "Your password has been updated.",
+      "Please sign in again on all devices.",
     );
-    expect(mocks.replace).toHaveBeenCalledWith("/dashboard");
+    expect(mocks.replace).toHaveBeenCalledWith("/login?passwordChanged=1");
   });
 
   it("shows field-level errors and does not submit an invalid password", async () => {

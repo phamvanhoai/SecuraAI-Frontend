@@ -64,4 +64,13 @@ describe("PasswordChangeGuard", () => {
     );
     expect(screen.getByText("Change password content")).toBeInTheDocument();
   });
+  it("sends the other signed-in device to Login without returning to its previous page", async () => {
+    mocks.pathname = "/change-password";
+    const { rerender } = render(<PasswordChangeGuard><p>Protected content</p></PasswordChangeGuard>);
+    expect(screen.getByText("Protected content")).toBeInTheDocument();
+    mocks.session.data = null;
+    rerender(<PasswordChangeGuard><p>Protected content</p></PasswordChangeGuard>);
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login?sessionExpired=1"));
+    expect(screen.queryByText("Protected content")).not.toBeInTheDocument();
+  });
 });

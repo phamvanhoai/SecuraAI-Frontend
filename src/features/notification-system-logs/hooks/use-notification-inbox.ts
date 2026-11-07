@@ -8,10 +8,10 @@ import {
 } from "../api/notification-inbox";
 const inboxKey = (userId: string | undefined) =>
   ["notifications", "inbox", userId] as const;
-export function useNotificationInbox(userId: string | undefined, limit = 50) {
+export function useNotificationInbox(userId: string | undefined, limit = 50, unreadOnly = false) {
   return useQuery({
-    queryKey: [...inboxKey(userId), limit],
-    queryFn: ({ signal }) => getNotificationInbox(limit, signal),
+    queryKey: [...inboxKey(userId), limit, unreadOnly],
+    queryFn: ({ signal }) => getNotificationInbox(limit, signal, unreadOnly),
     enabled: Boolean(userId),
     refetchInterval: (query) => {
       const error = query.state.error;

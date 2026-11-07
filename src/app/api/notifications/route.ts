@@ -1,9 +1,10 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import { NextResponse } from "next/server";
 import { sendInSystemNotificationInputSchema } from "@/features/notification-system-logs/schemas/send-in-system-notification-schema";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
 
 export async function POST(request: Request): Promise<Response> {
-  if (request.headers.get("origin") !== new URL(request.url).origin)
+  if (!isSameOriginRequest(request))
     return NextResponse.json(
       {
         success: false,

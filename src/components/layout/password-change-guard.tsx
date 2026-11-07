@@ -15,7 +15,7 @@ export function PasswordChangeGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data) {
-      router.replace(`/login?returnUrl=${encodeURIComponent(pathname)}`);
+      router.replace("/login?sessionExpired=1");
       return;
     }
     if (mustChangePassword && !changingPassword) {

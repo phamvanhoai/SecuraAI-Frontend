@@ -10,7 +10,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useController, useForm, useWatch } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Pagination } from "@/components/data-display/pagination";
 import { StatusBadge } from "@/components/data-display/static-product";
@@ -131,6 +131,9 @@ export function AssessInherentRiskDialog({
     resolver: zodResolver(assessInherentRiskSchema),
     defaultValues: { likelihood: 3, impact: 3, assessmentReason: "" },
   });
+
+  const { field: likelihoodField } = useController({ control, name: "likelihood" });
+  const { field: impactField } = useController({ control, name: "impact" });
 
   const [likelihood, impact] = useWatch({
     control,
@@ -569,16 +572,30 @@ export function AssessInherentRiskDialog({
               </section>
             ) : null}
 
-            {/* Methodology note */}
-            <div className="border-border bg-neutral-soft/30 rounded-xl border p-3.5 text-xs">
-              <p className="font-semibold text-foreground">
-                Methodology: {methodologyVersion}
-              </p>
-              <p className="text-muted mt-1">
-                Score = Likelihood × Impact. 1–4 Low · 5–9 Medium · 10–16 High
-                · 17–25 Critical.
-              </p>
-            </div>
+            <details className="rounded-xl border border-border text-sm">
+              <summary className="focus-visible:outline-brand flex cursor-pointer list-none items-center gap-2 rounded-xl px-4 py-3 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2">
+                <Info aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.8} />
+                Inherent risk methodology
+              </summary>
+              <div className="border-t border-border px-4 pb-4 pt-3 text-xs leading-6">
+                <p className="font-semibold text-foreground">
+                  Methodology: {methodologyVersion}
+                </p>
+                <p className="text-muted mt-1">
+                  Internal 5-by-5 risk matrix informed by the likelihood-impact
+                  approach in NIST SP 800-30 Rev. 1 (2012), Section 3.2, Tasks 2-4
+                  to 2-6. The 1-5 scales, multiplication formula and rating
+                  thresholds are defined by SecuraAI; they are not prescribed by NIST.
+                </p>
+                <p className="text-muted mt-1">
+                  Assess inherent risk before considering existing controls.
+                </p>
+                <p className="text-muted mt-1">
+                  Score = Likelihood × Impact. 1–4 Low · 5–9 Medium · 10–16 High
+                  · 17–25 Critical.
+                </p>
+              </div>
+            </details>
 
             <fieldset
               className="space-y-6"
@@ -621,8 +638,10 @@ export function AssessInherentRiskDialog({
                       <input
                         type="radio"
                         className="sr-only"
+                        {...likelihoodField}
                         value={criterion.value}
-                        {...register("likelihood", { valueAsNumber: true })}
+                        checked={likelihoodField.value === criterion.value}
+                        onChange={(event) => likelihoodField.onChange(Number(event.target.value))}
                       />
                       <span className="font-semibold tabular-nums">
                         {criterion.value}
@@ -678,8 +697,10 @@ export function AssessInherentRiskDialog({
                       <input
                         type="radio"
                         className="sr-only"
+                        {...impactField}
                         value={criterion.value}
-                        {...register("impact", { valueAsNumber: true })}
+                        checked={impactField.value === criterion.value}
+                        onChange={(event) => impactField.onChange(Number(event.target.value))}
                       />
                       <span className="font-semibold tabular-nums">
                         {criterion.value}

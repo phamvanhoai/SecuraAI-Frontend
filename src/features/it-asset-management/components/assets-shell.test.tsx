@@ -44,4 +44,11 @@ describe("AssetsShell", () => { beforeEach(() => { push.mockReset(); useSessionU
     expect(screen.getByText("No IT assets have been registered yet.")).toBeInTheDocument();
   });
   it("shows an authorization state without querying", () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: [] } }); render(<AssetsShell />); expect(screen.getByText("You do not have permission to view assets")).toBeInTheDocument(); });
+  it("shows assigned-work guidance to an Asset Owner without assets", () => {
+    useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read"], roles: [{ code: "EMPLOYEE" }] } });
+    useAssets.mockReturnValue({ isPending: false, isError: false, data: { items: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } } });
+    render(<AssetsShell />);
+    expect(screen.getByRole("heading", { name: "No assets assigned" })).toBeInTheDocument();
+    expect(screen.getByText("You haven’t been assigned any assets yet.")).toBeInTheDocument();
+  });
 });

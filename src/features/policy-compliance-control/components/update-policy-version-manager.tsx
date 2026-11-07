@@ -208,6 +208,8 @@ export function UpdatePolicyVersionManager({
       const result = await mutation.mutateAsync({ policyId, input });
       setCreated(result);
       reset(defaultValues);
+      dialogRef.current?.close();
+      setSelectedPolicy(undefined);
       toast.success(
         "New policy version created",
         `${result.policyCode} version ${result.version.versionNumber} is ready for review as a draft.`,
@@ -319,7 +321,7 @@ export function UpdatePolicyVersionManager({
               <form
                 className="space-y-5"
                 noValidate
-                onSubmit={handleSubmit(submit)}
+                onSubmit={(event) => void handleSubmit(submit)(event)}
               >
                 <input type="hidden" {...register("policyId")} />
 

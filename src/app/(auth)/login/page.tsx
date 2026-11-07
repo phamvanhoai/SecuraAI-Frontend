@@ -11,8 +11,9 @@ export default async function LoginPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const startFromOverview = params.passwordChanged === "1" || params.sessionExpired === "1";
   const returnUrl = safeReturnUrl(
-    typeof params.returnUrl === "string" ? params.returnUrl : undefined,
+    !startFromOverview && typeof params.returnUrl === "string" ? params.returnUrl : undefined,
     "/dashboard",
   );
   const passwordChanged = params.passwordChanged === "1";

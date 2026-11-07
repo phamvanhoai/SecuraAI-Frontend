@@ -1,7 +1,23 @@
 "use client";
 
-import { Eye, Search, ShieldCheck, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  Clock,
+  Copy,
+  Eye,
+  Globe,
+  Hash,
+  Search,
+  Server,
+  ShieldCheck,
+  User,
+  X,
+  Zap,
+} from "lucide-react";
 import { useRef, useState } from "react";
+import { useToast } from "@/components/feedback/toast";
 import {
   DataTable,
   type DataTableColumn,
@@ -32,6 +48,8 @@ export function UserActivityAuditLogManager() {
   const [selected, setSelected] = useState<UserActivityAuditRecord | null>(
     null,
   );
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const toast = useToast();
   const dialog = useRef<HTMLDialogElement>(null);
   const audit = useUserActivityAudit({
     page,
@@ -47,6 +65,16 @@ export function UserActivityAuditLogManager() {
     setResourceType("");
     setPage(1);
   };
+  const handleCopy = async (value: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(key);
+      setTimeout(() => setCopiedField((current) => current === key ? null : current), 2000);
+    } catch {
+      toast.error("Unable to copy", "Select and copy the value manually.");
+    }
+  };
+
   const columns: readonly DataTableColumn<UserActivityAuditRecord>[] = [
     {
       key: "actor",
@@ -230,45 +258,211 @@ export function UserActivityAuditLogManager() {
         </div>
       </ProductPanel>
       <Dialog
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        className="max-h-[calc(100dvh-2rem)] w-[min(48rem,calc(100%-2rem))] overflow-y-auto"
         dialogRef={dialog}
         title="Audit record details"
       >
         {selected ? (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-sm font-semibold">
-                {selected.id}
-              </span>
-              <OutcomeBadge outcome={selected.outcome} />
+          <div className="space-y-6">
+
+            {/* ── Rich header ── */}
+            <div className="border-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-foreground break-all font-mono text-xl font-semibold">
+                    {selected.action}
+                  </h3>
+                  <OutcomeBadge outcome={selected.outcome} />
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1 font-mono">
+                    <Hash className="size-3 shrink-0" strokeWidth={1.8} />
+                    {selected.id}
+                    <button
+                      type="button"
+                      className="text-muted hover:text-foreground p-0.5 transition-colors"
+                      onClick={() => handleCopy(selected.id, "record-id")}
+                      title="Copy record ID"
+                    >
+                      {copiedField === "record-id" ? (
+                        <Check className="size-3 text-success" />
+                      ) : (
+                        <Copy className="size-3" />
+                      )}
+                    </button>
+                  </span>
+                </div>
+              </div>
+              {selected.outcome === "SUCCESS" ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-success/30 bg-success-soft px-2.5 py-1 text-xs font-semibold text-success">
+                  <ShieldCheck className="size-3.5" strokeWidth={1.8} />
+                    Successful
+                </span>
+              ) : (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-danger/30 bg-danger-soft px-2.5 py-1 text-xs font-semibold text-danger">
+                  <AlertTriangle className="size-3.5" strokeWidth={1.8} />
+                  {selected.outcome === "DENIED" ? "Access Denied" : "Failed"}
+                </span>
+              )}
             </div>
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <Detail
-                label="Actor"
-                value={`${selected.actor.name}${selected.actor.email ? ` · ${selected.actor.email}` : ""}`}
-              />
-              <Detail
-                label="Timestamp"
-                value={formatTime(selected.occurredAt)}
-              />
-              <Detail label="Action" value={selected.action} />
-              <Detail
-                label="Affected resource"
-                value={resourceLabel(selected)}
-              />
-              <Detail
-                label="Source"
-                value={selected.source ?? "Not recorded"}
-              />
-              <Detail
-                label="Source IP"
-                value={selected.sourceIp ?? "Not recorded"}
-              />
-              {selected.errorCode ? (
-                <Detail label="Error code" value={selected.errorCode} />
+
+            {/* ── Timestamp / context bar ── */}
+            <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border p-3.5 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-muted">
+                <Zap className="size-3.5 shrink-0 text-brand" strokeWidth={1.8} />
+                <span>
+                  Occurred:{" "}
+                  <strong className="text-foreground font-semibold">
+                    {formatTime(selected.occurredAt)}
+                  </strong>
+                </span>
+              </span>
+              {selected.source ? (
+                <>
+                  <span className="text-border hidden sm:inline">·</span>
+                  <span className="inline-flex items-center gap-1.5 text-muted">
+                    <Globe className="size-3.5 shrink-0" strokeWidth={1.8} />
+                    <span>
+                      Source:{" "}
+                      <strong className="text-foreground font-semibold">
+                        {selected.source}
+                      </strong>
+                    </span>
+                  </span>
+                </>
               ) : null}
-            </dl>
-            <div className="flex justify-end">
+              {selected.sourceIp ? (
+                <>
+                  <span className="text-border hidden sm:inline">·</span>
+                  <span className="inline-flex items-center gap-1.5 font-mono text-muted">
+                    <span>IP:</span>
+                    <strong className="text-foreground">{selected.sourceIp}</strong>
+                  </span>
+                </>
+              ) : null}
+            </div>
+
+            {/* ── 2-col: Actor + Resource ── */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+              {/* Actor */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <User className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <h3 className="text-sm font-semibold">Actor Information</h3>
+                </div>
+                <dl className="border-border bg-neutral-soft/30 grid gap-y-4 rounded-xl border p-4">
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Name</dt>
+                    <dd className="mt-1 truncate text-sm font-medium">{selected.actor.name}</dd>
+                  </div>
+                  {selected.actor.email ? (
+                    <div>
+                      <dt className="text-muted text-xs font-medium uppercase tracking-wide">Email</dt>
+                      <dd className="mt-1 truncate text-sm font-medium">{selected.actor.email}</dd>
+                    </div>
+                  ) : null}
+                  {selected.actor.id ? (
+                    <div>
+                      <dt className="text-muted text-xs font-medium uppercase tracking-wide">User ID</dt>
+                      <dd className="mt-1 flex items-center gap-1.5 font-mono text-xs text-muted truncate" title={selected.actor.id}>
+                        <span className="truncate">{selected.actor.id}</span>
+                        <button
+                          type="button"
+                          className="text-muted hover:text-foreground shrink-0 p-0.5 transition-colors"
+                          onClick={() => handleCopy(selected.actor.id ?? "", "actor-id")}
+                          title="Copy user ID"
+                        >
+                          {copiedField === "actor-id" ? (
+                            <Check className="size-3 text-success" />
+                          ) : (
+                            <Copy className="size-3" />
+                          )}
+                        </button>
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Timestamp</dt>
+                    <dd className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium">
+                      <Calendar className="size-3.5 shrink-0 text-muted" strokeWidth={1.8} />
+                      {formatTime(selected.occurredAt)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* Resource */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 border-b border-border pb-2">
+                  <Server className="mt-0.5 size-4 shrink-0 text-brand" strokeWidth={1.8} />
+                  <h3 className="text-sm font-semibold">Resource &amp; Context</h3>
+                </div>
+                <dl className="border-border bg-neutral-soft/30 grid gap-y-4 rounded-xl border p-4">
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Resource Type</dt>
+                    <dd className="mt-1">
+                      <span className="bg-neutral-soft border-border rounded border px-2 py-0.5 font-mono text-xs font-semibold">
+                        {selected.resource.type}
+                      </span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted text-xs font-medium uppercase tracking-wide">Affected Resource</dt>
+                    <dd className="mt-1 text-sm font-medium">{resourceLabel(selected)}</dd>
+                  </div>
+                  {selected.resource.id ? (
+                    <div>
+                      <dt className="text-muted text-xs font-medium uppercase tracking-wide">Resource ID</dt>
+                      <dd className="mt-1 flex items-center gap-1.5 font-mono text-xs text-muted truncate" title={selected.resource.id}>
+                        <span className="truncate">{selected.resource.id}</span>
+                        <button
+                          type="button"
+                          className="text-muted hover:text-foreground shrink-0 p-0.5 transition-colors"
+                          onClick={() => handleCopy(selected.resource.id ?? "", "resource-id")}
+                          title="Copy resource ID"
+                        >
+                          {copiedField === "resource-id" ? (
+                            <Check className="size-3 text-success" />
+                          ) : (
+                            <Copy className="size-3" />
+                          )}
+                        </button>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {selected.errorCode ? (
+                    <div>
+                      <dt className="text-muted text-xs font-medium uppercase tracking-wide">Error Code</dt>
+                      <dd className="mt-1">
+                        <span className="bg-danger-soft border-danger/20 text-danger rounded border px-2 py-0.5 font-mono text-xs font-semibold">
+                          {selected.errorCode}
+                        </span>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </div>
+            </div>
+
+            {/* ── Metadata footer bar ── */}
+            <div className="border-border bg-neutral-soft/20 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-xs text-muted">
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5 shrink-0" strokeWidth={1.8} />
+                <span>
+                  Occurred:{" "}
+                  <strong className="text-foreground font-medium">
+                    {formatTime(selected.occurredAt)}
+                  </strong>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono">{selected.id}</span>
+              </div>
+            </div>
+
+            {/* ── Footer ── */}
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
               <Button
                 type="button"
                 variant="secondary"
@@ -301,16 +495,6 @@ function OutcomeBadge({ outcome }: { outcome: AuditOutcome }) {
           ? "Denied"
           : "Failure"}
     </StatusBadge>
-  );
-}
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-muted text-xs font-medium tracking-wide uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 text-sm leading-6 break-words">{value}</dd>
-    </div>
   );
 }
 function formatTime(value: string) {

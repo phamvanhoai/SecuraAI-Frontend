@@ -213,7 +213,9 @@ export function IncidentReportingManager() {
         role.code,
       ),
     ) ?? false;
-  const canRead = isSecurityOfficer;
+  const canRead =
+    isSecurityOfficer ||
+    (session.data?.roles.some((role) => role.code === "EXECUTIVE") ?? false);
   const canClassify = isSecurityOfficer;
   const canAssign = isSecurityOfficer;
   const canLinkAssets = isSecurityOfficer;
@@ -266,7 +268,7 @@ export function IncidentReportingManager() {
   const progressDialogRef = useRef<HTMLDialogElement>(null);
   const evidenceDialogRef = useRef<HTMLDialogElement>(null);
   const removalDialogRef = useRef<HTMLDialogElement>(null);
-  const list = useMyIncidents(page, allowed && !canClassify);
+  const list = useMyIncidents(page, allowed && !canRead);
   const classificationQueue = useIncidentClassificationQueue(
     page,
     classificationFilters,
@@ -334,9 +336,9 @@ export function IncidentReportingManager() {
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
+    if (open && isSecurityOfficer && !dialog.open) dialog.showModal();
+    if ((!open || !isSecurityOfficer) && dialog.open) dialog.close();
+  }, [open, isSecurityOfficer]);
   useEffect(() => {
     const dialog = detailDialogRef.current;
     if (!dialog) return;
@@ -379,11 +381,13 @@ export function IncidentReportingManager() {
     reset(createDefaults(isSecurityOfficer));
   };
   const openCreateDialog = () => {
+    if (!isSecurityOfficer) return;
     setMessage(undefined);
     reset(createDefaults(isSecurityOfficer));
     setOpen(true);
   };
   const submit = async (values: ReportIncidentForm) => {
+    if (!isSecurityOfficer || mutation.isPending) return;
     try {
       const created = await mutation.mutateAsync(values);
       close();
@@ -924,15 +928,15 @@ export function IncidentReportingManager() {
   return (
     <>
       <ProductPageHeader
-        title={canRead ? "Security incidents" : "Report security incidents"}
+        title={canRead ? "Security incidents" : "Reported security incidents"}
         description={
           canRead
             ? "Review security incidents and open a selected record for operational details."
-            : "Report suspicious activity promptly so the security team can investigate and respond."
+            : "Review incidents previously recorded under your account. New incidents are created by Security Officers."
         }
         showSampleNotice={false}
         additionalActions={
-          allowed ? (
+          isSecurityOfficer ? (
             <Button onClick={openCreateDialog}>
               <Plus aria-hidden="true" className="size-4" />
               Create incident
@@ -1090,15 +1094,6 @@ export function IncidentReportingManager() {
                   variant="secondary"
                 >
                   Clear filters
-                </Button>
-              ) : !canRead ? (
-                <Button
-                  className="mt-4 min-h-9 text-xs"
-                  onClick={openCreateDialog}
-                  type="button"
-                >
-                  <Plus aria-hidden="true" className="size-4" />
-                  Create incident
                 </Button>
               ) : null}
             </div>

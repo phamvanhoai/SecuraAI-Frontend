@@ -5,15 +5,32 @@ vi.mock('../hooks/use-create-risk-treatment-plan', () => ({
   useRiskTreatmentPlanOptions: () => ({ data: { users: [], controls: [] }, isPending: false, isError: false }),
   useCreateRiskTreatmentPlan: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
-const state = vi.hoisted(() => ({ status: 'open' }));
-vi.mock('../hooks/use-risk-register', () => ({ useRiskRecord: () => ({ data: { status: state.status, activeTreatmentPlan: null, acceptances: [], assessments: [] }, isPending: false, isError: false }) }));
+const state = vi.hoisted(() => ({ status: 'open', pending: false, activePlan: false }));
+vi.mock('../hooks/use-risk-register', () => ({ useRiskRecord: () => ({ data: { status: state.status, activeTreatmentPlan: state.activePlan ? { id: 'plan' } : null, acceptances: state.pending ? [{ decision: 'pending' }] : [], assessments: [] }, isPending: false, isError: false }) }));
 vi.mock('@/components/feedback/toast', () => ({ useToast: () => ({ success: vi.fn() }) }));
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
 });
-afterEach(() => { cleanup(); state.status = 'open'; });
+afterEach(() => { cleanup(); state.status = 'open'; state.pending = false; state.activePlan = false; });
 describe('create Risk Treatment Plan', () => {
+  it.each(['open', 'under_treatment'])('allows creation for %s Risk without pending acceptance or an existing plan', (status) => {
+    state.status = status;
+    render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+    expect(screen.getByLabelText('Plan title')).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeEnabled();
+    expect(screen.queryByText(/Create is unavailable/)).not.toBeInTheDocument();
+  });
+  it.each(['accepted', 'closed', 'archived'])('blocks finalized %s Risk', (status) => {
+    state.status = status;
+    render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeDisabled();
+  });
+  it.each(['pending', 'activePlan'] as const)('blocks creation when %s exists', (field) => {
+    state[field] = true;
+    render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeDisabled();
+  });
   it('shows cost justification instead of fake actions for Accept and preserves other strategies', () => {
     render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Add action' })).toBeInTheDocument();

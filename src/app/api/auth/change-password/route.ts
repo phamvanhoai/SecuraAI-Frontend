@@ -50,7 +50,8 @@ async function toNextResponse(
         backendResponse.headers.get("content-type") ?? "application/json",
     },
   });
-  if (refreshedTokens) setAuthCookies(response, refreshedTokens);
+  if (backendResponse.ok || backendResponse.status === 401) clearAuthCookies(response);
+  else if (refreshedTokens) setAuthCookies(response, refreshedTokens);
   return response;
 }
 

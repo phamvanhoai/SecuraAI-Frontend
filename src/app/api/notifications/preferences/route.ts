@@ -1,3 +1,4 @@
+import { isSameOriginRequest } from "@/lib/api/same-origin";
 import { NextResponse } from "next/server";
 import { updateNotificationPreferencesInputSchema } from "@/features/notification-system-logs/schemas/notification-preferences-schema";
 import { proxyAuthenticatedRequest } from "@/lib/api/backend-proxy";
@@ -9,9 +10,12 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function PATCH(request: Request): Promise<Response> {
-  if (request.headers.get("origin") !== new URL(request.url).origin)
+  if (!isSameOriginRequest(request))
     return NextResponse.json(
-      { success: false, error: { code: "FORBIDDEN", message: "Same-origin request required." } },
+      {
+        success: false,
+        error: { code: "FORBIDDEN", message: "Same-origin request required." },
+      },
       { status: 403 },
     );
   let body: unknown;
@@ -19,7 +23,10 @@ export async function PATCH(request: Request): Promise<Response> {
     body = await request.json();
   } catch {
     return NextResponse.json(
-      { success: false, error: { code: "VALIDATION_FAILED", message: "Invalid JSON." } },
+      {
+        success: false,
+        error: { code: "VALIDATION_FAILED", message: "Invalid JSON." },
+      },
       { status: 422 },
     );
   }

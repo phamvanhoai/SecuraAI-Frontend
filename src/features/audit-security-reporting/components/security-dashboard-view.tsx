@@ -69,7 +69,7 @@ export function SecurityDashboardView() {
       <div className="space-y-5">
         <ProductPageHeader
           title="Security & Risk Posture Dashboard"
-          description="View aggregated security posture, risk indicators, incident telemetry, and real-time AI alerts."
+          description="View aggregated security posture, risk indicators, incident telemetry, and real-time anomaly alerts."
         />
         <div
           className="border-danger/30 bg-danger/10 text-danger rounded-xl border p-6 text-center space-y-3"
@@ -94,7 +94,7 @@ export function SecurityDashboardView() {
       <div className="space-y-5">
         <ProductPageHeader
           title="Security & Risk Posture Dashboard"
-          description="View aggregated security posture, risk indicators, incident telemetry, and real-time AI alerts."
+          description="View aggregated security posture, risk indicators, incident telemetry, and real-time anomaly alerts."
         />
         <div
           className="border-danger/30 bg-danger/10 text-danger rounded-xl border p-6 text-center space-y-3"

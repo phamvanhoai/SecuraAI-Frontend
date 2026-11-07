@@ -1,19 +1,17 @@
 "use client";
 
-import { Database, KeyRound, List, UserRound } from "lucide-react";
+import { List, UserRound } from "lucide-react";
 import { useState } from "react";
 import { ProductPageHeader } from "@/components/data-display/static-product";
 import { Alert } from "@/components/ui/alert";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   AuditLogsManager,
-  EventDataGovernancePolicy,
-  IntegrationApiKeyList,
   UserActivityAuditLogManager,
 } from "@/features/audit-security-reporting";
 import { cn } from "@/lib/utils";
 
-type AuditView = "all" | "user-activity" | "data-governance" | "api-keys";
+type AuditView = "all" | "user-activity";
 
 export default function AuditsPage() {
   const [activeView, setActiveView] = useState<AuditView>("all");
@@ -63,18 +61,6 @@ export default function AuditsPage() {
                   label="User Activity"
                   onClick={() => setActiveView("user-activity")}
                 />
-                <AuditTab
-                  active={currentView === "data-governance"}
-                  icon={Database}
-                  label="Data Governance"
-                  onClick={() => setActiveView("data-governance")}
-                />
-                <AuditTab
-                  active={currentView === "api-keys"}
-                  icon={KeyRound}
-                  label="Integration API Keys"
-                  onClick={() => setActiveView("api-keys")}
-                />
               </>
             ) : null}
           </div>
@@ -82,12 +68,6 @@ export default function AuditsPage() {
             {currentView === "all" ? <AuditLogsManager /> : null}
             {isAdmin && currentView === "user-activity" ? (
               <UserActivityAuditLogManager />
-            ) : null}
-            {isAdmin && currentView === "data-governance" ? (
-              <EventDataGovernancePolicy />
-            ) : null}
-            {isAdmin && currentView === "api-keys" ? (
-              <IntegrationApiKeyList />
             ) : null}
           </div>
         </div>

@@ -60,6 +60,7 @@ import { MarkFalsePositiveDialog } from "./mark-false-positive-dialog";
 import { MarkFurtherInvestigationDialog } from "./mark-further-investigation-dialog";
 import { AssetThresholdOverridesManager } from "./alert-thresholds-dialog";
 import { useAlertThresholds } from "../hooks/use-alert-thresholds";
+import { NormalizedEventDetailDialog } from "@/features/event-ingestion/components/normalized-event-detail-dialog";
 
 type TimeRange = "all" | "1h" | "24h" | "7d";
 
@@ -70,6 +71,8 @@ export function AiAlertsManager() {
   const [status, setStatus] = useState<AiAlertStatus | "all">("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [viewing, setViewing] = useState<AiAlert | null>(null);
+  const [viewingSourceEventId, setViewingSourceEventId] = useState<string | null>(null);
+  const [sourceEventParentAlert, setSourceEventParentAlert] = useState<AiAlert | null>(null);
   const [evaluating, setEvaluating] = useState<AiAlert | null>(null);
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
@@ -130,7 +133,7 @@ export function AiAlertsManager() {
     void runDetection
       .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
       .then((result) => {
-        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created.`;
+        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.${result.insufficientBaseline ? ` ${result.insufficientBaseline} events lacked sufficient baseline.` : ""}`;
         if (result.hasMore) {
           toast.warning(
             "Manual detection batch completed",
@@ -145,7 +148,7 @@ export function AiAlertsManager() {
           "Detection run failed",
           error instanceof Error
             ? error.message
-            : "Try again after checking the deployed model and backend connection.",
+            : "Check the deployed model and backend connection, then try again.",
         );
       });
   }
@@ -173,7 +176,7 @@ export function AiAlertsManager() {
     },
     {
       key: "score",
-      header: "Anomaly score",
+      header: "Detection score",
       cell: (item) => (
         <span className="font-medium tabular-nums">
           {formatScore(item.anomalyScore)}
@@ -255,7 +258,18 @@ export function AiAlertsManager() {
             type="button"
           >
             <Eye aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            View XAI explanation
+            View alert explanation
+          </button>
+          <button
+            className="hover:bg-neutral-soft focus-visible:outline-brand flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition-colors focus-visible:outline-2"
+            onClick={() => {
+              setSourceEventParentAlert(null);
+              setViewingSourceEventId(item.event.id);
+            }}
+            type="button"
+          >
+            <FileSearch aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            View ingested event
           </button>
           {canStartTriage && item.status === "new" ? (
             <button
@@ -374,7 +388,7 @@ export function AiAlertsManager() {
   return (
     <>
       <ProductPageHeader
-        description="Monitor alerts created by the deployed anomaly-scoring configuration. Ollama explains stored results but does not calculate scores or decide whether alerts are created."
+        description="Wazuh security events are evaluated automatically by behavioral ML and escalated to security AI when deeper analysis is required."
         additionalActions={
           canRunDetection ? (
             <Button
@@ -398,7 +412,7 @@ export function AiAlertsManager() {
       <MetricStrip
         ariaLabel={
           view === "alerts"
-            ? "AI alert metrics for the last 24 hours"
+            ? "AI-detected security alert metrics for the last 24 hours"
             : "Asset threshold override metrics"
         }
         metrics={
@@ -501,7 +515,7 @@ export function AiAlertsManager() {
                 )}
                 strokeWidth={2}
               />
-              <span>AI alerts</span>
+              <span>AI-detected alerts</span>
               {metrics.data ? (
                 <span
                   className={cn(
@@ -560,9 +574,9 @@ export function AiAlertsManager() {
                 ? "Updating alert results…"
                 : alerts.data
                   ? `${alerts.data.pagination.total} alerts match the current filters`
-                  : "Backend-generated anomaly alerts"
+                  : "Security alerts generated automatically by the AI detection pipeline"
             }
-            title="Real-time alert feed"
+            title="Real-time AI alert feed"
           >
             <form
               className="border-border flex flex-wrap items-center gap-2 border-b p-4"
@@ -573,7 +587,7 @@ export function AiAlertsManager() {
               }}
             >
               <label className="relative block max-w-md min-w-[220px] flex-1">
-                <span className="sr-only">Search AI alerts</span>
+                <span className="sr-only">Search AI-detected security alerts</span>
                 <Search
                   aria-hidden="true"
                   className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -663,30 +677,30 @@ export function AiAlertsManager() {
                     "Alert",
                     "Log source",
                     "Asset",
-                    "Anomaly score",
+                    "Detection score",
                     "Detection risk level",
                     "Status",
                     "Detected",
                     "Actions",
                   ]}
-                  label="Loading AI alerts"
+                  label="Loading AI-detected security alerts"
                   rows={skeletonRows(metrics.data?.total, 6)}
                 />
               ) : alerts.isError ? (
                 <Alert>
-                  Unable to load AI alerts. Check your session, permission, and
-                  backend connection, then try again.
+                  Unable to load AI-detected security alerts. Check your session, permission,
+                  and backend connection, then try again.
                 </Alert>
               ) : alerts.data?.items.length === 0 ? (
                 <div className="py-12 text-center">
                   <Radar className="text-muted mx-auto size-10 stroke-1" />
                   <h3 className="mt-2 text-base font-semibold">
-                    No AI alerts found
+                    No AI-detected security alerts found
                   </h3>
                   <p className="text-muted mt-1 text-sm">
                     {hasActiveFilters
                       ? "No alerts match the current search and filter criteria."
-                      : "No anomaly alerts have been generated yet."}
+                      : "The AI detection pipeline has not generated any security alerts yet."}
                   </p>
                   {hasActiveFilters ? (
                     <Button
@@ -724,7 +738,24 @@ export function AiAlertsManager() {
       ) : (
         <AssetThresholdOverridesManager />
       )}
-      <AiAlertDetailDialog alert={viewing} onClose={() => setViewing(null)} />
+      <AiAlertDetailDialog
+        alert={viewing}
+        onClose={() => setViewing(null)}
+        onViewSourceEvent={(eventId) => {
+          setSourceEventParentAlert(viewing);
+          setViewing(null);
+          setViewingSourceEventId(eventId);
+        }}
+      />
+      <NormalizedEventDetailDialog
+        eventId={viewingSourceEventId}
+        isOpen={viewingSourceEventId !== null}
+        onClose={() => {
+          setViewingSourceEventId(null);
+          if (sourceEventParentAlert) setViewing(sourceEventParentAlert);
+          setSourceEventParentAlert(null);
+        }}
+      />
       <EvaluateAlertReliabilityDialog
         alert={evaluating}
         key={evaluating?.id ?? "closed"}
@@ -745,17 +776,17 @@ export function AiAlertsManager() {
       <Dialog dialogRef={manualDetectionDialogRef} title="Run manual detection">
         <div className="space-y-4">
           <Alert className="border-info/25 bg-info-soft text-foreground">
-            This run processes up to 100 of the oldest pending security events.
+            This run processes up to 100 of the oldest pending security events
+            from the last 24 hours.
           </Alert>
           <div className="text-muted space-y-2 text-sm leading-6">
             <p>
-              Events already evaluated by the deployed scoring configuration are
-              skipped. Pending events are eligible regardless of age. Ollama is
-              not used to calculate the anomaly score.
+              Realtime Wazuh API events are processed automatically by the worker
+              and do not require this action.
             </p>
             <p>
-              If more events remain, you can start another batch when you are
-              ready.
+              Events already evaluated by the deployed model are skipped. Run
+              another batch only when the result reports that pending events remain.
             </p>
           </div>
           <div className="border-border flex justify-end gap-2 border-t pt-4">
@@ -766,7 +797,11 @@ export function AiAlertsManager() {
             >
               Cancel
             </Button>
-            <Button onClick={runManualDetectionBatch} type="button">
+            <Button
+              disabled={runDetection.isPending}
+              onClick={runManualDetectionBatch}
+              type="button"
+            >
               Run up to 100 events
             </Button>
           </div>
@@ -784,9 +819,15 @@ function detectedAfter(range: TimeRange): string | undefined {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    fractionalSecondDigits: 3,
+    hour12: false,
   }).format(new Date(value));
 }
 
@@ -806,10 +847,11 @@ function riskLevelTone(level: string) {
 }
 
 function formatTime(value: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
+    hour12: false,
   }).format(new Date(value));
 }
 

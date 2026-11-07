@@ -40,7 +40,17 @@ vi.mock("../hooks/use-incidents", () => ({
     };
     return {
       data: {
-        controls: query.scope === "linked" ? [linked] : [available],
+        controls:
+          query.scope === "linked"
+            ? [linked]
+            : [
+                available,
+                {
+                  ...available,
+                  id: "33333333-3333-4333-8333-333333333333",
+                  controlCode: "CTRL-003",
+                },
+              ],
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
       isPending: false,
@@ -109,6 +119,57 @@ afterEach(() => {
 });
 
 describe("link incident control dialog", () => {
+  it("preserves selections when searching available options", () => {
+    render(<LinkIncidentControlDialog incident={incident} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /CTRL-002/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Search available controls" }),
+    );
+    expect(screen.getByRole("checkbox", { name: /CTRL-002/ })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Link selected (1)" }),
+    ).toBeEnabled();
+  });
+
+  it("links multiple selections and retains only failures for retry", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("Unavailable"));
+    render(<LinkIncidentControlDialog incident={incident} onClose={onClose} />);
+    const first = screen.getByRole("checkbox", { name: /CTRL-002/ });
+    const second = screen.getByRole("checkbox", { name: /CTRL-003/ });
+    fireEvent.click(first);
+    fireEvent.click(second);
+    expect(
+      screen.getByRole("button", { name: "Link selected (2)" }),
+    ).toBeEnabled();
+    fireEvent.submit(first.closest("form") as HTMLFormElement);
+    await waitFor(() =>
+      expect(screen.getByText(/Could not link:/)).toHaveTextContent("CTRL-003"),
+    );
+    expect(mocks.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(first).not.toBeChecked();
+    expect(second).toBeChecked();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and clears the selection after linking", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync.mockResolvedValue({
+      control: { controlCode: "CTRL-002" },
+      incident: { incidentCode: "INC-001" },
+    });
+    render(<LinkIncidentControlDialog incident={incident} onClose={onClose} />);
+    const option = screen.getByRole("checkbox", { name: /CTRL-002/ });
+    fireEvent.click(option);
+    fireEvent.submit(option.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(mocks.success).toHaveBeenCalled());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveAttribute("open");
+    expect(option).not.toBeChecked();
+  });
+
   it("shows existing links and only offers controls that are not linked", () => {
     render(<LinkIncidentControlDialog incident={incident} onClose={vi.fn()} />);
     expect(
@@ -116,9 +177,11 @@ describe("link incident control dialog", () => {
     ).toBeVisible();
     expect(screen.getByText("Multi-factor authentication")).toBeVisible();
     expect(
-      screen.queryByRole("radio", { name: /CTRL-001/ }),
+      screen.queryByRole("checkbox", { name: /CTRL-001/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /CTRL-002/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /CTRL-002/ }),
+    ).toBeInTheDocument();
   });
   it("requires confirmation before unlinking a control", async () => {
     mocks.unlinkAsync.mockResolvedValue(undefined);

@@ -1,4 +1,7 @@
 "use client";
+import { NotificationImagePicker } from "./notification-image-picker";
+import type { NotificationImage } from "../types/notification-image";
+
 
 import {
   BellRing,
@@ -48,6 +51,8 @@ export function SendInSystemNotificationManager() {
   const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
+  const [images, setImages] = useState<NotificationImage[]>([]);
+  const [imageBusy, setImageBusy] = useState(false);
   const [priority, setPriority] = useState<Priority>("important");
   const users = useUsers(
     {
@@ -80,14 +85,14 @@ export function SendInSystemNotificationManager() {
       ? selectedRoles.length > 0
       : selectedUsers.length > 0;
   const ready =
-    title.trim().length > 0 && message.trim().length > 0 && hasAudience;
+    title.trim().length > 0 && message.trim().length > 0 && hasAudience && !imageBusy;
 
   const submit = () => {
     if (!ready || sendNotification.isPending) return;
     sendNotification.mutate(
       {
         title: title.trim(),
-        message: message.trim(),
+        message: message.trim(), ...(images.length ? { images } : {}),
         priority: priority.toUpperCase() as
           | "NORMAL"
           | "IMPORTANT"
@@ -108,6 +113,7 @@ export function SendInSystemNotificationManager() {
           );
           setTitle("");
           setMessage("");
+          setImages([]);
           setSelectedRoles([]);
           setSelectedUsers([]);
         },
@@ -315,6 +321,7 @@ export function SendInSystemNotificationManager() {
               placeholder="Write the message recipients will see"
               value={message}
             />
+            <NotificationImagePicker images={images} onChange={setImages} onBusyChange={setImageBusy} disabled={sendNotification.isPending} />
             <div className="text-muted flex justify-between gap-4 text-xs">
               <span>
                 Keep the message clear and include the required action.
@@ -330,9 +337,11 @@ export function SendInSystemNotificationManager() {
             </p>
             <div className="flex gap-2 sm:justify-end">
               <Button
+                disabled={imageBusy || sendNotification.isPending}
                 onClick={() => {
                   setTitle("");
                   setMessage("");
+          setImages([]);
                   setSelectedRoles([]);
                   setSelectedUsers([]);
                 }}

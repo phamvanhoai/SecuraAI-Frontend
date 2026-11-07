@@ -39,7 +39,17 @@ vi.mock("../hooks/use-incidents", () => ({
     };
     return {
       data: {
-        risks: query.scope === "linked" ? [linked] : [available],
+        risks:
+          query.scope === "linked"
+            ? [linked]
+            : [
+                available,
+                {
+                  ...available,
+                  id: "33333333-3333-4333-8333-333333333333",
+                  riskCode: "RSK-003",
+                },
+              ],
         pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
       },
       isPending: false,
@@ -108,6 +118,57 @@ afterEach(() => {
 });
 
 describe("link incident risk dialog", () => {
+  it("preserves selections when searching available options", () => {
+    render(<LinkIncidentRiskDialog incident={incident} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /RSK-002/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Search available risks" }),
+    );
+    expect(screen.getByRole("checkbox", { name: /RSK-002/ })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Link selected (1)" }),
+    ).toBeEnabled();
+  });
+
+  it("links multiple selections and retains only failures for retry", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("Unavailable"));
+    render(<LinkIncidentRiskDialog incident={incident} onClose={onClose} />);
+    const first = screen.getByRole("checkbox", { name: /RSK-002/ });
+    const second = screen.getByRole("checkbox", { name: /RSK-003/ });
+    fireEvent.click(first);
+    fireEvent.click(second);
+    expect(
+      screen.getByRole("button", { name: "Link selected (2)" }),
+    ).toBeEnabled();
+    fireEvent.submit(first.closest("form") as HTMLFormElement);
+    await waitFor(() =>
+      expect(screen.getByText(/Could not link:/)).toHaveTextContent("RSK-003"),
+    );
+    expect(mocks.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(first).not.toBeChecked();
+    expect(second).toBeChecked();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and clears the selection after linking", async () => {
+    const onClose = vi.fn();
+    mocks.mutateAsync.mockResolvedValue({
+      risk: { riskCode: "RSK-002" },
+      incident: { incidentCode: "INC-001" },
+    });
+    render(<LinkIncidentRiskDialog incident={incident} onClose={onClose} />);
+    const option = screen.getByRole("checkbox", { name: /RSK-002/ });
+    fireEvent.click(option);
+    fireEvent.submit(option.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(mocks.success).toHaveBeenCalled());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toHaveAttribute("open");
+    expect(option).not.toBeChecked();
+  });
+
   it("shows existing links and only offers unlinked risks", () => {
     render(<LinkIncidentRiskDialog incident={incident} onClose={vi.fn()} />);
     expect(
@@ -115,9 +176,11 @@ describe("link incident risk dialog", () => {
     ).toBeVisible();
     expect(screen.getByText("Credential compromise")).toBeVisible();
     expect(
-      screen.queryByRole("radio", { name: /RSK-001/ }),
+      screen.queryByRole("checkbox", { name: /RSK-001/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /RSK-002/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: /RSK-002/ }),
+    ).toBeInTheDocument();
   });
   it("requires confirmation before unlinking a risk", async () => {
     mocks.unlinkAsync.mockResolvedValue(undefined);

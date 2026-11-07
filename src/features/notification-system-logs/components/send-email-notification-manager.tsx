@@ -1,4 +1,7 @@
 "use client";
+import { NotificationImagePicker } from "./notification-image-picker";
+import type { NotificationImage } from "../types/notification-image";
+
 
 import {
   CheckCircle2,
@@ -30,6 +33,8 @@ export function SendEmailNotificationManager() {
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [images, setImages] = useState<NotificationImage[]>([]);
+  const [imageBusy, setImageBusy] = useState(false);
   const users = useUsers({
     page: 1,
     limit: 20,
@@ -44,7 +49,7 @@ export function SendEmailNotificationManager() {
   const ready =
     selectedUsers.length > 0 &&
     subject.trim().length > 0 &&
-    message.trim().length > 0;
+    message.trim().length > 0 && !imageBusy;
 
   const toggleUser = (id: string) => {
     setSelectedUsers((current) =>
@@ -57,7 +62,7 @@ export function SendEmailNotificationManager() {
   const submit = () => {
     if (!ready || sendEmail.isPending) return;
     sendEmail.mutate(
-      { subject: subject.trim(), message: message.trim(), userIds: selectedUsers },
+      { subject: subject.trim(), message: message.trim(), ...(images.length ? { images } : {}), userIds: selectedUsers },
       {
         onSuccess: (result) => {
           if (result.sentCount === 0) {
@@ -79,6 +84,7 @@ export function SendEmailNotificationManager() {
           setSelectedUsers([]);
           setSubject("");
           setMessage("");
+          setImages([]);
         },
         onError: (error) => {
           toast.error(
@@ -209,6 +215,7 @@ export function SendEmailNotificationManager() {
               placeholder="Write the email recipients will receive"
               value={message}
             />
+            <NotificationImagePicker images={images} onChange={setImages} onBusyChange={setImageBusy} disabled={sendEmail.isPending} />
             <div className="text-muted flex justify-between gap-4 text-xs">
               <span>
                 Do not include credentials or sensitive incident details.
@@ -223,10 +230,12 @@ export function SendEmailNotificationManager() {
             </p>
             <div className="flex gap-2 sm:justify-end">
               <Button
+                disabled={imageBusy || sendEmail.isPending}
                 onClick={() => {
                   setSelectedUsers([]);
                   setSubject("");
                   setMessage("");
+          setImages([]);
                 }}
                 type="button"
                 variant="secondary"

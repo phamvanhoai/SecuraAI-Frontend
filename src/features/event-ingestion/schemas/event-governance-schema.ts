@@ -102,7 +102,7 @@ export const updateEventGovernancePolicySchema = z
     retentionDays: z
       .number()
       .int()
-      .min(1, "Retention period must be at least 1 day")
+      .min(1, "Retention days must be at least 1")
       .max(3650, "Retention period cannot exceed 3650 days (10 years)")
       .optional(),
     archiveAfterDays: z

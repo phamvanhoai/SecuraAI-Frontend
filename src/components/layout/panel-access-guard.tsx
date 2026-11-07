@@ -1,13 +1,12 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { canAccessPanel, defaultPanelPath, type PanelKind } from "@/config/navigation";
 import { useSessionUser } from "@/features/authentication-account";
 
 export function PanelAccessGuard({ panel, children }: { panel: PanelKind; children: ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
   const session = useSessionUser();
   const roleCodes = useMemo(
@@ -19,11 +18,11 @@ export function PanelAccessGuard({ panel, children }: { panel: PanelKind; childr
   useEffect(() => {
     if (session.isPending) return;
     if (!session.data) {
-      router.replace(`/login?returnUrl=${encodeURIComponent(pathname)}`);
+      router.replace("/login?sessionExpired=1");
       return;
     }
     if (!allowed) router.replace(defaultPanelPath(roleCodes));
-  }, [allowed, pathname, roleCodes, router, session.data, session.isPending]);
+  }, [allowed, roleCodes, router, session.data, session.isPending]);
 
   if (session.isPending || !allowed) {
     return (

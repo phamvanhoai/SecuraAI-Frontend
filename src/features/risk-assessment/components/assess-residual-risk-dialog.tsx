@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Pagination } from "@/components/data-display/pagination";
 import { StatusBadge } from "@/components/data-display/static-product";
-import { useForm, useWatch } from "react-hook-form";
+import { useController, useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,9 @@ export function AssessResidualRiskDialog({
       assessmentReason: "",
     },
   });
+
+  const { field: likelihoodField } = useController({ control, name: "likelihood" });
+  const { field: impactField } = useController({ control, name: "impact" });
 
   const [likelihood, impact] = useWatch({
     control,
@@ -572,8 +575,10 @@ export function AssessResidualRiskDialog({
                         <input
                           type="radio"
                           className="sr-only"
+                          {...likelihoodField}
                           value={value}
-                          {...register("likelihood", { valueAsNumber: true })}
+                          checked={likelihoodField.value === value}
+                          onChange={(event) => likelihoodField.onChange(Number(event.target.value))}
                         />
                         <span className="font-semibold tabular-nums">
                           {value}
@@ -633,8 +638,10 @@ export function AssessResidualRiskDialog({
                         <input
                           type="radio"
                           className="sr-only"
+                          {...impactField}
                           value={value}
-                          {...register("impact", { valueAsNumber: true })}
+                          checked={impactField.value === value}
+                          onChange={(event) => impactField.onChange(Number(event.target.value))}
                         />
                         <span className="font-semibold tabular-nums">
                           {value}

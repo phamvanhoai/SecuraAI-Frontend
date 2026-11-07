@@ -73,7 +73,7 @@ export function useAiAlertExplanation(alertId: string | null) {
   return useQuery({
     queryKey: ["ai-alerts", "explanation", alertId],
     queryFn: ({ signal }) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return getAiAlertExplanation(alertId, signal);
     },
     enabled: alertId !== null,
@@ -84,7 +84,7 @@ export function useRegenerateAiAlertExplanation(alertId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: RegenerateAlertExplanationRequest) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return regenerateAiAlertExplanation(alertId, input);
     },
     onSuccess: (data) => {
@@ -98,7 +98,7 @@ export function useEvaluateAiAlertReliability(alertId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: EvaluateAiAlertReliabilityRequest) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return evaluateAiAlertReliability(alertId, input);
     },
     onSuccess: async () => {
@@ -118,7 +118,7 @@ export function useAiAlertFeedback(
   return useQuery({
     queryKey: ["ai-alerts", "feedback", alertId, page],
     queryFn: ({ signal }) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return listAiAlertFeedback(alertId, page, signal);
     },
     enabled: enabled && alertId !== null,
@@ -154,7 +154,7 @@ export function useConfirmAiAlertAsIncident(alertId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: ConfirmAiAlertRequest) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return confirmAiAlertAsIncident(alertId, input);
     },
     onSuccess: async () => {
@@ -174,7 +174,7 @@ export function useMarkAiAlertFalsePositive(alertId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: MarkFalsePositiveRequest) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return markAiAlertFalsePositive(alertId, input);
     },
     onSuccess: async () => {
@@ -194,7 +194,7 @@ export function useMarkAiAlertFurtherInvestigation(alertId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: MarkFurtherInvestigationRequest) => {
-      if (!alertId) throw new Error("The selected AI alert is unavailable.");
+      if (!alertId) throw new Error("The selected anomaly alert is unavailable.");
       return markAiAlertFurtherInvestigation(alertId, input);
     },
     onSuccess: async () => {

@@ -1,13 +1,12 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Boxes, CheckCircle2, Link2, Loader2, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Pagination } from "@/components/data-display/pagination";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useIncidentLinkSelection } from "../hooks/use-incident-link-selection";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
@@ -16,10 +15,6 @@ import {
   useLinkIncidentToAsset,
   useUnlinkIncidentFromAsset,
 } from "../hooks/use-incidents";
-import {
-  linkIncidentAssetFormSchema,
-  type LinkIncidentAssetForm,
-} from "../schemas/incident-asset-schema";
 import type { Incident } from "../schemas/report-incident-schema";
 
 export function LinkIncidentAssetDialog({
@@ -52,25 +47,23 @@ export function LinkIncidentAssetDialog({
   const unlinkMutation = useUnlinkIncidentFromAsset();
   const toast = useToast();
   const [unlinkTargetId, setUnlinkTargetId] = useState<string>();
-  const form = useForm<LinkIncidentAssetForm>({
-    resolver: zodResolver(linkIncidentAssetFormSchema),
-    defaultValues: { assetId: "" },
-  });
-  const selectedAssetId = form.watch("assetId");
+  const selection = useIncidentLinkSelection();
   const availableAssets = availableOptions.data?.assets ?? [];
   const linkedAssets = linkedOptions.data?.assets ?? [];
-  const hasLinkedAssets = incident ? incident.relatedCounts.assets > 0 : false;
+  const hasLinkedAssets =
+    linkedAssets.length > 0 || Boolean(incident?.relatedCounts.assets);
 
   useEffect(() => {
     if (incident) {
-      form.reset({ assetId: "" });
       ref.current?.showModal();
     } else {
       ref.current?.close();
     }
-  }, [form, incident]);
+  }, [incident]);
 
   const close = () => {
+    if (selection.busy) return;
+    selection.reset();
     setUnlinkTargetId(undefined);
     setAvailableDraft("");
     setAvailableSearch("");
@@ -84,7 +77,6 @@ export function LinkIncidentAssetDialog({
   const searchAvailableAssets = () => {
     setAvailableSearch(availableDraft.trim());
     setAvailablePage(1);
-    form.reset({ assetId: "" });
   };
 
   const searchLinkedAssets = () => {
@@ -92,22 +84,30 @@ export function LinkIncidentAssetDialog({
     setLinkedPage(1);
   };
 
-  const submit = async (values: LinkIncidentAssetForm) => {
-    if (!incident) return;
-    try {
-      const linked = await mutation.mutateAsync({ id: incident.id, values });
+  const submit = async () => {
+    if (
+      !incident ||
+      selection.busy ||
+      unlinkMutation.isPending ||
+      !selection.count
+    )
+      return;
+    const result = await selection.submit((assetId) =>
+      mutation.mutateAsync({ id: incident.id, values: { assetId } }),
+    );
+    if (!result) return;
+    if (result.succeeded)
       toast.success(
-        "Asset linked",
-        `${linked.asset.assetCode} is now linked to ${linked.incident.incidentCode}.`,
+        "Links saved",
+        `${result.succeeded} asset(s) linked to ${incident.incidentCode}.`,
       );
-      close();
-    } catch {
-      // The normalized API error is rendered persistently below.
-    }
+    setLinkedSearch("");
+    setLinkedDraft("");
+    setLinkedPage(1);
   };
 
   const unlink = async (assetId: string) => {
-    if (!incident) return;
+    if (!incident || selection.busy) return;
     const asset = linkedAssets.find((item) => item.id === assetId);
     try {
       await unlinkMutation.mutateAsync({ incidentId: incident.id, assetId });
@@ -127,13 +127,26 @@ export function LinkIncidentAssetDialog({
       title={hasLinkedAssets ? "Link another asset" : "Link incident to asset"}
       className="max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
       onClose={close}
+      onCancel={(event) => {
+        if (selection.busy) event.preventDefault();
+      }}
     >
       {incident ? (
         <form
           className="space-y-5"
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
         >
+          {selection.failures.length ? (
+            <Alert>
+              Could not link: {selection.failures.join(", ")}. Successful links
+              were saved. Failed items remain selected; refresh options or
+              retry.
+            </Alert>
+          ) : null}
           {/* Context bar */}
           <div className="border-border bg-neutral-soft/30 rounded-lg border p-3.5 text-xs">
             <div className="flex flex-wrap items-center gap-3">
@@ -253,7 +266,9 @@ export function LinkIncidentAssetDialog({
                         {unlinkTargetId !== asset.id ? (
                           <button
                             className="text-danger hover:bg-danger-soft focus-visible:outline-danger min-h-8 rounded-md px-2 text-xs font-semibold focus-visible:outline-2"
-                            disabled={unlinkMutation.isPending}
+                            disabled={
+                              selection.busy || unlinkMutation.isPending
+                            }
                             onClick={() => setUnlinkTargetId(asset.id)}
                             type="button"
                           >
@@ -272,7 +287,9 @@ export function LinkIncidentAssetDialog({
                           <div className="mt-3 flex justify-end gap-2">
                             <Button
                               className="min-h-9 px-3 text-xs"
-                              disabled={unlinkMutation.isPending}
+                              disabled={
+                                selection.busy || unlinkMutation.isPending
+                              }
                               onClick={() => setUnlinkTargetId(undefined)}
                               type="button"
                               variant="secondary"
@@ -281,7 +298,9 @@ export function LinkIncidentAssetDialog({
                             </Button>
                             <Button
                               className="min-h-9 px-3 text-xs"
-                              disabled={unlinkMutation.isPending}
+                              disabled={
+                                selection.busy || unlinkMutation.isPending
+                              }
                               onClick={() => void unlink(asset.id)}
                               type="button"
                               variant="danger"
@@ -390,22 +409,21 @@ export function LinkIncidentAssetDialog({
             ) : (
               <ul
                 className="space-y-2"
-                role="radiogroup"
+                role="group"
                 aria-labelledby="available-assets-heading"
               >
                 {availableAssets.map((asset) => {
-                  const isSelected = selectedAssetId === asset.id;
+                  const isSelected = Boolean(selection.selected[asset.id]);
                   return (
                     <li key={asset.id}>
                       <button
                         type="button"
-                        role="radio"
+                        role="checkbox"
                         aria-checked={isSelected}
                         onClick={() =>
-                          form.setValue("assetId", asset.id, {
-                            shouldValidate: true,
-                          })
+                          selection.toggle(asset.id, asset.assetCode)
                         }
+                        disabled={selection.busy || unlinkMutation.isPending}
                         className={cn(
                           "border-border focus-visible:outline-brand w-full rounded-xl border p-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
                           isSelected
@@ -427,14 +445,17 @@ export function LinkIncidentAssetDialog({
                           </div>
                           <span
                             className={cn(
-                              "grid size-4 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                              "grid size-4 shrink-0 place-items-center rounded border-2 transition-colors",
                               isSelected
                                 ? "border-brand bg-brand"
                                 : "border-border bg-surface",
                             )}
                           >
                             {isSelected ? (
-                              <span className="size-1.5 rounded-full bg-white" />
+                              <CheckCircle2
+                                aria-hidden="true"
+                                className="size-3 text-white"
+                              />
                             ) : null}
                           </span>
                         </div>
@@ -446,11 +467,6 @@ export function LinkIncidentAssetDialog({
             )}
 
             {/* Validation error */}
-            {form.formState.errors.assetId ? (
-              <p className="text-danger text-sm">
-                {form.formState.errors.assetId.message}
-              </p>
-            ) : null}
 
             {/* Pagination */}
             {availableOptions.data &&
@@ -458,7 +474,6 @@ export function LinkIncidentAssetDialog({
               <Pagination
                 onPageChange={(page) => {
                   setAvailablePage(page);
-                  form.reset({ assetId: "" });
                 }}
                 page={availableOptions.data.pagination.page}
                 pageCount={availableOptions.data.pagination.totalPages}
@@ -468,16 +483,25 @@ export function LinkIncidentAssetDialog({
 
           {/* Footer actions */}
           <div className="border-border flex items-center justify-between border-t pt-4">
-            <div />
+            <p className="text-muted text-xs" role="status">
+              {selection.count} selected across pages
+            </p>
             <div className="flex items-center gap-3">
-              <Button variant="secondary" onClick={close} type="button">
+              <Button
+                variant="secondary"
+                onClick={close}
+                disabled={selection.busy}
+                type="button"
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={mutation.isPending || !selectedAssetId}
+                disabled={
+                  selection.busy || unlinkMutation.isPending || !selection.count
+                }
               >
-                {mutation.isPending ? (
+                {selection.busy ? (
                   <>
                     <Loader2
                       aria-hidden="true"
@@ -492,7 +516,7 @@ export function LinkIncidentAssetDialog({
                       className="size-4"
                       strokeWidth={1.8}
                     />
-                    {hasLinkedAssets ? "Link another asset" : "Link asset"}
+                    {`Link selected (${selection.count})`}
                   </>
                 )}
               </Button>
