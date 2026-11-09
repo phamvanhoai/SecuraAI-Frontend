@@ -10,7 +10,7 @@ const context = { params: Promise.resolve({ serviceId: id }) };
 const input = {
   expectedUpdatedAt: "2026-10-07T00:00:00Z",
   confirmationName: " Support ",
-  reason: " Retired ",
+  reason: " Retired after service migration ",
 };
 const request = (body: unknown, origin = "http://localhost") =>
   new Request(`http://localhost/api/business-services/${id}/deactivate`, {
@@ -36,7 +36,7 @@ describe("Deactivate BFF", () => {
         body: JSON.stringify({
           ...input,
           confirmationName: "Support",
-          reason: "Retired",
+          reason: "Retired after service migration",
         }),
         signal: req.signal,
       },

@@ -83,7 +83,7 @@ export function DeleteAssetDialog({
   const isActive = asset?.status === "active";
   const locked = !isActive || stale || mutation.isPending;
   const confirmationMatches = confirmation.trim() === (asset?.assetCode ?? "___");
-  const canSubmit = confirmationMatches && reason.trim().length >= 1 && reason.trim().length <= 1000 && !locked;
+  const canSubmit = confirmationMatches && reason.trim().length >= 20 && reason.trim().length <= 1000 && !locked;
 
   return (
     <Dialog
@@ -213,7 +213,7 @@ export function DeleteAssetDialog({
                 onChange={(event) => setReason(event.target.value)}
               />
               <p className="text-muted text-xs">
-                {reason.trim().length} / 1000 characters
+                {reason.trim().length} / 1000 characters (minimum 20)
               </p>
             </div>
           </div>
