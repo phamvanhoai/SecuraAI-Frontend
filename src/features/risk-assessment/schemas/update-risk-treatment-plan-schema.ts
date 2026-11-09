@@ -9,6 +9,7 @@ export const updateRiskTreatmentPlanSchema = z
     targetDate: z.iso.date(),
     status: z.enum(["draft", "active", "completed", "cancelled"]),
     expectedUpdatedAt: z.iso.datetime({ offset: true }),
+    changeReason: z.string().trim().min(10).max(2000).optional(),
     controlIds: z.array(z.string().uuid()).max(100),
     actions: z
       .array(
@@ -23,6 +24,10 @@ export const updateRiskTreatmentPlanSchema = z
       .max(100),
   })
   .superRefine((value, context) => {
+    if (value.status === "cancelled") {
+      if (!value.changeReason) context.addIssue({ code: "custom", path: ["changeReason"], message: "Enter a cancellation reason (10–2000 characters)." });
+      return;
+    }
     validateAcceptanceCost(value, context);
     if (value.strategy === "mitigate" && !value.controlIds.length)
       context.addIssue({

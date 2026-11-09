@@ -18,6 +18,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useIdentifyThreat } from "../hooks/use-identify-threat";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import {
   identifyThreatSchema,
@@ -41,7 +42,8 @@ export function IdentifyThreatDialog({
   const mutation = useIdentifyThreat(riskId);
   const toast = useToast();
 
-  const blockedReason =
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
+  const blockedReason = pendingAcceptance ? PENDING_ACCEPTANCE_MESSAGE :
     risk.data?.vulnerabilityWorkflow?.blockedReason ??
     (risk.data && risk.data.vulnerabilityWorkflow?.canIdentify === false
       ? "Threat creation is unavailable. Open Risk Review for an Accepted Risk first. History remains available."
@@ -118,7 +120,7 @@ export function IdentifyThreatDialog({
             </span>
           </div>
           {blockedReason ? (
-            <p className="text-warning mt-1.5 font-medium">{blockedReason}</p>
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">{blockedReason}</Alert>
           ) : null}
         </div>
 
@@ -242,7 +244,7 @@ export function IdentifyThreatDialog({
             onSubmit={handleSubmit(submit)}
           >
             {/* Alerts */}
-            {message ? (
+            {message && !pendingAcceptance ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {message}
               </Alert>

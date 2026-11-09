@@ -4,6 +4,7 @@ import { AssessInherentRiskDialog } from "./assess-inherent-risk-dialog";
 
 const mutateAsync = vi.hoisted(() => vi.fn().mockResolvedValue({ riskCode: "RSK-001", score: 12, rating: "high" }));
 const onClose = vi.fn();
+const state = vi.hoisted(() => ({ pending: false }));
 const assessment = {
   id: "00000000-0000-4000-8000-000000000010",
   type: "initial",
@@ -32,6 +33,7 @@ vi.mock("../hooks/use-risk-register", () => ({
   useRiskRecord: () => ({
     data: {
       status: "open",
+      acceptances: state.pending ? [{ decision: "pending" }] : [],
       assets: [{ name: "Customer database", criticality: "high" }],
       threats: [{ name: "Database failure" }],
       vulnerabilities: [{ name: "Untested backups" }],
@@ -59,9 +61,21 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  state.pending = false;
 });
 
 describe("Assess Inherent Risk history", () => {
+  it("disables an already open form when acceptance becomes pending", () => {
+    const props = { riskId: "risk", riskLabel: "RSK-001", onClose };
+    const view = render(<AssessInherentRiskDialog {...props} />);
+    expect(screen.getByRole("button", { name: "Save assessment" })).toBeEnabled();
+    state.pending = true;
+    view.rerender(<AssessInherentRiskDialog {...props} />);
+    expect(screen.getByText("This Risk has a pending acceptance request. Changes are unavailable until the request is resolved.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save assessment" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /^3Possible/ })).toBeDisabled();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
   it("submits numeric scores after changing radio choices", async () => {
     render(<AssessInherentRiskDialog riskId="risk" riskLabel="RSK-001" onClose={onClose} />);
     fireEvent.click(screen.getByRole("radio", { name: /^4Likely/ }));

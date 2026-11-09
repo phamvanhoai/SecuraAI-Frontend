@@ -2,16 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ApiError } from "@/lib/api/api-error";
 import { UpdateTreatmentActionProgressDialog } from "./update-treatment-action-progress-dialog";
+import { PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 
 const mocks = vi.hoisted(() => ({ mutateAsync: vi.fn(), success: vi.fn() }));
 vi.mock("../hooks/use-update-treatment-action-progress", () => ({
   useUpdateTreatmentActionProgress: () => ({ mutateAsync: mocks.mutateAsync, isPending: false }),
 }));
+vi.mock("../hooks/use-risk-register", () => ({ useRiskRecord: () => ({ data: { acceptances: [] }, isPending: false, isError: false }) }));
 vi.mock("@/components/feedback/toast", () => ({ useToast: () => ({ success: mocks.success }) }));
 const timestamp = "2026-09-21T12:00:00.000Z";
 const action = { id: "22222222-2222-4222-8222-222222222222", title: "Strengthen authentication", description: null,
   assignee: null, dueDate: null, progressPercent: 100, status: "completed", completedAt: timestamp, createdAt: timestamp, updatedAt: timestamp };
-const props = { action, treatmentPlanId: "11111111-1111-4111-8111-111111111111", onClose: vi.fn(), onReload: vi.fn() };
+const props = { riskId: "11111111-1111-4111-8111-111111111111", action, treatmentPlanId: "11111111-1111-4111-8111-111111111111", onClose: vi.fn(), onReload: vi.fn() };
 beforeEach(() => {
   vi.clearAllMocks();
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.setAttribute("open", ""); } });
@@ -24,6 +26,16 @@ afterEach(() => {
 });
 
 describe("action progress dialog", () => {
+  it("keeps pending acceptance as the shared lock reason after a stale save", async () => {
+    mocks.mutateAsync.mockRejectedValue(new ApiError(PENDING_ACCEPTANCE_MESSAGE, 409, "CONFLICT", { error: { code: "ACCEPTANCE_PENDING" } }));
+    render(<UpdateTreatmentActionProgressDialog {...props} action={{ ...action, progressPercent: 0, status: "pending", completedAt: null }} />);
+    fireEvent.change(screen.getByLabelText("Progress (%)"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save progress" }));
+    expect(await screen.findByText(PENDING_ACCEPTANCE_MESSAGE)).toBeVisible();
+    expect(screen.getByLabelText("Progress (%)")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save progress" })).toBeDisabled();
+    expect(props.onClose).not.toHaveBeenCalled();
+  });
   it("requires a note for regression and sends the original concurrency version", async () => {
     mocks.mutateAsync.mockResolvedValue({ progressPercent: 60, allActionsCompleted: false });
     render(<UpdateTreatmentActionProgressDialog {...props} />);

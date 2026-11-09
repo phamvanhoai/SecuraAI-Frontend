@@ -20,6 +20,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDefineTargetRisk } from "../hooks/use-define-target-risk";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import {
   defineTargetRiskSchema,
@@ -91,6 +92,7 @@ export function DefineTargetRiskDialog({
   };
 
   const submit = async (input: DefineTargetRiskInput) => {
+    if (cannotSave) return;
     try {
       const result = await mutation.mutateAsync(input);
       close();
@@ -120,10 +122,10 @@ export function DefineTargetRiskDialog({
     )
     .toSorted((a, b) => Date.parse(b.assessedAt) - Date.parse(a.assessedAt))[0];
 
-  const blocked = Boolean(
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
+  const blocked = pendingAcceptance || Boolean(
     risk.data &&
-      (!["open", "under_treatment"].includes(risk.data.status) ||
-        risk.data.acceptances.some((item) => item.decision === "pending")),
+      (!["open", "under_treatment"].includes(risk.data.status)),
   );
 
   const plans =
@@ -181,10 +183,14 @@ export function DefineTargetRiskDialog({
               {riskLabel}
             </span>
           </div>
-          {blocked ? (
+          {pendingAcceptance ? (
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">
+              {PENDING_ACCEPTANCE_MESSAGE}
+            </Alert>
+          ) : blocked ? (
             <p className="text-warning mt-1.5 font-medium">
               Target risk cannot be changed for an accepted, closed or archived
-              risk, or while acceptance is pending.
+              risk.
             </p>
           ) : risk.data && !ready ? (
             <p className="text-warning mt-1.5 font-medium">
@@ -442,7 +448,7 @@ export function DefineTargetRiskDialog({
             onSubmit={handleSubmit(submit)}
           >
             {/* Alerts */}
-            {message ? (
+            {message && !pendingAcceptance ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {message}
               </Alert>

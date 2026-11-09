@@ -9,7 +9,7 @@ vi.mock("./risk-context-history-list", () => ({ RiskContextHistoryList: () => <p
 beforeAll(() => { Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } }); });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it.each(["Accepted Risk requires review", "Pending acceptance locks context", "Closed Risk is read-only"])("locks creation but preserves History: %s", (blockedReason) => {
-  state.risk.mockReturnValue({ data: { vulnerabilities: [{ id: "v", name: "Weakness", description: "Demo" }], contextHistory: [], vulnerabilityWorkflow: { canIdentify: false, blockedReason } } });
+  state.risk.mockReturnValue({ data: { acceptances: [], vulnerabilities: [{ id: "v", name: "Weakness", description: "Demo" }], contextHistory: [], vulnerabilityWorkflow: { canIdentify: false, blockedReason } } });
   render(<IdentifyThreatDialog riskId="risk" riskLabel="Demo risk" onClose={vi.fn()} />);
   expect(screen.getByLabelText("Threat name")).toBeDisabled();
   expect(screen.getByLabelText("Threat scenario")).toBeDisabled();
@@ -22,7 +22,7 @@ it.each(["Accepted Risk requires review", "Pending acceptance locks context", "C
   expect(state.save).not.toHaveBeenCalled();
 });
 it('enables creation from the server capability after review', () => {
-  state.risk.mockReturnValue({ data: { vulnerabilities: [{ id: "v", name: "Weakness", description: "Demo" }], contextHistory: [], vulnerabilityWorkflow: { canIdentify: true, blockedReason: null } } });
+  state.risk.mockReturnValue({ data: { acceptances: [], vulnerabilities: [{ id: "v", name: "Weakness", description: "Demo" }], contextHistory: [], vulnerabilityWorkflow: { canIdentify: true, blockedReason: null } } });
   render(<IdentifyThreatDialog riskId="risk" riskLabel="Demo risk" onClose={vi.fn()} />);
   expect(screen.getByLabelText("Threat name")).toBeEnabled();
   expect(screen.getByRole("button", { name: "Identify threat" })).toBeEnabled();

@@ -23,6 +23,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssessResidualRisk } from "../hooks/use-assess-residual-risk";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import {
   assessResidualRiskSchema,
@@ -141,10 +142,10 @@ export function AssessResidualRiskDialog({
       setValue("riskTolerance", established.riskTolerance);
   }, [established?.riskAppetite, established?.riskTolerance, setValue]);
 
-  const blocked = Boolean(
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
+  const blocked = pendingAcceptance || Boolean(
     risk.data &&
-      (!["open", "under_treatment"].includes(risk.data.status) ||
-        risk.data.acceptances.some((item) => item.decision === "pending")),
+      (!["open", "under_treatment"].includes(risk.data.status)),
   );
 
   useEffect(() => {
@@ -163,6 +164,7 @@ export function AssessResidualRiskDialog({
   };
 
   const submit = async (input: AssessResidualRiskInput) => {
+    if (cannotSave) return;
     try {
       const result = await mutation.mutateAsync(input);
       close();
@@ -208,10 +210,14 @@ export function AssessResidualRiskDialog({
               {riskLabel}
             </span>
           </div>
-          {blocked ? (
+          {pendingAcceptance ? (
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">
+              {PENDING_ACCEPTANCE_MESSAGE}
+            </Alert>
+          ) : blocked ? (
             <p className="text-warning mt-1.5 font-medium">
               This risk cannot receive a residual assessment in its current
-              state or while acceptance is pending.
+              state.
             </p>
           ) : risk.data && !ready ? (
             <p className="text-warning mt-1.5 font-medium">
@@ -465,7 +471,7 @@ export function AssessResidualRiskDialog({
             onSubmit={handleSubmit(submit)}
           >
             {/* Alerts */}
-            {message ? (
+            {message && !pendingAcceptance ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {message}
               </Alert>
