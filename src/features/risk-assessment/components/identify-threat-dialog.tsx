@@ -278,13 +278,13 @@ export function IdentifyThreatDialog({
                     Threat name
                   </h3>
                   <p className="text-xs text-muted">
-                    A short, descriptive identifier. Max 255 characters.
+                    A short, descriptive identifier. 2-100 characters.
                   </p>
                 </div>
               </div>
               <Input
                 id="threatName"
-                maxLength={255}
+                minLength={2} maxLength={100}
                 autoFocus
                 disabled={cannotSave}
                 aria-labelledby="threat-name-heading"
@@ -315,7 +315,7 @@ export function IdentifyThreatDialog({
                   </h3>
                   <p className="text-xs text-muted">
                     Describe how this threat could materialise and its potential
-                    impact. Max 3,000 characters.
+                    impact. 20-2,000 characters required.
                   </p>
                 </div>
               </div>
@@ -325,7 +325,7 @@ export function IdentifyThreatDialog({
                   "disabled:cursor-not-allowed disabled:bg-neutral-soft disabled:text-muted disabled:opacity-60 disabled:resize-none",
                 )}
                 rows={4}
-                maxLength={3000}
+                minLength={20} maxLength={2000}
                 disabled={cannotSave}
                 aria-labelledby="threat-desc-heading"
                 aria-invalid={Boolean(errors.description)}

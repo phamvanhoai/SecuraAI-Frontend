@@ -368,7 +368,8 @@ export function CreateRiskAssessmentDialog() {
               </label>
               <Input
                 id="riskTitle"
-                maxLength={255}
+                minLength={3}
+                maxLength={100}
                 autoFocus
                 aria-invalid={Boolean(errors.title)}
                 {...register("title")}
@@ -387,13 +388,14 @@ export function CreateRiskAssessmentDialog() {
               >
                 Context and scope
                 <span className="text-muted ml-1.5 text-xs font-normal">
-                  (optional)
+                  (required)
                 </span>
               </label>
               <Textarea
                 id="riskDescription"
                 rows={4}
-                maxLength={5000}
+                minLength={20}
+                maxLength={2000}
                 aria-invalid={Boolean(errors.description)}
                 {...register("description")}
               />

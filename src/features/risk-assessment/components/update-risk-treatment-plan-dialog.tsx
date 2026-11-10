@@ -251,6 +251,8 @@ export function UpdateRiskTreatmentPlanDialog({
               </label>
               <Input
                 id="update-plan-title"
+                minLength={3}
+                maxLength={100}
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               />
@@ -592,6 +594,8 @@ export function UpdateRiskTreatmentPlanDialog({
                     <Input
                       disabled={isTerminal}
                       aria-label={`Action ${index + 1} title`}
+                      minLength={3}
+                      maxLength={100}
                       value={action.title}
                       onChange={(e) =>
                         changeAction(index, { title: e.target.value })

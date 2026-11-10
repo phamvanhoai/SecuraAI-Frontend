@@ -765,19 +765,19 @@ export function AssessResidualRiskDialog({
                     >
                       Assessment basis
                       <span className="text-muted ml-1.5 text-xs font-normal">
-                        (optional)
+                        (required)
                       </span>
                     </h3>
                     <p className="text-xs text-muted">
                       Explain the evidence and control effectiveness considered.
-                      Max 3,000 characters.
+                      10-2,000 characters required.
                     </p>
                   </div>
                 </div>
                 <Textarea
                   id="residualReason"
                   rows={4}
-                  maxLength={3000}
+                  maxLength={2000}
                   aria-labelledby="residual-reason-heading"
                   aria-invalid={Boolean(errors.assessmentReason)}
                   {...register("assessmentReason")}

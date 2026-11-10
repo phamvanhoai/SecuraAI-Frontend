@@ -7,7 +7,7 @@ export const defineTargetRiskSchema = z.object({
     .string()
     .trim()
     .min(10, "Enter at least 10 characters.")
-    .max(3000),
+    .max(2000),
 });
 export const targetRiskResultSchema = z.object({
   assessmentId: z.uuid(),
