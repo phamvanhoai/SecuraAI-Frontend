@@ -245,12 +245,14 @@ export function CreateBusinessServiceDialog({
                   </label>
                   <Input
                     id="service-name"
-                    maxLength={255}
+                    minLength={3}
+                    maxLength={100}
                     autoComplete="off"
                     aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? "service-name-error" : undefined}
+                    aria-describedby={errors.name ? "service-name-error service-name-help" : "service-name-help"}
                     {...form.register("name")}
                   />
+                  <p id="service-name-help" className="text-muted text-xs">3-100 characters.</p>
                   {errors.name && (
                     <p id="service-name-error" role="alert" className="text-danger text-xs">
                       {errors.name.message}
@@ -277,7 +279,8 @@ export function CreateBusinessServiceDialog({
                     id="service-description"
                     aria-label="Description (optional)"
                     rows={4}
-                    maxLength={5000}
+                    minLength={20}
+                    maxLength={2000}
                     aria-invalid={!!errors.description}
                     aria-describedby={
                       errors.description
@@ -292,7 +295,7 @@ export function CreateBusinessServiceDialog({
                     </p>
                   ) : (
                     <p id="service-description-help" className="text-muted text-xs">
-                      Describe the business purpose and scope. Maximum 5,000 characters.
+                      Optional. If entered, describe the business purpose and scope in 20-2,000 characters.
                     </p>
                   )}
                 </div>

@@ -8,8 +8,8 @@ export const createBusinessServiceSchema = z
       .pipe(
         z
           .string()
-          .min(1, "Enter a service name.")
-          .max(255, "Use at most 255 characters."),
+          .min(3, "Enter at least 3 characters.")
+          .max(100, "Use at most 100 characters."),
       )
       .refine(
         (value) =>
@@ -21,7 +21,8 @@ export const createBusinessServiceSchema = z
     description: z
       .string()
       .trim()
-      .max(5000, "Use at most 5000 characters.")
+      .max(2000, "Use at most 2000 characters.")
+      .refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.")
       .refine(
         (value) => !value.includes("\u0000"),
         "Invalid control characters.",

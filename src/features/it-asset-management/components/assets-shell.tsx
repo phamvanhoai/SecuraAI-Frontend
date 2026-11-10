@@ -204,7 +204,7 @@ export function AssetsShell() {
       <ProductPageHeader
         title="IT Asset List"
         description="View the organization’s managed IT assets, ownership, business context, classification, and lifecycle status."
-        additionalActions={canCreate ? <CreateAssetDialog /> : undefined}
+        additionalActions={canCreate ? <CreateAssetDialog onCreated={() => navigate({ page: 1, sortBy: "createdAt", sortOrder: "desc" })} /> : undefined}
       />
       <AssetManagementTabs active="assets" canReadServices={session.data?.permissions.includes("business-services.read") ?? false} />
       <ProductPanel
