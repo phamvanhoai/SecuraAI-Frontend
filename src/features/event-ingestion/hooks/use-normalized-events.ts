@@ -4,6 +4,7 @@ import {
   getNormalizedEventDetail,
   getNormalizedEventMetrics,
   listNormalizedEvents,
+  retryEventDetection,
   updateEventMapping,
 } from "../api/normalized-events";
 import type {
@@ -74,6 +75,19 @@ export function useUpdateEventMapping(eventId: string | null) {
           queryKey: ["normalized-events", "detail", eventId],
         });
       }
+    },
+  });
+}
+
+export function useRetryEventDetection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: retryEventDetection,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["normalized-events"] });
+      queryClient.invalidateQueries({
+        queryKey: ["normalized-events", "detail", result.eventId],
+      });
     },
   });
 }

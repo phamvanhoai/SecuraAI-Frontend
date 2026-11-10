@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseNormalizedEvents = vi.fn();
+const mockRetryDetection = vi.fn();
 const mockSessionUser = vi.fn(() => ({
   data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
   isPending: false,
@@ -26,6 +27,11 @@ vi.mock("../hooks/use-normalized-events", () => ({
   useUpdateEventMapping: () => ({
     mutateAsync: vi.fn(),
     isPending: false,
+  }),
+  useRetryEventDetection: () => ({
+    mutate: mockRetryDetection,
+    isPending: false,
+    variables: undefined,
   }),
   useNormalizedEventMetrics: () => ({
     isPending: false,
@@ -152,6 +158,39 @@ describe("NormalizedEventsList", () => {
     expect(screen.getAllByText("Authentication")[0]).toBeInTheDocument();
     expect(screen.getAllByText("MAPPED")[0]).toBeInTheDocument();
     expect(screen.getByText("Anomaly")).toBeInTheDocument();
+  });
+
+  it("shows a clear AI failure and offers retry", async () => {
+    const user = userEvent.setup();
+    mockUseNormalizedEvents.mockReturnValueOnce({
+      isPending: false,
+      error: null,
+      data: {
+        items: [
+          {
+            ...mockItems[0],
+            detection: {
+              status: "FAILED",
+              score: null,
+              alertId: null,
+              errorCode: "LLM_TIMEOUT",
+              errorMessage: "Foundation-Sec analysis timed out.",
+              retryable: true,
+            },
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+    });
+
+    render(<NormalizedEventsList />);
+    expect(screen.getByText("Foundation-Sec timeout")).toBeInTheDocument();
+    expect(screen.getByText("Foundation-Sec analysis timed out.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry analysis" }));
+    expect(mockRetryDetection).toHaveBeenCalledWith(
+      mockItems[0]?.id,
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
   });
 
   it("handles search input submission", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   Calendar,
   ChevronDown,
   ChevronUp,
@@ -8,6 +9,7 @@ import {
   Filter,
   Layers,
   RotateCcw,
+  RefreshCw,
   Search,
   ShieldAlert,
   UserCheck,
@@ -30,6 +32,8 @@ import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useEventSources } from "../hooks/use-event-sources";
 import { useNormalizedEvents } from "../hooks/use-normalized-events";
+import { useRetryEventDetection } from "../hooks/use-normalized-events";
+import { useToast } from "@/components/feedback/toast";
 import {
   eventFamilies,
   mappingStatuses,
@@ -63,6 +67,8 @@ const formatFamilyLabel: Record<string, string> = {
 };
 
 export function NormalizedEventsList() {
+  const toast = useToast();
+  const retryDetection = useRetryEventDetection();
   const [page, setPage] = useState(1);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -298,25 +304,85 @@ export function NormalizedEventsList() {
           </StatusBadge>
           {item.detection ? (
             <div className="text-muted text-xs">
-              <p>
+              <p
+                className={cn(
+                  "inline-flex items-center gap-1 font-medium",
+                  item.detection.status === "FAILED" && "text-danger",
+                )}
+              >
+                {item.detection.status === "FAILED" ? (
+                  <AlertCircle className="size-3.5" aria-hidden="true" />
+                ) : null}
                 {item.detection.status === "BELOW_THRESHOLD"
                   ? "Evaluated — below threshold"
                   : item.detection.status === "LINKED_TO_ALERT"
                     ? "Linked to alert"
+                    : item.detection.status === "FAILED"
+                      ? item.detection.errorCode === "ML_MODEL_TIMEOUT"
+                        ? "ML model timeout"
+                        : item.detection.errorCode === "LLM_TIMEOUT"
+                          ? "Foundation-Sec timeout"
+                          : item.detection.errorCode?.startsWith("ML_")
+                            ? "ML model unavailable"
+                            : item.detection.errorCode?.startsWith("LLM_")
+                              ? "Foundation-Sec unavailable"
+                              : "AI analysis failed"
                     : item.detection.status
                         .replaceAll("_", " ")
                         .toLowerCase()
                         .replace(/^./, (s) => s.toUpperCase())}
               </p>
+              {item.detection.status === "FAILED" &&
+              item.detection.errorMessage ? (
+                <p className="mt-0.5 max-w-56 leading-4">
+                  {item.detection.errorMessage}
+                </p>
+              ) : null}
               {item.detection.score !== null ? (
                 <p>
-                  Historical anomaly: {(item.detection.score * 100).toFixed(1)}%
+                  Detection score: {(item.detection.score * 100).toFixed(1)}%
                 </p>
               ) : null}
               {item.detection.alertId ? (
                 <p className="font-mono">
                   ALT-{item.detection.alertId.slice(0, 8).toUpperCase()}
                 </p>
+              ) : null}
+              {item.detection.retryable ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-1 min-h-7 gap-1 px-2 py-0.5 text-xs"
+                  disabled={
+                    retryDetection.isPending &&
+                    retryDetection.variables === item.id
+                  }
+                  onClick={() => {
+                    retryDetection.mutate(item.id, {
+                      onSuccess: () =>
+                        toast.success(
+                          "AI analysis queued",
+                          "The event will be processed during the next scheduled cycle.",
+                        ),
+                      onError: (error) =>
+                        toast.error(
+                          "Unable to retry AI analysis",
+                          error.message,
+                        ),
+                    });
+                  }}
+                >
+                  <RefreshCw
+                    className={cn(
+                      "size-3.5",
+                      retryDetection.isPending &&
+                        retryDetection.variables === item.id &&
+                        "animate-spin",
+                    )}
+                    aria-hidden="true"
+                  />
+                  Retry analysis
+                </Button>
               ) : null}
             </div>
           ) : null}
