@@ -73,7 +73,7 @@ describe("DeleteAssetDialog", () => {
     );
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
     await user.type(screen.getByLabelText(/Enter code/), "AST-001");
-    await user.type(screen.getByLabelText(/Archive reason/), "Asset retirement");
+    await user.type(screen.getByLabelText(/Archive reason/), "Asset retired after migration");
     await user.click(screen.getByRole("button", { name: "Archive Asset" }));
 
     expect(

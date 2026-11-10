@@ -145,7 +145,7 @@ describe("Service Deactivate dialog", () => {
     );
     await user.type(
       screen.getByLabelText("Reason for deactivation (required)"),
-      "Retired service",
+      "Retired after service migration service",
     );
     await user.click(
       screen.getByRole("button", { name: "Deactivate service" }),
@@ -157,7 +157,7 @@ describe("Service Deactivate dialog", () => {
     );
     expect(
       screen.getByLabelText("Reason for deactivation (required)"),
-    ).toHaveValue("Retired service");
+    ).toHaveValue("Retired after service migration service");
     expect(mocks.mutate).toHaveBeenCalledTimes(1);
   });
   it("confirms dirty Cancel instead of losing reason", async () => {
@@ -166,14 +166,14 @@ describe("Service Deactivate dialog", () => {
     const user = userEvent.setup();
     await user.type(
       screen.getByLabelText("Reason for deactivation (required)"),
-      "Retired service",
+      "Retired after service migration service",
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(close).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Keep editing" }));
     expect(
       screen.getByLabelText("Reason for deactivation (required)"),
-    ).toHaveValue("Retired service");
+    ).toHaveValue("Retired after service migration service");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(close).toHaveBeenCalled();

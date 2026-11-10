@@ -119,7 +119,7 @@ export function TreatmentPlanDetailShell({
       <EditTreatmentPlanDialog plan={plan} open={editing} onClose={() => setEditing(false)} />
       <CancelTreatmentPlanDialog plan={plan} open={cancelling} onClose={() => setCancelling(false)} />
       {progressAction ? <UpdateTreatmentActionProgressDialog
-        treatmentPlanId={plan.id} action={progressAction}
+        treatmentPlanId={plan.id} riskId={plan.risk.id} action={progressAction}
         onClose={() => setProgressAction(null)}
         onReload={() => { setProgressAction(null); void detail.refetch(); }}
       /> : null}

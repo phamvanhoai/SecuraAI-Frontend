@@ -41,6 +41,20 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 const id = "11111111-1111-4111-8111-111111111111";
+it.each([
+  'Asset classification or context changed after submission. Reject this request, reassess the Risk, and submit a new acceptance request.',
+  'Evidence or its Control links changed after submission. Reject this request, review the Evidence and assessments, and submit a new acceptance request.',
+  'This request has no verifiable Asset/Evidence snapshot. Reject it and submit a new acceptance request.',
+  'This Risk is overdue for review. Reject this request so the Risk Owner can open and complete Risk Review, then submit a new acceptance request.',
+])('blocks Approve but preserves Reject when the backend reports: %s', (approvalBlockedReason) => {
+  render(<DecideRiskAcceptanceDialog acceptanceId={id} approvalBlockedReason={approvalBlockedReason} onClose={vi.fn()} />);
+  expect(screen.getByText(approvalBlockedReason)).toBeVisible();
+  expect(screen.getByRole('option', { name: 'Approve' })).toBeDisabled();
+  expect(screen.getByRole('option', { name: 'Reject' })).toBeEnabled();
+  expect(screen.getByLabelText('Decision', { exact: true })).toHaveValue('rejected');
+  expect(screen.getByRole('button', { name: 'Record decision' })).toBeEnabled();
+  expect(mutations.decide).not.toHaveBeenCalled();
+});
 it("shows submitted financial justification to the approver without auto-approving", () => {
   render(<DecideRiskAcceptanceDialog acceptanceId={id} onClose={vi.fn()} acceptanceCost={{ costToFix: "100000000", expectedLoss: "5000000", currency: "VND", periodMonths: 12, basis: "Synthetic submitted estimate for twelve months." }} />);
   expect(screen.getByText("100,000,000 VND")).toBeInTheDocument();
@@ -118,6 +132,13 @@ it("keeps expired request rejection available and disables approval", () => {
   expect(screen.getByRole("option", { name: "Approve" })).toBeDisabled();
   expect(screen.getByLabelText("Decision")).toHaveValue("rejected");
   expect(screen.getByRole("button", { name: "Record decision" })).toBeEnabled();
+});
+it("uses the server overdue instruction and blocks submission without disabling the assessment inputs", () => {
+  const blockedReason = "This Risk is overdue for review. Open and complete Risk Review before submitting an acceptance request.";
+  render(<SubmitRiskAcceptanceDialog risk={{ ...risk, reviewDate: "2020-01-01T00:00:00Z", acceptanceWorkflow: { canSubmit: false, canOpenReview: true, blockedReason } }} onClose={vi.fn()} />);
+  expect(screen.getByText(blockedReason)).toBeVisible();
+  expect(screen.getByRole("button", { name: "Submit for approval" })).toBeDisabled();
+  expect(mutations.submit).not.toHaveBeenCalled();
 });
 it("uses the actual residual and warns on proposed threshold exceedance without blocking submission", () => {
   render(<SubmitRiskAcceptanceDialog risk={risk} onClose={vi.fn()} />);

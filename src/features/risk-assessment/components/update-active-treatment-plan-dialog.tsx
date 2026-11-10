@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import { UpdateRiskTreatmentPlanDialog } from "./update-risk-treatment-plan-dialog";
 
@@ -19,9 +20,10 @@ export function UpdateActiveTreatmentPlanDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const detail = useRiskRecord(riskId);
   const plan = detail.data?.treatmentPlans.find((item) => item.id === planId);
+  const pendingAcceptance = hasPendingAcceptance(detail.data);
   const blocked = Boolean(detail.data && (
     ["accepted", "closed", "archived"].includes(detail.data.status) ||
-    detail.data.acceptances.some((item) => item.decision === "pending") ||
+    pendingAcceptance ||
     (plan && !["draft", "active"].includes(plan.status))
   ));
 
@@ -40,7 +42,7 @@ export function UpdateActiveTreatmentPlanDialog({
       onClose={onClose}
       className="w-[min(36rem,calc(100%-2rem))]"
     >
-      {blocked ? <Alert>This Risk or plan is read-only, or acceptance is pending. Open Risk Review for an Accepted Risk before updating an eligible plan.</Alert> : detail.isError ? (
+      {pendingAcceptance ? <Alert className="border-warning/30 bg-warning-soft text-warning">{PENDING_ACCEPTANCE_MESSAGE}</Alert> : blocked ? <Alert>This Risk or plan is read-only. Open Risk Review for an Accepted Risk before updating an eligible plan.</Alert> : detail.isError ? (
         <Alert className="border-danger/25 bg-danger-soft text-danger">
           Unable to load the active treatment plan. Close this dialog and try again.
         </Alert>
