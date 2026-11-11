@@ -19,7 +19,7 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { RiskTextInput as Input } from "./risk-text-fields";
 import { Select } from "@/components/ui/select";
 import { TreatmentActionOwnerPicker } from "./treatment-action-owner-picker";
 import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
@@ -184,6 +184,7 @@ export function CreateRiskTreatmentPlanDialog({
 
   const cannotSave =
     blocked ||
+    !current?.residualRating ||
     risk.isPending ||
     risk.isError ||
     options.isError ||
@@ -228,6 +229,8 @@ export function CreateRiskTreatmentPlanDialog({
           ) : null}
         </div>
 
+        {!blocked && risk.data && !current?.residualRating ? <Alert>Assess residual risk before creating a treatment plan.</Alert> : null}
+        <p className="text-muted text-sm">A current residual assessment based on up-to-date Inherent, Controls and Evidence is required for all treatment strategies.</p>
         {/* Alerts */}
         {risk.isError || options.isError ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger">

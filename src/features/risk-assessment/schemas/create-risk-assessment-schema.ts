@@ -12,8 +12,8 @@ const reviewDateSchema = z
 export const createRiskAssessmentSchema = z.object({
   scopeType: z.enum(["asset", "business_service"]),
   scopeId: z.string().uuid("Select a risk scope."),
-  title: z.string().trim().min(3, "Enter at least 3 characters.").max(100),
-  description: z.string().trim().min(20, "Describe the risk context in at least 20 characters.").max(2000),
+  title: z.string().trim().min(3, "Enter at least 3 characters.").max(100, "Use at most 100 characters."),
+  description: z.string().trim().min(20, "Describe the risk context in at least 20 characters.").max(2000, "Use at most 2,000 characters."),
   ownerUserId: z.string().uuid("Select a risk owner."),
   reviewDate: reviewDateSchema,
 });
@@ -26,8 +26,8 @@ export type CreateRiskAssessmentInput = z.input<
 
 export const createRiskAssessmentRequestSchema = z
   .object({
-    title: z.string().trim().min(3).max(100),
-    description: z.string().trim().min(20).max(2000),
+    title: z.string().trim().min(3).max(100, "Use at most 100 characters."),
+    description: z.string().trim().min(20).max(2000, "Use at most 2,000 characters."),
     ownerUserId: z.uuid(),
     reviewDate: reviewDateSchema,
     scope: z.discriminatedUnion("type", [

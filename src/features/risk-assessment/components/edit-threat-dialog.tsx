@@ -42,6 +42,7 @@ export function EditThreatDialog({
   const blockedReason = pendingAcceptance ? PENDING_ACCEPTANCE_MESSAGE : risk.data?.vulnerabilityWorkflow?.blockedReason ?? null;
   const { register, handleSubmit, formState: { errors } } = useForm<UpdateThreatInput>({
     resolver: zodResolver(updateThreatSchema),
+    mode: "onChange",
     defaultValues: {
       name: threat.name,
       description: threat.description ?? "",
@@ -102,10 +103,10 @@ export function EditThreatDialog({
         {risk.isError ? <Alert>Unable to refresh this Risk. Close and try again.</Alert> : null}
         {blockedReason ? <Alert className="border-warning/30 bg-warning-soft text-warning">{blockedReason}</Alert> : null}
         <FormField id="editThreatName" label="Threat name" error={errors.name?.message}>
-          <Input id="editThreatName" minLength={2} maxLength={100} autoFocus disabled={cannotSave} {...register("name")} />
+          <Input id="editThreatName" minLength={2} autoFocus disabled={cannotSave} {...register("name")} />
         </FormField>
         <FormField id="editThreatDescription" label="Threat scenario" error={errors.description?.message}>
-          <Textarea id="editThreatDescription" rows={4} minLength={20} maxLength={2000} disabled={cannotSave} {...register("description")} />
+          <Textarea id="editThreatDescription" rows={4} minLength={20} disabled={cannotSave} {...register("description")} />
         </FormField>
         <fieldset disabled={cannotSave}>
           <legend className="text-sm font-medium">Related vulnerabilities</legend>

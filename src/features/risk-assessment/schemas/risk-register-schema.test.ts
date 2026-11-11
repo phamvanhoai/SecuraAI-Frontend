@@ -49,7 +49,7 @@ describe("risk register contracts", () => {
   it("normalizes bounded filters", () => {
     expect(
       riskRegisterQuerySchema.parse({ q: " access ", page: "2" }),
-    ).toMatchObject({ q: "access", page: 2, limit: 10, sortBy: "updatedAt" });
+    ).toMatchObject({ q: "access", page: 2, limit: 10, sortBy: "createdAt" });
   });
   it("rejects invalid ranges", () => {
     expect(riskRegisterQuerySchema.safeParse({ limit: 101 }).success).toBe(
