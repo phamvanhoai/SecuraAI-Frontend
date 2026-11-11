@@ -112,6 +112,7 @@ function DeactivationForm({
 
   const form = useForm<DeactivateBusinessServiceInput>({
     resolver: zodResolver(deactivateBusinessServiceSchema),
+    mode: "onChange",
     defaultValues: {
       reason: "",
       confirmationName: "",
@@ -302,7 +303,6 @@ function DeactivationForm({
                   aria-label="Reason for deactivation (required)"
                   {...form.register("reason")}
                   rows={4}
-                  maxLength={2000}
                   aria-invalid={Boolean(form.formState.errors.reason)}
                   aria-describedby={
                     form.formState.errors.reason

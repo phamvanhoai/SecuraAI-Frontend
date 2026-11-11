@@ -4,10 +4,10 @@ import { ClipboardCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { ValidatedInput as Input } from "@/components/ui/validated-text-fields";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { ValidatedTextarea as Textarea } from "@/components/ui/validated-text-fields";
 import { useToast } from "@/components/feedback/toast";
 import { ApiError } from "@/lib/api/api-error";
 import {
@@ -140,7 +140,14 @@ function ControlFields({
   const set = <K extends keyof FormValues>(
     key: K,
     value: FormValues[K],
-  ) => setValues((current) => ({ ...current, [key]: value }));
+  ) => {
+    setValues((current) => ({ ...current, [key]: value }));
+    setErrors((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (busy.current || blocked) return;
@@ -270,7 +277,7 @@ function ControlFields({
               {...attributes("name")}
               className="mt-1.5"
               value={values.name}
-              maxLength={255}
+              maxLength={100}
               onChange={(event) => set("name", event.target.value)}
             />
             {message("name")}

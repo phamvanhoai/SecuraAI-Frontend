@@ -58,6 +58,27 @@ beforeEach(() => {
   mutate.mockResolvedValue(current);
 });
 describe("ControlEditor", () => {
+  it.each([
+    ["Control name *", 100],
+    ["Purpose and description *", 5000],
+    ["Reason for change *", 2000],
+  ] as const)("preserves overflow and blocks saving %s", async (label, maximum) => {
+    const user = userEvent.setup();
+    render(<ControlEditor controlId={current.id} onClose={vi.fn()} />);
+    const field = screen.getByLabelText(label);
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("A".repeat(maximum + 1));
+    expect(field).toHaveValue("A".repeat(maximum + 1));
+    const message = `Use at most ${maximum.toLocaleString("en-US")} characters.`;
+    expect(await screen.findByText(message)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save control" }));
+    expect(mutate).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.paste("A".repeat(maximum));
+    await waitFor(() => expect(screen.queryByText(message)).not.toBeInTheDocument());
+  });
+
   it("validates required fields and focuses the first invalid field", async () => {
     detail.mockReturnValue({ data: undefined });
     render(<ControlEditor onClose={vi.fn()} />);

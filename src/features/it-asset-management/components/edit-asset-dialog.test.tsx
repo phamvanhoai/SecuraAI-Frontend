@@ -10,6 +10,19 @@ const id = "00000000-0000-4000-8000-000000000001";
 beforeAll(() => { Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } }); Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute("open"); } }); });
 afterEach(cleanup);
 describe("EditAssetDialog", () => {
+  it("keeps an overlong pasted name and blocks updating until corrected", async () => {
+    const user = userEvent.setup();
+    render(<EditAssetDialog assetId={id} onClose={vi.fn()} />);
+    const name = await screen.findByLabelText("Asset name");
+    await user.clear(name); await user.click(name); await user.paste("B".repeat(101));
+    expect(name).toHaveValue("B".repeat(101));
+    expect(await screen.findByText("Use at most 100 characters.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).not.toHaveBeenCalled();
+    await user.clear(name); await user.type(name, "Corrected asset name");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ name: "Corrected asset name", assetType: "SERVER", description: null }));
+  });
   it("requires an explicit supported choice for legacy values", async () => {
     detail.mockReturnValue({ isPending: false, isError: false, data: { id, assetCode: "AST-001", name: "Legacy asset", assetType: "Database Server", description: null } });
     const user = userEvent.setup();

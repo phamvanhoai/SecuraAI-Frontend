@@ -42,6 +42,7 @@ export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
     reset,
     formState: { errors },
   } = useForm<CreateAssetInput, unknown, CreateAssetOutput>({
+    mode: "onChange",
     resolver: zodResolver(createAssetSchema),
     defaultValues: defaults,
   });
@@ -121,7 +122,6 @@ export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
                 <Input
                   id="name"
                   minLength={3}
-                  maxLength={100}
                   aria-invalid={Boolean(errors.name)}
                   aria-describedby={errors.name ? "name-error name-help" : "name-help"}
                   {...register("name")}

@@ -7,7 +7,7 @@ export const assessResidualRiskSchema = z
     targetRisk: level,
     riskAppetite: level,
     riskTolerance: level,
-    assessmentReason: z.string().trim().min(10).max(2000),
+    assessmentReason: z.string().trim().min(10).max(2000, "Use at most 2,000 characters."),
   })
   .refine(
     (input) => {

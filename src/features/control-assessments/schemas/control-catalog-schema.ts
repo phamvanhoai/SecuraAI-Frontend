@@ -11,7 +11,7 @@ export const implementationSchema = z.enum([
   "implemented",
 ]);
 const fields = {
-  name: z.string().trim().min(3, "Enter at least 3 characters").max(255),
+  name: z.string().trim().min(3, "Enter at least 3 characters").max(100, "Use at most 100 characters."),
   description: z
     .string()
     .trim()

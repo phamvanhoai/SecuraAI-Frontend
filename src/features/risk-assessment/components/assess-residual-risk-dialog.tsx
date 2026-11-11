@@ -112,6 +112,7 @@ export function AssessResidualRiskDialog({
     formState: { errors },
   } = useForm<AssessResidualRiskInput>({
     resolver: zodResolver(assessResidualRiskSchema),
+    mode: "onChange",
     defaultValues: {
       likelihood: 2,
       impact: 3,
@@ -777,7 +778,6 @@ export function AssessResidualRiskDialog({
                 <Textarea
                   id="residualReason"
                   rows={4}
-                  maxLength={2000}
                   aria-labelledby="residual-reason-heading"
                   aria-invalid={Boolean(errors.assessmentReason)}
                   {...register("assessmentReason")}

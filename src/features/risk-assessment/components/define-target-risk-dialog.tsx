@@ -73,6 +73,7 @@ export function DefineTargetRiskDialog({
     formState: { errors },
   } = useForm<DefineTargetRiskInput>({
     resolver: zodResolver(defineTargetRiskSchema),
+    mode: "onChange",
     defaultValues: { treatmentPlanId: "", targetRisk: "low", rationale: "" },
   });
 
@@ -674,7 +675,6 @@ export function DefineTargetRiskDialog({
                 <Textarea
                   id="targetRationale"
                   rows={4}
-                  maxLength={2000}
                   aria-labelledby="target-rationale-heading"
                   aria-invalid={Boolean(errors.rationale)}
                   {...register("rationale")}

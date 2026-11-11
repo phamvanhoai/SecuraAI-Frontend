@@ -13,12 +13,12 @@ export const classifyAssetCriticalitySchema = z
       .string()
       .trim()
       .min(20, "Explain the data classification basis (at least 20 characters)")
-      .max(2000),
+      .max(2000, "Use at most 2,000 characters."),
     rationale: z
       .string()
       .trim()
       .min(20, "Explain the assessment basis (at least 20 characters)")
-      .max(2000),
+      .max(2000, "Use at most 2,000 characters."),
     dataClassification: z.string().pipe(
       z.enum(["public", "internal", "confidential", "restricted"], {
         error: "Select a valid data classification",

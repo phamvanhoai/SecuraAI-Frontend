@@ -52,6 +52,23 @@ beforeEach(() => {
   mocks.mutate.mockResolvedValue({ ...service, status: "inactive" });
 });
 describe("Service Deactivate dialog", () => {
+  it("preserves an overlong reason and blocks deactivation until corrected", async () => {
+    const user = userEvent.setup();
+    render(<DeactivateBusinessServiceDialog serviceId={id} onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText("Enter service name to confirm"), "Support");
+    const reason = screen.getByLabelText("Reason for deactivation (required)");
+    await user.click(reason);
+    await user.paste("A".repeat(2001));
+    expect(reason).toHaveValue("A".repeat(2001));
+    expect(await screen.findByText("Use at most 2,000 characters.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Deactivate service" }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    await user.clear(reason);
+    await user.paste("Service retired after migration.");
+    await waitFor(() => expect(screen.queryByText("Use at most 2,000 characters.")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Deactivate service" }));
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  });
   it("waits for fresh check; no stale cached confirmation", () => {
     mocks.check.mockReturnValue({ isFetchedAfterMount: false, data: eligible });
     render(

@@ -8,9 +8,9 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { ValidatedInput as Input } from "@/components/ui/validated-text-fields";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { ValidatedTextarea as Textarea } from "@/components/ui/validated-text-fields";
 import { ApiError } from "@/lib/api/api-error";
 import {
   useControlEvidence,
@@ -203,8 +203,8 @@ export function ControlEvidenceDialog({
     setRequestId(crypto.randomUUID());
   };
   const unlink = async (evidenceId: string) => {
-    if (unlinkReason.trim().length < 10) {
-      setError("Explain why this evidence link should be removed (at least 10 characters).");
+    if (unlinkReason.trim().length < 10 || unlinkReason.trim().length > 2000) {
+      setError("Explain why this evidence link should be removed (10-2,000 characters).");
       return;
     }
     try {
@@ -838,7 +838,7 @@ export function ControlEvidenceDialog({
                               <Button
                                 type="button"
                                 variant="danger"
-                                disabled={saving || unlinkReason.trim().length < 10}
+                                disabled={saving || unlinkReason.trim().length < 10 || unlinkReason.trim().length > 2000}
                                 onClick={() => void unlink(item.id)}
                               >
                                 {mutations.unlink?.isPending ? "Unlinking…" : "Confirm unlink"}

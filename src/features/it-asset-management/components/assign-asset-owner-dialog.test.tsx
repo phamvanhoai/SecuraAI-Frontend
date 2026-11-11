@@ -73,6 +73,29 @@ describe("AssignAssetOwnerDialog", () => {
     });
   });
 
+  it("preserves an overlong reason and blocks saving until corrected", async () => {
+    const user = userEvent.setup();
+    render(<AssignAssetOwnerDialog asset={asset} onClose={vi.fn()} />);
+    await user.click(screen.getByLabelText("New owner"));
+    await user.click(await screen.findByRole("option", { name: /owner@example.test/ }));
+    const reason = screen.getByLabelText("Reason for change");
+    await user.click(reason);
+    await user.paste("A".repeat(1001));
+    expect(reason).toHaveValue("A".repeat(1001));
+    expect(await screen.findByText("Use at most 1,000 characters.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save owner" }));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+
+    await user.clear(reason);
+    await user.paste("Assign operational responsibility to the new owner.");
+    await waitFor(() => expect(screen.queryByText("Use at most 1,000 characters.")).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Save owner" }));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({
+      ownerUserId,
+      reason: "Assign operational responsibility to the new owner.",
+    }));
+  });
+
   it("submits an owner and mandatory reason", async () => {
     const user = userEvent.setup();
     render(<AssignAssetOwnerDialog asset={asset} onClose={vi.fn()} />);
