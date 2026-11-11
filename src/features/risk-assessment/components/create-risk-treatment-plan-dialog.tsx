@@ -276,6 +276,8 @@ export function CreateRiskTreatmentPlanDialog({
               </label>
               <Input
                 id="plan-title"
+                minLength={3}
+                maxLength={100}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Patch Management Initiative"
@@ -566,6 +568,8 @@ export function CreateRiskTreatmentPlanDialog({
                 >
                   <Input
                     aria-label={`Action ${index + 1} title`}
+                      minLength={3}
+                      maxLength={100}
                     placeholder="Action description"
                     value={action.title}
                     disabled={cannotSave}

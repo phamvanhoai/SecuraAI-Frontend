@@ -662,19 +662,19 @@ export function DefineTargetRiskDialog({
                     >
                       Target rationale
                       <span className="text-muted ml-1.5 text-xs font-normal">
-                        (optional)
+                        (required)
                       </span>
                     </h3>
                     <p className="text-xs text-muted">
                       Explain how the actions in the selected plan will achieve
-                      this target. Max 3,000 characters.
+                      this target. 10-2,000 characters required.
                     </p>
                   </div>
                 </div>
                 <Textarea
                   id="targetRationale"
                   rows={4}
-                  maxLength={3000}
+                  maxLength={2000}
                   aria-labelledby="target-rationale-heading"
                   aria-invalid={Boolean(errors.rationale)}
                   {...register("rationale")}

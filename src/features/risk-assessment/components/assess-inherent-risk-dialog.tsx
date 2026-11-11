@@ -767,11 +767,11 @@ export function AssessInherentRiskDialog({
                     >
                       Assessment basis
                       <span className="text-muted ml-1.5 text-xs font-normal">
-                        {isMajorReduction ? "(required — major reduction)" : "(optional)"}
+                        {isMajorReduction ? "(required — major reduction)" : "(required)"}
                       </span>
                     </h3>
                     <p className="text-xs text-muted">
-                      Explain the rationale for these scores. Max 3,000
+                      Explain the rationale for these scores. Max 2,000
                       characters.
                     </p>
                   </div>
@@ -779,7 +779,7 @@ export function AssessInherentRiskDialog({
                 <Textarea
                   id="inherentReason"
                   rows={4}
-                  maxLength={3000}
+                  maxLength={2000}
                   aria-labelledby="inherent-reason-heading"
                   aria-invalid={Boolean(errors.assessmentReason)}
                   {...register("assessmentReason")}

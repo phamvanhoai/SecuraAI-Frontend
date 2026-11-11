@@ -2,7 +2,7 @@ import { z } from "zod";
 import { acceptanceCostSchema, validateAcceptanceCost } from "./acceptance-cost-schema";
 export const updateRiskTreatmentPlanSchema = z
   .object({
-    title: z.string().trim().min(3).max(255),
+    title: z.string().trim().min(3).max(100),
     strategy: z.enum(["avoid", "mitigate", "transfer", "accept"]),
     acceptanceCost: acceptanceCostSchema.nullish(),
     ownerUserId: z.string().uuid(),
@@ -15,7 +15,7 @@ export const updateRiskTreatmentPlanSchema = z
       .array(
         z.object({
           id: z.string().uuid().optional(),
-          title: z.string().trim().min(3).max(255),
+          title: z.string().trim().min(3).max(100),
           assignedToUserId: z.string().uuid(),
           dueDate: z.iso.date(),
           status: z.enum(["pending", "in_progress", "completed", "cancelled"]),

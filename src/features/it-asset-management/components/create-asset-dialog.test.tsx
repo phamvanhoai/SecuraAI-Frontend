@@ -77,13 +77,14 @@ describe("CreateAssetDialog", () => {
     expect(type.querySelectorAll("option")).toHaveLength(7);
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     expect(
-      await screen.findByText("Asset name is required"),
+      await screen.findByText("Enter at least 3 characters."),
     ).toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
   it("submits identity without classification or business service", async () => {
     const user = userEvent.setup();
-    render(<CreateAssetDialog />);
+    const onCreated = vi.fn();
+    render(<CreateAssetDialog onCreated={onCreated} />);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
     expect(screen.queryByLabelText("Asset code")).not.toBeInTheDocument();
     expect(screen.getByText(/system generates a unique asset code/i)).toBeInTheDocument();
@@ -108,6 +109,7 @@ describe("CreateAssetDialog", () => {
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("criticality");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("dataClassification");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("businessServiceId");
+    expect(onCreated).toHaveBeenCalledOnce();
     expect(successMock).toHaveBeenCalledWith(
       "Asset created",
       "AST-002 – Application Server",

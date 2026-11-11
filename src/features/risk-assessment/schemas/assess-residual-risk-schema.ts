@@ -7,7 +7,7 @@ export const assessResidualRiskSchema = z
     targetRisk: level,
     riskAppetite: level,
     riskTolerance: level,
-    assessmentReason: z.string().trim().min(10).max(3000),
+    assessmentReason: z.string().trim().min(10).max(2000),
   })
   .refine(
     (input) => {
