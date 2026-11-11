@@ -13,7 +13,7 @@ export const deactivateBusinessServiceSchema = z
       .string()
       .trim()
       .min(20, "Enter at least 20 characters.")
-      .max(2000),
+      .max(2000, "Use at most 2,000 characters."),
   })
   .strict();
 export type DeactivateBusinessServiceInput = z.infer<

@@ -65,6 +65,18 @@ beforeAll(() => {
 afterEach(cleanup);
 
 describe("ClassifyAssetCriticalityDialog", () => {
+  it.each(["Criticality assessment basis", "Data classification basis"])("keeps overlong pasted text in %s and blocks saving", async (label) => {
+    const user = userEvent.setup();
+    render(<ClassifyAssetCriticalityDialog asset={asset} onClose={vi.fn()} />);
+    const field = screen.getByLabelText(label);
+    await user.click(field); await user.paste("A".repeat(2001));
+    expect(field).toHaveValue("A".repeat(2001));
+    expect(await screen.findByText("Use at most 2,000 characters.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save classification" }));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await user.clear(field); await user.type(field, "Current documented assessment basis.");
+    await waitFor(() => expect(screen.queryByText("Use at most 2,000 characters.")).not.toBeInTheDocument());
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     detailMock.mockReturnValue({

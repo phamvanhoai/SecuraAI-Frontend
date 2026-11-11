@@ -39,6 +39,7 @@ export function EditAssetDialog({
     reset,
     formState: { errors },
   } = useForm<UpdateAssetInput, unknown, UpdateAssetRequest>({
+    mode: "onChange",
     resolver: zodResolver(updateAssetSchema),
   });
 
@@ -151,7 +152,6 @@ export function EditAssetDialog({
                 <Input
                   id="edit-name"
                   minLength={3}
-                  maxLength={100}
                   aria-invalid={Boolean(errors.name)}
                   aria-describedby={errors.name ? "edit-name-error edit-name-help" : "edit-name-help"}
                   {...register("name")}

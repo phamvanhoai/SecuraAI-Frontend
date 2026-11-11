@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterEach,
@@ -69,6 +69,33 @@ describe("Create Business Service", () => {
     userEvent.click(
       screen.getByRole("button", { name: "Create business service" }),
     );
+  it.each([
+    ["Service name (required)", 100],
+    ["Description (optional)", 2000],
+  ] as const)("preserves overlong %s and blocks saving until corrected", async (label, maximum) => {
+    const user = userEvent.setup();
+    render(<CreateBusinessServiceDialog onCreated={vi.fn()} />);
+    await open();
+    const field = screen.getByLabelText(label);
+    if (label !== "Service name (required)") {
+      await user.clear(screen.getByLabelText("Service name (required)"));
+      await user.type(screen.getByLabelText("Service name (required)"), "Updated support service");
+    }
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("A".repeat(maximum + 1));
+    expect(field).toHaveValue("A".repeat(maximum + 1));
+    const message = `Use at most ${maximum.toLocaleString("en-US")} characters.`;
+    expect(await screen.findByText(message)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Create service" }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.paste("A".repeat(maximum));
+    await waitFor(() => expect(screen.queryByText(message)).not.toBeInTheDocument());
+    mocks.mutate.mockResolvedValue({ id, name: "Saved service" });
+    await user.click(screen.getByRole("button", { name: "Create service" }));
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  });
   it("requires name with inline validation and no API call", async () => {
     render(<CreateBusinessServiceDialog onCreated={vi.fn()} />);
     await open();

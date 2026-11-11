@@ -101,7 +101,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
     key: "updated",
     header: "Updated",
     cell: (item) =>
-      new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+      new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
         new Date(item.updatedAt),
       ),
   },

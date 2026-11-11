@@ -50,6 +50,29 @@ describe("DeleteAssetDialog", () => {
     mutateAsyncMock.mockResolvedValue(undefined);
   });
 
+  it("preserves an overlong reason and prevents archiving until corrected", async () => {
+    const user = userEvent.setup();
+    render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);
+    await user.type(screen.getByLabelText(/Enter code/), asset.assetCode);
+    const reason = screen.getByLabelText(/Archive reason/);
+    await user.click(reason);
+    await user.paste("A".repeat(1001));
+    expect(reason).toHaveValue("A".repeat(1001));
+    expect(screen.getByRole("alert")).toHaveTextContent("Use at most 1,000 characters.");
+    const archiveButton = screen.getByRole("button", { name: "Archive Asset" });
+    expect(archiveButton).toBeDisabled();
+    await user.click(archiveButton);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await user.clear(reason);
+    await user.paste("Asset retired after migration");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(archiveButton).toBeEnabled();
+    await user.click(archiveButton);
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({
+      assetId: asset.id, reason: "Asset retired after migration",
+    }));
+  });
+
   it("requires the exact asset code before deleting", async () => {
     const user = userEvent.setup();
     render(<DeleteAssetDialog asset={asset} onClose={vi.fn()} />);

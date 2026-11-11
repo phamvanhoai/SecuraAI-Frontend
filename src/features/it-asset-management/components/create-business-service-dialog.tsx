@@ -64,6 +64,7 @@ export function CreateBusinessServiceDialog({
 
   const form = useForm<CreateBusinessServiceInput, unknown, CreateBusinessServiceOutput>({
     resolver: zodResolver(createBusinessServiceSchema),
+    mode: "onChange",
     defaultValues: {
       name: editingService?.name ?? "",
       description: editingService?.description ?? "",
@@ -246,7 +247,6 @@ export function CreateBusinessServiceDialog({
                   <Input
                     id="service-name"
                     minLength={3}
-                    maxLength={100}
                     autoComplete="off"
                     aria-invalid={!!errors.name}
                     aria-describedby={errors.name ? "service-name-error service-name-help" : "service-name-help"}
@@ -280,7 +280,6 @@ export function CreateBusinessServiceDialog({
                     aria-label="Description (optional)"
                     rows={4}
                     minLength={20}
-                    maxLength={2000}
                     aria-invalid={!!errors.description}
                     aria-describedby={
                       errors.description

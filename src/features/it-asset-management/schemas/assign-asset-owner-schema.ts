@@ -5,7 +5,7 @@ export const assignAssetOwnerSchema = z
     ownerUserId: z
       .union([z.literal(""), z.uuid(), z.null()])
       .transform((value) => (value === "" ? null : value)),
-    reason: z.string().trim().min(20, "Enter at least 20 characters.").max(1000),
+    reason: z.string().trim().min(20, "Enter at least 20 characters.").max(1000, "Use at most 1,000 characters."),
   })
   .strict();
 

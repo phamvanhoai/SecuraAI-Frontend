@@ -51,6 +51,7 @@ export function AssignAssetOwnerDialog({
   } = useForm<AssignAssetOwnerInput, unknown, AssignAssetOwnerRequest>({
     resolver: zodResolver(assignAssetOwnerSchema),
     defaultValues: defaults,
+    mode: "onChange",
   });
 
   useEffect(() => {
@@ -243,7 +244,6 @@ export function AssignAssetOwnerDialog({
               <Textarea
                 id="owner-assignment-reason"
                 minLength={20}
-                maxLength={1000}
                 disabled={locked}
                 aria-invalid={Boolean(errors.reason)}
                 aria-describedby={errors.reason ? "owner-reason-error owner-reason-help" : "owner-reason-help"}
