@@ -1,4 +1,5 @@
 "use client";
+import { TreatmentActionOwnerPicker } from "./treatment-action-owner-picker";
 import { AcceptanceCostFields, AcceptanceCostSummary } from "./acceptance-cost-fields";
 import { emptyAcceptanceCost } from "../schemas/acceptance-cost-schema";
 import { useEffect, useRef, useState } from "react";
@@ -22,10 +23,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
 import { updateRiskTreatmentPlanSchema } from "../schemas/update-risk-treatment-plan-schema";
 import { useRiskTreatmentPlanOptions } from "../hooks/use-create-risk-treatment-plan";
 import { useUpdateRiskTreatmentPlan } from "../hooks/use-update-risk-treatment-plan";
+import { useRiskRecord } from "../hooks/use-risk-register";
+import { hasPendingAcceptance, isPendingAcceptanceError, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 
 type Plan = RiskRegisterDetail["treatmentPlans"][number];
 type Draft = Omit<Plan, "actions"> & {
@@ -67,9 +71,17 @@ export function UpdateRiskTreatmentPlanDialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<Draft>(plan);
   const [error, setError] = useState("");
+  const [changeReason, setChangeReason] = useState("");
   const options = useRiskTreatmentPlanOptions(plan.riskId);
   const mutation = useUpdateRiskTreatmentPlan(plan.id);
   const toast = useToast();
+  const risk = useRiskRecord(plan.riskId);
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || error === PENDING_ACCEPTANCE_MESSAGE;
+  const cannotSave = pendingAcceptance || mutation.isPending || risk.isPending || risk.isError;
+  const strategyLocked = plan.status === "active";
+  const cancelling = draft.status === "cancelled";
+  const reasonRequired = strategyLocked || cancelling;
+  const reasonInvalid = reasonRequired && (changeReason.trim().length < 10 || changeReason.trim().length > 2000);
 
   useEffect(() => {
     ref.current?.showModal();
@@ -87,6 +99,11 @@ export function UpdateRiskTreatmentPlanDialog({
     });
 
   const submit = async () => {
+    if (cannotSave) return;
+    if (reasonInvalid) {
+      setError("Enter a reason (10–2000 characters) before saving.");
+      return;
+    }
     if (
       draft.status === "completed" &&
       draft.strategy !== "accept" &&
@@ -97,17 +114,19 @@ export function UpdateRiskTreatmentPlanDialog({
       );
       return;
     }
+    const source = cancelling ? plan : draft;
     const parsed = updateRiskTreatmentPlanSchema.safeParse({
-      title: draft.title,
-      strategy: draft.strategy,
-      ownerUserId: draft.owner?.id ?? "",
-      targetDate: draft.targetCompletionDate?.slice(0, 10) ?? "",
+      title: source.title,
+      strategy: source.strategy,
+      ownerUserId: source.owner?.id ?? "",
+      targetDate: source.targetCompletionDate?.slice(0, 10) ?? "",
       status: draft.status,
       expectedUpdatedAt: draft.updatedAt,
+      ...(changeReason.trim() ? { changeReason: changeReason.trim() } : {}),
       acceptanceCost:
-        draft.strategy === "accept" ? draft.acceptanceCost ?? null : null,
-      controlIds: draft.controls.map((item) => item.id),
-      actions: draft.actions.map((item) => ({
+        source.strategy === "accept" ? source.acceptanceCost ?? null : null,
+      controlIds: source.controls.map((item) => item.id),
+      actions: source.actions.map((item) => ({
         ...item,
         assignedToUserId: item.assignedToUserId ?? "",
         dueDate: item.dueDate?.slice(0, 10) ?? "",
@@ -125,6 +144,10 @@ export function UpdateRiskTreatmentPlanDialog({
       );
       onClose();
     } catch (reason) {
+      if (isPendingAcceptanceError(reason)) {
+        setError(PENDING_ACCEPTANCE_MESSAGE);
+        return;
+      }
       if (reason instanceof ApiError && [403, 409].includes(reason.status)) {
         toast.warning(
           "Plan changed or access denied",
@@ -189,13 +212,16 @@ export function UpdateRiskTreatmentPlanDialog({
         </div>
 
         {/* Alerts */}
-        {error ? (
+        {pendingAcceptance ? <Alert className="border-warning/30 bg-warning-soft text-warning">{PENDING_ACCEPTANCE_MESSAGE}</Alert> : null}
+        {risk.isError ? <Alert>Unable to refresh this Risk. Close and try again.</Alert> : null}
+        {error && !pendingAcceptance ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger">
             {error}
           </Alert>
         ) : null}
 
         {/* Section — Plan details */}
+        <fieldset disabled={cannotSave} className="space-y-6">
         <section aria-labelledby="update-plan-details-heading" className="space-y-4">
           <div className="flex items-start gap-2 border-b border-border pb-2">
             <ClipboardList
@@ -225,6 +251,8 @@ export function UpdateRiskTreatmentPlanDialog({
               </label>
               <Input
                 id="update-plan-title"
+                minLength={3}
+                maxLength={100}
                 value={draft.title}
                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
               />
@@ -271,28 +299,17 @@ export function UpdateRiskTreatmentPlanDialog({
                   Responsible owner
                 </span>
               </label>
-              <Select
-                id="update-plan-owner"
+              <TreatmentActionOwnerPicker
+                inputId="update-plan-owner"
+                label="Responsible owner"
+                riskId={plan.riskId}
                 value={draft.owner?.id ?? ""}
-                onChange={(e) => {
-                  const user = options.data?.users.find(
-                    (item) => item.id === e.target.value,
-                  );
-                  setDraft({
-                    ...draft,
-                    owner: user
-                      ? { id: user.id, fullName: user.fullName, inactive: false }
-                      : null,
-                  });
-                }}
-              >
-                <option value="">Select owner</option>
-                {options.data?.users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName} — {u.email}
-                  </option>
-                ))}
-              </Select>
+                selectedOwnerName={draft.owner?.fullName ?? ""}
+                users={options.data?.users ?? []}
+                disabled={cannotSave}
+                onChange={(_id, user) => setDraft({ ...draft, owner: user
+                  ? { id: user.id, fullName: user.fullName, inactive: false } : null })}
+              />
             </div>
             <div className="space-y-1.5">
               <label
@@ -339,7 +356,9 @@ export function UpdateRiskTreatmentPlanDialog({
                 Treatment strategy
               </h3>
               <p className="text-xs text-muted">
-                Changing to Accept requires cancelling existing actions first.
+                {strategyLocked
+                  ? "Treatment strategy cannot change while the plan is Active. Cancel the current plan and create a new plan to use a different strategy."
+                  : "Changing to Accept requires cancelling existing actions first."}
               </p>
             </div>
           </div>
@@ -352,12 +371,14 @@ export function UpdateRiskTreatmentPlanDialog({
                   draft.strategy === s.value
                     ? "border-brand bg-brand/5"
                     : "bg-surface hover:bg-neutral-soft",
+                  (strategyLocked || cancelling) && "cursor-not-allowed opacity-60",
                 )}
               >
                 <input
                   type="radio"
                   className="sr-only"
                   name="update-treatment-strategy"
+                  disabled={strategyLocked || cancelling}
                   value={s.value}
                   checked={draft.strategy === s.value}
                   onChange={() => setDraft({ ...draft, strategy: s.value })}
@@ -573,6 +594,8 @@ export function UpdateRiskTreatmentPlanDialog({
                     <Input
                       disabled={isTerminal}
                       aria-label={`Action ${index + 1} title`}
+                      minLength={3}
+                      maxLength={100}
                       value={action.title}
                       onChange={(e) =>
                         changeAction(index, { title: e.target.value })
@@ -672,6 +695,17 @@ export function UpdateRiskTreatmentPlanDialog({
           </p>
         </div>
 
+        {reasonRequired ? (
+          <div className="space-y-2">
+            <label htmlFor="plan-change-reason" className="text-sm font-medium">{cancelling ? "Cancellation reason" : "Change reason"} *</label>
+            <Textarea id="plan-change-reason" value={changeReason} maxLength={2000} rows={3}
+              onChange={(event) => setChangeReason(event.target.value)} aria-required="true" aria-describedby="plan-change-reason-help" />
+            <p id="plan-change-reason-help" className="text-muted text-xs">{cancelling
+              ? "Enter 10–2000 characters. Cancelling preserves the plan, linked controls and all action history; other unsaved edits are discarded."
+              : "Enter 10–2000 characters. The reason and before/after changes are recorded in the audit log."}</p>
+          </div>
+        ) : null}
+        </fieldset>
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-border pt-4">
           <div />
@@ -679,7 +713,7 @@ export function UpdateRiskTreatmentPlanDialog({
             <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={cannotSave}>
               {mutation.isPending ? (
                 <>
                   <Loader2

@@ -29,7 +29,7 @@ const defaults: CreateAssetInput = {
   eventSourceIds: [],
 };
 
-export function CreateAssetDialog() {
+export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const mutation = useCreateAsset();
@@ -64,6 +64,7 @@ export function CreateAssetDialog() {
       });
       reset(defaults);
       close();
+      onCreated?.();
       toast.success("Asset created", `${asset.assetCode} – ${asset.name}`);
     } catch (error: unknown) {
       toast.error(
@@ -119,11 +120,13 @@ export function CreateAssetDialog() {
                 </label>
                 <Input
                   id="name"
-                  maxLength={255}
+                  minLength={3}
+                  maxLength={100}
                   aria-invalid={Boolean(errors.name)}
-                  aria-describedby={errors.name ? "name-error" : undefined}
+                  aria-describedby={errors.name ? "name-error name-help" : "name-help"}
                   {...register("name")}
                 />
+                <p id="name-help" className="text-muted text-xs">3-100 characters.</p>
                 {errors.name && (
                   <p id="name-error" role="alert" className="text-danger text-xs">
                     {errors.name.message}
@@ -212,12 +215,14 @@ export function CreateAssetDialog() {
               </label>
               <Textarea
                 id="description"
-                maxLength={10_000}
+                minLength={20}
+                maxLength={2000}
                 rows={4}
                 aria-invalid={Boolean(errors.description)}
-                aria-describedby={errors.description ? "description-error" : undefined}
+                aria-describedby={errors.description ? "description-error description-help" : "description-help"}
                 {...register("description")}
               />
+              <p id="description-help" className="text-muted text-xs">Optional. If entered, use 20-2,000 characters.</p>
               {errors.description && (
                 <p id="description-error" role="alert" className="text-danger text-xs">
                   {errors.description.message}

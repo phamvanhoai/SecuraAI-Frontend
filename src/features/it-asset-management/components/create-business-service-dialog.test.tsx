@@ -75,7 +75,7 @@ describe("Create Business Service", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "Create service" }),
     );
-    expect(screen.getByText("Enter a service name.")).toBeInTheDocument();
+    expect(screen.getByText("Enter at least 3 characters.")).toBeInTheDocument();
     expect(mocks.mutate).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Service name (required)")).toHaveFocus();
   });

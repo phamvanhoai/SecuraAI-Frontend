@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssessInherentRisk } from "../hooks/use-assess-inherent-risk";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import {
   assessInherentRiskSchema,
@@ -174,7 +175,9 @@ export function AssessInherentRiskDialog({
   const statusAllowsAssessment = Boolean(
     risk.data && ["open", "under_treatment"].includes(risk.data.status),
   );
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
   const cannotSave =
+    pendingAcceptance ||
     mutation.isPending ||
     risk.isPending ||
     !contextComplete ||
@@ -196,6 +199,7 @@ export function AssessInherentRiskDialog({
   };
 
   const submit = async (input: AssessInherentRiskInput) => {
+    if (cannotSave) return;
     if (isMajorReduction) {
       const reason = input.assessmentReason.trim();
       const previousReason = previousAssessment?.reason
@@ -253,7 +257,11 @@ export function AssessInherentRiskDialog({
               {riskLabel}
             </span>
           </div>
-          {risk.data && !statusAllowsAssessment ? (
+          {pendingAcceptance ? (
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">
+              {PENDING_ACCEPTANCE_MESSAGE}
+            </Alert>
+          ) : risk.data && !statusAllowsAssessment ? (
             <p className="text-warning mt-1.5 font-medium">
               Assessment is only available while the risk is Open or Under
               treatment. Current status:{" "}
@@ -484,7 +492,7 @@ export function AssessInherentRiskDialog({
             onSubmit={handleSubmit(submit)}
           >
             {/* Alerts */}
-            {message ? (
+            {message && !pendingAcceptance ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {message}
               </Alert>
@@ -759,11 +767,11 @@ export function AssessInherentRiskDialog({
                     >
                       Assessment basis
                       <span className="text-muted ml-1.5 text-xs font-normal">
-                        {isMajorReduction ? "(required — major reduction)" : "(optional)"}
+                        {isMajorReduction ? "(required — major reduction)" : "(required)"}
                       </span>
                     </h3>
                     <p className="text-xs text-muted">
-                      Explain the rationale for these scores. Max 3,000
+                      Explain the rationale for these scores. Max 2,000
                       characters.
                     </p>
                   </div>
@@ -771,7 +779,7 @@ export function AssessInherentRiskDialog({
                 <Textarea
                   id="inherentReason"
                   rows={4}
-                  maxLength={3000}
+                  maxLength={2000}
                   aria-labelledby="inherent-reason-heading"
                   aria-invalid={Boolean(errors.assessmentReason)}
                   {...register("assessmentReason")}

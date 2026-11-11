@@ -150,11 +150,13 @@ export function EditAssetDialog({
                 </label>
                 <Input
                   id="edit-name"
-                  maxLength={255}
+                  minLength={3}
+                  maxLength={100}
                   aria-invalid={Boolean(errors.name)}
-                  aria-describedby={errors.name ? "edit-name-error" : undefined}
+                  aria-describedby={errors.name ? "edit-name-error edit-name-help" : "edit-name-help"}
                   {...register("name")}
                 />
+                <p id="edit-name-help" className="text-muted text-xs">3-100 characters.</p>
                 {errors.name && (
                   <p
                     id="edit-name-error"
@@ -231,14 +233,16 @@ export function EditAssetDialog({
               </label>
               <Textarea
                 id="edit-description"
-                maxLength={10_000}
+                minLength={20}
+                maxLength={2000}
                 rows={4}
                 aria-invalid={Boolean(errors.description)}
                 aria-describedby={
-                  errors.description ? "edit-description-error" : undefined
+                  errors.description ? "edit-description-error edit-description-help" : "edit-description-help"
                 }
                 {...register("description")}
               />
+              <p id="edit-description-help" className="text-muted text-xs">Optional. If entered, use 20-2,000 characters.</p>
               {errors.description && (
                 <p
                   id="edit-description-error"

@@ -1,5 +1,7 @@
 "use client";
 
+import { RiskContextHistoryList } from "./risk-context-history-list";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { History, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import { useUpdateThreat } from "../hooks/use-update-threat";
 import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
@@ -35,7 +38,8 @@ export function EditThreatDialog({
   const risk = useRiskRecord(riskId);
   const mutation = useUpdateThreat(riskId, threat.id);
   const toast = useToast();
-  const blockedReason = risk.data?.vulnerabilityWorkflow?.blockedReason ?? null;
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
+  const blockedReason = pendingAcceptance ? PENDING_ACCEPTANCE_MESSAGE : risk.data?.vulnerabilityWorkflow?.blockedReason ?? null;
   const { register, handleSubmit, formState: { errors } } = useForm<UpdateThreatInput>({
     resolver: zodResolver(updateThreatSchema),
     defaultValues: {
@@ -86,9 +90,7 @@ export function EditThreatDialog({
       {tab === "history" ? (
         <section role="tabpanel" className="space-y-3">
           <p className="text-muted text-sm">Read-only changes for this Threat.</p>
-          {risk.data?.contextHistory.filter((entry) => entry.type === "threat" && entry.entityId === threat.id).map((entry) => (
-            <article key={entry.id} className="border-border rounded-lg border p-3"><p className="font-medium">{entry.actor?.fullName ?? "Unknown actor"}</p><p className="text-muted text-xs">{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.occurredAt))}</p><details className="mt-2"><summary className="cursor-pointer text-sm">View changes</summary><div className="mt-2 grid gap-2 sm:grid-cols-2"><pre className="bg-neutral-soft overflow-auto rounded p-2 text-xs whitespace-pre-wrap">{JSON.stringify(entry.before, null, 2)}</pre><pre className="bg-neutral-soft overflow-auto rounded p-2 text-xs whitespace-pre-wrap">{JSON.stringify(entry.after, null, 2)}</pre></div></details></article>
-          )) ?? <p className="border-border rounded-lg border border-dashed p-6 text-center text-sm">No history recorded.</p>}
+          {risk.data ? <RiskContextHistoryList entries={risk.data.contextHistory.filter((entry) => entry.type === "threat" && entry.entityId === threat.id)} risk={risk.data} /> : null}
         </section>
       ) : (
       <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
@@ -96,16 +98,16 @@ export function EditThreatDialog({
           Update this threat for <strong className="text-foreground">{riskLabel}</strong>.
           This changes the existing record and requires the Risk to be reassessed.
         </p>
-        {message ? <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert> : null}
+        {message && !pendingAcceptance ? <Alert className="border-danger/25 bg-danger-soft text-danger">{message}</Alert> : null}
         {risk.isError ? <Alert>Unable to refresh this Risk. Close and try again.</Alert> : null}
-        {blockedReason ? <Alert>{blockedReason}</Alert> : null}
+        {blockedReason ? <Alert className="border-warning/30 bg-warning-soft text-warning">{blockedReason}</Alert> : null}
         <FormField id="editThreatName" label="Threat name" error={errors.name?.message}>
-          <Input id="editThreatName" maxLength={255} autoFocus {...register("name")} />
+          <Input id="editThreatName" minLength={2} maxLength={100} autoFocus disabled={cannotSave} {...register("name")} />
         </FormField>
         <FormField id="editThreatDescription" label="Threat scenario" error={errors.description?.message}>
-          <Textarea id="editThreatDescription" rows={4} maxLength={3000} {...register("description")} />
+          <Textarea id="editThreatDescription" rows={4} minLength={20} maxLength={2000} disabled={cannotSave} {...register("description")} />
         </FormField>
-        <fieldset>
+        <fieldset disabled={cannotSave}>
           <legend className="text-sm font-medium">Related vulnerabilities</legend>
           <p className="text-muted mt-1 text-xs">
             Select at least one vulnerability already documented for this Risk.

@@ -29,7 +29,7 @@ const id = "00000000-0000-4000-8000-000000000001";
 const service = {
   id,
   name: "Support",
-  description: "Purpose",
+  description: "Business service operational purpose",
   status: "active" as const,
   owner: {
     id,
@@ -78,7 +78,7 @@ describe("Edit service metadata form", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(mocks.mutate).toHaveBeenCalledWith({
       name: "Support",
-      description: "Purpose updated",
+      description: "Business service operational purpose updated",
       ownerUserId: id,
       expectedUpdatedAt: service.updatedAt,
     });

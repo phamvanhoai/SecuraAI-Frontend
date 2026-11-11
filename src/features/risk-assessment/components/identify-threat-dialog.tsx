@@ -18,6 +18,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useIdentifyThreat } from "../hooks/use-identify-threat";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import {
   identifyThreatSchema,
@@ -41,7 +42,8 @@ export function IdentifyThreatDialog({
   const mutation = useIdentifyThreat(riskId);
   const toast = useToast();
 
-  const blockedReason =
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || message === PENDING_ACCEPTANCE_MESSAGE;
+  const blockedReason = pendingAcceptance ? PENDING_ACCEPTANCE_MESSAGE :
     risk.data?.vulnerabilityWorkflow?.blockedReason ??
     (risk.data && risk.data.vulnerabilityWorkflow?.canIdentify === false
       ? "Threat creation is unavailable. Open Risk Review for an Accepted Risk first. History remains available."
@@ -118,7 +120,7 @@ export function IdentifyThreatDialog({
             </span>
           </div>
           {blockedReason ? (
-            <p className="text-warning mt-1.5 font-medium">{blockedReason}</p>
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">{blockedReason}</Alert>
           ) : null}
         </div>
 
@@ -242,7 +244,7 @@ export function IdentifyThreatDialog({
             onSubmit={handleSubmit(submit)}
           >
             {/* Alerts */}
-            {message ? (
+            {message && !pendingAcceptance ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {message}
               </Alert>
@@ -276,13 +278,13 @@ export function IdentifyThreatDialog({
                     Threat name
                   </h3>
                   <p className="text-xs text-muted">
-                    A short, descriptive identifier. Max 255 characters.
+                    A short, descriptive identifier. 2-100 characters.
                   </p>
                 </div>
               </div>
               <Input
                 id="threatName"
-                maxLength={255}
+                minLength={2} maxLength={100}
                 autoFocus
                 disabled={cannotSave}
                 aria-labelledby="threat-name-heading"
@@ -313,7 +315,7 @@ export function IdentifyThreatDialog({
                   </h3>
                   <p className="text-xs text-muted">
                     Describe how this threat could materialise and its potential
-                    impact. Max 3,000 characters.
+                    impact. 20-2,000 characters required.
                   </p>
                 </div>
               </div>
@@ -323,7 +325,7 @@ export function IdentifyThreatDialog({
                   "disabled:cursor-not-allowed disabled:bg-neutral-soft disabled:text-muted disabled:opacity-60 disabled:resize-none",
                 )}
                 rows={4}
-                maxLength={3000}
+                minLength={20} maxLength={2000}
                 disabled={cannotSave}
                 aria-labelledby="threat-desc-heading"
                 aria-invalid={Boolean(errors.description)}

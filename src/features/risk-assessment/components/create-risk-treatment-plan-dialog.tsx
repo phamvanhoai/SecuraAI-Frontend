@@ -22,6 +22,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TreatmentActionOwnerPicker } from "./treatment-action-owner-picker";
+import { hasPendingAcceptance, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 import { useRiskRecord } from "../hooks/use-risk-register";
 import { createRiskTreatmentPlanSchema } from "../schemas/create-risk-treatment-plan-schema";
 import {
@@ -126,7 +127,7 @@ export function CreateRiskTreatmentPlanDialog({
   };
 
   const submit = async () => {
-    if (!riskId) return;
+    if (!riskId || cannotSave) return;
     const parsed = createRiskTreatmentPlanSchema.safeParse({
       riskId,
       title,
@@ -168,10 +169,10 @@ export function CreateRiskTreatmentPlanDialog({
     }
   };
 
-  const blocked = Boolean(
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || error === PENDING_ACCEPTANCE_MESSAGE;
+  const blocked = pendingAcceptance || Boolean(
     risk.data &&
       (!["open", "under_treatment"].includes(risk.data.status) ||
-        risk.data.acceptances.some((item) => item.decision === "pending") ||
         risk.data.activeTreatmentPlan),
   );
 
@@ -215,9 +216,13 @@ export function CreateRiskTreatmentPlanDialog({
               {riskLabel}
             </span>
           </div>
-          {blocked ? (
+          {pendingAcceptance ? (
+            <Alert className="mt-1.5 border-warning/30 bg-warning-soft text-warning">
+              {PENDING_ACCEPTANCE_MESSAGE}
+            </Alert>
+          ) : blocked ? (
             <p className="text-warning mt-1.5 font-medium">
-              This Risk is finalized, has a pending acceptance, or already has a
+              This Risk is finalized or already has a
               Draft/Active plan. Create is unavailable.
             </p>
           ) : null}
@@ -235,7 +240,7 @@ export function CreateRiskTreatmentPlanDialog({
             Review whether the planned actions are sufficient.
           </Alert>
         ) : null}
-        {error ? (
+        {error && !pendingAcceptance ? (
           <Alert className="border-danger/25 bg-danger-soft text-danger">
             {error}
           </Alert>
@@ -271,6 +276,8 @@ export function CreateRiskTreatmentPlanDialog({
               </label>
               <Input
                 id="plan-title"
+                minLength={3}
+                maxLength={100}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Patch Management Initiative"
@@ -291,19 +298,15 @@ export function CreateRiskTreatmentPlanDialog({
                   Responsible owner
                 </span>
               </label>
-              <Select
-                id="plan-owner"
+              <TreatmentActionOwnerPicker
+                inputId="plan-owner"
+                label="Responsible owner"
+                riskId={riskId}
                 value={owner}
-                onChange={(e) => setOwner(e.target.value)}
+                onChange={setOwner}
+                users={options.data?.users ?? []}
                 disabled={cannotSave}
-              >
-                <option value="">Select owner</option>
-                {options.data?.users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName} — {u.email}
-                  </option>
-                ))}
-              </Select>
+              />
             </div>
             <div className="space-y-1.5">
               <label
@@ -565,6 +568,8 @@ export function CreateRiskTreatmentPlanDialog({
                 >
                   <Input
                     aria-label={`Action ${index + 1} title`}
+                      minLength={3}
+                      maxLength={100}
                     placeholder="Action description"
                     value={action.title}
                     disabled={cannotSave}
