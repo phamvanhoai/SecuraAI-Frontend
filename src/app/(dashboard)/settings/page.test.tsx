@@ -1,35 +1,36 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import SettingsPage from "./page";
 
+vi.mock("@/features/integrations", () => ({
+  ApiKeysTab: () => <div>Production API key workflow</div>,
+}));
+
 describe("SettingsPage", () => {
-  it("opens every settings section", async () => {
-    const user = userEvent.setup();
+  it("keeps Settings while removing placeholder configuration sections", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const view = render(
+
+    render(
       <QueryClientProvider client={client}>
         <ToastProvider>
           <SettingsPage />
         </ToastProvider>
       </QueryClientProvider>,
     );
-    const page = within(view.container);
 
-    for (const [tab, heading] of [
-      ["Tổ chức", "Thông tin tổ chức"],
-      ["Bảo mật", "Chính sách phiên đăng nhập"],
-      ["Thông báo", "Quy tắc thông báo"],
-      ["API và khóa", "Khóa API tích hợp"],
-    ] as const) {
-      await user.click(page.getByRole("button", { name: tab }));
-      expect(page.getByRole("heading", { name: heading })).toBeVisible();
-    }
-
-    view.unmount();
+    expect(
+      screen.getByRole("heading", { name: "System Settings" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Integration API Keys" }),
+    ).toBeVisible();
+    expect(screen.getByText("Production API key workflow")).toBeVisible();
+    expect(screen.queryByText("Organization information")).not.toBeInTheDocument();
+    expect(screen.queryByText("Login session policy")).not.toBeInTheDocument();
+    expect(screen.queryByText("Notification rules")).not.toBeInTheDocument();
   });
 });
