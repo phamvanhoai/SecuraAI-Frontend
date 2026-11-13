@@ -64,6 +64,7 @@ export function IdentifyThreatDialog({
     formState: { errors },
   } = useForm<IdentifyThreatInput>({
     resolver: zodResolver(identifyThreatSchema),
+    mode: "onChange",
     defaultValues: { name: "", description: "", vulnerabilityIds: [] },
   });
 
@@ -284,7 +285,7 @@ export function IdentifyThreatDialog({
               </div>
               <Input
                 id="threatName"
-                minLength={2} maxLength={100}
+                minLength={2}
                 autoFocus
                 disabled={cannotSave}
                 aria-labelledby="threat-name-heading"
@@ -325,7 +326,7 @@ export function IdentifyThreatDialog({
                   "disabled:cursor-not-allowed disabled:bg-neutral-soft disabled:text-muted disabled:opacity-60 disabled:resize-none",
                 )}
                 rows={4}
-                minLength={20} maxLength={2000}
+                minLength={20}
                 disabled={cannotSave}
                 aria-labelledby="threat-desc-heading"
                 aria-invalid={Boolean(errors.description)}

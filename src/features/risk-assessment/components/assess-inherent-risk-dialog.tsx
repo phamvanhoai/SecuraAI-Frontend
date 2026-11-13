@@ -130,6 +130,7 @@ export function AssessInherentRiskDialog({
     formState: { errors },
   } = useForm<AssessInherentRiskInput>({
     resolver: zodResolver(assessInherentRiskSchema),
+    mode: "onChange",
     defaultValues: { likelihood: 3, impact: 3, assessmentReason: "" },
   });
 
@@ -779,7 +780,6 @@ export function AssessInherentRiskDialog({
                 <Textarea
                   id="inherentReason"
                   rows={4}
-                  maxLength={2000}
                   aria-labelledby="inherent-reason-heading"
                   aria-invalid={Boolean(errors.assessmentReason)}
                   {...register("assessmentReason")}

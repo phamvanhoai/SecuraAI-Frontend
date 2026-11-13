@@ -21,7 +21,7 @@ export const createBusinessServiceSchema = z
     description: z
       .string()
       .trim()
-      .max(2000, "Use at most 2000 characters.")
+      .max(2000, "Use at most 2,000 characters.")
       .refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.")
       .refine(
         (value) => !value.includes("\u0000"),

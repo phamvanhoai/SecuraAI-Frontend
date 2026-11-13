@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { IdentifyThreatDialog } from "./identify-threat-dialog";
 const state = vi.hoisted(() => ({ risk: vi.fn(), save: vi.fn() }));
@@ -26,4 +27,24 @@ it('enables creation from the server capability after review', () => {
   render(<IdentifyThreatDialog riskId="risk" riskLabel="Demo risk" onClose={vi.fn()} />);
   expect(screen.getByLabelText("Threat name")).toBeEnabled();
   expect(screen.getByRole("button", { name: "Identify threat" })).toBeEnabled();
+});
+
+it.each([
+  ["Threat name", 100],
+  ["Threat scenario", 2000],
+] as const)("preserves overflow and blocks saving %s", async (label, maximum) => {
+  state.risk.mockReturnValue({ data: { acceptances: [], vulnerabilities: [{ id: "v", name: "Weakness", description: "Demo" }], contextHistory: [], vulnerabilityWorkflow: { canIdentify: true, blockedReason: null } } });
+  const user = userEvent.setup();
+  render(<IdentifyThreatDialog riskId="risk" riskLabel="Demo risk" onClose={vi.fn()} />);
+  const field = screen.getByLabelText(label);
+  await user.click(field);
+  await user.paste("A".repeat(maximum + 1));
+  expect(field).toHaveValue("A".repeat(maximum + 1));
+  const message = `Use at most ${maximum.toLocaleString("en-US")} characters.`;
+  expect(await screen.findByText(message)).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "Identify threat" }));
+  expect(state.save).not.toHaveBeenCalled();
+  await user.clear(field);
+  await user.paste("A".repeat(maximum));
+  await waitFor(() => expect(screen.queryByText(message)).not.toBeInTheDocument());
 });

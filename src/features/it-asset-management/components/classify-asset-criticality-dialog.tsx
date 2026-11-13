@@ -73,6 +73,7 @@ export function ClassifyAssetCriticalityDialog({
     control,
     formState: { errors },
   } = useForm<ClassifyAssetCriticalityInput, unknown, ClassifyAssetCriticalityRequest>({
+    mode: "onChange",
     resolver: zodResolver(classifyAssetCriticalitySchema),
     defaultValues: defaults,
   });
@@ -494,7 +495,6 @@ export function ClassifyAssetCriticalityDialog({
                 <Textarea
                   id="classification-rationale"
                   rows={4}
-                  maxLength={2000}
                   disabled={blocked}
                   aria-invalid={Boolean(errors.rationale)}
                   aria-describedby={
@@ -614,7 +614,6 @@ export function ClassifyAssetCriticalityDialog({
                 <Textarea
                   id="data-classification-basis"
                   rows={3}
-                  maxLength={2000}
                   disabled={blocked}
                   aria-invalid={Boolean(errors.dataClassificationBasis)}
                   aria-describedby={

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 export const identifyThreatSchema = z.object({
-  name: z.string().trim().min(2, "Enter at least 2 characters.").max(100),
+  name: z.string().trim().min(2, "Enter at least 2 characters.").max(100, "Use at most 100 characters."),
   description: z
     .string()
     .trim()
     .min(20, "Describe how the threat could affect this scope in at least 20 characters.")
-    .max(2000),
+    .max(2000, "Use at most 2,000 characters."),
   vulnerabilityIds: z
     .array(z.uuid())
     .min(1, "Select at least one related vulnerability.")

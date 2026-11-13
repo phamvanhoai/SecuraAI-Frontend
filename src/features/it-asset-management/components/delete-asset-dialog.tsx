@@ -64,7 +64,7 @@ export function DeleteAssetDialog({
       return;
     const parsed = archiveAssetSchema.safeParse({ reason });
     if (!parsed.success) {
-      setMessage("Enter an archive reason (1-1000 characters).");
+      setMessage(parsed.error.issues[0]?.message ?? "Enter an archive reason (20-1,000 characters).");
       return;
     }
     setMessage(undefined);
@@ -83,7 +83,11 @@ export function DeleteAssetDialog({
   const isActive = asset?.status === "active";
   const locked = !isActive || stale || mutation.isPending;
   const confirmationMatches = confirmation.trim() === (asset?.assetCode ?? "___");
-  const canSubmit = confirmationMatches && reason.trim().length >= 20 && reason.trim().length <= 1000 && !locked;
+  const reasonValidation = archiveAssetSchema.safeParse({ reason });
+  const reasonError = reason.length > 0 && !reasonValidation.success
+    ? reasonValidation.error.issues[0]?.message
+    : undefined;
+  const canSubmit = confirmationMatches && reasonValidation.success && !locked;
 
   return (
     <Dialog
@@ -206,15 +210,21 @@ export function DeleteAssetDialog({
               <Textarea
                 id="archive-asset-reason"
                 value={reason}
-                maxLength={1000}
                 required
                 rows={3}
                 disabled={locked}
+                aria-invalid={Boolean(reasonError)}
+                aria-describedby={reasonError ? "archive-reason-help archive-reason-error" : "archive-reason-help"}
                 onChange={(event) => setReason(event.target.value)}
               />
-              <p className="text-muted text-xs">
+              <p id="archive-reason-help" className="text-muted text-xs">
                 {reason.trim().length} / 1000 characters (minimum 20)
               </p>
+              {reasonError ? (
+                <p id="archive-reason-error" role="alert" className="text-danger text-xs">
+                  {reasonError}
+                </p>
+              ) : null}
             </div>
           </div>
 

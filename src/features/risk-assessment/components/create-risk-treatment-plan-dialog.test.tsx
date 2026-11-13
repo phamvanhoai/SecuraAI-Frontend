@@ -5,15 +5,21 @@ vi.mock('../hooks/use-create-risk-treatment-plan', () => ({
   useRiskTreatmentPlanOptions: () => ({ data: { users: [], controls: [] }, isPending: false, isError: false }),
   useCreateRiskTreatmentPlan: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
-const state = vi.hoisted(() => ({ status: 'open', pending: false, activePlan: false }));
-vi.mock('../hooks/use-risk-register', () => ({ useRiskRecord: () => ({ data: { status: state.status, activeTreatmentPlan: state.activePlan ? { id: 'plan' } : null, acceptances: state.pending ? [{ decision: 'pending' }] : [], assessments: [] }, isPending: false, isError: false }) }));
+const state = vi.hoisted(() => ({ status: 'open', pending: false, activePlan: false, residual: true }));
+vi.mock('../hooks/use-risk-register', () => ({ useRiskRecord: () => ({ data: { status: state.status, activeTreatmentPlan: state.activePlan ? { id: 'plan' } : null, acceptances: state.pending ? [{ decision: 'pending' }] : [], assessments: state.residual ? [{ type: "periodic_review", residualRating: "medium", assessedAt: "2026-11-11T00:00:00Z" }] : [] }, isPending: false, isError: false }) }));
 vi.mock('@/components/feedback/toast', () => ({ useToast: () => ({ success: vi.fn() }) }));
 beforeAll(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
   Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
 });
-afterEach(() => { cleanup(); state.status = 'open'; state.pending = false; state.activePlan = false; });
+afterEach(() => { cleanup(); state.status = 'open'; state.pending = false; state.activePlan = false; state.residual = true; });
 describe('create Risk Treatment Plan', () => {
+  it('blocks all four strategies when residual is missing', () => {
+    state.residual = false;
+    render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+    expect(screen.getByText('Assess residual risk before creating a treatment plan.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Create plan' })).toBeDisabled();
+  });
   it.each(['open', 'under_treatment'])('allows creation for %s Risk without pending acceptance or an existing plan', (status) => {
     state.status = status;
     render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);

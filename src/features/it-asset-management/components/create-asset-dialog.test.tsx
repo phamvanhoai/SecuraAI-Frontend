@@ -66,6 +66,22 @@ describe("CreateAssetDialog", () => {
       },
     });
   });
+  it("preserves pasted overlong names, shows an error and blocks creation", async () => {
+    const user = userEvent.setup();
+    render(<CreateAssetDialog />);
+    await user.click(screen.getByRole("button", { name: "Add asset" }));
+    const name = screen.getByLabelText("Asset name");
+    await user.click(name);
+    await user.paste("A".repeat(101));
+    expect(name).toHaveValue("A".repeat(101));
+    expect(await screen.findByText("Use at most 100 characters.")).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Asset type"), "SERVER");
+    await user.click(screen.getByRole("button", { name: "Create asset" }));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await user.clear(name);
+    await user.type(name, "Valid asset name");
+    await waitFor(() => expect(screen.queryByText("Use at most 100 characters.")).not.toBeInTheDocument());
+  });
   it("loads options only while open and validates required fields", async () => {
     const user = userEvent.setup();
     render(<CreateAssetDialog />);
