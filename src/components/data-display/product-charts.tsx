@@ -15,9 +15,11 @@ const colors = ["#1769f6", "#16a05d", "#f59e0b", "#ef4444"];
 export function DistributionDonut({
   items,
   total,
+  totalLabel = "Total",
 }: {
   items: readonly { label: string; value: string }[];
   total: string;
+  totalLabel?: string;
 }) {
   const data = items.map((item, index) => ({
     name: item.label,
@@ -29,7 +31,7 @@ export function DistributionDonut({
   return (
     <div
       className="relative h-44 w-full"
-      aria-label="Biểu đồ phân bố dữ liệu mẫu"
+      aria-label="Distribution chart"
     >
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
@@ -61,7 +63,7 @@ export function DistributionDonut({
       <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
         <div>
           <strong className="text-foreground block text-2xl">{total}</strong>
-          <span className="text-muted text-xs">Tổng mẫu</span>
+          <span className="text-muted text-xs">{totalLabel}</span>
         </div>
       </div>
     </div>

@@ -217,6 +217,10 @@ describe("SecurityDashboardView Component", () => {
     expect(screen.getByText("Total IT Assets")).toBeInTheDocument();
     expect(screen.getByText("Open Risks")).toBeInTheDocument();
 
+    // Check Risk Rating Distribution donut center label
+    expect(screen.getByText("Total Risks")).toBeInTheDocument();
+    expect(screen.queryByText("Tổng mẫu")).not.toBeInTheDocument();
+
     // Check Ingested Events funnel
     expect(screen.getByText("84,500")).toBeInTheDocument();
     expect(screen.getByText("24h Ingested Events:")).toBeInTheDocument();
