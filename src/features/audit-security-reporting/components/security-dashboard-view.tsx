@@ -318,6 +318,7 @@ export function SecurityDashboardView() {
             <DistributionDonut
               items={donutItems}
               total={String(totalAssessedRisks)}
+              totalLabel="Total Risks"
             />
             <div className="grid grid-cols-2 gap-2 text-xs border-t border-border pt-3">
               <div className="flex items-center justify-between">
