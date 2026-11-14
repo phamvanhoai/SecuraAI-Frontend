@@ -7,6 +7,7 @@ import {
   Pencil,
   RotateCcw,
   Search,
+  X,
   XCircle,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useEventGovernancePolicies } from "../hooks/use-event-governance";
 import type {
   EventGovernancePolicy,
@@ -47,12 +49,20 @@ const familyBadgeStyles: Record<string, string> = {
 
 export function EventGovernancePoliciesList() {
   const [page, setPage] = useState(1);
+  const sessionQuery = useSessionUser();
+  const isAdmin =
+    sessionQuery.data?.roles.some((role) => role.code === "ADMIN") ?? false;
+
   const [draftSearch, setDraftSearch] = useState("");
   const [search, setSearch] = useState("");
   const [familyFilter, setFamilyFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedPolicyId, setSelectedPolicyId] = useState<string | null>(null);
   const [editingPolicy, setEditingPolicy] = useState<EventGovernancePolicy | null>(null);
+
+  const hasActiveFilters = Boolean(
+    search || familyFilter !== "ALL" || statusFilter !== "ALL",
+  );
 
   const policiesQuery = useEventGovernancePolicies({
     page,
@@ -83,7 +93,7 @@ export function EventGovernancePoliciesList() {
   const columns: readonly DataTableColumn<EventGovernancePolicy>[] = [
     {
       key: "name",
-      header: "Policy name & Purpose",
+      header: "Policy name & purpose",
       cell: (item: EventGovernancePolicy) => (
         <div className="py-0.5">
           <strong className="text-foreground block font-medium">
@@ -197,20 +207,24 @@ export function EventGovernancePoliciesList() {
             <span>View</span>
           </Button>
 
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-h-7 py-0.5 px-2 text-xs flex items-center gap-1"
-            onClick={() => setEditingPolicy(item)}
-            aria-label={`Configure policy settings for ${item.name}`}
-          >
-            <Pencil className="size-3.5" />
-            <span>Edit</span>
-          </Button>
+          {isAdmin ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="min-h-7 py-0.5 px-2 text-xs flex items-center gap-1"
+              onClick={() => setEditingPolicy(item)}
+              aria-label={`Configure policy settings for ${item.name}`}
+            >
+              <Pencil className="size-3.5" />
+              <span>Edit</span>
+            </Button>
+          ) : null}
         </div>
       ),
     },
   ];
+
+  const items = policiesQuery.data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -236,10 +250,24 @@ export function EventGovernancePoliciesList() {
                   value={draftSearch}
                   onChange={(e) => setDraftSearch(e.target.value)}
                   placeholder="Search by policy name, purpose, or scope..."
-                  className="pl-9 text-xs"
+                  className="min-h-10 pl-9 pr-9 text-xs"
                 />
+                {draftSearch ? (
+                  <button
+                    type="button"
+                    aria-label="Clear policy search"
+                    onClick={() => {
+                      setDraftSearch("");
+                      setSearch("");
+                      setPage(1);
+                    }}
+                    className="text-muted hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 rounded p-0.5"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                ) : null}
               </div>
-              <Button type="submit" variant="primary" className="text-xs">
+              <Button type="submit" variant="primary" className="min-h-10 text-xs">
                 Search
               </Button>
             </form>
@@ -251,7 +279,7 @@ export function EventGovernancePoliciesList() {
                   setFamilyFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-44 text-xs"
+                className="min-h-10 w-44 text-xs"
               >
                 <option value="ALL">All event families</option>
                 <option value="AUTHENTICATION">Authentication</option>
@@ -265,19 +293,19 @@ export function EventGovernancePoliciesList() {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-36 text-xs"
+                className="min-h-10 w-36 text-xs"
               >
                 <option value="ALL">All statuses</option>
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
               </Select>
 
-              {(search || familyFilter !== "ALL" || statusFilter !== "ALL") && (
+              {hasActiveFilters && (
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={handleResetFilters}
-                  className="text-muted hover:text-foreground text-xs flex items-center gap-1"
+                  className="min-h-10 text-muted hover:text-foreground text-xs flex items-center gap-1"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   <span>Reset</span>
@@ -291,14 +319,51 @@ export function EventGovernancePoliciesList() {
             <TableSkeleton rows={5} />
           ) : policiesQuery.isError ? (
             <Alert>
-              Failed to load event data governance policies.{" "}
-              {policiesQuery.error?.message}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  Failed to load event data governance policies.{" "}
+                  {policiesQuery.error?.message}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void policiesQuery.refetch?.()}
+                  className="min-h-8 gap-1.5 px-2.5 text-xs"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Retry</span>
+                </Button>
+              </div>
             </Alert>
+          ) : items.length === 0 ? (
+            <div className="border-border bg-surface-subtle/30 rounded-lg border px-4 py-10 text-center">
+              <p className="text-foreground text-sm font-medium">
+                {hasActiveFilters
+                  ? "No governance policies match the current filters."
+                  : "No event data governance policies found."}
+              </p>
+              <p className="text-muted mt-1 text-xs">
+                {hasActiveFilters
+                  ? "Try clearing your search query or adjusting the event family and status filters."
+                  : "Configured retention and archival policies across event streams will appear here."}
+              </p>
+              {hasActiveFilters ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleResetFilters}
+                  className="mt-4 min-h-8 gap-1.5 px-3 text-xs"
+                >
+                  <RotateCcw className="size-3.5" />
+                  <span>Reset filters</span>
+                </Button>
+              ) : null}
+            </div>
           ) : (
             <div className="space-y-4">
               <DataTable
                 columns={columns}
-                rows={policiesQuery.data?.items ?? []}
+                rows={items}
                 getRowKey={(item) => item.id}
               />
 
@@ -319,10 +384,14 @@ export function EventGovernancePoliciesList() {
         policyId={selectedPolicyId}
         isOpen={Boolean(selectedPolicyId)}
         onClose={() => setSelectedPolicyId(null)}
-        onEditClick={(p) => {
-          setSelectedPolicyId(null);
-          setEditingPolicy(p);
-        }}
+        {...(isAdmin
+          ? {
+              onEditClick: (p: EventGovernancePolicy) => {
+                setSelectedPolicyId(null);
+                setEditingPolicy(p);
+              },
+            }
+          : {})}
       />
 
       {/* Edit / Configure Policy Dialog */}

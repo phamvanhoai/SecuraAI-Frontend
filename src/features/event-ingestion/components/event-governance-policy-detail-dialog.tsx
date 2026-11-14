@@ -23,6 +23,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSessionUser } from "@/features/authentication-account";
 import { useEventGovernancePolicyDetail } from "../hooks/use-event-governance";
 import type { EventGovernancePolicy } from "../schemas/event-governance-schema";
 
@@ -54,6 +55,9 @@ export function EventGovernancePolicyDetailDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+  const sessionQuery = useSessionUser();
+  const isAdmin =
+    sessionQuery.data?.roles.some((role) => role.code === "ADMIN") ?? false;
 
   const { data: policy, isPending, isError, error } = useEventGovernancePolicyDetail(
     isOpen ? policyId : null,
@@ -384,7 +388,7 @@ export function EventGovernancePolicyDetailDialog({
           </>
         ) : null}
 
-        <div className="border-border flex items-center justify-between border-t pt-4">
+        <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-4">
           <Button
             variant="secondary"
             onClick={handleCopyJson}
@@ -395,8 +399,8 @@ export function EventGovernancePolicyDetailDialog({
             <span>{copied ? "Copied" : "Copy JSON"}</span>
           </Button>
 
-          <div className="flex items-center gap-2">
-            {policy && onEditClick ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {isAdmin && policy && onEditClick ? (
               <Button
                 variant="primary"
                 onClick={() => onEditClick(policy)}

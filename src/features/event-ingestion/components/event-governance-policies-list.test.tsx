@@ -3,6 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUsePolicies = vi.fn();
 const mockUseSummary = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-event-governance", () => ({
   useEventGovernancePolicies: (params: unknown) => mockUsePolicies(params),
@@ -62,6 +70,10 @@ const sampleSummary = {
 describe("EventGovernancePoliciesList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+      isPending: false,
+    });
   });
 
   afterEach(() => {
@@ -119,5 +131,36 @@ describe("EventGovernancePoliciesList", () => {
         search: "VPN policy",
       }),
     );
+
+    expect(screen.getByText("No governance policies match the current filters.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    expect(mockUsePolicies).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 1, limit: 20 }),
+    );
+  });
+
+  it("hides policy Edit action for non-admin users such as SECURITY_OFFICER", () => {
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+      isPending: false,
+    });
+    mockUseSummary.mockReturnValue({ data: sampleSummary, isPending: false, isError: false });
+    mockUsePolicies.mockReturnValue({
+      data: {
+        items: [samplePolicy],
+        pagination: { page: 1, limit: 20, totalItems: 1, totalPages: 1 },
+      },
+      isPending: false,
+      isError: false,
+    });
+
+    render(<EventGovernancePoliciesList />);
+
+    expect(
+      screen.getByRole("button", { name: /View policy details for Authentication Retention Policy/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Configure policy settings for Authentication Retention Policy/i }),
+    ).not.toBeInTheDocument();
   });
 });

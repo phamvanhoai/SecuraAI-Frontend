@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useUpdateEventGovernancePolicy } from "../hooks/use-event-governance";
 import {
   updateEventGovernancePolicySchema,
@@ -337,7 +338,7 @@ function EditPolicyForm({
           label="Business Purpose & Retention Justification"
           error={fieldErrors.purpose}
         >
-          <textarea
+          <Textarea
             id="gov-policy-purpose"
             value={purpose}
             onChange={(e) => {
@@ -346,7 +347,7 @@ function EditPolicyForm({
             }}
             placeholder="e.g. Comply with ISO/IEC 27001:2022 A.8.15 requirements..."
             rows={2}
-            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+            className="text-xs"
             required
           />
           <p className="text-[11px] text-muted mt-1">
@@ -532,7 +533,7 @@ function EditPolicyForm({
           label="PII & Sensitive Field Masking Rules (JSON)"
           error={fieldErrors.maskingRules}
         >
-          <textarea
+          <Textarea
             id="gov-policy-masking-rules"
             value={maskingRulesText}
             onChange={(e) => {
@@ -540,7 +541,7 @@ function EditPolicyForm({
               setMaskingRulesText(e.target.value);
             }}
             rows={3}
-            className="font-mono text-xs w-full rounded-md border border-border bg-surface px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="font-mono text-xs"
           />
           <p className="text-[11px] text-muted mt-1">
             Define field masking transformations (e.g. IP anonymization, user pseudonymization).
@@ -549,7 +550,7 @@ function EditPolicyForm({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
         <Button
           type="button"
           variant="secondary"
