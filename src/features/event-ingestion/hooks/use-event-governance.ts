@@ -31,10 +31,11 @@ export function useEventGovernancePolicyDetail(id: string | null) {
   });
 }
 
-export function useEventGovernanceSummary() {
+export function useEventGovernanceSummary(options?: { enabled?: boolean }) {
   return useQuery<EventGovernanceLifecycleSummary, Error>({
     queryKey: ["event-governance", "policies", "summary"],
     queryFn: () => getEventGovernanceLifecycleSummary(),
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -24,17 +24,28 @@ export function LogSourcesManager() {
   const session = useSessionUser();
   const canViewEvents =
     session.data?.roles.some((role) => role.code === "SECURITY_OFFICER") ?? false;
+  const canManageGovernance =
+    session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
 
   const [selectedTab, setSelectedTab] = useState<
     "events" | "event-sources" | "governance"
   >("events");
   const [registerEventSourceOpen, setRegisterEventSourceOpen] = useState(false);
 
-  const activeTab = !canViewEvents && selectedTab === "events" ? "event-sources" : selectedTab;
+  const activeTab =
+    !canViewEvents && selectedTab === "events"
+      ? "event-sources"
+      : !canManageGovernance && selectedTab === "governance"
+        ? canViewEvents
+          ? "events"
+          : "event-sources"
+        : selectedTab;
 
   const eventSourcesOverview = useEventSources({ limit: 100 });
   const eventMetrics = useNormalizedEventMetrics({ enabled: canViewEvents });
-  const governanceSummary = useEventGovernanceSummary();
+  const governanceSummary = useEventGovernanceSummary({
+    enabled: canManageGovernance,
+  });
 
   const totalEventSources = eventSourcesOverview.data?.pagination.total ?? 0;
   const activeEventSources =
@@ -264,40 +275,42 @@ export function LogSourcesManager() {
               </span>
             ) : null}
           </button>
-          <button
-            type="button"
-            onClick={() => setSelectedTab("governance")}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
-              activeTab === "governance"
-                ? "bg-brand text-brand-contrast font-semibold shadow-xs"
-                : "text-muted hover:bg-neutral-soft hover:text-foreground",
-            )}
-          >
-            <Shield
-              aria-hidden="true"
+          {canManageGovernance ? (
+            <button
+              type="button"
+              onClick={() => setSelectedTab("governance")}
               className={cn(
-                "size-4",
+                "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-all",
                 activeTab === "governance"
-                  ? "text-brand-contrast"
-                  : "text-muted",
+                  ? "bg-brand text-brand-contrast font-semibold shadow-xs"
+                  : "text-muted hover:bg-neutral-soft hover:text-foreground",
               )}
-              strokeWidth={2}
-            />
-            <span>Data governance & Retention</span>
-            {governanceSummary.data ? (
-              <span
+            >
+              <Shield
+                aria-hidden="true"
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                  "size-4",
                   activeTab === "governance"
-                    ? "bg-white/20 text-brand-contrast"
-                    : "border-border bg-neutral-soft text-muted border",
+                    ? "text-brand-contrast"
+                    : "text-muted",
                 )}
-              >
-                {governanceSummary.data.totalPolicies}
-              </span>
-            ) : null}
-          </button>
+                strokeWidth={2}
+              />
+              <span>Data governance & Retention</span>
+              {governanceSummary.data ? (
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold transition-colors",
+                    activeTab === "governance"
+                      ? "bg-white/20 text-brand-contrast"
+                      : "border-border bg-neutral-soft text-muted border",
+                  )}
+                >
+                  {governanceSummary.data.totalPolicies}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -312,12 +325,12 @@ export function LogSourcesManager() {
 
       {activeTab === "events" && canViewEvents ? (
         <NormalizedEventsList />
-      ) : activeTab === "event-sources" ? (
+      ) : activeTab === "governance" && canManageGovernance ? (
+        <EventGovernancePoliciesList />
+      ) : (
         <EventSourcesList
           onRegisterClick={() => setRegisterEventSourceOpen(true)}
         />
-      ) : (
-        <EventGovernancePoliciesList />
       )}
     </>
   );
