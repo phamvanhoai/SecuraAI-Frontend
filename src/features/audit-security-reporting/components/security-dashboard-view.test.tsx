@@ -4,12 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboardView } from "./security-dashboard-view";
 import type { SecurityDashboardResponse } from "../schemas/security-dashboard-schema";
 
-let mockSessionUser = {
+let mockSessionUser: {
+  data?: {
+    id: string;
+    roles: { code: string; name: string }[];
+  } | undefined;
+  isPending: boolean;
+  isError?: boolean | undefined;
+  error?: unknown;
+  refetch?: (() => void) | undefined;
+} = {
   data: {
     id: "user-1",
     roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
   },
   isPending: false,
+  isError: false,
 };
 
 vi.mock("@/features/authentication-account", () => ({
@@ -231,6 +241,7 @@ describe("SecurityDashboardView Component", () => {
 
     // Executive summary section should NOT be present for Security Officer
     expect(screen.queryByTestId("executive-summary-section")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View All Alerts/i })).toBeInTheDocument();
   });
 
   it("renders Executive dashboard with executive summary and hides operational details", async () => {
@@ -256,12 +267,34 @@ describe("SecurityDashboardView Component", () => {
     // Check Executive summary section is present
     expect(screen.getByTestId("executive-summary-section")).toBeInTheDocument();
     expect(screen.getByText("84 / 100")).toBeInTheDocument();
-    expect(screen.getByText("ADEQUATE")).toBeInTheDocument();
+    expect(screen.getByText("Adequate")).toBeInTheDocument();
     expect(screen.getByText("91%")).toBeInTheDocument();
     expect(screen.getByText(/Overall security posture rated as ADEQUATE/)).toBeInTheDocument();
 
-    // Operational details section should NOT be present for Executive
+    // Operational details and Security Officer alert route link should NOT be present for Executive
     expect(screen.queryByTestId("operational-details-section")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /View All Alerts/i })).not.toBeInTheDocument();
+  });
+
+  it("renders session error state instead of access restriction when session verification fails", async () => {
+    const refetch = vi.fn();
+    mockSessionUser = {
+      data: undefined,
+      isPending: false,
+      isError: true,
+      error: new Error("Session timeout"),
+      refetch,
+    };
+
+    renderDashboard();
+
+    expect(
+      await screen.findByText("Unable to Verify Session"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Access Restricted")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Retry Session Check/i }));
+    expect(refetch).toHaveBeenCalled();
   });
 
   it("renders access restriction alert when user role is not SECURITY_OFFICER or EXECUTIVE", async () => {

@@ -4,12 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { ExportReportsView } from "./export-reports-view";
 
-let mockSessionUser = {
+let mockSessionUser: {
+  data?: {
+    id: string;
+    roles: { code: string; name: string }[];
+  } | undefined;
+  isPending: boolean;
+  isError?: boolean | undefined;
+  error?: unknown;
+  refetch?: (() => void) | undefined;
+} = {
   data: {
     id: "user-1",
     roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }],
   },
   isPending: false,
+  isError: false,
 };
 
 vi.mock("@/features/authentication-account", () => ({
@@ -238,6 +248,7 @@ describe("ExportReportsView", () => {
         roles: [{ code: "ADMIN", name: "Administrator" }],
       },
       isPending: false,
+      isError: false,
     };
 
     renderView();
@@ -247,5 +258,54 @@ describe("ExportReportsView", () => {
         "This reporting module is available to Security Officers and Executives only.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("supports SECURITY_POSTURE label, REQUESTED status filter, filtered empty state, and session error retry", async () => {
+    const mockEmpty = {
+      success: true,
+      data: {
+        items: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          totalItems: 0,
+          totalPages: 1,
+        },
+      },
+    };
+
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(mockEmpty), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    renderView();
+
+    const typeFilter = await screen.findByLabelText("Filter by report type");
+    expect(screen.getByRole("option", { name: "Security Posture (SECURITY_POSTURE)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Requested" })).toBeInTheDocument();
+
+    fireEvent.change(typeFilter, { target: { value: "SECURITY_POSTURE" } });
+    expect(await screen.findByText("No report exports match your filters")).toBeInTheDocument();
+
+    cleanup();
+
+    const refetch = vi.fn();
+    mockSessionUser = {
+      data: undefined,
+      isPending: false,
+      isError: true,
+      error: new Error("Session expired"),
+      refetch,
+    };
+
+    renderView();
+    expect(await screen.findByText(/Failed to verify session permissions/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalled();
   });
 });

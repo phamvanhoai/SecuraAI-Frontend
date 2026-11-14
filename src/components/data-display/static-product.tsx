@@ -100,7 +100,7 @@ export type Metric = {
 
 export function MetricStrip({
   metrics,
-  ariaLabel = "Chỉ số mẫu",
+  ariaLabel = "Summary metrics",
 }: {
   metrics: readonly Metric[];
   ariaLabel?: string;

@@ -22,4 +22,16 @@ describe("DataTable", () => {
     expect(cell).toHaveClass("align-middle");
     expect(cell.closest("tr")).toHaveClass("h-16");
   });
+
+  it("renders English empty state when rows are empty", () => {
+    render(
+      <DataTable
+        columns={columns}
+        getRowKey={(row) => row.id}
+        rows={[]}
+      />,
+    );
+
+    expect(screen.getByText("No records found")).toBeInTheDocument();
+  });
 });
