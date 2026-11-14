@@ -21,7 +21,6 @@ import {
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
 import {
-  ProductPageHeader,
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
@@ -343,23 +342,6 @@ export function AuditLogsManager() {
 
   return (
     <>
-      <ProductPageHeader
-        title="System Audit Logs"
-        description="Search, filter, and review system audit records covering user actions, configuration changes, and system access activities for compliance monitoring and accountability."
-        additionalActions={
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="gap-1.5"
-          >
-            <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} />
-            <span>Refresh</span>
-          </Button>
-        }
-      />
-
       {/* Cryptographic Protection Banner */}
       <div className="mb-6 flex items-start gap-3 rounded-xl border border-success/30 bg-success-soft p-4 text-sm text-success">
         <ShieldCheck className="mt-0.5 size-5 shrink-0" />
@@ -421,8 +403,18 @@ export function AuditLogsManager() {
               </Button>
             </form>
 
-            {/* Filter Toggle & Reset Buttons */}
+            {/* Filter Toggle, Refresh & Reset Buttons */}
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="gap-1.5 text-xs"
+              >
+                <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} />
+                <span>Refresh</span>
+              </Button>
               <Button
                 type="button"
                 variant={showAdvancedFilters || activeFilterCount > 0 ? "primary" : "secondary"}
