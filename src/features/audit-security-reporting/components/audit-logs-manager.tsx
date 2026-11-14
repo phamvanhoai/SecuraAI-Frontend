@@ -21,7 +21,6 @@ import {
 } from "@/components/data-display/data-table";
 import { Pagination } from "@/components/data-display/pagination";
 import {
-  ProductPageHeader,
   ProductPanel,
   StatusBadge,
 } from "@/components/data-display/static-product";
@@ -343,10 +342,7 @@ export function AuditLogsManager() {
 
   return (
     <>
-      <ProductPageHeader
-        title="System Audit Logs"
-        description="Search, filter, and review system audit records covering user actions, configuration changes, and system access activities for compliance monitoring and accountability."
-        additionalActions={
+      <div className="flex justify-end">
           <Button
             type="button"
             variant="secondary"
@@ -357,8 +353,7 @@ export function AuditLogsManager() {
             <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} />
             <span>Refresh</span>
           </Button>
-        }
-      />
+      </div>
 
       {/* Cryptographic Protection Banner */}
       <div className="mb-6 flex items-start gap-3 rounded-xl border border-success/30 bg-success-soft p-4 text-sm text-success">

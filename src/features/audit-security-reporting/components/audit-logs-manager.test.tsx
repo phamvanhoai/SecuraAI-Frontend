@@ -108,12 +108,12 @@ describe("AuditLogsManager Component", () => {
     cleanup();
   });
 
-  it("renders header and audit log table rows with key details", () => {
+  it("renders audit records without a duplicate page heading", () => {
     render(<AuditLogsManager />);
 
     expect(
-      screen.getByRole("heading", { name: /System Audit Logs/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { name: /System Audit Logs/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("UPDATE_USER_ROLE")).toBeInTheDocument();
     expect(screen.getByText("Admin Superuser")).toBeInTheDocument();
     expect(screen.getByText("admin@securaai.internal")).toBeInTheDocument();
