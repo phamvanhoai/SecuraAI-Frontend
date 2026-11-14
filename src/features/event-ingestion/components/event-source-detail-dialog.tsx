@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { useSessionUser } from "@/features/authentication-account";
 import { ApiKeyModal, OneTimeSecretDialog } from "@/features/integrations";
 import { useEventSource, useUpdateEventSource } from "../hooks/use-event-sources";
@@ -224,7 +225,7 @@ export function EventSourceDetailDialog({
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge tone={statusTones[source.status]}>
                   {source.status === "ACTIVE" ? "Active" : "Inactive"}
                 </StatusBadge>
@@ -253,15 +254,6 @@ export function EventSourceDetailDialog({
                     <span>{source.status === "ACTIVE" ? "Pause" : "Resume"}</span>
                   </Button>
                 ) : null}
-                <Button
-                  className="min-h-8 gap-1.5 px-2.5 text-xs font-medium"
-                  onClick={() => setIsEditing(true)}
-                  type="button"
-                  variant="secondary"
-                >
-                  <SlidersHorizontal aria-hidden="true" className="size-3.5" strokeWidth={1.8} />
-                  <span>Configure</span>
-                </Button>
               </div>
             </div>
 
@@ -381,7 +373,7 @@ export function EventSourceDetailDialog({
                   </span>
                   {canToggleStatus ? (
                     <Button
-                      className="flex items-center gap-1.5"
+                      className="min-h-8 flex items-center gap-1.5 px-2.5 text-xs"
                       onClick={() => setIsCreatingKey(true)}
                       type="button"
                       variant="secondary"
@@ -510,7 +502,7 @@ export function EventSourceDetailDialog({
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex flex-wrap justify-between items-center gap-2 pt-2">
               <div className="flex items-center gap-2">
                 <Button
                   onClick={() => setIsEditing(true)}
@@ -620,6 +612,10 @@ function EditEventSourceInlineForm({
     latencyMs: number;
   } | null>(null);
   const [hasTestedValid, setHasTestedValid] = useState(false);
+
+  const endpointChanged =
+    (form.endpoint ?? "").trim() !== (source.endpoint ?? "").trim();
+  const requiresConnectionTest = endpointChanged && !hasTestedValid;
 
   const handleFamilyToggle = (family: (typeof eventFamilies)[number]) => {
     setForm((prev) => {
@@ -921,10 +917,9 @@ function EditEventSourceInlineForm({
           label="Description"
           error={fieldErrors["description"]}
         >
-          <textarea
+          <Textarea
             id="edit-source-description"
             rows={3}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-brand focus:outline-none focus:ring-3 focus:ring-brand/15"
             placeholder="Describe the operational scope, monitored hosts, or special notes..."
             value={form.description ?? ""}
             onChange={(e) => {
@@ -936,7 +931,7 @@ function EditEventSourceInlineForm({
       </div>
 
       {/* MODAL ACTIONS */}
-      <div className="flex items-center justify-between border-t border-border pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
         <Button
           type="button"
           variant="secondary"
@@ -959,9 +954,13 @@ function EditEventSourceInlineForm({
 
           <Button
             type="submit"
-            disabled={!hasTestedValid || updateMutation.isPending}
+            disabled={requiresConnectionTest || updateMutation.isPending}
             className="flex items-center gap-2"
-            title={!hasTestedValid ? "Please run a successful Test Connection before saving configuration" : undefined}
+            title={
+              requiresConnectionTest
+                ? "Please run a successful Test Connection after updating the endpoint URL"
+                : undefined
+            }
           >
             {updateMutation.isPending ? (
               <>

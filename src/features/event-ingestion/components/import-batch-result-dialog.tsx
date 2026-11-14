@@ -264,7 +264,7 @@ export function ImportBatchResultDialog({
                 </div>
 
                 {batch.rejectedRecords > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="relative w-44">
                       <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
                       <Input
@@ -275,8 +275,21 @@ export function ImportBatchResultDialog({
                           setSearchTerm(e.target.value);
                           setPage(1);
                         }}
-                        className="pl-8 text-xs h-8"
+                        className="pl-8 pr-7 text-xs min-h-8 h-8"
                       />
+                      {searchTerm ? (
+                        <button
+                          type="button"
+                          aria-label="Clear error search"
+                          onClick={() => {
+                            setSearchTerm("");
+                            setPage(1);
+                          }}
+                          className="text-muted hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      ) : null}
                     </div>
                     <Select
                       aria-label="Filter error code"
@@ -285,7 +298,7 @@ export function ImportBatchResultDialog({
                         setErrorCodeFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="text-xs h-8 min-w-44 max-w-56"
+                      className="text-xs min-h-8 h-8 min-w-44 max-w-56"
                     >
                       <option value="">All Error Codes</option>
                       {availableErrorCodes.map((code) => (
@@ -294,6 +307,21 @@ export function ImportBatchResultDialog({
                         </option>
                       ))}
                     </Select>
+                    {searchTerm || errorCodeFilter ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setSearchTerm("");
+                          setErrorCodeFilter("");
+                          setPage(1);
+                        }}
+                        className="min-h-8 h-8 gap-1 px-2.5 text-xs"
+                      >
+                        <X className="size-3" />
+                        <span>Clear</span>
+                      </Button>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -506,7 +534,7 @@ export function ImportBatchResultDialog({
             )}
 
             {/* Dialog Footer */}
-            <div className="border-border flex items-center justify-between border-t pt-4">
+            <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-4">
               {onImportAnotherFile ? (
                 <Button
                   type="button"

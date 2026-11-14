@@ -65,13 +65,30 @@ export function ImportEventsDialog({
   const [importResult, setImportResult] = useState<ImportEventsResponse | null>(null);
   const [activeTab, setActiveTab] = useState<"preview" | "diagnostics">("preview");
 
-  const sourcesQuery = useEventSources({ limit: 50, status: "ACTIVE" });
+  const sourcesQuery = useEventSources(
+    { limit: 100, status: "ACTIVE" },
+    { enabled: isOpen },
+  );
   const importMutation = useImportEvents();
 
+  const availableSources = sourcesQuery.data?.items ?? [];
   const selectedSourceId =
-    presetSource?.id ?? (userSourceId || (sourcesQuery.data?.items[0]?.id ?? ""));
+    presetSource?.id ?? (userSourceId || (availableSources[0]?.id ?? ""));
   const defaultEventFamily =
     userEventFamily || (presetSource?.eventFamilies[0] ?? "AUTHENTICATION");
+
+  async function handleFallbackFamilyChange(nextFamily: string) {
+    setUserEventFamily(nextFamily);
+    if (!selectedFile) return;
+
+    try {
+      const text = await selectedFile.text();
+      const parsed = parseEventFileContent(text, selectedFile.name, nextFamily);
+      setParsedData(parsed);
+    } catch {
+      // Preserve existing parse error handling from file selection
+    }
+  }
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -251,7 +268,7 @@ export function ImportEventsDialog({
                             : "danger"
                       }
                     >
-                      {importResult.status.replace("_", " ")}
+                      {importResult.status.replace(/_/g, " ")}
                     </StatusBadge>
                   </div>
                   <p className="text-muted text-xs font-mono mt-1">
@@ -318,7 +335,7 @@ export function ImportEventsDialog({
               </div>
             )}
 
-            <div className="border-border flex items-center justify-between border-t pt-4">
+            <div className="border-border flex flex-wrap items-center justify-between gap-2 border-t pt-4">
               <Button
                 type="button"
                 variant="secondary"
@@ -329,7 +346,7 @@ export function ImportEventsDialog({
                 <span>Import another file</span>
               </Button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {onViewBatchReport && (
                   <Button
                     type="button"
@@ -371,21 +388,37 @@ export function ImportEventsDialog({
                     <StatusBadge tone="success">Active</StatusBadge>
                   </div>
                 ) : (
-                  <Select
-                    aria-label="Select target event source"
-                    value={selectedSourceId}
-                    onChange={(e) => setUserSourceId(e.target.value)}
-                    className="w-full text-sm"
-                  >
-                    <option value="" disabled>
-                      Select an event source...
-                    </option>
-                    {sourcesQuery.data?.items.map((src) => (
-                      <option key={src.id} value={src.id}>
-                        {src.name} ({src.sourceType})
+                  <div className="space-y-1">
+                    <Select
+                      aria-label="Select target event source"
+                      value={selectedSourceId}
+                      onChange={(e) => setUserSourceId(e.target.value)}
+                      disabled={sourcesQuery.isPending || availableSources.length === 0}
+                      className="w-full text-sm"
+                    >
+                      <option value="" disabled>
+                        {sourcesQuery.isPending
+                          ? "Loading active event sources..."
+                          : availableSources.length === 0
+                            ? "No active event sources found"
+                            : "Select an event source..."}
                       </option>
-                    ))}
-                  </Select>
+                      {availableSources.map((src) => (
+                        <option key={src.id} value={src.id}>
+                          {src.name} ({src.sourceType})
+                        </option>
+                      ))}
+                    </Select>
+                    {sourcesQuery.isError ? (
+                      <p className="text-danger text-[11px]">
+                        Failed to load active event sources. Please close and reopen this dialog.
+                      </p>
+                    ) : !sourcesQuery.isPending && availableSources.length === 0 ? (
+                      <p className="text-amber-700 dark:text-amber-300 text-[11px]">
+                        Activate or register an event source before importing events.
+                      </p>
+                    ) : null}
+                  </div>
                 )}
               </div>
 
@@ -396,7 +429,9 @@ export function ImportEventsDialog({
                 <Select
                   aria-label="Select fallback event family"
                   value={defaultEventFamily}
-                  onChange={(e) => setUserEventFamily(e.target.value)}
+                  onChange={(e) => {
+                    void handleFallbackFamilyChange(e.target.value);
+                  }}
                   className="w-full text-sm"
                 >
                   {eventFamilyOptions.map((opt) => (

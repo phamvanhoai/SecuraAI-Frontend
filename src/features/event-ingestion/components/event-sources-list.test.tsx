@@ -202,4 +202,27 @@ describe("EventSourcesList", () => {
     expect(screen.queryByRole("button", { name: /Pause/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Resume/i })).not.toBeInTheDocument();
   });
+
+  it("renders Retry action on query error and clears search with inline clear button", async () => {
+    const refetch = vi.fn();
+    mockUseEventSources.mockReturnValue({
+      isPending: false,
+      isError: true,
+      refetch,
+      data: undefined,
+    });
+
+    const user = userEvent.setup();
+    render(<EventSourcesList />);
+
+    const retryBtn = screen.getByRole("button", { name: /Retry/i });
+    await user.click(retryBtn);
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    const searchInput = screen.getByPlaceholderText(/Search by name or source type/i);
+    await user.type(searchInput, "Wazuh");
+    const clearSearchBtn = screen.getByRole("button", { name: /Clear search query/i });
+    await user.click(clearSearchBtn);
+    expect(searchInput).toHaveValue("");
+  });
 });
