@@ -2,14 +2,31 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createMock, updateMock, mockSessionUser } = vi.hoisted(() => ({
-  createMock: vi.fn(),
-  updateMock: vi.fn(),
-  mockSessionUser: vi.fn(() => ({
-    data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
-    isPending: false,
-  })),
-}));
+const { createMock, updateMock, mockSessionUser, mockUseEventGovernanceSummary } =
+  vi.hoisted(() => ({
+    createMock: vi.fn(),
+    updateMock: vi.fn(),
+    mockSessionUser: vi.fn(() => ({
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+      isPending: false,
+    })),
+    mockUseEventGovernanceSummary: vi.fn(() => ({
+      data: {
+        totalPolicies: 0,
+        activePolicies: 0,
+        inactivePolicies: 0,
+        minRetentionDays: 0,
+        maxRetentionDays: 0,
+        avgRetentionDays: 0,
+        policiesWithArchival: 0,
+        policiesWithAutomatedDeletion: 0,
+        exportAllowedCount: 0,
+      },
+      isPending: false,
+      isError: false,
+      error: null,
+    })),
+  }));
 
 vi.mock("@/features/authentication-account", () => ({
   useSessionUser: () => mockSessionUser(),
@@ -79,25 +96,15 @@ vi.mock("../hooks/use-normalized-events", () => ({
     isPending: false,
     error: null,
   }),
+  useRetryEventDetection: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }));
 
 vi.mock("../hooks/use-event-governance", () => ({
-  useEventGovernanceSummary: () => ({
-    data: {
-      totalPolicies: 0,
-      activePolicies: 0,
-      inactivePolicies: 0,
-      minRetentionDays: 0,
-      maxRetentionDays: 0,
-      avgRetentionDays: 0,
-      policiesWithArchival: 0,
-      policiesWithAutomatedDeletion: 0,
-      exportAllowedCount: 0,
-    },
-    isPending: false,
-    isError: false,
-    error: null,
-  }),
+  useEventGovernanceSummary: (...args: unknown[]) =>
+    mockUseEventGovernanceSummary(...(args as [])),
   useEventGovernancePolicies: () => ({
     data: {
       items: [],
@@ -135,11 +142,10 @@ describe("LogSourcesManager", () => {
   });
   afterEach(cleanup);
 
-  it("renders the 3 active V2 tabs and switches between them", async () => {
+  it("hides Data governance & Retention tab for SECURITY_OFFICER and switches between allowed tabs", async () => {
     const user = userEvent.setup();
     render(<LogSourcesManager />);
 
-    // Assert the 3 active tabs exist
     expect(
       screen.getByRole("button", { name: /Security events/i }),
     ).toBeInTheDocument();
@@ -147,8 +153,11 @@ describe("LogSourcesManager", () => {
       screen.getByRole("button", { name: /Normalized event sources/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Data governance & Retention/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Data governance & Retention/i }),
+    ).not.toBeInTheDocument();
+    expect(mockUseEventGovernanceSummary).toHaveBeenCalledWith({
+      enabled: false,
+    });
 
     // Default tab is Security events
     expect(screen.getByText("Total events")).toBeInTheDocument();
@@ -160,17 +169,10 @@ describe("LogSourcesManager", () => {
     expect(
       screen.getAllByRole("button", { name: /Register event source/i }).length,
     ).toBeGreaterThan(0);
-
-    // Switch to Data governance & Retention
-    await user.click(
-      screen.getByRole("button", { name: /Data governance & Retention/i }),
-    );
-    expect(
-      screen.getByText("Total policies"),
-    ).toBeInTheDocument();
   });
 
-  it("hides Security events tab and defaults to Normalized event sources when user is ADMIN", () => {
+  it("hides Security events tab, defaults to Normalized event sources, and allows Data governance & Retention when user is ADMIN", async () => {
+    const user = userEvent.setup();
     mockSessionUser.mockReturnValue({
       data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
       isPending: false,
@@ -185,8 +187,20 @@ describe("LogSourcesManager", () => {
       screen.getByRole("button", { name: /Normalized event sources/i }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("button", { name: /Data governance & Retention/i }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("region", { name: "Event source metrics" }),
     ).toBeInTheDocument();
+    expect(mockUseEventGovernanceSummary).toHaveBeenCalledWith({
+      enabled: true,
+    });
+
+    // Switch to Data governance & Retention
+    await user.click(
+      screen.getByRole("button", { name: /Data governance & Retention/i }),
+    );
+    expect(screen.getByText("Total policies")).toBeInTheDocument();
   });
 });
 
