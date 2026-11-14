@@ -172,7 +172,87 @@ describe("EditEntityMappingDialog", () => {
     // Select options should exist
     expect(screen.getByLabelText(/Associated User/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Associated Asset \/ Device/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Monitored Account Link/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Reason for Correction/i)).toBeInTheDocument();
+  });
+
+  it("filters users, assets, and monitored accounts via mini search and allows selecting and clearing", async () => {
+    mockMutateAsync.mockResolvedValueOnce({
+      success: true,
+      data: {
+        mapping: {
+          id: "map-4",
+          mappingMethod: "MANUAL",
+          confidence: 0.95,
+          reason: "Reassigned via searchable dropdown",
+          isActive: true,
+        },
+      },
+    });
+
+    render(
+      <EditEntityMappingDialog
+        event={mockEvent}
+        isOpen={true}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Filter Associated User to Alice Smith
+    fireEvent.click(screen.getByRole("combobox", { name: /Associated User/i }));
+    const userSearch = screen.getByPlaceholderText(/Search users by name or email/i);
+    fireEvent.change(userSearch, { target: { value: "alice" } });
+
+    expect(screen.getByText("1 of 2 matching")).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /John Doe/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: /Alice Smith/i }));
+    expect(
+      screen.getByRole("combobox", { name: /Associated User/i }),
+    ).toHaveTextContent("Alice Smith (alice@company.com)");
+
+    // Filter Associated Asset by code
+    fireEvent.click(
+      screen.getByRole("combobox", { name: /Associated Asset \/ Device/i }),
+    );
+    const assetSearch = screen.getByPlaceholderText(
+      /Search assets by name, code, or type/i,
+    );
+    fireEvent.change(assetSearch, { target: { value: "AST-SRV-02" } });
+    fireEvent.click(screen.getByRole("option", { name: /Production Web Server/i }));
+    expect(
+      screen.getByRole("combobox", { name: /Associated Asset \/ Device/i }),
+    ).toHaveTextContent("Production Web Server [AST-SRV-02]");
+
+    // Open Monitored Account Link and check empty search state, then clear it
+    fireEvent.click(
+      screen.getByRole("combobox", { name: /Monitored Account Link/i }),
+    );
+    const accountSearch = screen.getByPlaceholderText(
+      /Search accounts by ID, source, or display name/i,
+    );
+    fireEvent.change(accountSearch, { target: { value: "nonexistent" } });
+    expect(
+      screen.getByText(/No matching options for “nonexistent”\./i),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Unassign monitored account/i }));
+    expect(
+      screen.getByRole("combobox", { name: /Monitored Account Link/i }),
+    ).toHaveTextContent("— No Monitored Account Link —");
+
+    fireEvent.change(screen.getByLabelText(/Reason for Correction/i), {
+      target: { value: "Reassigned via searchable dropdown" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Corrected Mapping/i }));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        userId: "user-2",
+        assetId: "asset-2",
+        monitoredAccountId: null,
+        reason: "Reassigned via searchable dropdown",
+        confidence: 0.95,
+      });
+    });
   });
 
   it("requires reason before submitting mapping correction", async () => {
