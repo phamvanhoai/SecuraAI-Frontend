@@ -261,7 +261,13 @@ export function useApiKeys(
 ) {
   const effectiveId = input.integrationId?.trim() || "all";
   return useQuery({
-    queryKey: [...integrationKeys.apiKeys(effectiveId), input.isActive, input.search],
+    queryKey: [
+      ...integrationKeys.apiKeys(effectiveId),
+      input.isActive,
+      input.search,
+      input.page,
+      input.limit,
+    ],
     queryFn: ({ signal }) => listApiKeys({ ...input, signal }),
     enabled: true,
   });
@@ -290,6 +296,9 @@ export function useCreateApiKey() {
         queryKey: integrationKeys.apiKeys(variables.integrationId),
       });
       queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys("all"),
+      });
+      queryClient.invalidateQueries({
         queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
       });
     },
@@ -311,6 +320,12 @@ export function useUpdateApiKey() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys("all"),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["integration-api-key-detail", variables.keyId],
       });
       queryClient.invalidateQueries({
         queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
@@ -336,6 +351,12 @@ export function useRotateApiKey() {
         queryKey: integrationKeys.apiKeys(variables.integrationId),
       });
       queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys("all"),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["integration-api-key-detail", variables.keyId],
+      });
+      queryClient.invalidateQueries({
         queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
       });
     },
@@ -357,6 +378,12 @@ export function useRevokeApiKey() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: integrationKeys.apiKeys(variables.integrationId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: integrationKeys.apiKeys("all"),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["integration-api-key-detail", variables.keyId],
       });
       queryClient.invalidateQueries({
         queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),

@@ -12,9 +12,6 @@ import {
   Layers,
   RefreshCw,
   Shield,
-  ShieldAlert,
-  ShieldCheck,
-  ShieldX,
   User,
   X,
 } from "lucide-react";
@@ -128,6 +125,30 @@ export function ApiKeyDetailModal({
 
       {/* Modal Body */}
       <div className="space-y-5 p-5 text-xs">
+        {detailQuery.isFetching && keyData ? (
+          <div className="text-muted flex items-center gap-2 rounded-md border border-border bg-neutral-soft/40 px-3 py-2 text-[11px]">
+            <RefreshCw className="size-3.5 animate-spin" aria-hidden="true" />
+            Refreshing latest key telemetry and lifecycle details...
+          </div>
+        ) : null}
+        {detailQuery.isError && keyData ? (
+          <div className="border-warning/30 bg-warning/10 text-warning flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+            <span>
+              Unable to refresh latest metadata (
+              {detailQuery.error instanceof Error
+                ? detailQuery.error.message
+                : "request failed"}
+              ). Showing cached summary below.
+            </span>
+            <Button
+              className="min-h-7 px-2.5 text-xs"
+              onClick={() => detailQuery.refetch()}
+              variant="secondary"
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
         {detailQuery.isLoading && !keyData ? (
           <div className="space-y-3 py-6">
             <div className="h-6 w-1/3 animate-pulse rounded bg-neutral-soft/60" />
@@ -135,7 +156,7 @@ export function ApiKeyDetailModal({
             <div className="h-24 animate-pulse rounded-lg bg-neutral-soft/40" />
           </div>
         ) : detailQuery.isError && !keyData ? (
-          <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-danger flex items-center justify-between">
+          <div className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-danger flex flex-wrap items-center justify-between gap-2">
             <span>
               {detailQuery.error instanceof Error
                 ? detailQuery.error.message
@@ -321,6 +342,8 @@ export function ApiKeyDetailModal({
                           month: "short",
                           day: "numeric",
                           year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </span>
                     </div>
@@ -333,7 +356,33 @@ export function ApiKeyDetailModal({
                           month: "short",
                           day: "numeric",
                           year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
+                      </span>
+                    </div>
+                  ) : null}
+                  {keyData.revoker ? (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted">Revoked By:</span>
+                      <span className="text-right font-medium text-rose-600 dark:text-rose-400">
+                        {keyData.revoker.fullName ||
+                          keyData.revoker.email ||
+                          keyData.revoker.username ||
+                          "Administrator"}
+                      </span>
+                    </div>
+                  ) : null}
+                  {keyData.replacementKey ? (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted">Replacement Key:</span>
+                      <span className="text-right font-medium text-foreground">
+                        {keyData.replacementKey.name || "Rotated Replacement"}
+                        {keyData.replacementKey.keyPrefix ? (
+                          <code className="text-muted ml-1.5 font-mono text-[10px]">
+                            ({keyData.replacementKey.keyPrefix}...)
+                          </code>
+                        ) : null}
                       </span>
                     </div>
                   ) : null}
@@ -357,7 +406,11 @@ export function ApiKeyDetailModal({
                       : "bg-neutral-soft text-muted border border-border"
                   }`}
                 >
-                  {keyData.usage?.isUsed || keyData.lastUsedAt ? "Active Ingestion Usage" : "Never Used Yet"}
+                  {keyData.usage?.isUsed || keyData.lastUsedAt
+                    ? keyData.scopes?.includes("events:ingest")
+                      ? "Active Ingestion Usage"
+                      : "Active API Usage"
+                    : "Never Used Yet"}
                 </span>
               </div>
 
@@ -405,7 +458,7 @@ export function ApiKeyDetailModal({
         ) : null}
 
         {/* Modal Footer */}
-        <div className="border-border flex justify-end gap-2 border-t pt-4">
+        <div className="border-border flex flex-wrap justify-end gap-2 border-t pt-4">
           <Button
             className="min-h-8 px-4 text-xs font-medium"
             onClick={handleClose}

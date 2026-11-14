@@ -67,7 +67,7 @@ describe("Revoke Integration API Key Workflow", () => {
   }
 
   it("shows validation error when confirming revocation without entering reason", async () => {
-    fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+    fetchMock.mockImplementation(() => {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [sampleActiveKey] }), {
           status: 200,
@@ -99,7 +99,7 @@ describe("Revoke Integration API Key Workflow", () => {
   });
 
   it("shows validation error when reason exceeds 500 characters", async () => {
-    fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+    fetchMock.mockImplementation(() => {
       return Promise.resolve(
         new Response(JSON.stringify({ success: true, data: [sampleActiveKey] }), {
           status: 200,
@@ -180,6 +180,58 @@ describe("Revoke Integration API Key Workflow", () => {
           body: JSON.stringify({ reason: "Decommissioned Wazuh server" }),
         }),
       );
+    });
+  });
+
+  it("displays inline backend error alert when revocation API fails", async () => {
+    fetchMock.mockImplementation((_url: RequestInfo | URL, init?: RequestInit) => {
+      const method = (init?.method || "GET").toUpperCase();
+      if (method === "POST") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: "KEY_ALREADY_REVOKED",
+                message: "This API key has already been revoked.",
+              },
+            }),
+            {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: [sampleActiveKey] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    renderTab();
+
+    const revokeButton = await screen.findByRole("button", {
+      name: `Revoke API key ${sampleActiveKey.keyName}`,
+    });
+    fireEvent.click(revokeButton);
+
+    const reasonInput = screen.getByPlaceholderText(/please enter a reason/i);
+    fireEvent.change(reasonInput, {
+      target: { value: "Key compromised" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm Revocation" }));
+
+    await waitFor(() => {
+      const alerts = screen.getAllByRole("alert");
+      expect(
+        alerts.some((el) =>
+          el.textContent?.includes("This API key has already been revoked."),
+        ),
+      ).toBe(true);
     });
   });
 });

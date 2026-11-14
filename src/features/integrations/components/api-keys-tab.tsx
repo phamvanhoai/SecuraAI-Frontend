@@ -17,7 +17,10 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Pagination } from "@/components/data-display/pagination";
+import { MetricStrip } from "@/components/data-display/static-product";
 import { useToast } from "@/components/feedback/toast";
+import { Alert } from "@/components/ui/alert";
 import { ApiError } from "@/lib/api/api-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,25 +84,31 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
   const [searchDraft, setSearchDraft] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSearchTerm(searchDraft.trim());
+    setPage(1);
   }
 
   function handleClearSearch() {
     setSearchDraft("");
     setSearchTerm("");
+    setPage(1);
   }
 
   function handleClearAllFilters() {
     setSearchDraft("");
     setSearchTerm("");
     setStatusFilter("all");
+    setPage(1);
   }
 
   const apiKeysQuery = useApiKeys({
     integrationId: effectiveIntegrationId,
+    limit: 100,
   });
 
   const revokeMutation = useRevokeApiKey();
@@ -119,7 +128,15 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
   const [keyToRevoke, setKeyToRevoke] = useState<IntegrationApiKey | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
   const [revokeReasonError, setRevokeReasonError] = useState<string | null>(null);
+  const [revokeSubmitError, setRevokeSubmitError] = useState<string | null>(null);
   const revokeDialogRef = useRef<HTMLDialogElement>(null);
+
+  function resetRevokeDialog() {
+    setKeyToRevoke(null);
+    setRevokeReason("");
+    setRevokeReasonError(null);
+    setRevokeSubmitError(null);
+  }
 
   useEffect(() => {
     const dialog = revokeDialogRef.current;
@@ -167,6 +184,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
 
   async function handleConfirmRevoke() {
     if (!keyToRevoke) return;
+    setRevokeSubmitError(null);
     const trimmedReason = revokeReason.trim();
     if (!trimmedReason) {
       setRevokeReasonError("Revocation reason is required.");
@@ -183,11 +201,16 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
         reason: trimmedReason,
       });
       toast.success(`API key "${keyToRevoke.keyName}" has been revoked`);
-      setKeyToRevoke(null);
-      setRevokeReason("");
-      setRevokeReasonError(null);
-    } catch {
-      toast.error("Failed to revoke API key");
+      resetRevokeDialog();
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to revoke API key";
+      setRevokeSubmitError(message);
+      toast.error("Failed to revoke API key", message);
     }
   }
 
@@ -198,6 +221,12 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
     }
     if (key.status === "ROTATED") {
       toast.error("Rotated API keys cannot be reactivated. Please generate a new key.");
+      return;
+    }
+    if (key.status === "EXPIRED") {
+      toast.error(
+        "Expired API keys cannot be reactivated directly. Edit expiration date or Rotate the key instead.",
+      );
       return;
     }
     try {
@@ -220,7 +249,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
     }
   }
 
-  const rawKeys = apiKeysQuery.data ?? [];
+  const rawKeys = useMemo(() => apiKeysQuery.data ?? [], [apiKeysQuery.data]);
 
   const keys = useMemo(() => {
     return rawKeys.filter((k) => {
@@ -254,10 +283,82 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
     });
   }, [rawKeys, searchTerm, statusFilter]);
 
+  const keyMetrics = useMemo(() => {
+    const activeCount = rawKeys.filter((k) => k.status === "ACTIVE").length;
+    const expiredCount = rawKeys.filter((k) => k.status === "EXPIRED").length;
+    const retiredCount = rawKeys.filter(
+      (k) => k.status === "REVOKED" || k.status === "ROTATED",
+    ).length;
+
+    return [
+      {
+        label: "Total Keys",
+        value: String(rawKeys.length),
+        detail:
+          effectiveIntegrationId === "all"
+            ? "Across all integrations"
+            : "Bound to this source",
+        tone: "neutral" as const,
+        loading: apiKeysQuery.isLoading,
+      },
+      {
+        label: "Active",
+        value: String(activeCount),
+        detail: "Ready for authentication",
+        tone: "brand" as const,
+        loading: apiKeysQuery.isLoading,
+      },
+      {
+        label: "Expired",
+        value: String(expiredCount),
+        detail: "Require rotation or renewal",
+        tone: "warning" as const,
+        loading: apiKeysQuery.isLoading,
+      },
+      {
+        label: "Revoked / Rotated",
+        value: String(retiredCount),
+        detail: "Permanently retired credentials",
+        tone: "danger" as const,
+        loading: apiKeysQuery.isLoading,
+      },
+    ];
+  }, [rawKeys, effectiveIntegrationId, apiKeysQuery.isLoading]);
+
+  const hasLegacyInactive = useMemo(
+    () => rawKeys.some((k) => k.status === "INACTIVE"),
+    [rawKeys],
+  );
+
+  const visibleStatusTabs = useMemo(() => {
+    const tabs: Array<{ id: string; label: string }> = [
+      { id: "all", label: "All" },
+      { id: "active", label: "Active" },
+    ];
+    if (hasLegacyInactive || statusFilter === "inactive") {
+      tabs.push({ id: "inactive", label: "Inactive" });
+    }
+    tabs.push(
+      { id: "expired", label: "Expired" },
+      { id: "revoked", label: "Revoked" },
+      { id: "rotated", label: "Rotated" },
+    );
+    return tabs;
+  }, [hasLegacyInactive, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(keys.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedKeys = useMemo(
+    () => keys.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [keys, safePage],
+  );
+
   const isFilteringActive = searchTerm.trim().length > 0 || statusFilter !== "all";
 
   return (
     <div className="space-y-4">
+      <MetricStrip ariaLabel="API key inventory summary" metrics={keyMetrics} />
+
       {/* Action Header & Filters */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
@@ -273,7 +374,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                   aria-label="Search API keys"
                   className="h-8 min-h-8 pl-8 pr-7 text-xs"
                   onChange={(e) => setSearchDraft(e.target.value)}
-                  placeholder="Search by key name, scope, or creator..."
+                  placeholder="Search by key name, prefix, scope, or creator..."
                   value={searchDraft}
                 />
                 {searchDraft ? (
@@ -298,17 +399,8 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
             </form>
 
             {/* Status Pills */}
-            <div className="flex items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
-              {(
-                [
-                  { id: "all", label: "All" },
-                  { id: "active", label: "Active" },
-                  { id: "inactive", label: "Inactive" },
-                  { id: "expired", label: "Expired" },
-                  { id: "revoked", label: "Revoked" },
-                  { id: "rotated", label: "Rotated" },
-                ] as const
-              ).map((tab) => (
+            <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border p-0.5 text-xs bg-neutral-soft/40">
+              {visibleStatusTabs.map((tab) => (
                 <button
                   key={tab.id}
                   className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
@@ -316,13 +408,28 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                       ? "bg-surface text-foreground shadow-xs"
                       : "text-muted hover:text-foreground"
                   }`}
-                  onClick={() => setStatusFilter(tab.id)}
+                  onClick={() => {
+                    setStatusFilter(tab.id);
+                    setPage(1);
+                  }}
                   type="button"
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
+
+            {isFilteringActive ? (
+              <Button
+                className="h-8 min-h-8 px-2.5 text-xs gap-1"
+                onClick={handleClearAllFilters}
+                type="button"
+                variant="secondary"
+              >
+                <X className="size-3.5" />
+                Clear Filters
+              </Button>
+            ) : null}
           </div>
 
           <Button
@@ -399,158 +506,215 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
           )}
         </div>
       ) : (
-        <div className="border-border overflow-hidden rounded-lg border">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-border bg-neutral-soft/50 text-muted border-b font-medium">
-                <tr>
-                  <th className="px-4 py-2.5">Key Identifier</th>
-                  <th className="px-4 py-2.5">Status</th>
-                  <th className="px-4 py-2.5">Creator</th>
-                  <th className="px-4 py-2.5">Expires At</th>
-                  <th className="px-4 py-2.5">Created At</th>
-                  <th className="px-4 py-2.5 text-center w-40">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-border divide-y">
-                {keys.map((key) => (
-                  <tr
-                    className="hover:bg-neutral-soft/30 transition-colors"
-                    key={key.id}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Key className="text-muted size-3.5 shrink-0" />
-                        <div>
-                          <button
-                            className="font-semibold text-foreground hover:text-brand transition-colors block text-left"
-                            onClick={() => handleOpenDetail(key)}
-                            title={`View metadata for ${key.keyName}`}
-                            type="button"
-                          >
-                            {key.keyName}
-                          </button>
-                          {key.eventSource?.name ? (
-                            <span className="text-[10px] text-muted">
-                              {key.eventSource.name}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
+        <>
+          <div className="border-border overflow-hidden rounded-lg border">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <caption className="sr-only">Integration API Keys</caption>
+                <thead className="border-border bg-neutral-soft/50 text-muted border-b font-medium">
+                  <tr>
+                    <th className="px-4 py-2.5" scope="col">
+                      Key Identifier
+                    </th>
+                    <th className="px-4 py-2.5" scope="col">
+                      Status
+                    </th>
+                    <th className="px-4 py-2.5" scope="col">
+                      Creator
+                    </th>
+                    <th className="px-4 py-2.5" scope="col">
+                      Expires At
+                    </th>
+                    <th className="px-4 py-2.5" scope="col">
+                      Created At
+                    </th>
+                    <th className="px-4 py-2.5 text-center w-40" scope="col">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-border divide-y">
+                  {paginatedKeys.map((key) => {
+                    const isTerminal =
+                      key.status === "REVOKED" || key.status === "ROTATED";
+                    const isExpired = key.status === "EXPIRED";
 
-                    <td className="px-4 py-3">
-                      <ApiKeyStatusBadge status={key.status} />
-                    </td>
+                    return (
+                      <tr
+                        className="hover:bg-neutral-soft/30 transition-colors"
+                        key={key.id}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Key className="text-muted size-3.5 shrink-0" />
+                            <div>
+                              <button
+                                className="font-semibold text-foreground hover:text-brand transition-colors block text-left"
+                                onClick={() => handleOpenDetail(key)}
+                                title={`View metadata for ${key.keyName}`}
+                                type="button"
+                              >
+                                {key.keyName}
+                              </button>
+                              <code className="text-muted block font-mono text-[10px]">
+                                {key.maskedKey || key.keyFingerprint}
+                              </code>
+                              {key.eventSource?.name ? (
+                                <span className="text-[10px] text-muted block">
+                                  {key.eventSource.name}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
 
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <User className="size-3 text-muted shrink-0" />
-                        <div className="flex flex-col text-[11px]">
-                          <span className="font-medium text-foreground">
-                            {key.creator?.fullName || "Administrator"}
-                          </span>
-                          {key.creator?.email ? (
-                            <span className="text-muted text-[10px]">
-                              {key.creator.email}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
+                        <td className="px-4 py-3">
+                          <ApiKeyStatusBadge status={key.status} />
+                        </td>
 
-                    <td className="text-muted px-4 py-3 text-[11px]">
-                      {key.expiresAt
-                        ? new Date(key.expiresAt).toLocaleString("en-US", {
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <User className="size-3 text-muted shrink-0" />
+                            <div className="flex flex-col text-[11px]">
+                              <span className="font-medium text-foreground">
+                                {key.creator?.fullName || "System Administrator"}
+                              </span>
+                              {key.creator?.email ? (
+                                <span className="text-muted text-[10px]">
+                                  {key.creator.email}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="text-muted px-4 py-3 text-[11px]">
+                          {key.expiresAt
+                            ? new Date(key.expiresAt).toLocaleString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Never (No Expiration)"}
+                        </td>
+
+                        <td className="text-muted px-4 py-3 text-[11px]">
+                          {new Date(key.createdAt).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "Never"}
-                    </td>
+                          })}
+                        </td>
 
-                    <td className="text-muted px-4 py-3 text-[11px]">
-                      {new Date(key.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </td>
+                        <td className="px-4 py-3 text-center w-40">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              aria-label={`View API key details for ${key.keyName}`}
+                              className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                              onClick={() => handleOpenDetail(key)}
+                              title="View key metadata & usage details"
+                              type="button"
+                            >
+                              <Eye className="size-3 text-muted" />
+                            </Button>
 
-                    <td className="px-4 py-3 text-center w-40">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          aria-label={`View API key details for ${key.keyName}`}
-                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-                          onClick={() => handleOpenDetail(key)}
-                          title="View key metadata & usage details"
-                          type="button"
-                        >
-                          <Eye className="size-3 text-muted" />
-                        </Button>
+                            <Button
+                              aria-label={`Rotate API key ${key.keyName}`}
+                              className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1 disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled={isTerminal}
+                              onClick={() => handleOpenRotate(key)}
+                              title={
+                                isTerminal
+                                  ? `${key.status === "REVOKED" ? "Revoked" : "Rotated"} API keys cannot be rotated`
+                                  : "Rotate secret token"
+                              }
+                              type="button"
+                            >
+                              <RefreshCw className="size-3" />
+                            </Button>
 
-                        <Button
-                          aria-label={`Rotate API key ${key.keyName}`}
-                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-                          onClick={() => handleOpenRotate(key)}
-                          title="Rotate secret token"
-                          type="button"
-                        >
-                          <RefreshCw className="size-3" />
-                        </Button>
+                            <Button
+                              aria-label={`Edit API key ${key.keyName}`}
+                              className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1 disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled={isTerminal}
+                              onClick={() => handleOpenEdit(key)}
+                              title={
+                                isTerminal
+                                  ? `${key.status === "REVOKED" ? "Revoked" : "Rotated"} API keys cannot be edited`
+                                  : "Edit key name, scopes and expiration"
+                              }
+                              type="button"
+                            >
+                              <Edit2 className="size-3" />
+                            </Button>
 
-                        <Button
-                          aria-label={`Edit API key ${key.keyName}`}
-                          className="size-7 p-0 bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
-                          onClick={() => handleOpenEdit(key)}
-                          title="Edit key name, scopes and expiration"
-                          type="button"
-                        >
-                          <Edit2 className="size-3" />
-                        </Button>
-
-                        {key.isActive ? (
-                          <Button
-                            aria-label={`Revoke API key ${key.keyName}`}
-                            className="size-7 p-0 text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
-                            onClick={() => setKeyToRevoke(key)}
-                            title="Revoke this API key"
-                            type="button"
-                          >
-                            <Ban className="size-3" />
-                          </Button>
-                        ) : key.status === "REVOKED" || key.status === "ROTATED" ? (
-                          <Button
-                            aria-label={`Cannot reactivate ${key.status.toLowerCase()} API key ${key.keyName}`}
-                            className="size-7 p-0 text-muted/40 cursor-not-allowed ring-border/30 bg-surface/50 ring-1 opacity-50"
-                            disabled
-                            title={`${key.status === "REVOKED" ? "Revoked" : "Rotated"} API keys cannot be reactivated for security reasons`}
-                            type="button"
-                          >
-                            <Ban className="size-3" />
-                          </Button>
-                        ) : (
-                          <Button
-                            aria-label={`Reactivate API key ${key.keyName}`}
-                            className="size-7 p-0 text-emerald-400 ring-emerald-500/30 hover:bg-emerald-500/10 ring-1 bg-surface"
-                            disabled={updateMutation.isPending}
-                            onClick={() => handleReactivate(key)}
-                            title="Reactivate this API key"
-                            type="button"
-                          >
-                            <CheckCircle2 className="size-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            {key.isActive && !isExpired ? (
+                              <Button
+                                aria-label={`Revoke API key ${key.keyName}`}
+                                className="size-7 p-0 text-danger ring-danger/30 hover:bg-danger/10 ring-1 bg-surface"
+                                onClick={() => {
+                                  setRevokeSubmitError(null);
+                                  setKeyToRevoke(key);
+                                }}
+                                title="Revoke this API key"
+                                type="button"
+                              >
+                                <Ban className="size-3" />
+                              </Button>
+                            ) : isTerminal ? (
+                              <Button
+                                aria-label={`Cannot reactivate ${key.status.toLowerCase()} API key ${key.keyName}`}
+                                className="size-7 p-0 text-muted/40 cursor-not-allowed ring-border/30 bg-surface/50 ring-1 opacity-50"
+                                disabled
+                                title={`${key.status === "REVOKED" ? "Revoked" : "Rotated"} API keys cannot be reactivated for security reasons`}
+                                type="button"
+                              >
+                                <Ban className="size-3" />
+                              </Button>
+                            ) : isExpired ? (
+                              <Button
+                                aria-label={`Cannot reactivate expired API key ${key.keyName}`}
+                                className="size-7 p-0 text-muted/40 cursor-not-allowed ring-border/30 bg-surface/50 ring-1 opacity-50"
+                                disabled
+                                title="Expired API keys cannot be reactivated directly. Edit expiration date or Rotate the key instead."
+                                type="button"
+                              >
+                                <CheckCircle2 className="size-3" />
+                              </Button>
+                            ) : (
+                              <Button
+                                aria-label={`Reactivate API key ${key.keyName}`}
+                                className="size-7 p-0 text-emerald-400 ring-emerald-500/30 hover:bg-emerald-500/10 ring-1 bg-surface"
+                                disabled={updateMutation.isPending}
+                                onClick={() => handleReactivate(key)}
+                                title="Reactivate this API key"
+                                type="button"
+                              >
+                                <CheckCircle2 className="size-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {totalPages > 1 ? (
+            <div className="pt-1">
+              <Pagination
+                onPageChange={setPage}
+                page={safePage}
+                pageCount={totalPages}
+              />
+            </div>
+          ) : null}
+        </>
       )}
 
       {/* ApiKey Modal (Create / Edit / Rotate) */}
@@ -567,7 +731,10 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
       {/* Show-Once Secret Dialog */}
       <OneTimeSecretDialog
         keyName={secretDialogKeyName}
-        onClose={() => setSecretDialogOpen(false)}
+        onClose={() => {
+          setSecretDialogOpen(false);
+          setSecretDialogPlaintext(null);
+        }}
         open={secretDialogOpen}
         secret={secretDialogPlaintext}
       />
@@ -590,26 +757,41 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
         className="border-border bg-surface text-foreground m-auto max-h-[calc(100dvh-2rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-xl border p-0 shadow-2xl backdrop:bg-[#07110f]/55"
         onCancel={(e) => {
           e.preventDefault();
-          setKeyToRevoke(null);
-          setRevokeReason("");
-          setRevokeReasonError(null);
+          resetRevokeDialog();
         }}
         ref={revokeDialogRef}
       >
         {keyToRevoke ? (
           <>
             <div className="border-border bg-surface border-b p-5">
-              <div className="flex items-center gap-2.5">
-                <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
-                  <ShieldAlert className="size-4" />
+              <div className="flex items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="text-danger flex size-8 items-center justify-center rounded-lg bg-danger/10 border border-danger/20">
+                    <ShieldAlert className="size-4" />
+                  </div>
+                  <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
+                    Confirm API Key Revocation
+                  </h3>
                 </div>
-                <h3 id="revoke-confirm-title" className="text-sm font-semibold tracking-tight">
-                  Confirm API Key Revocation
-                </h3>
+                <button
+                  aria-label="Close"
+                  className="text-muted hover:text-foreground rounded p-1 transition-colors"
+                  disabled={revokeMutation.isPending}
+                  onClick={resetRevokeDialog}
+                  type="button"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
             </div>
 
             <div className="space-y-4 p-5 text-xs">
+              {revokeSubmitError ? (
+                <Alert className="border-danger/30 bg-danger/10 text-danger">
+                  {revokeSubmitError}
+                </Alert>
+              ) : null}
+
               <p className="text-muted leading-relaxed">
                 Are you sure you want to revoke the key{" "}
                 <strong className="text-foreground">{keyToRevoke.keyName}</strong>?
@@ -630,6 +812,7 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                   onChange={(e) => {
                     setRevokeReason(e.target.value);
                     if (revokeReasonError) setRevokeReasonError(null);
+                    if (revokeSubmitError) setRevokeSubmitError(null);
                   }}
                   placeholder="Please enter a reason for revoking this API key..."
                   className={`border-border bg-neutral-soft text-foreground placeholder:text-muted focus:border-brand focus:ring-brand/20 w-full rounded-lg border p-2.5 text-xs outline-none transition focus:ring-2 resize-none ${
@@ -647,15 +830,11 @@ export function ApiKeysTab({ integrationId }: { integrationId?: string | undefin
                 </div>
               </div>
 
-              <div className="border-border flex justify-end gap-2 border-t pt-4">
+              <div className="border-border flex flex-wrap justify-end gap-2 border-t pt-4">
                 <Button
                   className="min-h-8 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
                   disabled={revokeMutation.isPending}
-                  onClick={() => {
-                    setKeyToRevoke(null);
-                    setRevokeReason("");
-                    setRevokeReasonError(null);
-                  }}
+                  onClick={resetRevokeDialog}
                   type="button"
                 >
                   Cancel
