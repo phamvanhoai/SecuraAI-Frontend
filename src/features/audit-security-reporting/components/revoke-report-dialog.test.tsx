@@ -84,7 +84,8 @@ describe("RevokeReportDialog", () => {
       screen.getByRole("heading", { name: "Revoke Report Export" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Irreversible Compliance Action")).toBeInTheDocument();
-    expect(screen.getByText("RISK")).toBeInTheDocument();
+    expect(screen.getByText("Security Risk Register")).toBeInTheDocument();
+    expect(screen.getByText("Minimum 5 characters")).toBeInTheDocument();
 
     const textarea = screen.getByLabelText(/Revocation Reason/i);
     const submitBtn = screen.getByRole("button", { name: /Confirm Revoke/i });

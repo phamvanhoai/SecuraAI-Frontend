@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BrainCircuit,
-  CheckCircle2,
   HardDrive,
   RefreshCw,
   Shield,
@@ -25,6 +24,15 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSessionUser } from "@/features/authentication-account";
 import { useSecurityDashboard } from "../hooks/use-security-dashboard";
+
+function formatEnumLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split("_")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
 
 export function SecurityDashboardView() {
   const session = useSessionUser();
@@ -59,6 +67,42 @@ export function SecurityDashboardView() {
           <Skeleton className="h-72 rounded-[10px]" />
           <Skeleton className="h-72 rounded-[10px]" />
           <Skeleton className="h-72 rounded-[10px]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (session.isError) {
+    return (
+      <div className="space-y-5">
+        <ProductPageHeader
+          title="Security & Risk Posture Dashboard"
+          description="View aggregated security posture, risk indicators, incident telemetry, and real-time anomaly alerts."
+        />
+        <div
+          className="border-danger/30 bg-danger/10 text-danger rounded-xl border p-6 text-center space-y-3"
+          data-testid="dashboard-session-error-state"
+        >
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-danger/20 text-danger">
+            <ShieldAlert className="size-6" />
+          </div>
+          <h3 className="text-base font-semibold">
+            Unable to Verify Session
+          </h3>
+          <p className="text-muted mx-auto max-w-md text-xs">
+            {session.error instanceof Error
+              ? session.error.message
+              : "Unable to load your active user session. Please retry."}
+          </p>
+          <Button
+            className="mt-2 min-h-8 text-xs"
+            onClick={() => void session.refetch()}
+            type="button"
+            variant="secondary"
+          >
+            <RefreshCw className="mr-1.5 size-3.5" />
+            Retry Session Check
+          </Button>
         </div>
       </div>
     );
@@ -260,7 +304,7 @@ export function SecurityDashboardView() {
                           : "danger"
                   }
                 >
-                  {executiveSummary.postureLevel}
+                  {formatEnumLabel(executiveSummary.postureLevel)}
                 </StatusBadge>
               </div>
             </div>
@@ -469,7 +513,7 @@ export function SecurityDashboardView() {
                             : "warning"
                         }
                       >
-                        {alert.severity}
+                        {formatEnumLabel(alert.severity)}
                       </StatusBadge>
                     </div>
                   </div>
@@ -481,12 +525,14 @@ export function SecurityDashboardView() {
               )}
             </div>
 
-            <Link
-              className="text-brand hover:underline flex items-center justify-end gap-1 text-xs font-medium pt-1"
-              href="/anomaly-monitoring"
-            >
-              View All Alerts <ArrowUpRight className="size-3.5" />
-            </Link>
+            {userRole === "SECURITY_OFFICER" ? (
+              <Link
+                className="text-brand hover:underline flex items-center justify-end gap-1 text-xs font-medium pt-1"
+                href="/anomaly-monitoring"
+              >
+                View All Alerts <ArrowUpRight className="size-3.5" />
+              </Link>
+            ) : null}
           </div>
         </ProductPanel>
       </div>
@@ -506,7 +552,7 @@ export function SecurityDashboardView() {
               {operationalDetails.highRiskAssets.length > 0 ? (
                 operationalDetails.highRiskAssets.map((asset) => (
                   <div
-                    className="flex items-center justify-between px-5 py-3 text-xs"
+                    className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-xs"
                     key={asset.id}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -536,7 +582,7 @@ export function SecurityDashboardView() {
                               : "neutral"
                         }
                       >
-                        {asset.criticality}
+                        {formatEnumLabel(asset.criticality)}
                       </StatusBadge>
                     </div>
                   </div>
@@ -569,7 +615,7 @@ export function SecurityDashboardView() {
               {operationalDetails.recentIncidents.length > 0 ? (
                 operationalDetails.recentIncidents.map((incident) => (
                   <div
-                    className="flex items-center justify-between px-5 py-3 text-xs"
+                    className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-xs"
                     key={incident.id}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -591,7 +637,7 @@ export function SecurityDashboardView() {
                               : "neutral"
                         }
                       >
-                        {incident.severity}
+                        {formatEnumLabel(incident.severity)}
                       </StatusBadge>
                       <StatusBadge
                         tone={
@@ -601,7 +647,7 @@ export function SecurityDashboardView() {
                             : "info"
                         }
                       >
-                        {incident.status}
+                        {formatEnumLabel(incident.status)}
                       </StatusBadge>
                     </div>
                   </div>

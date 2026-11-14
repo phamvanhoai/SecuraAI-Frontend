@@ -17,22 +17,27 @@ interface RevokeReportDialogProps {
   onClose: () => void;
 }
 
+function formatReportTypeLabel(type: ReportExportItem["reportType"]): string {
+  switch (type) {
+    case "RISK":
+      return "Security Risk Register";
+    case "INCIDENT":
+      return "Security Incident Records";
+    case "SECURITY_POSTURE":
+      return "Executive Security Posture";
+    default:
+      return type;
+  }
+}
+
 export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const toast = useToast();
-
-  const [reason, setReason] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const revokeMutation = useRevokeExportReportMutation();
 
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
     if (isOpen && !dialog.open) {
-      setReason("");
-      setFormError(null);
       if (typeof dialog.showModal === "function") {
         dialog.showModal();
       } else {
@@ -47,7 +52,33 @@ export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialog
     }
   }, [isOpen]);
 
-  if (!item) return null;
+  return (
+    <Dialog
+      title="Revoke Report Export"
+      dialogRef={dialogRef}
+      onClose={onClose}
+      className="max-h-[calc(100dvh-2rem)] w-[min(32rem,calc(100%-2rem))] overflow-y-auto"
+    >
+      {item && isOpen ? (
+        <RevokeReportForm key={item.id} item={item} onClose={onClose} />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function RevokeReportForm({
+  item,
+  onClose,
+}: {
+  item: ReportExportItem;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+
+  const [reason, setReason] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const revokeMutation = useRevokeExportReportMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,11 +110,6 @@ export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialog
   };
 
   return (
-    <Dialog
-      title="Revoke Report Export"
-      dialogRef={dialogRef}
-      className="max-w-lg"
-    >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Alert className="border-danger/30 bg-danger-soft text-danger">
           <div className="flex items-start gap-2.5">
@@ -98,17 +124,17 @@ export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialog
         </Alert>
 
         <div className="rounded-lg border border-border bg-surface-subtle/60 p-3 space-y-2 text-xs">
-          <div className="flex justify-between items-center text-muted">
+          <div className="flex justify-between items-center gap-2 text-muted">
             <span>Report ID:</span>
-            <span className="font-mono text-foreground font-medium">{item.id}</span>
+            <span className="font-mono text-foreground font-medium truncate">{item.id}</span>
           </div>
-          <div className="flex justify-between items-center text-muted">
+          <div className="flex justify-between items-center gap-2 text-muted">
             <span>Report Type:</span>
-            <span className="font-medium text-foreground">{item.reportType}</span>
+            <span className="font-medium text-foreground">{formatReportTypeLabel(item.reportType)}</span>
           </div>
-          <div className="flex justify-between items-center text-muted">
+          <div className="flex justify-between items-center gap-2 text-muted">
             <span>Requested By:</span>
-            <span className="text-foreground">{item.requestedBy.fullName} ({item.requestedBy.role})</span>
+            <span className="text-foreground text-right">{item.requestedBy.fullName} ({item.requestedBy.role})</span>
           </div>
         </div>
 
@@ -117,12 +143,15 @@ export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialog
             <Label htmlFor="revocationReason" className="text-xs font-semibold">
               Revocation Reason <span className="text-danger">*</span>
             </Label>
-            <span className="text-[11px] text-muted">Min 5 chars</span>
+            <span className="text-[11px] text-muted">Minimum 5 characters</span>
           </div>
           <Textarea
             id="revocationReason"
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => {
+              setReason(e.target.value);
+              if (formError) setFormError(null);
+            }}
             placeholder="e.g. Filtered wrong date range (August instead of September), or exported outdated risk ratings."
             rows={3}
             disabled={revokeMutation.isPending}
@@ -166,6 +195,5 @@ export function RevokeReportDialog({ item, isOpen, onClose }: RevokeReportDialog
           </Button>
         </div>
       </form>
-    </Dialog>
   );
 }
