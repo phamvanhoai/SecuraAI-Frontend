@@ -22,7 +22,9 @@ import {
 
 export function Header() {
   const router = useRouter();
-  const session = useSessionUser();
+  // The header is mounted once for the dashboard and is the sole active
+  // session monitor. Other consumers share this query without starting timers.
+  const session = useSessionUser({ monitor: true });
   const user = session.data;
   const panels = allowedPanels(user?.roles.map((role) => role.code) ?? []);
 

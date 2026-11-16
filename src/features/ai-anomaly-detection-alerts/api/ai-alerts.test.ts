@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   markAiAlertFurtherInvestigation,
+  issueAiAlertRealtimeTicket,
   regenerateAiAlertExplanation,
   startAiAlertTriage,
 } from "./ai-alerts";
@@ -11,6 +12,24 @@ const analystId = "9a9bf33a-02db-48e4-a8ad-90517278d7f2";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("anomaly alert triage API", () => {
+  it("requests a short-lived realtime ticket through the authenticated BFF", async () => {
+    const ticket = {
+      ticket: "signed-realtime-ticket",
+      expiresInSeconds: 30,
+      path: "/api/v1/ai-alerts/realtime",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(Response.json({ success: true, data: ticket }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(issueAiAlertRealtimeTicket()).resolves.toEqual(ticket);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai-alerts/realtime-ticket",
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
+  });
+
   it("starts triage through the authenticated BFF route", async () => {
     const result = {
       id: alertId,
