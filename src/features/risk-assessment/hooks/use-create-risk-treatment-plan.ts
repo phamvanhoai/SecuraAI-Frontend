@@ -1,5 +1,6 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api/api-error";
 import {
   createRiskTreatmentPlan,
   getRiskTreatmentPlanOptions,
@@ -21,6 +22,10 @@ export function useCreateRiskTreatmentPlan() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: createRiskTreatmentPlan,
+    onError: async (error) => {
+      if (error instanceof ApiError && [403, 409].includes(error.status))
+        await client.invalidateQueries({ queryKey: ["risk-register"] });
+    },
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["risk-register"] }),

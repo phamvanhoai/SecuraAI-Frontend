@@ -16,7 +16,7 @@ import { useToast } from "@/components/feedback/toast";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { RiskTextarea as Textarea } from "./risk-text-fields";
 import { ApiError } from "@/lib/api/api-error";
 import { usePerformResidualRiskAssessment } from "../hooks/use-perform-residual-risk-assessment";
 import type { RiskDetail } from "../schemas/risk-detail-schema";

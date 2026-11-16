@@ -55,7 +55,7 @@ const defaults = (): CreateRiskAssessmentInput => ({
   reviewDate: nextRiskReviewDate(),
 });
 
-export function CreateRiskAssessmentDialog() {
+export function CreateRiskAssessmentDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string>();
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -71,6 +71,7 @@ export function CreateRiskAssessmentDialog() {
     formState: { errors },
   } = useForm<CreateRiskAssessmentInput, unknown, CreateRiskAssessmentForm>({
     resolver: zodResolver(createRiskAssessmentSchema),
+    mode: "onChange",
     defaultValues: defaults(),
   });
 
@@ -107,6 +108,7 @@ export function CreateRiskAssessmentDialog() {
       const created = await mutation.mutateAsync(request);
       reset(defaults());
       close();
+      onCreated?.();
       toast.success(
         "Risk created",
         `${created.riskCode} is ready for threat and vulnerability identification.`,
@@ -368,7 +370,7 @@ export function CreateRiskAssessmentDialog() {
               </label>
               <Input
                 id="riskTitle"
-                maxLength={255}
+                minLength={3}
                 autoFocus
                 aria-invalid={Boolean(errors.title)}
                 {...register("title")}
@@ -387,13 +389,13 @@ export function CreateRiskAssessmentDialog() {
               >
                 Context and scope
                 <span className="text-muted ml-1.5 text-xs font-normal">
-                  (optional)
+                  (required)
                 </span>
               </label>
               <Textarea
                 id="riskDescription"
                 rows={4}
-                maxLength={5000}
+                minLength={20}
                 aria-invalid={Boolean(errors.description)}
                 {...register("description")}
               />

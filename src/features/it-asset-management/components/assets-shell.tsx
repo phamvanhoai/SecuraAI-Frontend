@@ -101,7 +101,7 @@ const columns: readonly DataTableColumn<AssetListItem>[] = [
     key: "updated",
     header: "Updated",
     cell: (item) =>
-      new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+      new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(
         new Date(item.updatedAt),
       ),
   },
@@ -204,7 +204,7 @@ export function AssetsShell() {
       <ProductPageHeader
         title="IT Asset List"
         description="View the organization’s managed IT assets, ownership, business context, classification, and lifecycle status."
-        additionalActions={canCreate ? <CreateAssetDialog /> : undefined}
+        additionalActions={canCreate ? <CreateAssetDialog onCreated={() => navigate({ page: 1, sortBy: "createdAt", sortOrder: "desc" })} /> : undefined}
       />
       <AssetManagementTabs active="assets" canReadServices={session.data?.permissions.includes("business-services.read") ?? false} />
       <ProductPanel

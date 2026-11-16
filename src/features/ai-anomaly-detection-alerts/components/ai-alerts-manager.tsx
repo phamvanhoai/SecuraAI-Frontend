@@ -39,6 +39,7 @@ import { useSessionUser } from "@/features/authentication-account";
 import { cn } from "@/lib/utils";
 import {
   useAiAlertMetrics,
+  useAiAlertRealtime,
   useAiAlerts,
   useRunAnomalyDetection,
   useStartAiAlertTriage,
@@ -71,8 +72,11 @@ export function AiAlertsManager() {
   const [status, setStatus] = useState<AiAlertStatus | "all">("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const [viewing, setViewing] = useState<AiAlert | null>(null);
-  const [viewingSourceEventId, setViewingSourceEventId] = useState<string | null>(null);
-  const [sourceEventParentAlert, setSourceEventParentAlert] = useState<AiAlert | null>(null);
+  const [viewingSourceEventId, setViewingSourceEventId] = useState<
+    string | null
+  >(null);
+  const [sourceEventParentAlert, setSourceEventParentAlert] =
+    useState<AiAlert | null>(null);
   const [evaluating, setEvaluating] = useState<AiAlert | null>(null);
   const [confirming, setConfirming] = useState<AiAlert | null>(null);
   const [markingFalsePositive, setMarkingFalsePositive] =
@@ -98,15 +102,21 @@ export function AiAlertsManager() {
   const canManageThresholds =
     session.data?.permissions.includes("ai-alerts.thresholds.manage") ?? false;
   const after = useMemo(() => detectedAfter(timeRange), [timeRange]);
-  const alerts = useAiAlerts({
-    page,
-    limit: 20,
-    sortOrder: "desc",
-    ...(search ? { q: search } : {}),
-    ...(status === "all" ? {} : { status }),
-    ...(after ? { detectedAfter: after } : {}),
-  });
-  const metrics = useAiAlertMetrics();
+  const realtimeStatus = useAiAlertRealtime(view === "alerts");
+  const realtimeConnected = realtimeStatus === "live";
+  const alerts = useAiAlerts(
+    {
+      page,
+      limit: 20,
+      sortOrder: "desc",
+      ...(search ? { q: search } : {}),
+      ...(status === "all" ? {} : { status }),
+      ...(after ? { detectedAfter: after } : {}),
+    },
+    true,
+    realtimeConnected,
+  );
+  const metrics = useAiAlertMetrics(true, realtimeConnected);
   const thresholdOverview = useAlertThresholds(1, "", canManageThresholds);
   const thresholdItems = thresholdOverview.data?.items ?? [];
   const enabledThresholds = thresholdItems.filter(
@@ -268,7 +278,11 @@ export function AiAlertsManager() {
             }}
             type="button"
           >
-            <FileSearch aria-hidden="true" className="size-4" strokeWidth={1.8} />
+            <FileSearch
+              aria-hidden="true"
+              className="size-4"
+              strokeWidth={1.8}
+            />
             View ingested event
           </button>
           {canStartTriage && item.status === "new" ? (
@@ -587,7 +601,9 @@ export function AiAlertsManager() {
               }}
             >
               <label className="relative block max-w-md min-w-[220px] flex-1">
-                <span className="sr-only">Search AI-detected security alerts</span>
+                <span className="sr-only">
+                  Search AI-detected security alerts
+                </span>
                 <Search
                   aria-hidden="true"
                   className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -650,10 +666,19 @@ export function AiAlertsManager() {
                 </Button>
               ) : null}
               <div className="ml-auto flex flex-wrap items-center gap-3">
+                <StatusBadge tone={realtimeConnected ? "success" : "warning"}>
+                  {realtimeConnected
+                    ? "Live updates"
+                    : realtimeStatus === "connecting"
+                      ? "Connecting…"
+                      : "Polling fallback"}
+                </StatusBadge>
                 <p aria-live="polite" className="text-muted text-xs">
                   {alerts.data
                     ? `Updated ${formatTime(alerts.data.serverTime)}`
-                    : "Updates every 10 seconds"}
+                    : realtimeConnected
+                      ? "Waiting for live updates"
+                      : "Fallback refresh every 10 seconds"}
                 </p>
                 <Button
                   disabled={alerts.isFetching}
@@ -688,8 +713,8 @@ export function AiAlertsManager() {
                 />
               ) : alerts.isError ? (
                 <Alert>
-                  Unable to load AI-detected security alerts. Check your session, permission,
-                  and backend connection, then try again.
+                  Unable to load AI-detected security alerts. Check your
+                  session, permission, and backend connection, then try again.
                 </Alert>
               ) : alerts.data?.items.length === 0 ? (
                 <div className="py-12 text-center">
@@ -781,12 +806,13 @@ export function AiAlertsManager() {
           </Alert>
           <div className="text-muted space-y-2 text-sm leading-6">
             <p>
-              Realtime Wazuh API events are processed automatically by the worker
-              and do not require this action.
+              Realtime Wazuh API events are processed automatically by the
+              worker and do not require this action.
             </p>
             <p>
               Events already evaluated by the deployed model are skipped. Run
-              another batch only when the result reports that pending events remain.
+              another batch only when the result reports that pending events
+              remain.
             </p>
           </div>
           <div className="border-border flex justify-end gap-2 border-t pt-4">

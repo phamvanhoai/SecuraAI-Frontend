@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { RiskTextarea as Textarea } from "./risk-text-fields";
 import { acceptanceCostSchema, type AcceptanceCost } from "../schemas/acceptance-cost-schema";
 
 export function AcceptanceCostFields({ value, onChange }: { value: AcceptanceCost; onChange: (value: AcceptanceCost) => void }) {

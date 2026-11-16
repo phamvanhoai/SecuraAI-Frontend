@@ -92,7 +92,7 @@ describe("Edit API Key Scope & Expiration Workflow", () => {
 
     // Check expiration preset buttons are visible
     expect(screen.getByRole("button", { name: "30 days" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Never" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Never" })).not.toBeInTheDocument();
 
     // Check Save Changes button
     expect(screen.getByRole("button", { name: /save changes/i })).toBeInTheDocument();
@@ -177,12 +177,11 @@ describe("Edit API Key Scope & Expiration Workflow", () => {
     });
   });
 
-  it("displays validation error when attempting to set expiration date to Never", async () => {
+  it("displays validation error when clearing the expiration date", async () => {
     renderEditModal();
 
-    // Change expiration to Never
-    const neverPreset = screen.getByRole("button", { name: "Never" });
-    fireEvent.click(neverPreset);
+    const expiryInput = screen.getByLabelText(/expiration date/i);
+    fireEvent.change(expiryInput, { target: { value: "" } });
 
     // Click Save Changes
     const saveButton = screen.getByRole("button", { name: /save changes/i });

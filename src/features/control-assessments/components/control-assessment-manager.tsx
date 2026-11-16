@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { implementationSchema } from "../schemas/control-catalog-schema";
-import { Textarea } from "@/components/ui/textarea";
+import { ValidatedTextarea as Textarea } from "@/components/ui/validated-text-fields";
 import { useSessionUser } from "@/features/authentication-account";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/api-error";
@@ -117,9 +117,9 @@ export function ControlAssessmentManager() {
     if (!selected || stale || mutation.isPending) return;
     if (
       implementationStatus !== selected.implementationStatus &&
-      implementationChangeReason.trim().length < 10
+      (implementationChangeReason.trim().length < 10 || implementationChangeReason.trim().length > 2000)
     ) {
-      setError("Explain the implementation change in at least 10 characters.");
+      setError("Explain the implementation change using 10-2,000 characters.");
       return;
     }
     const score = Number(effectiveness);
@@ -127,7 +127,9 @@ export function ControlAssessmentManager() {
       !effectiveness.trim() ||
       !Number.isFinite(score) ||
       method.trim().length < 3 ||
+      method.trim().length > 1000 ||
       notes.trim().length < 10 ||
+      notes.trim().length > 5000 ||
       score < 0 ||
       score > 100
     ) {
@@ -875,6 +877,7 @@ export function ControlAssessmentManager() {
               <Label htmlFor="testMethod">Test method</Label>
               <Textarea
                 id="testMethod"
+                maxLength={1000}
                 className="mt-1.5"
                 rows={3}
                 value={method}
@@ -946,6 +949,7 @@ export function ControlAssessmentManager() {
               <Label htmlFor="controlNotes">Assessment notes</Label>
               <Textarea
                 id="controlNotes"
+                maxLength={5000}
                 className="mt-1.5"
                 rows={4}
                 value={notes}

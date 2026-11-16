@@ -2,9 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { riskRegisterDetailSchema } from "../schemas/risk-register-schema";
 import { UpdateRiskTreatmentPlanDialog } from "./update-risk-treatment-plan-dialog";
+import { ApiError } from "@/lib/api/api-error";
+import { PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 const state = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock("../hooks/use-update-risk-treatment-plan", () => ({ useUpdateRiskTreatmentPlan: () => ({ mutateAsync: state.save, isPending: false }) }));
 vi.mock("../hooks/use-create-risk-treatment-plan", () => ({ useRiskTreatmentPlanOptions: () => ({ data: { users: [], controls: [] } }) }));
+vi.mock("../hooks/use-risk-register", () => ({ useRiskRecord: () => ({ data: { acceptances: [] }, isPending: false, isError: false }) }));
 vi.mock("@/components/feedback/toast", () => ({ useToast: () => ({ success: vi.fn(), warning: vi.fn() }) }));
 beforeAll(() => { Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value(this: HTMLDialogElement) { this.setAttribute("open", ""); } }); });
 afterEach(cleanup);
@@ -12,6 +15,33 @@ beforeEach(() => { state.save.mockReset(); state.save.mockResolvedValue({}); });
 const id = "11111111-1111-4111-8111-111111111111";
 const cost = { costToFix: "100000000", expectedLoss: "5000000", currency: "VND", periodMonths: 12, basis: "Synthetic comparison including one-time and operating costs." };
 const plan = riskRegisterDetailSchema.shape.treatmentPlans.element.parse({ id, riskId: id, title: "Accept demo exposure", strategy: "accept", status: "draft", owner: { id, fullName: "Owner", inactive: false }, targetCompletionDate: "2027-12-31T00:00:00Z", actionCount: 0, progress: 0, updatedAt: "2026-10-19T00:00:00Z", controls: [], actions: [], acceptanceCost: cost });
+it("locks Active strategy, requires a reason and keeps ordinary edits available", async () => {
+  render(<UpdateRiskTreatmentPlanDialog plan={{ ...plan, status: "active" }} onClose={vi.fn()} />);
+  expect(screen.getByRole("radio", { name: /^Transfer/ })).toBeDisabled();
+  expect(screen.getByRole("radio", { name: /^Accept/ })).toBeDisabled();
+  expect(screen.getByLabelText("Plan title")).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(state.save).not.toHaveBeenCalled();
+  expect(screen.getByText("Enter a reason (10–2000 characters) before saving.")).toBeVisible();
+  fireEvent.change(screen.getByLabelText("Change reason *"), { target: { value: "Update the estimated loss after reviewing current exposure." } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ strategy: "accept", changeReason: "Update the estimated loss after reviewing current exposure." })));
+});
+it("keeps Draft strategy editable", () => {
+  render(<UpdateRiskTreatmentPlanDialog plan={plan} onClose={vi.fn()} />);
+  expect(screen.getByRole("radio", { name: /^Transfer/ })).toBeEnabled();
+  expect(screen.queryByLabelText("Change reason *")).not.toBeInTheDocument();
+});
+it("requires a cancellation reason and submits the stored plan instead of unsaved edits", async () => {
+  render(<UpdateRiskTreatmentPlanDialog plan={{ ...plan, status: "active" }} onClose={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText("Plan title"), { target: { value: "Unsaved title" } });
+  fireEvent.change(screen.getByLabelText("Plan status"), { target: { value: "cancelled" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(state.save).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Cancellation reason *"), { target: { value: "Cancel this plan so a replacement strategy can be proposed." } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ status: "cancelled", title: plan.title, strategy: plan.strategy, changeReason: "Cancel this plan so a replacement strategy can be proposed." })));
+});
 it("preloads, edits and saves cost justification without inventing actions", async () => {
   render(<UpdateRiskTreatmentPlanDialog plan={plan} onClose={vi.fn()} />);
   expect(screen.getByLabelText("Cost to fix *")).toHaveValue("100000000");
@@ -25,4 +55,16 @@ it("requires missing costs on an old Accept plan instead of fabricating them", a
   fireEvent.submit(screen.getByRole("button", { name: "Save changes" }).closest("form") ?? document.createElement("form"));
   expect(await screen.findByRole("alert")).toHaveTextContent(/Accept requires/);
   expect(state.save).not.toHaveBeenCalled();
+});
+it("keeps a stale plan open and locks its actions when the backend reports pending acceptance", async () => {
+  const onClose = vi.fn();
+  state.save.mockRejectedValue(new ApiError(PENDING_ACCEPTANCE_MESSAGE, 409, "CONFLICT", { error: { code: "ACCEPTANCE_PENDING" } }));
+  render(<UpdateRiskTreatmentPlanDialog plan={plan} onClose={onClose} />);
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(await screen.findByText(PENDING_ACCEPTANCE_MESSAGE)).toBeVisible();
+  expect(screen.getByLabelText("Plan title")).toBeDisabled();
+  expect(screen.getByLabelText("Cost to fix *")).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+  expect(onClose).not.toHaveBeenCalled();
 });

@@ -158,8 +158,7 @@ export function RegisterEventSourceForm({
       const isDuplicate =
         (err instanceof ApiError && (err.status === 409 || err.code === "CONFLICT")) ||
         (err instanceof Error &&
-          (err.message.toLowerCase().includes("already exists") ||
-            err.message.toLowerCase().includes("trùng")));
+          err.message.toLowerCase().includes("already exists"));
       const message =
         err instanceof Error
           ? err.message
@@ -245,8 +244,8 @@ export function RegisterEventSourceForm({
                 }}
                 disabled={createMutation.isPending}
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
               </Select>
             </FormField>
           </div>

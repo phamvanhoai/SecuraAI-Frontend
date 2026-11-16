@@ -76,7 +76,7 @@ describe("Create Integration API Key Workflow", () => {
     expect(screen.getByRole("button", { name: "30 days" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "90 days" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "1 year" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Never" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Never" })).not.toBeInTheDocument();
     expect(screen.getByText(/automatically generate a cryptographically secure 192-bit secret token/i)).toBeInTheDocument();
   });
 
@@ -101,10 +101,10 @@ describe("Create Integration API Key Workflow", () => {
     const expiryInput = screen.getByLabelText(/expiration (settings|date)/i) as HTMLInputElement;
     expect(expiryInput.value).not.toBe("");
 
-    // Click "Never" preset
-    const presetNever = screen.getByRole("button", { name: "Never" });
-    fireEvent.click(presetNever);
-    expect(expiryInput.value).toBe("");
+    // Click "90 days" preset
+    const preset90Days = screen.getByRole("button", { name: "90 days" });
+    fireEvent.click(preset90Days);
+    expect(expiryInput.value).not.toBe("");
   });
 
   it("submits the form, calls backend POST /api/integrations/:id/api-keys, and invokes onSecretGenerated", async () => {
@@ -201,7 +201,7 @@ describe("Create Integration API Key Workflow", () => {
     expect(screen.getByText("Requires Event Source")).toBeInTheDocument();
   });
 
-  it("displays validation error when submitting with empty expiration date or Never preset", async () => {
+  it("displays validation error when submitting with empty expiration date", async () => {
     const onSecretGenerated = vi.fn();
     const onOpenChange = vi.fn();
 
@@ -209,10 +209,6 @@ describe("Create Integration API Key Workflow", () => {
 
     const nameInput = screen.getByLabelText(/key identifier name/i);
     fireEvent.change(nameInput, { target: { value: "Wazuh Agent HEC Key" } });
-
-    // Click "Never" preset explicitly
-    const presetNever = screen.getByRole("button", { name: "Never" });
-    fireEvent.click(presetNever);
 
     const submitBtn = screen.getByRole("button", { name: /^create api key$/i });
     fireEvent.click(submitBtn);
@@ -240,12 +236,56 @@ describe("Create Integration API Key Workflow", () => {
     );
   });
 
-  it('displays validation error: "Event source selection is required" when no event source is selected', async () => {
-    // Render without integrationId to trigger source selection
-    renderModal({ integrationId: "all" });
+  it("allows creating a General Read-Only API key when no event source is selected", async () => {
+    const mockReadOnlyKey = {
+      id: "44444444-4444-4444-8444-444444444444",
+      integrationId: null,
+      eventSourceId: null,
+      keyName: "Read Only Observer Key",
+      name: "Read Only Observer Key",
+      keyPrefix: "sec_live_readonly1",
+      keyFingerprint: "sec_live_readonly1...****",
+      maskedKey: "sec_live_readonly1...****",
+      secret: "sec_live_readonly1234567890abcdef1234567890abcdef12",
+      status: "ACTIVE" as const,
+      isActive: true,
+      scopes: ["events:read"],
+      expiresAt: "2027-01-01T00:00:00.000Z",
+      createdAt: new Date().toISOString(),
+    };
+
+    fetchMock.mockImplementation((url: RequestInfo | URL, init?: RequestInit) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api-keys") && (init?.method || "GET").toUpperCase() === "POST") {
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: true, data: mockReadOnlyKey }), {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              items: [],
+              pagination: { total: 0, page: 1, limit: 100, totalPages: 1 },
+            },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+    });
+
+    const onSecretGenerated = vi.fn();
+    renderModal({ integrationId: "all", onSecretGenerated });
 
     const nameInput = screen.getByLabelText(/key identifier name/i);
-    fireEvent.change(nameInput, { target: { value: "Syslog Agent Key" } });
+    fireEvent.change(nameInput, { target: { value: "Read Only Observer Key" } });
 
     const preset30Days = screen.getByRole("button", { name: "30 days" });
     fireEvent.click(preset30Days);
@@ -253,11 +293,19 @@ describe("Create Integration API Key Workflow", () => {
     const submitBtn = screen.getByRole("button", { name: /^create api key$/i });
     fireEvent.click(submitBtn);
 
-    expect(screen.getByText("Event source selection is required")).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalledWith(
-      expect.stringContaining('/api-keys'),
-      expect.anything(),
-    );
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("/api/integrations/all/api-keys"),
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"scopes":["events:read"]'),
+        }),
+      );
+      expect(onSecretGenerated).toHaveBeenCalledWith(
+        "Read Only Observer Key",
+        mockReadOnlyKey.secret,
+      );
+    });
   });
 
   it('displays validation error: "Expiration date must be in the future" when past date is entered', async () => {
@@ -291,5 +339,84 @@ describe("Create Integration API Key Workflow", () => {
     ).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("supports mini search and scrollable ~5-item viewport in Associated Event Source dropdown", async () => {
+    const now = "2026-10-01T00:00:00.000Z";
+    const makeSource = (
+      idSuffix: string,
+      name: string,
+      sourceType: string,
+      status: "ACTIVE" | "INACTIVE",
+    ) => ({
+      id: `aaaaaaaa-aaaa-4aaa-8aaa-${idSuffix.padStart(12, "0")}`,
+      name,
+      sourceType,
+      endpoint: null,
+      ingestionMethod: "API" as const,
+      authenticationType: "BEARER_TOKEN",
+      status,
+      description: null,
+      eventFamilies: ["AUTHENTICATION" as const],
+      createdBy: "bbbbbbbb-bbbb-4bbb-8bbb-000000000001",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const mockSources = [
+      makeSource("1", "Customer VPN Gateway Wazuh Agent", "WAZUH", "ACTIVE"),
+      makeSource("2", "Wazuh SIEM - Core DC Cluster v1", "WAZUH", "ACTIVE"),
+      makeSource("3", "Wazuh SIEM - Master Cloud", "WAZUH", "INACTIVE"),
+      makeSource("4", "Fortinet Perimeter Firewall", "FIREWALL", "ACTIVE"),
+      makeSource("5", "AI Alert Demo Events", "CUSTOM_JSON", "ACTIVE"),
+      makeSource("6", "SecuraAI Demo Identity Events", "IAM", "ACTIVE"),
+    ];
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            items: mockSources,
+            pagination: { total: 6, page: 1, limit: 100, totalPages: 1 },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    renderModal({ integrationId: "all" });
+
+    const comboboxTrigger = await screen.findByRole("combobox", {
+      name: /associated event source/i,
+    });
+    await waitFor(() => {
+      expect(comboboxTrigger).not.toBeDisabled();
+    });
+
+    fireEvent.click(comboboxTrigger);
+
+    const listbox = screen.getByRole("listbox", { name: /event source options/i });
+    expect(listbox.className).toContain("max-h-[180px]");
+    expect(listbox.className).toContain("overflow-y-auto");
+
+    const miniSearch = screen.getByLabelText("Filter event sources");
+    fireEvent.change(miniSearch, { target: { value: "Fortinet" } });
+
+    expect(screen.getByRole("option", { name: /Fortinet Perimeter Firewall/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /AI Alert Demo Events/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("option", { name: /Fortinet Perimeter Firewall/i }));
+
+    expect(comboboxTrigger).toHaveTextContent("Fortinet Perimeter Firewall (ACTIVE)");
+    const ingestCheckbox = screen.getByLabelText((_content, element) => {
+      return (
+        element?.tagName.toLowerCase() === "input" &&
+        element?.getAttribute("type") === "checkbox" &&
+        element?.closest("label")?.textContent?.includes("Ingest Log Events") === true
+      );
+    });
+    expect(ingestCheckbox).not.toBeDisabled();
+    expect(ingestCheckbox).toBeChecked();
   });
 });

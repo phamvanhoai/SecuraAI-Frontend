@@ -2,19 +2,20 @@ import { z } from "zod";
 import { acceptanceCostSchema, validateAcceptanceCost } from "./acceptance-cost-schema";
 export const updateRiskTreatmentPlanSchema = z
   .object({
-    title: z.string().trim().min(3).max(255),
+    title: z.string().trim().min(3).max(100),
     strategy: z.enum(["avoid", "mitigate", "transfer", "accept"]),
     acceptanceCost: acceptanceCostSchema.nullish(),
     ownerUserId: z.string().uuid(),
     targetDate: z.iso.date(),
     status: z.enum(["draft", "active", "completed", "cancelled"]),
     expectedUpdatedAt: z.iso.datetime({ offset: true }),
+    changeReason: z.string().trim().min(10).max(2000).optional(),
     controlIds: z.array(z.string().uuid()).max(100),
     actions: z
       .array(
         z.object({
           id: z.string().uuid().optional(),
-          title: z.string().trim().min(3).max(255),
+          title: z.string().trim().min(3).max(100),
           assignedToUserId: z.string().uuid(),
           dueDate: z.iso.date(),
           status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
@@ -23,6 +24,10 @@ export const updateRiskTreatmentPlanSchema = z
       .max(100),
   })
   .superRefine((value, context) => {
+    if (value.status === "cancelled") {
+      if (!value.changeReason) context.addIssue({ code: "custom", path: ["changeReason"], message: "Enter a cancellation reason (10–2000 characters)." });
+      return;
+    }
     validateAcceptanceCost(value, context);
     if (value.strategy === "mitigate" && !value.controlIds.length)
       context.addIssue({

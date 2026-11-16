@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { RiskTextarea as Textarea } from "./risk-text-fields";
 import type { RiskRegisterDetail } from "../schemas/risk-register-schema";
 import {
   decideRiskAcceptanceSchema,
@@ -198,6 +198,7 @@ export function SubmitRiskAcceptanceDialog({
         <label className="block text-sm font-medium">
           Reassessment rationale
           <Textarea
+            maxLength={2000}
             className="mt-1"
             value={assessmentReason}
             onChange={(e) => setAssessmentReason(e.target.value)}
@@ -242,6 +243,7 @@ export function SubmitRiskAcceptanceDialog({
         <label className="block text-sm font-medium">
           Acceptance justification
           <Textarea
+            maxLength={2000}
             className="mt-1"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -351,6 +353,7 @@ export function DecideRiskAcceptanceDialog({
         <label className="block text-sm font-medium">
           Decision rationale
           <Textarea
+            maxLength={2000}
             className="mt-1"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -430,9 +433,9 @@ export function OpenRiskReviewDialog({
         <label className="block text-sm font-medium">
           Review rationale
           <Textarea
+            maxLength={2000}
             className="mt-1"
             value={reason}
-            maxLength={2000}
             onChange={(event) => setReason(event.target.value)}
           />
         </label>

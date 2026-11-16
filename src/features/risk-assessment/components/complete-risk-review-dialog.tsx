@@ -4,7 +4,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RiskTextarea as Textarea } from "./risk-text-fields";
 import { useToast } from "@/components/feedback/toast";
 import { useCompleteRiskReview } from "../hooks/use-complete-risk-review";
 import { completeRiskReviewSchema } from "../schemas/complete-risk-review-schema";

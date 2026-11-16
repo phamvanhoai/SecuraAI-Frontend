@@ -8,13 +8,16 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   useMappingOptions,
   useUpdateEventMapping,
 } from "../hooks/use-normalized-events";
 import type { NormalizedEventDetail } from "../schemas/normalized-event-schema";
+import {
+  SearchableEntitySelect,
+  type EntitySelectOption,
+} from "./searchable-entity-select";
 
 interface EditEntityMappingDialogProps {
   event: NormalizedEventDetail | null;
@@ -59,6 +62,32 @@ function EditEntityMappingForm({
   const accountSelectId = useId();
   const confidenceInputId = useId();
   const reasonTextareaId = useId();
+
+  const userOptions: EntitySelectOption[] = (optionsQuery.data?.users ?? []).map((u) => ({
+    id: u.id,
+    primaryLabel: u.fullName || u.email,
+    secondaryLabel: u.fullName ? u.email : undefined,
+    searchText: `${u.fullName ?? ""} ${u.email}`.toLowerCase(),
+    selectedText: u.fullName ? `${u.fullName} (${u.email})` : u.email,
+  }));
+
+  const assetOptions: EntitySelectOption[] = (optionsQuery.data?.assets ?? []).map((a) => ({
+    id: a.id,
+    primaryLabel: a.name,
+    secondaryLabel: `${a.assetCode} • ${a.assetType}${a.criticality ? ` • ${a.criticality}` : ""}`,
+    searchText: `${a.name} ${a.assetCode} ${a.assetType} ${a.criticality ?? ""}`.toLowerCase(),
+    selectedText: `${a.name} [${a.assetCode}] — ${a.assetType}${a.criticality ? ` (${a.criticality})` : ""}`,
+  }));
+
+  const accountOptions: EntitySelectOption[] = (
+    optionsQuery.data?.monitoredAccounts ?? []
+  ).map((m) => ({
+    id: m.id,
+    primaryLabel: m.accountIdentifier,
+    secondaryLabel: m.displayName ? `${m.sourceSystem} • ${m.displayName}` : m.sourceSystem,
+    searchText: `${m.accountIdentifier} ${m.sourceSystem} ${m.displayName ?? ""}`.toLowerCase(),
+    selectedText: `${m.accountIdentifier} (${m.sourceSystem})${m.displayName ? ` — ${m.displayName}` : ""}`,
+  }));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -156,81 +185,58 @@ function EditEntityMappingForm({
         </div>
 
         {/* User Association */}
-        <div className="space-y-1">
-          <label
-            htmlFor={userSelectId}
-            className="text-foreground flex items-center gap-1.5 text-xs font-semibold"
-          >
-            <UserCheck className="size-3.5 text-brand" />
-            <span>Associated User</span>
-          </label>
-          <Select
-            id={userSelectId}
-            value={selectedUserId}
-            onChange={(e) => setSelectedUserId(e.target.value)}
-            disabled={optionsQuery.isPending}
-            className="text-xs"
-          >
-            <option value="NONE">— No User Mapped (Unassigned) —</option>
-            {optionsQuery.data?.users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.fullName ? `${u.fullName} (${u.email})` : u.email}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <SearchableEntitySelect
+          id={userSelectId}
+          label={
+            <>
+              <UserCheck className="size-3.5 text-brand" />
+              <span>Associated User</span>
+            </>
+          }
+          emptyOptionLabel="— No User Mapped (Unassigned) —"
+          searchPlaceholder="Search users by name or email..."
+          clearAriaLabel="Unassign user"
+          options={userOptions}
+          value={selectedUserId}
+          onChange={setSelectedUserId}
+          loading={optionsQuery.isPending}
+        />
 
         {/* Asset Association */}
-        <div className="space-y-1">
-          <label
-            htmlFor={assetSelectId}
-            className="text-foreground flex items-center gap-1.5 text-xs font-semibold"
-          >
-            <HardDrive className="size-3.5 text-brand" />
-            <span>Associated Asset / Device</span>
-          </label>
-          <Select
-            id={assetSelectId}
-            value={selectedAssetId}
-            onChange={(e) => setSelectedAssetId(e.target.value)}
-            disabled={optionsQuery.isPending}
-            className="text-xs"
-          >
-            <option value="NONE">— No Asset Mapped (Unassigned) —</option>
-            {optionsQuery.data?.assets.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} [{a.assetCode}] — {a.assetType}
-                {a.criticality ? ` (${a.criticality})` : ""}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <SearchableEntitySelect
+          id={assetSelectId}
+          label={
+            <>
+              <HardDrive className="size-3.5 text-brand" />
+              <span>Associated Asset / Device</span>
+            </>
+          }
+          emptyOptionLabel="— No Asset Mapped (Unassigned) —"
+          searchPlaceholder="Search assets by name, code, or type..."
+          clearAriaLabel="Unassign asset"
+          options={assetOptions}
+          value={selectedAssetId}
+          onChange={setSelectedAssetId}
+          loading={optionsQuery.isPending}
+        />
 
         {/* Monitored Account Association */}
-        <div className="space-y-1">
-          <label
-            htmlFor={accountSelectId}
-            className="text-foreground flex items-center gap-1.5 text-xs font-semibold"
-          >
-            <ShieldCheck className="size-3.5 text-brand" />
-            <span>Monitored Account Link</span>
-          </label>
-          <Select
-            id={accountSelectId}
-            value={selectedAccountId}
-            onChange={(e) => setSelectedAccountId(e.target.value)}
-            disabled={optionsQuery.isPending}
-            className="text-xs"
-          >
-            <option value="NONE">— No Monitored Account Link —</option>
-            {optionsQuery.data?.monitoredAccounts.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.accountIdentifier} ({m.sourceSystem})
-                {m.displayName ? ` — ${m.displayName}` : ""}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <SearchableEntitySelect
+          id={accountSelectId}
+          label={
+            <>
+              <ShieldCheck className="size-3.5 text-brand" />
+              <span>Monitored Account Link</span>
+            </>
+          }
+          emptyOptionLabel="— No Monitored Account Link —"
+          searchPlaceholder="Search accounts by ID, source, or display name..."
+          clearAriaLabel="Unassign monitored account"
+          options={accountOptions}
+          value={selectedAccountId}
+          onChange={setSelectedAccountId}
+          loading={optionsQuery.isPending}
+        />
 
         {/* Confidence Level */}
         <div className="space-y-1.5">

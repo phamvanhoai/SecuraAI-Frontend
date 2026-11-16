@@ -12,8 +12,8 @@ export const deactivateBusinessServiceSchema = z
     reason: z
       .string()
       .trim()
-      .min(1, "Enter a reason for deactivation.")
-      .max(2000),
+      .min(20, "Enter at least 20 characters.")
+      .max(2000, "Use at most 2,000 characters."),
   })
   .strict();
 export type DeactivateBusinessServiceInput = z.infer<

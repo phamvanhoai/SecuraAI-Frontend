@@ -108,12 +108,16 @@ describe("AuditLogsManager Component", () => {
     cleanup();
   });
 
-  it("renders audit records without a duplicate page heading", () => {
+  it("renders audit trail panel without duplicate page header and shows table rows", () => {
     render(<AuditLogsManager />);
 
     expect(
       screen.queryByRole("heading", { name: /System Audit Logs/i }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Audit Trail Records/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Refresh/i })).toBeInTheDocument();
     expect(screen.getByText("UPDATE_USER_ROLE")).toBeInTheDocument();
     expect(screen.getByText("Admin Superuser")).toBeInTheDocument();
     expect(screen.getByText("admin@securaai.internal")).toBeInTheDocument();

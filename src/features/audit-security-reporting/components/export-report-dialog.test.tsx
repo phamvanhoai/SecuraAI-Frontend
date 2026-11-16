@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/feedback/toast";
 import { ExportReportDialog } from "./export-report-dialog";
@@ -13,6 +13,7 @@ describe("ExportReportDialog", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.unstubAllGlobals();
     fetchMock.mockReset();
   });
@@ -88,5 +89,54 @@ describe("ExportReportDialog", () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled();
     });
+  });
+
+  it("resets severity/status on report type change and resets fields when reopened", () => {
+    const onClose = vi.fn();
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ExportReportDialog isOpen={true} onClose={onClose} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+
+    const typeSelect = screen.getByLabelText("Report Type") as HTMLSelectElement;
+    const severitySelect = screen.getByLabelText("Severity Level") as HTMLSelectElement;
+    const statusSelect = screen.getByLabelText("Record Status") as HTMLSelectElement;
+
+    fireEvent.change(severitySelect, { target: { value: "HIGH" } });
+    fireEvent.change(statusSelect, { target: { value: "OPEN" } });
+    expect(severitySelect.value).toBe("HIGH");
+    expect(statusSelect.value).toBe("OPEN");
+
+    fireEvent.change(typeSelect, { target: { value: "INCIDENT" } });
+    expect(severitySelect.value).toBe("");
+    expect(statusSelect.value).toBe("");
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ExportReportDialog isOpen={false} onClose={onClose} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByLabelText("Report Type")).not.toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ExportReportDialog isOpen={true} onClose={onClose} />
+        </ToastProvider>
+      </QueryClientProvider>,
+    );
+
+    expect((screen.getByLabelText("Report Type") as HTMLSelectElement).value).toBe("RISK");
   });
 });

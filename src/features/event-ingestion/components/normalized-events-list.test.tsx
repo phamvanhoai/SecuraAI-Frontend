@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseNormalizedEvents = vi.fn();
+const mockRetryDetection = vi.fn();
 const mockSessionUser = vi.fn(() => ({
   data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
   isPending: false,
@@ -26,6 +27,11 @@ vi.mock("../hooks/use-normalized-events", () => ({
   useUpdateEventMapping: () => ({
     mutateAsync: vi.fn(),
     isPending: false,
+  }),
+  useRetryEventDetection: () => ({
+    mutate: mockRetryDetection,
+    isPending: false,
+    variables: undefined,
   }),
   useNormalizedEventMetrics: () => ({
     isPending: false,
@@ -154,6 +160,39 @@ describe("NormalizedEventsList", () => {
     expect(screen.getByText("Anomaly")).toBeInTheDocument();
   });
 
+  it("shows a clear AI failure and offers retry", async () => {
+    const user = userEvent.setup();
+    mockUseNormalizedEvents.mockReturnValueOnce({
+      isPending: false,
+      error: null,
+      data: {
+        items: [
+          {
+            ...mockItems[0],
+            detection: {
+              status: "FAILED",
+              score: null,
+              alertId: null,
+              errorCode: "LLM_TIMEOUT",
+              errorMessage: "Foundation-Sec analysis timed out.",
+              retryable: true,
+            },
+          },
+        ],
+        pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      },
+    });
+
+    render(<NormalizedEventsList />);
+    expect(screen.getByText("Foundation-Sec timeout")).toBeInTheDocument();
+    expect(screen.getByText("Foundation-Sec analysis timed out.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Retry analysis" }));
+    expect(mockRetryDetection).toHaveBeenCalledWith(
+      mockItems[0]?.id,
+      expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+    );
+  });
+
   it("handles search input submission", async () => {
     const user = userEvent.setup();
     render(<NormalizedEventsList />);
@@ -204,16 +243,20 @@ describe("NormalizedEventsList", () => {
     const ipInput = screen.getByPlaceholderText(/192\.168\.1\.100/i);
     await user.type(ipInput, "10.0.0.5");
 
-    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ sourceIp: "10.0.0.5" }),
-    );
+    await waitFor(() => {
+      expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceIp: "10.0.0.5" }),
+      );
+    });
 
     const accountInput = screen.getByPlaceholderText(/admin@company\.com/i);
     await user.type(accountInput, "user@test.com");
 
-    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ account: "user@test.com" }),
-    );
+    await waitFor(() => {
+      expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ account: "user@test.com" }),
+      );
+    });
 
     const preset24hBtn = screen.getByRole("button", { name: /Last 24 Hours/i });
     await user.click(preset24hBtn);

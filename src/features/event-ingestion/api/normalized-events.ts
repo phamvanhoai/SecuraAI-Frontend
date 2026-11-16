@@ -5,12 +5,14 @@ import {
   normalizedEventDetailSchema,
   normalizedEventMetricsSchema,
   paginatedNormalizedEventsSchema,
+  retryEventDetectionResultSchema,
   type EntityMapping,
   type ListNormalizedEventsQuery,
   type MappingOptions,
   type NormalizedEventDetail,
   type NormalizedEventMetrics,
   type PaginatedNormalizedEvents,
+  type RetryEventDetectionResult,
   type UpdateEntityMappingPayload,
 } from "../schemas/normalized-event-schema";
 
@@ -86,4 +88,14 @@ export async function getMappingOptions(): Promise<MappingOptions> {
   });
 
   return mappingOptionsSchema.parse(data);
+}
+
+export async function retryEventDetection(
+  eventId: string,
+): Promise<RetryEventDetectionResult> {
+  const data = await apiRequest<unknown>(
+    `/api/events/${encodeURIComponent(eventId)}/detection/retry`,
+    { method: "POST", target: "same-origin" },
+  );
+  return retryEventDetectionResultSchema.parse(data);
 }

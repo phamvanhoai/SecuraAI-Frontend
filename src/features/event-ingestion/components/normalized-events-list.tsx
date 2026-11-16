@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   Calendar,
   ChevronDown,
   ChevronUp,
@@ -8,12 +9,13 @@ import {
   Filter,
   Layers,
   RotateCcw,
+  RefreshCw,
   Search,
   ShieldAlert,
   UserCheck,
   X,
 } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import {
   DataTable,
   type DataTableColumn,
@@ -30,6 +32,8 @@ import { Select } from "@/components/ui/select";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useEventSources } from "../hooks/use-event-sources";
 import { useNormalizedEvents } from "../hooks/use-normalized-events";
+import { useRetryEventDetection } from "../hooks/use-normalized-events";
+import { useToast } from "@/components/feedback/toast";
 import {
   eventFamilies,
   mappingStatuses,
@@ -63,6 +67,8 @@ const formatFamilyLabel: Record<string, string> = {
 };
 
 export function NormalizedEventsList() {
+  const toast = useToast();
+  const retryDetection = useRetryEventDetection();
   const [page, setPage] = useState(1);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -77,8 +83,20 @@ export function NormalizedEventsList() {
   const [sourceIpFilter, setSourceIpFilter] = useState("");
   const [accountFilter, setAccountFilter] = useState("");
   const [assetFilter, setAssetFilter] = useState("");
+  const [debouncedSourceIp, setDebouncedSourceIp] = useState("");
+  const [debouncedAccount, setDebouncedAccount] = useState("");
+  const [debouncedAsset, setDebouncedAsset] = useState("");
   const [fromDateFilter, setFromDateFilter] = useState("");
   const [toDateFilter, setToDateFilter] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSourceIp(sourceIpFilter);
+      setDebouncedAccount(accountFilter);
+      setDebouncedAsset(assetFilter);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [sourceIpFilter, accountFilter, assetFilter]);
 
   const searchInputId = useId();
   const familySelectId = useId();
@@ -104,9 +122,9 @@ export function NormalizedEventsList() {
     ...(statusFilter !== "ALL"
       ? { mappingStatus: statusFilter as MappingStatus }
       : {}),
-    ...(sourceIpFilter ? { sourceIp: sourceIpFilter } : {}),
-    ...(accountFilter ? { account: accountFilter } : {}),
-    ...(assetFilter ? { asset: assetFilter } : {}),
+    ...(debouncedSourceIp ? { sourceIp: debouncedSourceIp } : {}),
+    ...(debouncedAccount ? { account: debouncedAccount } : {}),
+    ...(debouncedAsset ? { asset: debouncedAsset } : {}),
     ...(fromDateFilter ? { from: fromDateFilter } : {}),
     ...(toDateFilter ? { to: toDateFilter } : {}),
   };
@@ -149,8 +167,11 @@ export function NormalizedEventsList() {
     setSourceFilter("ALL");
     setStatusFilter("ALL");
     setSourceIpFilter("");
+    setDebouncedSourceIp("");
     setAccountFilter("");
+    setDebouncedAccount("");
     setAssetFilter("");
+    setDebouncedAsset("");
     setFromDateFilter("");
     setToDateFilter("");
     setPage(1);
@@ -298,25 +319,85 @@ export function NormalizedEventsList() {
           </StatusBadge>
           {item.detection ? (
             <div className="text-muted text-xs">
-              <p>
+              <p
+                className={cn(
+                  "inline-flex items-center gap-1 font-medium",
+                  item.detection.status === "FAILED" && "text-danger",
+                )}
+              >
+                {item.detection.status === "FAILED" ? (
+                  <AlertCircle className="size-3.5" aria-hidden="true" />
+                ) : null}
                 {item.detection.status === "BELOW_THRESHOLD"
                   ? "Evaluated — below threshold"
                   : item.detection.status === "LINKED_TO_ALERT"
                     ? "Linked to alert"
+                    : item.detection.status === "FAILED"
+                      ? item.detection.errorCode === "ML_MODEL_TIMEOUT"
+                        ? "ML model timeout"
+                        : item.detection.errorCode === "LLM_TIMEOUT"
+                          ? "Foundation-Sec timeout"
+                          : item.detection.errorCode?.startsWith("ML_")
+                            ? "ML model unavailable"
+                            : item.detection.errorCode?.startsWith("LLM_")
+                              ? "Foundation-Sec unavailable"
+                              : "AI analysis failed"
                     : item.detection.status
                         .replaceAll("_", " ")
                         .toLowerCase()
                         .replace(/^./, (s) => s.toUpperCase())}
               </p>
+              {item.detection.status === "FAILED" &&
+              item.detection.errorMessage ? (
+                <p className="mt-0.5 max-w-56 leading-4">
+                  {item.detection.errorMessage}
+                </p>
+              ) : null}
               {item.detection.score !== null ? (
                 <p>
-                  Historical anomaly: {(item.detection.score * 100).toFixed(1)}%
+                  Detection score: {(item.detection.score * 100).toFixed(1)}%
                 </p>
               ) : null}
               {item.detection.alertId ? (
                 <p className="font-mono">
                   ALT-{item.detection.alertId.slice(0, 8).toUpperCase()}
                 </p>
+              ) : null}
+              {item.detection.retryable ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="mt-1 min-h-7 gap-1 px-2 py-0.5 text-xs"
+                  disabled={
+                    retryDetection.isPending &&
+                    retryDetection.variables === item.id
+                  }
+                  onClick={() => {
+                    retryDetection.mutate(item.id, {
+                      onSuccess: () =>
+                        toast.success(
+                          "AI analysis queued",
+                          "The event will be processed during the next scheduled cycle.",
+                        ),
+                      onError: (error) =>
+                        toast.error(
+                          "Unable to retry AI analysis",
+                          error.message,
+                        ),
+                    });
+                  }}
+                >
+                  <RefreshCw
+                    className={cn(
+                      "size-3.5",
+                      retryDetection.isPending &&
+                        retryDetection.variables === item.id &&
+                        "animate-spin",
+                    )}
+                    aria-hidden="true"
+                  />
+                  Retry analysis
+                </Button>
               ) : null}
             </div>
           ) : null}
@@ -364,7 +445,7 @@ export function NormalizedEventsList() {
                     id={searchInputId}
                     type="search"
                     placeholder="Search event type, account, IP, asset..."
-                    className="pr-8 pl-9"
+                    className="min-h-10 h-10 pr-8 pl-9"
                     value={searchDraft}
                     onChange={(e) => setSearchDraft(e.target.value)}
                   />
@@ -386,7 +467,7 @@ export function NormalizedEventsList() {
                 <Button
                   type="submit"
                   variant="secondary"
-                  className="px-3 text-xs"
+                  className="min-h-10 h-10 px-3 text-xs"
                 >
                   Search
                 </Button>
@@ -404,7 +485,7 @@ export function NormalizedEventsList() {
                       setFamilyFilter(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 text-xs"
+                    className="min-h-10 h-10 text-xs"
                   >
                     <option value="ALL">All Families</option>
                     {eventFamilies.map((f) => (
@@ -416,7 +497,7 @@ export function NormalizedEventsList() {
                 </div>
 
                 {/* Source Filter */}
-                <div className="w-44">
+                <div className="w-56">
                   <Select
                     id={sourceSelectId}
                     aria-label="Filter by event source"
@@ -425,9 +506,15 @@ export function NormalizedEventsList() {
                       setSourceFilter(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 text-xs"
+                    className="min-h-10 h-10 text-xs"
                   >
-                    <option value="ALL">All Sources</option>
+                    <option value="ALL">
+                      {eventSourcesQuery.isPending
+                        ? "All Sources (loading...)"
+                        : eventSourcesQuery.isError
+                          ? "All Sources (load failed)"
+                          : "All Sources"}
+                    </option>
                     {eventSourcesQuery.data?.items.map((src) => (
                       <option key={src.id} value={src.id}>
                         {src.name}
@@ -446,7 +533,7 @@ export function NormalizedEventsList() {
                       setStatusFilter(e.target.value);
                       setPage(1);
                     }}
-                    className="h-9 text-xs"
+                    className="min-h-10 h-10 text-xs"
                   >
                     <option value="ALL">All Statuses</option>
                     {mappingStatuses.map((s) => (
@@ -461,7 +548,7 @@ export function NormalizedEventsList() {
                 <Button
                   type="button"
                   variant={isAdvancedFiltersOpen ? "primary" : "secondary"}
-                  className="flex h-9 items-center gap-1.5 text-xs"
+                  className="flex min-h-10 h-10 items-center gap-1.5 text-xs"
                   onClick={() =>
                     setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)
                   }
@@ -485,7 +572,7 @@ export function NormalizedEventsList() {
                   <Button
                     type="button"
                     variant="secondary"
-                    className="text-muted hover:text-foreground flex h-9 items-center gap-1 text-xs"
+                    className="text-muted hover:text-foreground flex min-h-10 h-10 items-center gap-1 text-xs"
                     onClick={handleClearAllFilters}
                   >
                     <RotateCcw className="size-3.5" />
@@ -547,17 +634,33 @@ export function NormalizedEventsList() {
                     >
                       Source IP Address
                     </label>
-                    <Input
-                      id={sourceIpInputId}
-                      type="text"
-                      placeholder="e.g. 192.168.1.100"
-                      value={sourceIpFilter}
-                      onChange={(e) => {
-                        setSourceIpFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 font-mono text-xs"
-                    />
+                    <div className="relative">
+                      <Input
+                        id={sourceIpInputId}
+                        type="text"
+                        placeholder="e.g. 192.168.1.100"
+                        value={sourceIpFilter}
+                        onChange={(e) => {
+                          setSourceIpFilter(e.target.value);
+                          setPage(1);
+                        }}
+                        className="min-h-8 h-8 pr-7 font-mono text-xs"
+                      />
+                      {sourceIpFilter ? (
+                        <button
+                          type="button"
+                          aria-label="Clear source IP filter"
+                          onClick={() => {
+                            setSourceIpFilter("");
+                            setDebouncedSourceIp("");
+                            setPage(1);
+                          }}
+                          className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
                   {/* User Account Filter */}
@@ -568,17 +671,33 @@ export function NormalizedEventsList() {
                     >
                       User Account
                     </label>
-                    <Input
-                      id={accountInputId}
-                      type="text"
-                      placeholder="e.g. admin@company.com"
-                      value={accountFilter}
-                      onChange={(e) => {
-                        setAccountFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 font-mono text-xs"
-                    />
+                    <div className="relative">
+                      <Input
+                        id={accountInputId}
+                        type="text"
+                        placeholder="e.g. admin@company.com"
+                        value={accountFilter}
+                        onChange={(e) => {
+                          setAccountFilter(e.target.value);
+                          setPage(1);
+                        }}
+                        className="min-h-8 h-8 pr-7 font-mono text-xs"
+                      />
+                      {accountFilter ? (
+                        <button
+                          type="button"
+                          aria-label="Clear user account filter"
+                          onClick={() => {
+                            setAccountFilter("");
+                            setDebouncedAccount("");
+                            setPage(1);
+                          }}
+                          className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
@@ -592,17 +711,33 @@ export function NormalizedEventsList() {
                     >
                       Associated Asset
                     </label>
-                    <Input
-                      id={assetInputId}
-                      type="text"
-                      placeholder="e.g. AST-DC-01, Server..."
-                      value={assetFilter}
-                      onChange={(e) => {
-                        setAssetFilter(e.target.value);
-                        setPage(1);
-                      }}
-                      className="h-8 text-xs"
-                    />
+                    <div className="relative">
+                      <Input
+                        id={assetInputId}
+                        type="text"
+                        placeholder="e.g. AST-DC-01, Server..."
+                        value={assetFilter}
+                        onChange={(e) => {
+                          setAssetFilter(e.target.value);
+                          setPage(1);
+                        }}
+                        className="min-h-8 h-8 pr-7 text-xs"
+                      />
+                      {assetFilter ? (
+                        <button
+                          type="button"
+                          aria-label="Clear associated asset filter"
+                          onClick={() => {
+                            setAssetFilter("");
+                            setDebouncedAsset("");
+                            setPage(1);
+                          }}
+                          className="text-muted hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
                   {/* Time Range Quick Presets */}
@@ -744,6 +879,7 @@ export function NormalizedEventsList() {
                       type="button"
                       onClick={() => {
                         setSourceIpFilter("");
+                        setDebouncedSourceIp("");
                         setPage(1);
                       }}
                       className="text-muted hover:text-foreground"
@@ -760,6 +896,7 @@ export function NormalizedEventsList() {
                       type="button"
                       onClick={() => {
                         setAccountFilter("");
+                        setDebouncedAccount("");
                         setPage(1);
                       }}
                       className="text-muted hover:text-foreground"
@@ -776,6 +913,7 @@ export function NormalizedEventsList() {
                       type="button"
                       onClick={() => {
                         setAssetFilter("");
+                        setDebouncedAsset("");
                         setPage(1);
                       }}
                       className="text-muted hover:text-foreground"

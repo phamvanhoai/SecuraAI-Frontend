@@ -112,6 +112,7 @@ function DeactivationForm({
 
   const form = useForm<DeactivateBusinessServiceInput>({
     resolver: zodResolver(deactivateBusinessServiceSchema),
+    mode: "onChange",
     defaultValues: {
       reason: "",
       confirmationName: "",
@@ -302,7 +303,6 @@ function DeactivationForm({
                   aria-label="Reason for deactivation (required)"
                   {...form.register("reason")}
                   rows={4}
-                  maxLength={2000}
                   aria-invalid={Boolean(form.formState.errors.reason)}
                   aria-describedby={
                     form.formState.errors.reason
@@ -320,7 +320,7 @@ function DeactivationForm({
                   </p>
                 ) : (
                   <p id="service-deactivate-reason-help" className="text-muted text-xs">
-                    Explain why the service is no longer used. The reason and acting
+                    Enter at least 20 characters explaining why the service is no longer used. The reason and acting
                     user are recorded in audit logs. Maximum 2,000 characters.
                   </p>
                 )}
@@ -414,7 +414,7 @@ function DeactivationForm({
           {check.canDeactivate ? (
             <Button
               type="submit"
-              disabled={!confirmed || !reason.trim() || mutation.isPending || blocked}
+              disabled={!confirmed || reason.trim().length < 20 || mutation.isPending || blocked}
               className={cn(
                 "bg-danger text-white hover:opacity-90",
                 mutation.isPending && "opacity-80",

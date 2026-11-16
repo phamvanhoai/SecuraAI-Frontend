@@ -12,13 +12,16 @@ import {
   Radio,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useToast } from "@/components/feedback/toast";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/api-error";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useEventSources } from "@/features/event-ingestion";
+import { useAssets } from "../hooks/use-assets";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
@@ -55,9 +58,65 @@ export function LinkAssetContextDialog({
   const toast = useToast();
   const [message, setMessage] = useState<string>();
   const [cycleMessage, setCycleMessage] = useState<string>();
+  const [dependencySearch, setDependencySearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [chosenDependencies, setChosenDependencies] = useState<
+    Array<{ id: string; assetCode: string; name: string; status: string }>
+  >([]);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSearch(dependencySearch.trim()),
+      300,
+    );
+    return () => clearTimeout(timer);
+  }, [dependencySearch]);
+  const dependencyResults = useAssets(
+    {
+      page: 1,
+      limit: 10,
+      status: "active",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      ...(debouncedSearch ? { q: debouncedSearch } : {}),
+    },
+    Boolean(assetId) &&
+      tab === "links" &&
+      dependencySearch.trim() === debouncedSearch,
+  );
+
+  const [sourceSearch, setSourceSearch] = useState("");
+  const [debouncedSourceSearch, setDebouncedSourceSearch] = useState("");
+  const [chosenSources, setChosenSources] = useState<
+    Array<{ id: string; name: string; sourceType: string; status: string }>
+  >([]);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedSourceSearch(sourceSearch.trim()),
+      300,
+    );
+    return () => clearTimeout(timer);
+  }, [sourceSearch]);
+  const sourceResults = useEventSources(
+    {
+      page: 1,
+      limit: 10,
+      status: "ACTIVE",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      ...(debouncedSourceSearch ? { q: debouncedSourceSearch } : {}),
+    },
+    {
+      enabled:
+        Boolean(assetId) &&
+        tab === "links" &&
+        sourceSearch.trim() === debouncedSourceSearch,
+    },
+  );
 
   const {
     register,
+    control,
+    setValue,
     handleSubmit,
     reset,
     formState: { errors },
@@ -87,6 +146,10 @@ export function LinkAssetContextDialog({
     setMessage(undefined);
     setCycleMessage(undefined);
     setTab("links");
+    setDependencySearch("");
+    setChosenDependencies([]);
+    setSourceSearch("");
+    setChosenSources([]);
     onClose();
   };
 
@@ -119,7 +182,9 @@ export function LinkAssetContextDialog({
         }
       }
       setMessage(
-        error instanceof Error ? error.message : "Unable to update asset context.",
+        error instanceof Error
+          ? error.message
+          : "Unable to update asset context.",
       );
     }
   };
@@ -134,21 +199,82 @@ export function LinkAssetContextDialog({
       name: `${detail.data.businessService.name} (Inactive - existing link)`,
     });
 
-  const dependencies = (options.data?.assets ?? [])
-    .filter((item) => item.id !== assetId)
-    .map((item) => ({ ...item, status: "active" }));
-  for (const link of detail.data?.dependencies ?? []) {
-    if (!dependencies.some((item) => item.id === link.asset.id))
-      dependencies.push(link.asset);
-  }
+  const selectedDependencyIds = useWatch({ control, name: "dependencyIds" });
+  const dependencyRecords = new Map([
+    ...(detail.data?.dependencies ?? []).map(
+      (link) => [link.asset.id, link.asset] as const,
+    ),
+    ...chosenDependencies.map((item) => [item.id, item] as const),
+  ]);
+  const selectedDependencies = selectedDependencyIds
+    .map((id) => dependencyRecords.get(id))
+    .filter((item) => item !== undefined);
+  const searchPending =
+    dependencySearch.trim() !== debouncedSearch ||
+    dependencyResults.isFetching ||
+    dependencyResults.isPending;
+  const matches =
+    searchPending || dependencyResults.isError
+      ? []
+      : (dependencyResults.data?.items ?? []).filter(
+          (item) =>
+            item.id !== assetId && !selectedDependencyIds.includes(item.id),
+        );
+  const toggleDependency = (
+    item: { id: string; assetCode: string; name: string; status: string },
+    selected: boolean,
+  ) => {
+    if (selected)
+      setChosenDependencies((items) => [
+        ...items.filter((entry) => entry.id !== item.id),
+        item,
+      ]);
+    setValue(
+      "dependencyIds",
+      selected
+        ? [...selectedDependencyIds, item.id]
+        : selectedDependencyIds.filter((id) => id !== item.id),
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
 
-  const sources = (options.data?.eventSources ?? []).map((item) => ({
-    ...item,
-    status: "active",
-  }));
-  for (const source of detail.data?.eventSources ?? []) {
-    if (!sources.some((item) => item.id === source.id)) sources.push(source);
-  }
+  const selectedSourceIds = useWatch({ control, name: "eventSourceIds" });
+  const sourceRecords = new Map([
+    ...(detail.data?.eventSources ?? []).map(
+      (item) => [item.id, item] as const,
+    ),
+    ...chosenSources.map((item) => [item.id, item] as const),
+  ]);
+  const selectedSources = selectedSourceIds
+    .map((id) => sourceRecords.get(id))
+    .filter((item) => item !== undefined);
+  const sourceSearchPending =
+    sourceSearch.trim() !== debouncedSourceSearch ||
+    sourceResults.isPending ||
+    sourceResults.isFetching;
+  const sourceMatches =
+    sourceSearchPending || sourceResults.isError
+      ? []
+      : (sourceResults.data?.items ?? [])
+          .filter((item) => !selectedSourceIds.includes(item.id))
+          .slice(0, 10);
+  const toggleSource = (
+    item: { id: string; name: string; sourceType: string; status: string },
+    selected: boolean,
+  ) => {
+    if (selected)
+      setChosenSources((items) => [
+        ...items.filter((entry) => entry.id !== item.id),
+        { ...item, status: item.status.toLowerCase() },
+      ]);
+    setValue(
+      "eventSourceIds",
+      selected
+        ? [...selectedSourceIds, item.id]
+        : selectedSourceIds.filter((id) => id !== item.id),
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
 
   const busy = detail.isPending || options.isPending;
   const isArchived = detail.data?.status !== "active";
@@ -245,7 +371,7 @@ export function LinkAssetContextDialog({
         {tab === "history" && assetId ? (
           <AssetContextHistory key={assetId} assetId={assetId} />
         ) : null}
-        <div className="mt-5 flex items-center justify-end border-t border-border pt-4">
+        <div className="border-border mt-5 flex items-center justify-end border-t pt-4">
           <Button type="button" variant="secondary" onClick={close}>
             Close
           </Button>
@@ -276,7 +402,7 @@ export function LinkAssetContextDialog({
             </div>
           </div>
         ) : detail.isError || options.isError ? (
-          <div className="border-border bg-neutral-soft/30 rounded-xl border p-6 text-center space-y-3">
+          <div className="border-border bg-neutral-soft/30 space-y-3 rounded-xl border p-6 text-center">
             <HardDrive
               className="text-muted mx-auto mb-1 size-8"
               strokeWidth={1.5}
@@ -307,7 +433,7 @@ export function LinkAssetContextDialog({
             {/* Context bar */}
             <div className="border-border bg-neutral-soft/30 flex flex-wrap items-center gap-3 rounded-lg border p-3.5 text-xs">
               <HardDrive
-                className="size-3.5 shrink-0 text-brand"
+                className="text-brand size-3.5 shrink-0"
                 strokeWidth={1.8}
               />
               <span className="font-semibold tabular-nums">
@@ -321,7 +447,7 @@ export function LinkAssetContextDialog({
             {isArchived ? (
               <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
                 <AlertTriangle
-                  className="mt-0.5 size-4 shrink-0 text-warning"
+                  className="text-warning mt-0.5 size-4 shrink-0"
                   strokeWidth={1.8}
                 />
                 <p className="text-xs leading-5">
@@ -340,7 +466,7 @@ export function LinkAssetContextDialog({
             {message ? (
               <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
                 <AlertTriangle
-                  className="mt-0.5 size-4 shrink-0 text-danger"
+                  className="text-danger mt-0.5 size-4 shrink-0"
                   strokeWidth={1.8}
                 />
                 <p className="text-danger text-xs leading-5">{message}</p>
@@ -349,9 +475,9 @@ export function LinkAssetContextDialog({
 
             {/* Business service */}
             <div className="space-y-3">
-              <div className="flex items-start gap-2 border-b border-border pb-2">
+              <div className="border-border flex items-start gap-2 border-b pb-2">
                 <Building2
-                  className="mt-0.5 size-4 shrink-0 text-brand"
+                  className="text-brand mt-0.5 size-4 shrink-0"
                   strokeWidth={1.8}
                 />
                 <h3 className="text-sm font-semibold">Business service</h3>
@@ -386,60 +512,126 @@ export function LinkAssetContextDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Dependencies */}
               <div className="space-y-3">
-                <div className="flex items-start gap-2 border-b border-border pb-2">
+                <div className="border-border flex items-start gap-2 border-b pb-2">
                   <Boxes
-                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    className="text-brand mt-0.5 size-4 shrink-0"
                     strokeWidth={1.8}
                   />
                   <h3 className="text-sm font-semibold">Dependencies</h3>
                 </div>
-                <div className="border-border rounded-xl border">
-                  {dependencies.length > 0 ? (
-                    <ul className="divide-y divide-border px-3 py-2">
-                      {dependencies.map((item) => (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="dependency-search"
+                    className="block text-sm font-medium"
+                  >
+                    Search dependencies
+                  </label>
+                  <Input
+                    id="dependency-search"
+                    type="search"
+                    maxLength={100}
+                    autoComplete="off"
+                    placeholder="Search dependencies"
+                    value={dependencySearch}
+                    disabled={isArchived || mutation.isPending}
+                    aria-describedby="dependency-search-help"
+                    onChange={(event) =>
+                      setDependencySearch(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.preventDefault();
+                    }}
+                  />
+                  <p id="dependency-search-help" className="text-muted text-xs">
+                    Latest 10 assets. Search by code or name for other assets.
+                  </p>
+                  <div className="border-border space-y-2 rounded-lg border p-3">
+                    <p role="status" className="text-muted text-xs">
+                      {searchPending
+                        ? "Searching..."
+                        : dependencyResults.isError
+                          ? "Unable to search. Try again."
+                          : matches.length
+                            ? "Select from the results."
+                            : "No matching assets. Try another search."}
+                    </p>
+                    {dependencyResults.isError ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => void dependencyResults.refetch()}
+                      >
+                        Retry
+                      </Button>
+                    ) : null}
+                    <ul
+                      aria-label="Dependency search results"
+                      className="divide-border max-h-56 divide-y overflow-y-auto"
+                    >
+                      {matches.map((item) => (
                         <li key={item.id}>
-                          <label className="flex items-start gap-2.5 py-2.5 text-xs cursor-pointer hover:bg-neutral-soft/40 -mx-3 px-3 transition-colors">
+                          <label className="flex cursor-pointer gap-2 py-2 text-xs">
                             <input
                               type="checkbox"
-                              value={item.id}
-                              {...register("dependencyIds")}
-                              className="mt-0.5 shrink-0"
+                              checked={false}
+                              disabled={
+                                isArchived ||
+                                mutation.isPending ||
+                                selectedDependencyIds.length >= 50
+                              }
+                              onChange={() => toggleDependency(item, true)}
                             />
-                            <span className="min-w-0">
-                              <span className="font-medium block">
+                            <span className="min-w-0 break-words">
+                              <span className="block font-medium">
                                 {item.assetCode}
                               </span>
-                              <span className="text-muted block truncate">
-                                {item.name}
-                                {item.status !== "active"
-                                  ? ` (${item.status} — existing link)`
-                                  : ""}
-                              </span>
+                              {item.name}
                             </span>
                           </label>
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <div className="p-5 text-center">
-                      <Boxes
-                        className="text-muted mx-auto mb-2 size-6"
-                        strokeWidth={1.5}
-                      />
-                      <p className="text-xs font-medium">No assets available</p>
-                      <p className="text-muted mt-0.5 text-xs">
-                        No other assets found to link as dependencies.
-                      </p>
-                    </div>
-                  )}
+                  </div>
+                  <p className="text-sm font-medium">
+                    Selected dependencies ({selectedDependencyIds.length}/50)
+                  </p>
+                  <ul
+                    aria-label="Selected dependencies"
+                    className="border-border divide-border max-h-56 divide-y overflow-y-auto rounded-lg border px-3"
+                  >
+                    {selectedDependencies.map((item) => (
+                      <li key={item.id}>
+                        <label className="flex cursor-pointer gap-2 py-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked
+                            disabled={isArchived || mutation.isPending}
+                            onChange={() => toggleDependency(item, false)}
+                          />
+                          <span className="min-w-0 break-words">
+                            <span className="block font-medium">
+                              {item.assetCode}
+                            </span>
+                            {item.name}
+                            {item.status !== "active"
+                              ? ` (${item.status} - existing link)`
+                              : ""}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  {!selectedDependencyIds.length ? (
+                    <p className="text-muted text-xs">None selected.</p>
+                  ) : null}
                 </div>
                 {cycleMessage ? (
                   <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
                     <AlertTriangle
-                      className="mt-0.5 size-4 shrink-0 text-danger"
+                      className="text-danger mt-0.5 size-4 shrink-0"
                       strokeWidth={1.8}
                     />
-                    <p className="text-danger break-words text-xs leading-5">
+                    <p className="text-danger text-xs leading-5 break-words">
                       {cycleMessage}
                     </p>
                   </div>
@@ -457,54 +649,119 @@ export function LinkAssetContextDialog({
 
               {/* Event sources */}
               <div className="space-y-3">
-                <div className="flex items-start gap-2 border-b border-border pb-2">
+                <div className="border-border flex items-start gap-2 border-b pb-2">
                   <Radio
-                    className="mt-0.5 size-4 shrink-0 text-brand"
+                    className="text-brand mt-0.5 size-4 shrink-0"
                     strokeWidth={1.8}
                   />
                   <h3 className="text-sm font-semibold">Event sources</h3>
                 </div>
-                <div className="border-border rounded-xl border">
-                  {sources.length > 0 ? (
-                    <ul className="divide-y divide-border px-3 py-2">
-                      {sources.map((item) => (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="event-source-search"
+                    className="block text-sm font-medium"
+                  >
+                    Search event sources
+                  </label>
+                  <Input
+                    id="event-source-search"
+                    type="search"
+                    maxLength={100}
+                    autoComplete="off"
+                    placeholder="Search event sources"
+                    value={sourceSearch}
+                    disabled={isArchived || mutation.isPending}
+                    aria-describedby="event-source-search-help"
+                    onChange={(event) => setSourceSearch(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.preventDefault();
+                    }}
+                  />
+                  <p
+                    id="event-source-search-help"
+                    className="text-muted text-xs"
+                  >
+                    Latest 10 event sources. Search for other sources.
+                  </p>
+                  <div className="border-border space-y-2 rounded-lg border p-3">
+                    <p role="status" className="text-muted text-xs">
+                      {sourceSearchPending
+                        ? "Searching..."
+                        : sourceResults.isError
+                          ? "Unable to search. Try again."
+                          : sourceMatches.length
+                            ? "Select from the results."
+                            : "No matching event sources. Try another search."}
+                    </p>
+                    {sourceResults.isError ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => void sourceResults.refetch()}
+                      >
+                        Retry
+                      </Button>
+                    ) : null}
+                    <ul
+                      aria-label="Event source search results"
+                      className="divide-border max-h-56 divide-y overflow-y-auto"
+                    >
+                      {sourceMatches.map((item) => (
                         <li key={item.id}>
-                          <label className="flex items-start gap-2.5 py-2.5 text-xs cursor-pointer hover:bg-neutral-soft/40 -mx-3 px-3 transition-colors">
+                          <label className="flex cursor-pointer gap-2 py-2 text-xs">
                             <input
                               type="checkbox"
-                              value={item.id}
-                              {...register("eventSourceIds")}
-                              className="mt-0.5 shrink-0"
+                              checked={false}
+                              disabled={
+                                isArchived ||
+                                mutation.isPending ||
+                                selectedSourceIds.length >= 50
+                              }
+                              onChange={() => toggleSource(item, true)}
                             />
-                            <span className="min-w-0">
-                              <span className="font-medium block">
+                            <span className="min-w-0 break-words">
+                              <span className="block font-medium">
                                 {item.name}
                               </span>
-                              <span className="text-muted block truncate">
-                                {item.sourceType}
-                                {item.status !== "active"
-                                  ? ` (${item.status} — existing link)`
-                                  : ""}
-                              </span>
+                              {item.sourceType}
                             </span>
                           </label>
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <div className="p-5 text-center">
-                      <Radio
-                        className="text-muted mx-auto mb-2 size-6"
-                        strokeWidth={1.5}
-                      />
-                      <p className="text-xs font-medium">
-                        No event sources available
-                      </p>
-                      <p className="text-muted mt-0.5 text-xs">
-                        Register event sources first to link them here.
-                      </p>
-                    </div>
-                  )}
+                  </div>
+                  <p className="text-sm font-medium">
+                    Selected event sources ({selectedSourceIds.length}/50)
+                  </p>
+                  <ul
+                    aria-label="Selected event sources"
+                    className="border-border divide-border max-h-56 divide-y overflow-y-auto rounded-lg border px-3"
+                  >
+                    {selectedSources.map((item) => (
+                      <li key={item.id}>
+                        <label className="flex cursor-pointer gap-2 py-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked
+                            disabled={isArchived || mutation.isPending}
+                            onChange={() => toggleSource(item, false)}
+                          />
+                          <span className="min-w-0 break-words">
+                            <span className="block font-medium">
+                              {item.name}
+                            </span>
+                            {item.sourceType}
+                            {item.status !== "active"
+                              ? ` (${item.status} - existing link)`
+                              : ""}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  {!selectedSourceIds.length ? (
+                    <p className="text-muted text-xs">None selected.</p>
+                  ) : null}
                 </div>
                 {errors.eventSourceIds && (
                   <p role="alert" className="text-danger text-xs">
@@ -521,7 +778,7 @@ export function LinkAssetContextDialog({
             {/* Info hint */}
             <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
               <Info
-                className="mt-0.5 size-4 shrink-0 text-brand"
+                className="text-brand mt-0.5 size-4 shrink-0"
                 strokeWidth={1.8}
               />
               <p className="text-muted text-xs leading-5">
@@ -531,7 +788,7 @@ export function LinkAssetContextDialog({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+            <div className="border-border flex items-center justify-end gap-2 border-t pt-4">
               <Button type="button" variant="secondary" onClick={close}>
                 Cancel
               </Button>

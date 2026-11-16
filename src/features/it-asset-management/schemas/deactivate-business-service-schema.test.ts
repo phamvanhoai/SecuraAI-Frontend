@@ -3,7 +3,7 @@ import { deactivateBusinessServiceSchema as schema } from "./deactivate-business
 const valid = {
   expectedUpdatedAt: "2026-10-07T00:00:00Z",
   confirmationName: "Support",
-  reason: "No longer in use",
+  reason: "Service no longer in operational use",
 };
 describe("Deactivate validation", () => {
   it("normalizes input", () =>
@@ -11,11 +11,11 @@ describe("Deactivate validation", () => {
       schema.parse({
         ...valid,
         confirmationName: " Support  Service ",
-        reason: " Retired ",
+        reason: " Retired after service migration ",
       }),
     ).toMatchObject({
       confirmationName: "Support Service",
-      reason: "Retired",
+      reason: "Retired after service migration",
     }));
   it.each([
     { ...valid, reason: " " },

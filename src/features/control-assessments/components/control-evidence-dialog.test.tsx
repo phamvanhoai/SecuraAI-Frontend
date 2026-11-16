@@ -115,6 +115,39 @@ async function completeAdd() {
   });
 }
 describe("Control Evidence dialog", () => {
+  it.each([
+    ["Evidence name *", 255],
+    ["Source *", 255],
+    ["Results, scope and supporting context *", 5000],
+    ["Supporting document URL (HTTPS) *", 2048],
+  ] as const)("preserves overflow and blocks adding %s", async (label, maximum) => {
+    const user = userEvent.setup();
+    render(<ControlEvidenceDialog controlId={id} onClose={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "Add evidence" }));
+    for (const [fieldLabel, value] of [
+      ["Evidence name *", item.name],
+      ["Source *", item.source],
+      ["Results, scope and supporting context *", item.description],
+      ["Supporting document URL (HTTPS) *", item.documentUrl],
+      ["Collected at (UTC+7) *", "2020-01-01T10:20"],
+    ] as const) fireEvent.change(screen.getByLabelText(fieldLabel), { target: { value } });
+    const field = screen.getByLabelText(label);
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("A".repeat(maximum + 1));
+    expect(field).toHaveValue("A".repeat(maximum + 1));
+    const message = `Use at most ${maximum.toLocaleString("en-US")} characters.`;
+    expect(await screen.findByText(message)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Add and link evidence" }));
+    expect(add).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.paste(label.startsWith("Supporting") ? item.documentUrl : "Valid supporting information");
+    await waitFor(() => expect(screen.queryByText(message)).not.toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Add and link evidence" }));
+    await waitFor(() => expect(add).toHaveBeenCalledOnce());
+  });
+
   it("explains external permission/review boundaries and linked empty state", () => {
     render(<ControlEvidenceDialog controlId={id} onClose={vi.fn()} />);
     expect(

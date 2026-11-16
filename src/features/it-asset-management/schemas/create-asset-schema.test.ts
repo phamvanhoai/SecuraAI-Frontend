@@ -22,7 +22,7 @@ describe("createAssetSchema", () => {
   });
   it("accepts an optional owner and description", () => {
     const ownerUserId = "00000000-0000-4000-8000-000000000020";
-    expect(createAssetSchema.parse({ ...identity, ownerUserId, description: " Example " })).toMatchObject({ ownerUserId, description: "Example" });
+    expect(createAssetSchema.parse({ ...identity, ownerUserId, description: " Example description for this asset. " })).toMatchObject({ ownerUserId, description: "Example description for this asset." });
   });
   it("rejects invalid owners and missing identity", () => {
     expect(createAssetSchema.safeParse({ ...identity, ownerUserId: "invalid" }).success).toBe(false);

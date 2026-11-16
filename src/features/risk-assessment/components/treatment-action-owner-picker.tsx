@@ -11,12 +11,20 @@ export function TreatmentActionOwnerPicker({
   onChange,
   users,
   actionNumber,
+  label,
+  inputId,
+  disabled = false,
+  selectedOwnerName,
 }: {
   riskId: string | null;
   value: string;
-  onChange: (id: string) => void;
+  onChange: (id: string, owner: Owner | null) => void;
   users: Owner[];
-  actionNumber: number;
+  actionNumber?: number;
+  label?: string;
+  inputId?: string;
+  disabled?: boolean;
+  selectedOwnerName?: string;
 }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -25,10 +33,12 @@ export function TreatmentActionOwnerPicker({
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Owner | null>(null);
-  const results = useRiskTreatmentPlanOptions(riskId, query, open);
+  const results = useRiskTreatmentPlanOptions(riskId, query, open && !disabled);
   const owner =
     users.find((item) => item.id === value) ??
     (selected?.id === value ? selected : null);
+  const ownerLabel = label ?? `Action ${actionNumber} owner`;
+  const ownerText = owner ? `${owner.fullName} — ${owner.email}` : value ? selectedOwnerName ?? "Selected owner" : "Assign owner";
   useEffect(() => {
     if (!open) return;
     input.current?.focus();
@@ -41,7 +51,7 @@ export function TreatmentActionOwnerPicker({
   }, [open]);
   const choose = (item: Owner | null) => {
     setSelected(item);
-    onChange(item?.id ?? "");
+    onChange(item?.id ?? "", item);
     setOpen(false);
     root.current?.querySelector<HTMLButtonElement>("button")?.focus();
   };
@@ -72,7 +82,9 @@ export function TreatmentActionOwnerPicker({
       <Button
         type="button"
         variant="secondary"
-        aria-label={`Action ${actionNumber} owner${owner ? `: ${owner.fullName} — ${owner.email}` : ""}`}
+        id={inputId}
+        disabled={disabled}
+        aria-label={`${ownerLabel}${owner ? `: ${owner.fullName} — ${owner.email}` : ""}`}
         aria-expanded={open}
         aria-controls={`${id}-panel`}
         className="w-full justify-between text-left font-normal"
@@ -84,21 +96,21 @@ export function TreatmentActionOwnerPicker({
       >
         <span
           className="min-w-0 truncate"
-          title={owner ? `${owner.fullName} — ${owner.email}` : undefined}
+          title={value ? ownerText : undefined}
         >
-          {owner ? `${owner.fullName} — ${owner.email}` : "Assign owner"}
+          {ownerText}
         </span>
         <ChevronDown
           className="text-muted size-4 shrink-0"
           aria-hidden="true"
         />
       </Button>
-      {open ? (
+      {open && !disabled ? (
         <div
           id={`${id}-panel`}
           className="border-border bg-surface absolute top-full left-0 z-50 mt-1 w-full min-w-0 rounded-lg border p-2 shadow-lg"
           role="region"
-          aria-label={`Choose action ${actionNumber} owner`}
+          aria-label={`Choose ${ownerLabel.toLowerCase()}`}
         >
           <div className="flex gap-1">
             <Input

@@ -11,15 +11,16 @@ const optionalText = (maximum: number) =>
     .string()
     .trim()
     .max(maximum)
+    .refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.")
     .optional()
     .transform((value) => value || undefined);
 
 export const createAssetSchema = z
   .object({
-    name: z.string().trim().min(1, "Asset name is required").max(255),
+    name: z.string().trim().min(3, "Enter at least 3 characters.").max(100, "Use at most 100 characters."),
     assetType: z.string().pipe(assetTypeSchema),
     ownerUserId: optionalUuid,
-    description: optionalText(10_000),
+    description: optionalText(2000),
     dependencyIds: z.array(z.uuid()).max(50).default([]),
     eventSourceIds: z.array(z.uuid()).max(50).default([]),
   })
@@ -51,10 +52,10 @@ export const assetCreateOptionsSchema = z.object({
 
 export const createdAssetSchema = assetListItemSchema;
 export const createAssetRequestSchema = z.object({
-  name: z.string().trim().min(1).max(255),
+  name: z.string().trim().min(3).max(100),
   assetType: assetTypeSchema,
   ownerUserId: z.uuid().optional(),
-  description: z.string().trim().max(10_000).optional(),
+  description: z.string().trim().max(2000).refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.").optional(),
   dependencies: z.array(z.object({ assetId: z.uuid() })).max(50),
   eventSourceIds: z.array(z.uuid()).max(50),
 }).strict();

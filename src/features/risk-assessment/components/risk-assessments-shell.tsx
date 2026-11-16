@@ -316,7 +316,7 @@ export function RiskAssessmentsShell() {
           }
           additionalActions={
             currentView === "register" && canCreate ? (
-              <CreateRiskAssessmentDialog />
+              <CreateRiskAssessmentDialog onCreated={() => navigate({ page: 1, sortBy: "createdAt", sortOrder: "desc" })} />
             ) : null
           }
         />

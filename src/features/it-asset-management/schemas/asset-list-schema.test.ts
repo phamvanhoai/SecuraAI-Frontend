@@ -17,8 +17,8 @@ describe("asset list contracts", () => {
       limit: 10,
       q: "server",
       status: "active",
-      sortBy: "assetCode",
-      sortOrder: "asc",
+      sortBy: "createdAt",
+      sortOrder: "desc",
     });
   });
 

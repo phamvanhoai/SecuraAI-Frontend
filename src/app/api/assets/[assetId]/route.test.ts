@@ -14,21 +14,21 @@ beforeEach(() => {
   mocks.cookieGet.mockImplementation((name: string) => name === "access" ? { value: "token" } : undefined);
 });
 describe("archive BFF", () => {
-  it.each([{}, { reason: " " }, { reason: "Retired", archivedBy: id }])("rejects invalid/forged metadata %j", async (body) => {
+  it.each([{}, { reason: " " }, { reason: "Retired after service migration", archivedBy: id }])("rejects invalid/forged metadata %j", async (body) => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     expect((await DELETE(request(body), context())).status).toBe(422);
     expect(fetchMock).not.toHaveBeenCalled();
   });
   it("forwards only normalized reason with server-side authentication", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 204 }));
-    expect((await DELETE(request({ reason: " Retired " }), context())).status).toBe(204);
+    expect((await DELETE(request({ reason: " Retired after service migration " }), context())).status).toBe(204);
     expect(fetchMock.mock.calls[0]?.[0].toString()).toBe(`http://backend.test/api/v1/assets/${id}`);
-    expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ method: "DELETE", body: JSON.stringify({ reason: "Retired" }), headers: expect.objectContaining({ Authorization: "Bearer token", "Content-Type": "application/json" }) }));
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(URL), expect.objectContaining({ method: "DELETE", body: JSON.stringify({ reason: "Retired after service migration" }), headers: expect.objectContaining({ Authorization: "Bearer token", "Content-Type": "application/json" }) }));
   });
   it("requires authentication", async () => {
     mocks.cookieGet.mockReturnValue(undefined);
     const fetchMock = vi.spyOn(globalThis, "fetch");
-    expect((await DELETE(request({ reason: "Retired" }), context())).status).toBe(401);
+    expect((await DELETE(request({ reason: "Retired after service migration" }), context())).status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

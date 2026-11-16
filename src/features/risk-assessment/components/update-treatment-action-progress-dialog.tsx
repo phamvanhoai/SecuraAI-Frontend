@@ -11,11 +11,14 @@ import { ApiError } from "@/lib/api/api-error";
 import { useUpdateTreatmentActionProgress } from "../hooks/use-update-treatment-action-progress";
 import type { TreatmentPlanDetail } from "../schemas/treatment-plan-detail-schema";
 import { updateTreatmentActionProgressRequestSchema } from "../schemas/update-treatment-action-progress-schema";
+import { useRiskRecord } from "../hooks/use-risk-register";
+import { hasPendingAcceptance, isPendingAcceptanceError, PENDING_ACCEPTANCE_MESSAGE } from "../pending-acceptance";
 
 export function UpdateTreatmentActionProgressDialog({
-  treatmentPlanId, action, onClose, onReload,
+  treatmentPlanId, riskId, action, onClose, onReload,
 }: {
   treatmentPlanId: string;
+  riskId: string;
   action: TreatmentPlanDetail["actions"][number];
   onClose: () => void;
   onReload: () => void;
@@ -30,6 +33,9 @@ export function UpdateTreatmentActionProgressDialog({
   const [discarding, setDiscarding] = useState(false);
   const mutation = useUpdateTreatmentActionProgress(treatmentPlanId);
   const toast = useToast();
+  const risk = useRiskRecord(riskId);
+  const pendingAcceptance = hasPendingAcceptance(risk.data) || error === PENDING_ACCEPTANCE_MESSAGE;
+  const cannotSave = pendingAcceptance || risk.isPending || risk.isError || needsReload || mutation.isPending;
   const percent = progress.trim() === "" ? NaN : Number(progress);
   const reducing = percent < action.progressPercent;
   const normalizedNote = note.trim();
@@ -52,7 +58,7 @@ export function UpdateTreatmentActionProgressDialog({
   };
   const submit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (submitting.current || needsReload || !validProgress || noteError) return;
+    if (submitting.current || cannotSave || !validProgress || noteError) return;
     const parsed = updateTreatmentActionProgressRequestSchema.safeParse({
       expectedUpdatedAt: action.updatedAt,
       progressPercent: percent,
@@ -68,6 +74,10 @@ export function UpdateTreatmentActionProgressDialog({
         : `${action.title}: ${result.progressPercent}% complete.`);
       onClose();
     } catch (cause: unknown) {
+      if (isPendingAcceptanceError(cause)) {
+        setError(PENDING_ACCEPTANCE_MESSAGE);
+        return;
+      }
       const stale = cause instanceof ApiError && [403, 404, 409].includes(cause.status);
       setNeedsReload(stale);
       setError(cause instanceof ApiError && cause.status !== 0
@@ -86,8 +96,10 @@ export function UpdateTreatmentActionProgressDialog({
           <p className="font-medium wrap-anywhere">{action.title}</p>
           <p className="text-muted mt-1 text-sm">Current progress: {action.progressPercent}%</p>
         </div>
-        {error ? <div ref={errorRef} tabIndex={-1} role="alert"><Alert className="border-danger/25 bg-danger-soft text-danger">{error}</Alert></div> : null}
-        <fieldset disabled={mutation.isPending || needsReload} className="space-y-4">
+        {pendingAcceptance ? <Alert className="border-warning/30 bg-warning-soft text-warning">{PENDING_ACCEPTANCE_MESSAGE}</Alert> : null}
+        {risk.isError ? <Alert>Unable to refresh this Risk. Close and try again.</Alert> : null}
+        {error && !pendingAcceptance ? <div ref={errorRef} tabIndex={-1} role="alert"><Alert className="border-danger/25 bg-danger-soft text-danger">{error}</Alert></div> : null}
+        <fieldset disabled={cannotSave} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="action-progress-percent" className="text-sm font-medium">Progress (%)</label>
             <Input id="action-progress-percent" type="number" min={0} max={100} step={1}
@@ -118,7 +130,7 @@ export function UpdateTreatmentActionProgressDialog({
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="secondary" disabled={mutation.isPending} onClick={close}>Cancel</Button>
           {needsReload ? <Button type="button" onClick={onReload}>Reload plan</Button> :
-            <Button type="submit" disabled={mutation.isPending || !validProgress || noteError || !dirty}>
+            <Button type="submit" disabled={cannotSave || !validProgress || noteError || !dirty}>
               {mutation.isPending ? "Saving..." : "Save progress"}
             </Button>}
         </div>

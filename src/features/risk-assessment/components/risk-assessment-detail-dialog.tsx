@@ -1,5 +1,6 @@
 "use client";
 
+import { RiskContextHistoryList } from "./risk-context-history-list";
 import { AcceptanceCostSummary } from "./acceptance-cost-fields";
 import { RiskReviewDate } from "./risk-review-date";
 import { CompleteRiskReviewDialog } from "./complete-risk-review-dialog";
@@ -716,55 +717,7 @@ export function RiskAssessmentDetailDialog({
                   Changes to Threats and Vulnerabilities are read-only and
                   ordered newest first.
                 </p>
-                {risk.contextHistory.length ? (
-                  risk.contextHistory.map((entry) => (
-                    <article
-                      key={entry.id}
-                      className="bg-surface rounded-xl border border-border p-4"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold">
-                            {entry.type === "threat"
-                              ? `Threat ${entry.event}`
-                              : `Vulnerability ${entry.event}`}
-                          </p>
-                          <p className="text-muted text-sm">
-                            {new Intl.DateTimeFormat("en-GB", {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            }).format(new Date(entry.occurredAt))}
-                          </p>
-                        </div>
-                        <span className="text-muted text-sm">
-                          {entry.actor?.fullName ?? "Unknown actor"}
-                        </span>
-                      </div>
-                      <details className="mt-3">
-                        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                          <History aria-hidden="true" className="size-4 shrink-0 text-brand" strokeWidth={2} />
-                          View changes
-                        </summary>
-                        <div className="mt-2 grid gap-3 text-xs sm:grid-cols-2">
-                          <pre className="bg-neutral-soft overflow-auto rounded p-2 whitespace-pre-wrap">
-                            {JSON.stringify(entry.before, null, 2)}
-                          </pre>
-                          <pre className="bg-neutral-soft overflow-auto rounded p-2 whitespace-pre-wrap">
-                            {JSON.stringify(entry.after, null, 2)}
-                          </pre>
-                        </div>
-                      </details>
-                    </article>
-                  ))
-                ) : (
-                  <div className="border-border bg-neutral-soft/30 rounded-xl border p-5 text-center">
-                    <History aria-hidden="true" className="text-muted mx-auto mb-2 size-7" strokeWidth={1.5} />
-                    <p className="text-sm font-medium text-foreground">No context history</p>
-                    <p className="text-muted mt-0.5 text-xs">
-                      Changes will appear here after a Threat or Vulnerability is edited.
-                    </p>
-                  </div>
-                )}
+                <RiskContextHistoryList entries={risk.contextHistory} risk={risk} />
               </section>
             ) : null}
             {contextTab === "records" ? (

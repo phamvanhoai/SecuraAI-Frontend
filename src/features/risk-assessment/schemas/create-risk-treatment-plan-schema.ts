@@ -4,7 +4,7 @@ import { acceptanceCostSchema, validateAcceptanceCost } from "./acceptance-cost-
 export const createRiskTreatmentPlanSchema = z
   .object({
     riskId: z.string().uuid(),
-    title: z.string().trim().min(3).max(255),
+    title: z.string().trim().min(3).max(100),
     strategy: z.enum(["avoid", "mitigate", "transfer", "accept"]),
     acceptanceCost: acceptanceCostSchema.nullish(),
     ownerUserId: z.string().uuid(),
@@ -14,8 +14,8 @@ export const createRiskTreatmentPlanSchema = z
     actions: z
       .array(
         z.object({
-          title: z.string().trim().min(3).max(255),
-          description: z.string().trim().max(2000).optional(),
+          title: z.string().trim().min(3).max(100),
+          description: z.string().trim().max(2000).refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.").optional(),
           assignedToUserId: z.string().uuid(),
           dueDate: z.iso.date(),
         }),

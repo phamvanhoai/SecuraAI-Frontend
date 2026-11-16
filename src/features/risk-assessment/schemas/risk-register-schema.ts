@@ -19,8 +19,8 @@ export const riskRegisterQuerySchema = z
     reviewFrom: z.iso.date().optional(),
     reviewTo: z.iso.date().optional(),
     sortBy: z
-      .enum(["riskCode", "title", "reviewDate", "updatedAt"])
-      .default("updatedAt"),
+      .enum(["riskCode", "title", "reviewDate", "updatedAt", "createdAt"])
+      .default("createdAt"),
     sortOrder: z.enum(["asc", "desc"]).default("desc"),
   })
   .refine(

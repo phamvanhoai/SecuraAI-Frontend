@@ -66,6 +66,22 @@ describe("CreateAssetDialog", () => {
       },
     });
   });
+  it("preserves pasted overlong names, shows an error and blocks creation", async () => {
+    const user = userEvent.setup();
+    render(<CreateAssetDialog />);
+    await user.click(screen.getByRole("button", { name: "Add asset" }));
+    const name = screen.getByLabelText("Asset name");
+    await user.click(name);
+    await user.paste("A".repeat(101));
+    expect(name).toHaveValue("A".repeat(101));
+    expect(await screen.findByText("Use at most 100 characters.")).toBeVisible();
+    await user.selectOptions(screen.getByLabelText("Asset type"), "SERVER");
+    await user.click(screen.getByRole("button", { name: "Create asset" }));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    await user.clear(name);
+    await user.type(name, "Valid asset name");
+    await waitFor(() => expect(screen.queryByText("Use at most 100 characters.")).not.toBeInTheDocument());
+  });
   it("loads options only while open and validates required fields", async () => {
     const user = userEvent.setup();
     render(<CreateAssetDialog />);
@@ -77,13 +93,14 @@ describe("CreateAssetDialog", () => {
     expect(type.querySelectorAll("option")).toHaveLength(7);
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     expect(
-      await screen.findByText("Asset name is required"),
+      await screen.findByText("Enter at least 3 characters."),
     ).toBeInTheDocument();
     expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
   it("submits identity without classification or business service", async () => {
     const user = userEvent.setup();
-    render(<CreateAssetDialog />);
+    const onCreated = vi.fn();
+    render(<CreateAssetDialog onCreated={onCreated} />);
     await user.click(screen.getByRole("button", { name: "Add asset" }));
     expect(screen.queryByLabelText("Asset code")).not.toBeInTheDocument();
     expect(screen.getByText(/system generates a unique asset code/i)).toBeInTheDocument();
@@ -108,6 +125,7 @@ describe("CreateAssetDialog", () => {
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("criticality");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("dataClassification");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("businessServiceId");
+    expect(onCreated).toHaveBeenCalledOnce();
     expect(successMock).toHaveBeenCalledWith(
       "Asset created",
       "AST-002 – Application Server",

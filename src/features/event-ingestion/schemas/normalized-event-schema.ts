@@ -132,6 +132,9 @@ export const normalizedEventItemSchema = z.object({
       ]),
       score: z.number().min(0).max(1).nullable(),
       alertId: z.uuid().nullable(),
+      errorCode: z.string().nullable(),
+      errorMessage: z.string().nullable(),
+      retryable: z.boolean(),
     })
     .optional(),
   id: z.string().uuid(),
@@ -158,6 +161,15 @@ export const normalizedEventItemSchema = z.object({
 });
 
 export type NormalizedEventItem = z.infer<typeof normalizedEventItemSchema>;
+
+export const retryEventDetectionResultSchema = z.object({
+  eventId: z.string().uuid(),
+  status: z.literal("PENDING"),
+});
+
+export type RetryEventDetectionResult = z.infer<
+  typeof retryEventDetectionResultSchema
+>;
 
 export const anomalyDetectionItemSchema = z.object({
   id: z.string().uuid(),

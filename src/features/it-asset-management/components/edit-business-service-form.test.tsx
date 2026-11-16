@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterEach,
@@ -29,7 +29,7 @@ const id = "00000000-0000-4000-8000-000000000001";
 const service = {
   id,
   name: "Support",
-  description: "Purpose",
+  description: "Business service operational purpose",
   status: "active" as const,
   owner: {
     id,
@@ -58,6 +58,32 @@ beforeAll(() => {
 afterEach(cleanup);
 describe("Edit service metadata form", () => {
   beforeEach(() => vi.clearAllMocks());
+  it.each([
+    ["Service name (required)", 100],
+    ["Description (optional)", 2000],
+  ] as const)("preserves overlong %s and blocks saving until corrected", async (label, maximum) => {
+    const user = userEvent.setup();
+    render(<CreateBusinessServiceDialog editingService={service} onCreated={vi.fn()} />);
+    const field = screen.getByLabelText(label);
+    if (label !== "Service name (required)") {
+      await user.clear(screen.getByLabelText("Service name (required)"));
+      await user.type(screen.getByLabelText("Service name (required)"), "Updated support service");
+    }
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("A".repeat(maximum + 1));
+    expect(field).toHaveValue("A".repeat(maximum + 1));
+    const message = `Use at most ${maximum.toLocaleString("en-US")} characters.`;
+    expect(await screen.findByText(message)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    await user.clear(field);
+    await user.paste("A".repeat(maximum));
+    await waitFor(() => expect(screen.queryByText(message)).not.toBeInTheDocument());
+    mocks.mutate.mockResolvedValue({ id, name: "Saved service" });
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  });
   it("loads metadata and keeps inactive owner without silently unassigning", async () => {
     mocks.mutate.mockResolvedValue(service);
     render(
@@ -78,7 +104,7 @@ describe("Edit service metadata form", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(mocks.mutate).toHaveBeenCalledWith({
       name: "Support",
-      description: "Purpose updated",
+      description: "Business service operational purpose updated",
       ownerUserId: id,
       expectedUpdatedAt: service.updatedAt,
     });
