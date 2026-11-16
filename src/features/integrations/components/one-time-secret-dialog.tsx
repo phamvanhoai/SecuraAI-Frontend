@@ -18,8 +18,17 @@ export function OneTimeSecretDialog({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toast = useToast();
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -33,6 +42,10 @@ export function OneTimeSecretDialog({
   }, [open]);
 
   function handleClose() {
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = null;
+    }
     setCopied(false);
     onClose();
   }
@@ -48,7 +61,13 @@ export function OneTimeSecretDialog({
         "Secret Token Copied",
         "The secret token has been copied to your clipboard.",
       );
-      setTimeout(() => setCopied(false), 3000);
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copyTimerRef.current = null;
+      }, 3000);
     } catch {
       toast.error(
         "Failed to Copy",
@@ -136,13 +155,13 @@ export function OneTimeSecretDialog({
           </div>
         </div>
 
-        <div className="border-border flex justify-end gap-2 border-t pt-4">
+        <div className="border-border flex flex-wrap justify-end gap-2 border-t pt-4">
           <Button
             className="min-h-8 px-4 text-xs font-medium"
             onClick={handleClose}
             type="button"
           >
-            I Have Saved the Secret & Close
+            Done, I Have Saved the Secret
           </Button>
         </div>
       </div>

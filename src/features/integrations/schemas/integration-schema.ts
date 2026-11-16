@@ -441,9 +441,21 @@ export const rotateApiKeyFormSchema = z.object({
   secret: z
     .string()
     .trim()
-    .max(1000, "Secret không được vượt quá 1000 ký tự")
+    .max(1000, "Secret must not exceed 1000 characters")
     .optional()
     .or(z.literal("")),
+  expiresAt: z
+    .string()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const d = new Date(val);
+        return !Number.isNaN(d.getTime()) && d.getTime() > Date.now();
+      },
+      { message: "Expiration date must be a valid future date" },
+    )
+    .nullable()
+    .optional(),
 });
 export type RotateApiKeyInput = z.infer<typeof rotateApiKeyFormSchema>;
 
