@@ -23,17 +23,6 @@ interface ExportReportDialogProps {
 
 export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const toast = useToast();
-
-  const [reportType, setReportType] = useState<ReportType>("RISK");
-  const [format, setFormat] = useState<ReportFormat>("EXCEL");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [severity, setSeverity] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const createMutation = useCreateExportReportMutation();
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -53,6 +42,31 @@ export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps)
       }
     }
   }, [isOpen]);
+
+  return (
+    <Dialog
+      dialogRef={dialogRef}
+      onClose={onClose}
+      title="Export Security & Risk Report"
+      className="max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] overflow-y-auto"
+    >
+      {isOpen ? <ExportReportForm onClose={onClose} /> : null}
+    </Dialog>
+  );
+}
+
+function ExportReportForm({ onClose }: { onClose: () => void }) {
+  const toast = useToast();
+
+  const [reportType, setReportType] = useState<ReportType>("RISK");
+  const [format, setFormat] = useState<ReportFormat>("EXCEL");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [severity, setSeverity] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const createMutation = useCreateExportReportMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,12 +106,6 @@ export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps)
   };
 
   return (
-    <Dialog
-      dialogRef={dialogRef}
-      onClose={onClose}
-      title="Export Security & Risk Report"
-      className="max-h-[calc(100dvh-2rem)] w-[min(36rem,calc(100%-2rem))] overflow-y-auto"
-    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && (
           <Alert className="border-danger/30 bg-danger-soft text-danger text-sm">
@@ -110,7 +118,12 @@ export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps)
           <Select
             id="report-type"
             value={reportType}
-            onChange={(e) => setReportType(e.target.value as ReportType)}
+            onChange={(e) => {
+              setReportType(e.target.value as ReportType);
+              setSeverity("");
+              setStatus("");
+              if (formError) setFormError(null);
+            }}
           >
             <option value="RISK">Security Risk Register (Risk assessments & treatments)</option>
             <option value="INCIDENT">Security Incident Log (Incident records & resolutions)</option>
@@ -208,7 +221,7 @@ export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps)
         <div className="rounded-lg border border-border bg-surface-subtle p-3 text-xs text-muted space-y-1">
           <p className="font-medium text-foreground">Role & SoD Governance (ISO/IEC 27001):</p>
           <p>
-            Only <strong>Security Officers</strong> and authorized <strong>Executives</strong> are permitted to export reports. All export actions are recorded in an immutable audit trail.
+            Only <strong>Security Officers</strong> and <strong>Executives</strong> are permitted to export reports. All export actions are recorded in an immutable audit trail.
           </p>
         </div>
 
@@ -244,6 +257,5 @@ export function ExportReportDialog({ isOpen, onClose }: ExportReportDialogProps)
           </Button>
         </div>
       </form>
-    </Dialog>
   );
 }

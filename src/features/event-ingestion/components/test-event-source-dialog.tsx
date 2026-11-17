@@ -150,12 +150,12 @@ export function TestEventSourceDialog({
   return (
     <Dialog
       aria-label="Test Wazuh Event Source"
-      className="w-[min(42rem,calc(100%-2rem))]"
+      className="max-h-[calc(100dvh-2rem)] w-[min(42rem,calc(100%-2rem))] overflow-y-auto"
       dialogRef={dialogRef}
       onClose={handleClose}
       title="Test Event Source Connection"
     >
-      <div className="border-border border-b p-6">
+      <div className="border-border mb-5 border-b pb-4">
         <div className="flex items-center gap-2.5">
           <div className="bg-brand/10 text-brand flex size-9 items-center justify-center rounded-lg">
             <Activity aria-hidden="true" className="size-5" />
@@ -171,7 +171,7 @@ export function TestEventSourceDialog({
         </div>
       </div>
 
-      <form onSubmit={handleRunTest} className="p-6 space-y-5">
+      <form onSubmit={handleRunTest} className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <FormField
@@ -403,7 +403,7 @@ export function TestEventSourceDialog({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
           <Button
             disabled={testMutation.isPending}
             onClick={handleReset}

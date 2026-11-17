@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -243,16 +243,20 @@ describe("NormalizedEventsList", () => {
     const ipInput = screen.getByPlaceholderText(/192\.168\.1\.100/i);
     await user.type(ipInput, "10.0.0.5");
 
-    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ sourceIp: "10.0.0.5" }),
-    );
+    await waitFor(() => {
+      expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ sourceIp: "10.0.0.5" }),
+      );
+    });
 
     const accountInput = screen.getByPlaceholderText(/admin@company\.com/i);
     await user.type(accountInput, "user@test.com");
 
-    expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ account: "user@test.com" }),
-    );
+    await waitFor(() => {
+      expect(mockUseNormalizedEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ account: "user@test.com" }),
+      );
+    });
 
     const preset24hBtn = screen.getByRole("button", { name: /Last 24 Hours/i });
     await user.click(preset24hBtn);

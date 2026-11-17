@@ -311,6 +311,8 @@ export type ListApiKeysInput = {
   integrationId?: string | undefined;
   isActive?: boolean | undefined;
   search?: string | undefined;
+  page?: number | undefined;
+  limit?: number | undefined;
   signal?: AbortSignal | undefined;
 };
 
@@ -320,6 +322,8 @@ export function listApiKeys(
   const query = new URLSearchParams();
   if (input.isActive !== undefined) query.set("isActive", String(input.isActive));
   if (input.search) query.set("search", input.search);
+  if (input.page !== undefined) query.set("page", String(input.page));
+  if (input.limit !== undefined) query.set("limit", String(input.limit));
 
   const qs = query.toString();
   const targetId = input.integrationId?.trim() || "all";

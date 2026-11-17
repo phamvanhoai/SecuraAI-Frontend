@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Power, Search, Server, Upload, X } from "lucide-react";
+import { Eye, Power, RotateCcw, Search, Server, Upload, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   DataTable,
@@ -60,7 +60,6 @@ export function EventSourcesList({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [togglingSource, setTogglingSource] = useState<EventSourceResponse | null>(null);
-  const [importingSource, setImportingSource] = useState<EventSourceResponse | null>(null);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewingBatchId, setViewingBatchId] = useState<string | null>(null);
 
@@ -246,12 +245,26 @@ export function EventSourcesList({
               strokeWidth={1.8}
             />
             <Input
-              className="bg-background min-h-10 pl-9"
+              className="bg-background min-h-10 pl-9 pr-9"
               maxLength={100}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Search by name or source type"
               value={draft}
             />
+            {draft ? (
+              <button
+                type="button"
+                aria-label="Clear search query"
+                onClick={() => {
+                  setDraft("");
+                  setQuery("");
+                  setPage(1);
+                }}
+                className="text-muted hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2 rounded p-0.5"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+              </button>
+            ) : null}
           </label>
           <Select
             aria-label="Filter by status"
@@ -279,10 +292,7 @@ export function EventSourcesList({
           ) : null}
           <Button
             className="min-h-10 gap-1.5 sm:ml-auto"
-            onClick={() => {
-              setImportingSource(null);
-              setIsImportOpen(true);
-            }}
+            onClick={() => setIsImportOpen(true)}
             type="button"
             variant="secondary"
           >
@@ -308,8 +318,21 @@ export function EventSourcesList({
             />
           ) : eventSourcesQuery.isError ? (
             <Alert>
-              Unable to load event sources. Please check your backend connection
-              and session.
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  Unable to load event sources. Please check your backend connection
+                  and session.
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => void eventSourcesQuery.refetch?.()}
+                  className="min-h-8 gap-1.5 px-2.5 text-xs"
+                >
+                  <RotateCcw aria-hidden="true" className="size-3.5" />
+                  <span>Retry</span>
+                </Button>
+              </div>
             </Alert>
           ) : eventSourcesQuery.data?.items.length === 0 ? (
             <div className="py-12 text-center">
@@ -322,7 +345,17 @@ export function EventSourcesList({
                   ? "No configured event sources match the current filter criteria."
                   : "No normalized event sources have been registered yet."}
               </p>
-              {onRegisterClick && !isFiltered ? (
+              {isFiltered ? (
+                <Button
+                  className="mt-4 min-h-9 gap-2 text-xs"
+                  onClick={handleClearFilters}
+                  type="button"
+                  variant="secondary"
+                >
+                  <RotateCcw aria-hidden="true" className="size-3.5" />
+                  <span>Clear filters</span>
+                </Button>
+              ) : onRegisterClick ? (
                 <Button
                   className="mt-4 min-h-9 gap-2 text-xs"
                   onClick={onRegisterClick}
@@ -363,11 +396,7 @@ export function EventSourcesList({
 
       <ImportEventsDialog
         isOpen={isImportOpen}
-        onClose={() => {
-          setIsImportOpen(false);
-          setImportingSource(null);
-        }}
-        presetSource={importingSource}
+        onClose={() => setIsImportOpen(false)}
         onViewBatchReport={(batchId) => setViewingBatchId(batchId)}
       />
 

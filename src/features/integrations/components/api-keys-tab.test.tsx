@@ -197,7 +197,7 @@ describe("ApiKeysTab", () => {
       expect(screen.getByText("Production Ingestion Key")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Search by key name, scope, or creator...");
+    const searchInput = screen.getByPlaceholderText("Search by key name, prefix, scope, or creator...");
     fireEvent.change(searchInput, { target: { value: "Staging" } });
     const searchBtn = screen.getByRole("button", { name: /^Search$/i });
     fireEvent.click(searchBtn);
@@ -434,6 +434,51 @@ describe("ApiKeysTab", () => {
         "title",
         "Revoked API keys cannot be reactivated for security reasons",
       );
+      expect(
+        screen.getByRole("button", {
+          name: `Rotate API key ${revokedKey.keyName}`,
+        }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", {
+          name: `Edit API key ${revokedKey.keyName}`,
+        }),
+      ).toBeDisabled();
     });
+  });
+
+  it("paginates API keys at 10 items per page and navigates between pages", async () => {
+    const twelveKeys = Array.from({ length: 12 }, (_, idx) => ({
+      ...mockApiKeys[0],
+      id: `10000000-0000-4000-8000-${String(idx + 1).padStart(12, "0")}`,
+      keyName: `Paginated Key ${idx + 1}`,
+      keyPrefix: `sec_live_key${String(idx + 1).padStart(2, "0")}`,
+      keyFingerprint: `sec_live_key${String(idx + 1).padStart(2, "0")}...****`,
+    }));
+
+    fetchMock.mockImplementation(() => {
+      return Promise.resolve(
+        new Response(JSON.stringify({ success: true, data: twelveKeys }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText("Paginated Key 1")).toBeInTheDocument();
+      expect(screen.getByText("Paginated Key 10")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Paginated Key 11")).not.toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(screen.getByText("Paginated Key 11")).toBeInTheDocument();
+    expect(screen.getByText("Paginated Key 12")).toBeInTheDocument();
+    expect(screen.queryByText("Paginated Key 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
   });
 });

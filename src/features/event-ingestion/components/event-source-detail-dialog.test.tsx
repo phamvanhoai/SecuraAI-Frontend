@@ -196,7 +196,13 @@ describe("EventSourceDetailDialog", () => {
 
     expect(screen.getByText("Update Event Source Configuration")).toBeInTheDocument();
     expect(screen.getByLabelText(/Event source name/i)).toHaveValue("Wazuh Production SIEM");
-    expect(screen.getByRole("button", { name: /Save configuration/i })).toBeInTheDocument();
+    const saveButton = screen.getByRole("button", { name: /Save configuration/i });
+    expect(saveButton).toBeEnabled();
+
+    fireEvent.change(screen.getByLabelText(/Wazuh Manager Endpoint URL/i), {
+      target: { value: "https://wazuh-new.internal:55000" },
+    });
+    expect(saveButton).toBeDisabled();
   });
 
   it("opens ToggleEventSourceStatusDialog when clicking Pause button in header", async () => {

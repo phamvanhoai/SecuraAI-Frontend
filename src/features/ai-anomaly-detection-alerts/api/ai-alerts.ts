@@ -1,4 +1,5 @@
 import { apiRequest } from "@/lib/api/api-client";
+import { z } from "zod";
 import {
   aiAlertFeedbackSchema,
   aiAlertFeedbackListSchema,
@@ -44,6 +45,26 @@ export type AiAlertQuery = {
   detectedAfter?: string;
   sortOrder?: "asc" | "desc";
 };
+
+const aiAlertRealtimeTicketSchema = z.object({
+  ticket: z.string().min(1),
+  expiresInSeconds: z.number().int().positive(),
+  path: z.string().startsWith("/"),
+});
+
+export type AiAlertRealtimeTicket = z.infer<typeof aiAlertRealtimeTicketSchema>;
+
+export async function issueAiAlertRealtimeTicket(
+  signal?: AbortSignal,
+): Promise<AiAlertRealtimeTicket> {
+  return aiAlertRealtimeTicketSchema.parse(
+    await apiRequest<unknown>("/api/ai-alerts/realtime-ticket", {
+      method: "POST",
+      target: "same-origin",
+      ...(signal ? { signal } : {}),
+    }),
+  );
+}
 
 export async function runAnomalyDetection(
   input: AnomalyDetectionRunInput,

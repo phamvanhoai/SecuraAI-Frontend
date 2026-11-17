@@ -2,6 +2,14 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUsePolicyDetail = vi.fn();
+const mockSessionUser = vi.fn(() => ({
+  data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+  isPending: false,
+}));
+
+vi.mock("@/features/authentication-account", () => ({
+  useSessionUser: () => mockSessionUser(),
+}));
 
 vi.mock("../hooks/use-event-governance", () => ({
   useEventGovernancePolicyDetail: (id: string | null) => mockUsePolicyDetail(id),
@@ -132,5 +140,48 @@ describe("EventGovernancePolicyDetailDialog", () => {
     const closeButton = screen.getByRole("button", { name: /Close/i });
     fireEvent.click(closeButton);
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it("shows Edit button for ADMIN when onEditClick is provided and hides it for SECURITY_OFFICER", () => {
+    const onEditClick = vi.fn();
+    mockUsePolicyDetail.mockReturnValue({
+      data: samplePolicy,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "ADMIN", name: "Administrator" }] },
+      isPending: false,
+    });
+
+    const { rerender } = render(
+      <EventGovernancePolicyDetailDialog
+        policyId={samplePolicy.id}
+        isOpen={true}
+        onClose={vi.fn()}
+        onEditClick={onEditClick}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Edit/i }));
+    expect(onEditClick).toHaveBeenCalledWith(samplePolicy);
+
+    mockSessionUser.mockReturnValue({
+      data: { roles: [{ code: "SECURITY_OFFICER", name: "Security Officer" }] },
+      isPending: false,
+    });
+
+    rerender(
+      <EventGovernancePolicyDetailDialog
+        policyId={samplePolicy.id}
+        isOpen={true}
+        onClose={vi.fn()}
+        onEditClick={onEditClick}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Edit/i })).not.toBeInTheDocument();
   });
 });

@@ -38,7 +38,7 @@ export function DataTable<Row>({
                 className="text-muted px-4 py-8 text-center"
                 colSpan={columns.length}
               >
-                Không có dữ liệu
+                No records found
               </td>
             </tr>
           ) : (

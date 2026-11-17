@@ -366,6 +366,33 @@ export function ExportReportsView() {
     );
   }
 
+  if (session.isError) {
+    return (
+      <div className="space-y-6">
+        <ProductPageHeader
+          title="Security & Risk Reports"
+          description="Compile and export security risk registers, incident logs, and organization security posture reports for executive leadership and compliance auditors in accordance with ISO/IEC 27001."
+        />
+        <Alert className="border-danger/30 bg-danger-soft text-danger">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              {session.error instanceof Error
+                ? `Failed to verify session permissions: ${session.error.message}`
+                : "Failed to verify session permissions. Please retry."}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void session.refetch()}
+            >
+              Retry
+            </Button>
+          </div>
+        </Alert>
+      </div>
+    );
+  }
+
   if (!canAccess) {
     return (
       <div className="space-y-6">
@@ -400,29 +427,30 @@ export function ExportReportsView() {
       />
 
       <MetricStrip
+        ariaLabel="Report export metrics"
         metrics={[
           {
             label: "Total Exports",
             value: String(totalReports),
-            detail: "Recorded in system",
+            detail: reportTypeFilter || statusFilter ? "Matching active filters" : "Recorded in system",
             tone: "brand",
           },
           {
             label: "Risk Registers",
             value: String(riskReportsCount),
-            detail: "Assessments & treatments",
+            detail: "On current page",
             tone: "neutral",
           },
           {
             label: "Incident Logs",
             value: String(incidentReportsCount),
-            detail: "Security incidents",
+            detail: "On current page",
             tone: "brand",
           },
           {
             label: "Security Posture",
             value: String(postureReportsCount),
-            detail: "Posture & compliance KPIs",
+            detail: "On current page",
             tone: "brand",
           },
         ]}
@@ -433,8 +461,9 @@ export function ExportReportsView() {
           {/* Filters Toolbar - Cleaned and optimized without redundant button */}
           <div className="border-b border-border p-4 bg-surface-subtle/50 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="w-56">
+              <div className="w-64">
                 <Select
+                  aria-label="Filter by report type"
                   value={reportTypeFilter}
                   onChange={(e) => {
                     setReportTypeFilter(e.target.value);
@@ -445,12 +474,13 @@ export function ExportReportsView() {
                   <option value="">All Security Reports</option>
                   <option value="RISK">Risk Register (RISK)</option>
                   <option value="INCIDENT">Incident Log (INCIDENT)</option>
-                  <option value="SECURITY_POSTURE">Security Posture (POSTURE)</option>
+                  <option value="SECURITY_POSTURE">Security Posture (SECURITY_POSTURE)</option>
                 </Select>
               </div>
 
               <div className="w-44">
                 <Select
+                  aria-label="Filter by export status"
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value);
@@ -459,8 +489,9 @@ export function ExportReportsView() {
                   className="min-h-9 text-xs"
                 >
                   <option value="">All Statuses</option>
-                  <option value="COMPLETED">Completed</option>
+                  <option value="REQUESTED">Requested</option>
                   <option value="GENERATING">Generating</option>
+                  <option value="COMPLETED">Completed</option>
                   <option value="FAILED">Failed</option>
                 </Select>
               </div>
@@ -510,21 +541,47 @@ export function ExportReportsView() {
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted">
               <FileSpreadsheet className="size-10 text-muted/60" />
-              <p className="mt-3 font-semibold text-foreground">
-                No report exports found
-              </p>
-              <p className="mt-1 text-xs max-w-sm">
-                Click &ldquo;Generate Report&rdquo; above to compile risk assessments, incident logs, or security posture indicators.
-              </p>
-              <Button
-                type="button"
-                variant="primary"
-                onClick={() => setIsDialogOpen(true)}
-                className="mt-4 gap-1.5 text-xs"
-              >
-                <Plus className="size-3.5" />
-                <span>Generate First Report</span>
-              </Button>
+              {reportTypeFilter || statusFilter ? (
+                <>
+                  <p className="mt-3 font-semibold text-foreground">
+                    No report exports match your filters
+                  </p>
+                  <p className="mt-1 text-xs max-w-sm">
+                    Adjust or clear the active report type and status filters to view matching exports.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setReportTypeFilter("");
+                      setStatusFilter("");
+                      setPage(1);
+                    }}
+                    className="mt-4 gap-1.5 text-xs"
+                  >
+                    <X className="size-3.5" />
+                    <span>Clear filters</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 font-semibold text-foreground">
+                    No report exports found
+                  </p>
+                  <p className="mt-1 text-xs max-w-sm">
+                    Click &ldquo;Generate Report&rdquo; above to compile risk assessments, incident logs, or security posture indicators.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => setIsDialogOpen(true)}
+                    className="mt-4 gap-1.5 text-xs"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Generate First Report</span>
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <div>
