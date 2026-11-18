@@ -241,17 +241,19 @@ function NotificationInbox() {
                         {new Date(item.createdAt).toLocaleString("en-GB")}
                       </p>
                     </div>
-                    <Button variant="secondary" type="button" className="min-h-9 shrink-0 px-2 text-xs" onClick={() => setSelectedId(item.id)}>View details</Button>
-                    {item.readAt ? null : (
-                      <Button
-                        variant="secondary"
-                        type="button"
-                        className="min-h-9 shrink-0 px-2 text-xs"
-                        onClick={() => read.mutate(item.id)}
-                      >
-                        Mark read
-                      </Button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button variant="secondary" type="button" className="min-h-9 shrink-0 px-2 text-xs" onClick={() => setSelectedId(item.id)}>View details</Button>
+                      {item.readAt ? null : (
+                        <Button
+                          variant="secondary"
+                          type="button"
+                          className="min-h-9 shrink-0 px-2 text-xs"
+                          onClick={() => read.mutate(item.id)}
+                        >
+                          Mark read
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-foreground/85 mt-3 max-w-3xl text-sm leading-6">
                     {item.message}
