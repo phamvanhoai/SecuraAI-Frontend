@@ -31,7 +31,7 @@ const actionPauseMs = numberFromEnv("SECURAAI_DEMO_ACTION_PAUSE_MS", 1_800);
 const sectionPauseMs = numberFromEnv("SECURAAI_DEMO_SECTION_PAUSE_MS", 4_500);
 const terminalHoldSeconds = numberFromEnv(
   "SECURAAI_DEMO_TERMINAL_HOLD_SECONDS",
-  15,
+  20,
 );
 const alertTimeoutMs = numberFromEnv("SECURAAI_DEMO_ALERT_TIMEOUT_MS", 90_000);
 const requiredAlertFamilies = numberFromEnv(
@@ -3316,11 +3316,11 @@ async function closeVisibleDialog(targetPage) {
 }
 
 async function launchVisibleWazuhScenarios() {
-  const launcher = path.join(
+  const visibleLauncher = path.join(
     frontendRoot,
     "scripts",
     "demo",
-    "run-wazuh-demo-scenarios.ps1",
+    "launch-visible-wazuh-demo.ps1",
   );
   await runProcess("powershell.exe", [
     "-NoLogo",
@@ -3328,7 +3328,7 @@ async function launchVisibleWazuhScenarios() {
     "-ExecutionPolicy",
     "Bypass",
     "-File",
-    launcher,
+    visibleLauncher,
     "-BackendRoot",
     backendRoot,
     "-ScenarioList",
