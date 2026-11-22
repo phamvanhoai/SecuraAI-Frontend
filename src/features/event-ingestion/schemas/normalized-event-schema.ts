@@ -30,7 +30,7 @@ export const mappedAssetSchema = z.object({
   name: z.string(),
   assetCode: z.string(),
   assetType: z.string(),
-  criticality: z.string(),
+  criticality: z.string().nullable(),
 });
 
 export type MappedAsset = z.infer<typeof mappedAssetSchema>;

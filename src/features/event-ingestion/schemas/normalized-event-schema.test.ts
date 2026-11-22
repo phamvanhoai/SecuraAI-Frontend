@@ -64,6 +64,22 @@ describe("normalized-event-schema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts a mapped asset that has not been assigned criticality", () => {
+    const itemWithUnclassifiedAsset = {
+      ...sampleItem,
+      mappedAsset: {
+        ...sampleItem.mappedAsset,
+        criticality: null,
+      },
+    };
+
+    const result = normalizedEventItemSchema.safeParse(
+      itemWithUnclassifiedAsset,
+    );
+
+    expect(result.success).toBe(true);
+  });
+
   it("validates normalized event detail with payload and anomaly detections", () => {
     const detail = {
       ...sampleItem,

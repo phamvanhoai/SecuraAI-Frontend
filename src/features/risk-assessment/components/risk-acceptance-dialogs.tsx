@@ -273,12 +273,14 @@ export function SubmitRiskAcceptanceDialog({
 export function DecideRiskAcceptanceDialog({
   acceptanceId,
   onClose,
+  onDecisionRecorded,
   expired = false,
   approvalBlockedReason = null,
   acceptanceCost,
 }: {
   acceptanceId: string;
   onClose: () => void;
+  onDecisionRecorded?: (() => void) | undefined;
   expired?: boolean;
   approvalBlockedReason?: string | null;
   acceptanceCost?: AcceptanceCost | null | undefined;
@@ -307,6 +309,7 @@ export function DecideRiskAcceptanceDialog({
           ? "The risk is now accepted."
           : "The request was returned to the Risk Owner.",
       );
+      onDecisionRecorded?.();
       onClose();
     } catch (e) {
       if (e instanceof ApiError && [403, 409].includes(e.status)) {
