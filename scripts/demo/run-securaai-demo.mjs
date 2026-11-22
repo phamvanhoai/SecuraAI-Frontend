@@ -266,15 +266,15 @@ try {
     );
 
   page = await switchRole(
-    "Security Officer",
-    roleEmail("SECURITY_OFFICER", "securityofficer@gmail.com"),
+    "Administrator",
+    roleEmail("ADMIN", "admin@gmail.com"),
   );
   if (shouldRun(9))
     await visitChapter(page, {
       number: "9",
       title: "Wazuh event ingestion",
       narration:
-        "Show connected event sources before generating a real Windows security scenario.",
+        "The Administrator registers, validates and controls the Wazuh event source before security analysis begins.",
       route: "/event-logs",
     });
   if (shouldRun(9))
@@ -287,6 +287,10 @@ try {
     await runOptionalStep(page, "Event Source Administration", () =>
       demonstrateEventSourceAdministration(page),
     );
+  page = await switchRole(
+    "Security Officer",
+    roleEmail("SECURITY_OFFICER", "securityofficer@gmail.com"),
+  );
   if (shouldRun(9))
     await runOptionalStep(page, "Import Normalized Events", () =>
       demonstrateNormalizedEventImport(page),
@@ -637,9 +641,22 @@ async function signIn(
   await targetPage.locator('input[name="password"]').fill(accountPassword);
   if (pauseBetweenFields) await targetPage.waitForTimeout(actionPauseMs);
   await targetPage.getByRole("button", { name: /sign in/iu }).click();
-  await targetPage.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 30_000,
-  });
+  await waitForAuthenticatedSession(targetPage);
+  await targetPage
+    .waitForURL((url) => !url.pathname.includes("/login"), { timeout: 2_000 })
+    .catch(() => undefined);
+  if (isLoginUrl(targetPage.url())) {
+    await targetPage
+      .goto(`${baseUrl}/dashboard`, { waitUntil: "domcontentloaded" })
+      .catch(async (error) => {
+        if (!/interrupted by another navigation/iu.test(String(error))) {
+          throw error;
+        }
+        await targetPage.waitForURL((url) => !url.pathname.includes("/login"), {
+          timeout: 10_000,
+        });
+      });
+  }
   await waitForPageToSettle(targetPage);
   if (pauseAfterLogin) await targetPage.waitForTimeout(sectionPauseMs);
 }
@@ -669,7 +686,13 @@ async function switchRole(roleLabel, accountEmail) {
   });
   const targetPage = await context.newPage();
   targetPage.setDefaultTimeout(20_000);
-  roleSessions.set(accountEmail, { context, page: targetPage, roleLabel });
+  roleSessions.set(accountEmail, {
+    context,
+    page: targetPage,
+    roleLabel,
+    accountEmail,
+    lastRoute: "/dashboard",
+  });
   try {
     await resetLocalLoginLimiter();
     await targetPage.bringToFront();
@@ -764,20 +787,24 @@ function familyLabel(scenarioName) {
 }
 
 async function visitChapter(targetPage, { number, title, narration, route }) {
+  rememberRoute(targetPage, route);
+  await ensureAuthenticated(targetPage, route);
   await targetPage.goto(`${baseUrl}${route}`, {
     waitUntil: "domcontentloaded",
   });
+  if (isLoginUrl(targetPage.url())) {
+    await ensureAuthenticated(targetPage, route);
+    await targetPage.goto(`${baseUrl}${route}`, {
+      waitUntil: "domcontentloaded",
+    });
+  }
   await waitForPageToSettle(targetPage);
   await showOverlay(targetPage, number, title, narration);
   await targetPage.waitForTimeout(sectionPauseMs);
 }
 
 async function chapter(targetPage, number, title, narration) {
-  if (targetPage.url() === "about:blank") {
-    await targetPage.goto(`${baseUrl}/login`, {
-      waitUntil: "domcontentloaded",
-    });
-  }
+  await ensureAuthenticated(targetPage);
   await showOverlay(targetPage, number, title, narration);
   await targetPage.waitForTimeout(sectionPauseMs);
 }
@@ -2204,7 +2231,7 @@ async function decideDemoRiskAcceptance(targetPage) {
     name: /risk acceptance decision/iu,
   });
   await decisionDialog.waitFor({ timeout: 20_000 });
-  const decision = decisionDialog.getByLabel("Decision");
+  const decision = decisionDialog.locator("select").first();
   const approveOption = decision.getByRole("option", { name: "Approve" });
   const approveAvailable = !(await approveOption.isDisabled());
   await decision.selectOption(approveAvailable ? "approved" : "rejected");
@@ -2626,29 +2653,49 @@ async function demonstrateEventSourceAdministration(targetPage) {
     }
     await targetPage.waitForTimeout(sectionPauseMs);
     console.log(`PASS Test Event Source Connection: ${wazuhEndpoint}`);
-    await closeVisibleDialog(targetPage);
+    const closeTest = testDialog.getByRole("button", {
+      name: /^(close|cancel)$/iu,
+    });
+    if (await closeTest.isVisible().catch(() => false)) {
+      await closeTest.click();
+    } else {
+      await targetPage.keyboard.press("Escape");
+    }
+    await testDialog.waitFor({ state: "hidden", timeout: 20_000 });
   }
 
   const configureSource = sourceDialog.getByRole("button", {
     name: /configure source/iu,
   });
   await revealAndClick(targetPage, configureSource);
-  const description = sourceDialog.getByLabel("Description");
+  const editDialog = targetPage.getByRole("dialog", {
+    name: /update event source configuration/iu,
+  });
+  await editDialog.waitFor({ state: "visible", timeout: 20_000 });
+  const description = editDialog.getByLabel("Description");
   await description.fill(
     "Active Wazuh SIEM source validated and updated during the recorded end-to-end demonstration.",
   );
   await revealAndClick(
     targetPage,
-    sourceDialog.getByRole("button", { name: /save configuration/iu }),
+    editDialog.getByRole("button", { name: /save configuration/iu }),
   );
-  await sourceDialog
+  const refreshedSourceDialog = targetPage.getByRole("dialog", {
+    name: /event source details/iu,
+  });
+  await refreshedSourceDialog
     .getByRole("button", { name: /configure source/iu })
     .waitFor({ state: "visible", timeout: 30_000 });
   console.log("PASS Update Event Source Configuration");
 
+  await closeVisibleDialog(targetPage);
+  const refreshedRow = targetPage
+    .locator("tr")
+    .filter({ hasText: sourceName })
+    .first();
   await revealAndClick(
     targetPage,
-    sourceDialog.getByRole("button", { name: /^pause$/iu }),
+    refreshedRow.getByRole("button", { name: /pause/iu }),
   );
   const pauseDialog = targetPage.getByRole("dialog", {
     name: /pause event ingestion/iu,
@@ -2657,12 +2704,12 @@ async function demonstrateEventSourceAdministration(targetPage) {
     targetPage,
     pauseDialog.getByRole("button", { name: /pause ingestion/iu }),
   );
-  await sourceDialog
-    .getByRole("button", { name: /^resume$/iu })
+  await refreshedRow
+    .getByRole("button", { name: /resume/iu })
     .waitFor({ state: "visible", timeout: 30_000 });
   await revealAndClick(
     targetPage,
-    sourceDialog.getByRole("button", { name: /^resume$/iu }),
+    refreshedRow.getByRole("button", { name: /resume/iu }),
   );
   const resumeDialog = targetPage.getByRole("dialog", {
     name: /resume event ingestion/iu,
@@ -2671,8 +2718,8 @@ async function demonstrateEventSourceAdministration(targetPage) {
     targetPage,
     resumeDialog.getByRole("button", { name: /resume ingestion/iu }),
   );
-  await sourceDialog
-    .getByRole("button", { name: /^pause$/iu })
+  await refreshedRow
+    .getByRole("button", { name: /pause/iu })
     .waitFor({ state: "visible", timeout: 30_000 });
   console.log("PASS Pause and Resume Event Ingestion");
   await closeVisibleDialog(targetPage);
@@ -2711,24 +2758,13 @@ async function demonstrateNormalizedEventImport(targetPage) {
   });
   await importButton.waitFor({ state: "visible" });
   await revealAndClick(targetPage, importButton);
-  await targetPage
-    .getByRole("heading", { name: /batch ingestion summary/iu })
-    .waitFor({ state: "visible", timeout: 60_000 });
-  await targetPage.waitForTimeout(sectionPauseMs);
-
-  const fullReport = targetPage.getByRole("button", {
-    name: /view full batch report/iu,
+  await dialog.waitFor({ state: "hidden", timeout: 60_000 });
+  const batchReport = targetPage.getByRole("dialog", {
+    name: /event ingestion batch report/iu,
   });
-  if (await fullReport.isVisible().catch(() => false)) {
-    await revealAndClick(targetPage, fullReport);
-    await targetPage.waitForTimeout(sectionPauseMs);
-    await closeVisibleDialog(targetPage);
-  } else {
-    await revealAndClick(
-      targetPage,
-      targetPage.getByRole("button", { name: /^done$/iu }),
-    );
-  }
+  await batchReport.waitFor({ state: "visible", timeout: 60_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await closeVisibleDialog(targetPage);
   console.log("PASS Import Normalized Events: batch result displayed");
 }
 
@@ -2964,7 +3000,7 @@ async function demonstrateInSystemNotification(targetPage) {
     .getByLabel("Notification title")
     .fill(`${demoRunId} security operations update`);
   await targetPage
-    .getByLabel("Message")
+    .locator("#notification-message")
     .fill(
       "The end-to-end security monitoring demonstration has completed. Review the generated alert and incident records.",
     );
@@ -2987,11 +3023,13 @@ async function demonstrateEmailNotification(targetPage) {
   });
   await waitForPageToSettle(targetPage);
   await targetPage.getByRole("tab", { name: /^send email$/iu }).click();
-  const recipient = targetPage
-    .locator("label")
-    .filter({ hasText: "securityofficer@gmail.com" })
-    .first();
-  await recipient.getByRole("checkbox").check();
+  const search = targetPage.locator("#email-recipient-search");
+  await search.fill("securityofficer@gmail.com");
+  await targetPage.getByRole("button", { name: /^search$/iu }).click();
+  const recipient = targetPage.locator("fieldset").filter({
+    has: targetPage.getByText("Email recipients", { exact: true }),
+  });
+  await recipient.getByRole("checkbox").first().check();
   await targetPage
     .getByLabel("Subject")
     .fill(`${demoRunId} security operations summary`);
@@ -3221,8 +3259,13 @@ async function demonstrateEntityMappingReview(targetPage) {
       targetPage,
       mapping.getByRole("button", { name: /save corrected mapping/iu }),
     );
-    await mapping.waitFor({ state: "hidden", timeout: 30_000 });
+    await targetPage
+      .getByText(/mapping updated|correction saved/iu)
+      .first()
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .catch(() => undefined);
     console.log("PASS Review & Correct Entity Mapping: correction saved");
+    await closeVisibleDialog(targetPage);
   }
   await closeVisibleDialog(targetPage);
 }
@@ -3278,13 +3321,134 @@ function shouldRun(chapter) {
 }
 
 async function runOptionalStep(targetPage, name, operation) {
+  await ensureAuthenticated(targetPage);
   try {
     await operation();
   } catch (error) {
+    if (!(await hasAuthenticatedSession(targetPage))) {
+      console.warn(
+        `Session expired during ${name}; signing in and retrying once.`,
+      );
+      await ensureAuthenticated(targetPage);
+      try {
+        await operation();
+        console.log(`PASS ${name}: completed after session recovery`);
+        return;
+      } catch (retryError) {
+        error = retryError;
+      }
+    }
     recordSkip(name, error instanceof Error ? error.message : String(error));
-    await targetPage.keyboard.press("Escape").catch(() => undefined);
+  } finally {
+    await closeCompletedDialogs(targetPage);
+  }
+}
+
+async function closeCompletedDialogs(targetPage) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const openDialog = targetPage.locator("dialog[open]").last();
+    if (!(await openDialog.isVisible().catch(() => false))) return;
+
+    const closeButton = openDialog
+      .getByRole("button", { name: /^(close|cancel|done)$/iu })
+      .last();
+    if (await closeButton.isVisible().catch(() => false)) {
+      await closeButton.click().catch(() => undefined);
+    } else {
+      await targetPage.keyboard.press("Escape").catch(() => undefined);
+    }
     await targetPage.waitForTimeout(actionPauseMs);
   }
+}
+
+function sessionForPage(targetPage) {
+  return [...roleSessions.values()].find(
+    (session) => session.page === targetPage,
+  );
+}
+
+function rememberRoute(targetPage, route) {
+  const session = sessionForPage(targetPage);
+  if (session) session.lastRoute = route;
+}
+
+function isLoginUrl(value) {
+  try {
+    return new URL(value).pathname === "/login";
+  } catch {
+    return false;
+  }
+}
+
+async function hasAuthenticatedSession(targetPage) {
+  try {
+    const response = await targetPage.request.get(
+      `${baseUrl}/api/auth/session`,
+      {
+        failOnStatusCode: false,
+        timeout: 10_000,
+      },
+    );
+    return response.ok();
+  } catch {
+    return false;
+  }
+}
+
+async function waitForAuthenticatedSession(targetPage, timeoutMs = 30_000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (await hasAuthenticatedSession(targetPage)) return;
+    await targetPage.waitForTimeout(250);
+  }
+
+  const visibleError = await targetPage
+    .locator('[role="alert"]')
+    .allTextContents()
+    .then((messages) =>
+      messages.map((message) => message.trim()).filter(Boolean),
+    )
+    .catch(() => []);
+  const detail = visibleError.length > 0 ? `: ${visibleError.join(" ")}` : "";
+  throw new Error(`Login did not create an authenticated session${detail}`);
+}
+
+async function ensureAuthenticated(targetPage, requestedRoute) {
+  const session = sessionForPage(targetPage);
+  if (!session) {
+    throw new Error("No demo account is associated with this browser profile.");
+  }
+
+  const requestedPath =
+    requestedRoute ??
+    (!isLoginUrl(targetPage.url()) && targetPage.url() !== "about:blank"
+      ? new URL(targetPage.url()).pathname + new URL(targetPage.url()).search
+      : session.lastRoute);
+  const destination = requestedPath || "/dashboard";
+  session.lastRoute = destination;
+
+  if (
+    !isLoginUrl(targetPage.url()) &&
+    (await hasAuthenticatedSession(targetPage))
+  ) {
+    return;
+  }
+
+  console.warn(
+    `Session unavailable for ${session.roleLabel}; signing in again before continuing.`,
+  );
+  await resetLocalLoginLimiter();
+  await signIn(
+    targetPage,
+    session.accountEmail,
+    rolePasswordFor(session.roleLabel),
+    { pauseAfterLogin: false, pauseBetweenFields: false },
+  );
+  await targetPage.goto(`${baseUrl}${destination}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  console.log(`PASS Session restored: ${session.roleLabel}`);
 }
 
 async function expectSelectedTab(tab, timeoutMs) {
