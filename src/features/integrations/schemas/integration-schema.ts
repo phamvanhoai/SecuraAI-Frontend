@@ -61,7 +61,9 @@ export const createIntegrationFormSchema = z.object({
     .transform((val) => (val && val.length > 0 ? val : null)),
   configuration: z.record(z.string(), z.unknown()).optional().nullable(),
 });
-export type CreateIntegrationInput = z.infer<typeof createIntegrationFormSchema>;
+export type CreateIntegrationInput = z.infer<
+  typeof createIntegrationFormSchema
+>;
 
 export const updateIntegrationFormSchema = z.object({
   name: z
@@ -81,7 +83,9 @@ export const updateIntegrationFormSchema = z.object({
   status: integrationStatusEnum.optional(),
   configuration: z.record(z.string(), z.unknown()).optional().nullable(),
 });
-export type UpdateIntegrationInput = z.infer<typeof updateIntegrationFormSchema>;
+export type UpdateIntegrationInput = z.infer<
+  typeof updateIntegrationFormSchema
+>;
 
 export const testConnectionResultSchema = z
   .object({
@@ -99,42 +103,6 @@ export const testConnectionResultSchema = z
     checkedAt: data.checkedAt || new Date().toISOString(),
   }));
 export type TestConnectionResult = z.infer<typeof testConnectionResultSchema>;
-
-export const syncScheduleSchema = z.object({
-  id: z.string().uuid(),
-  integrationId: z.string().uuid(),
-  scheduleExpression: z.string(),
-  isActive: z.boolean(),
-  lastRunAt: z.string().nullable(),
-  nextRunAt: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type SyncSchedule = z.infer<typeof syncScheduleSchema>;
-
-export const syncScheduleListSchema = z.array(syncScheduleSchema);
-export type SyncScheduleList = z.infer<typeof syncScheduleListSchema>;
-
-export const createSyncScheduleFormSchema = z.object({
-  scheduleExpression: z
-    .string()
-    .trim()
-    .min(1, "Cron expression is required")
-    .max(100, "Cron expression is too long"),
-  isActive: z.boolean().default(true),
-});
-export type CreateSyncScheduleInput = z.infer<typeof createSyncScheduleFormSchema>;
-
-export const updateSyncScheduleFormSchema = z.object({
-  scheduleExpression: z
-    .string()
-    .trim()
-    .min(1, "Cron expression is required")
-    .max(100, "Cron expression is too long")
-    .optional(),
-  isActive: z.boolean().optional(),
-});
-export type UpdateSyncScheduleInput = z.infer<typeof updateSyncScheduleFormSchema>;
 
 export const syncJobSchema = z.object({
   id: z.string().uuid(),
@@ -194,7 +162,13 @@ export const integrationLogListSchema = z.object({
 });
 export type IntegrationLogList = z.infer<typeof integrationLogListSchema>;
 
-export const apiKeyStatusEnum = z.enum(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED", "ROTATED"]);
+export const apiKeyStatusEnum = z.enum([
+  "ACTIVE",
+  "INACTIVE",
+  "EXPIRED",
+  "REVOKED",
+  "ROTATED",
+]);
 export type ApiKeyStatus = z.infer<typeof apiKeyStatusEnum>;
 
 export function deriveApiKeyStatus(
@@ -202,7 +176,10 @@ export function deriveApiKeyStatus(
   expiresAt: string | Date | null | undefined,
 ): ApiKeyStatus {
   if (expiresAt) {
-    const expTime = typeof expiresAt === "string" ? new Date(expiresAt).getTime() : expiresAt.getTime();
+    const expTime =
+      typeof expiresAt === "string"
+        ? new Date(expiresAt).getTime()
+        : expiresAt.getTime();
     if (!isNaN(expTime) && expTime <= Date.now()) {
       return "EXPIRED";
     }
@@ -256,8 +233,10 @@ export const integrationApiKeySchema = baseIntegrationApiKeySchema.transform(
     ...item,
     name: item.name || item.keyName || "API Key",
     keyName: item.keyName || item.name || "API Key",
-    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
-    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+    maskedKey:
+      item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint:
+      item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
   }),
 );
 export type IntegrationApiKey = z.infer<typeof integrationApiKeySchema>;
@@ -289,11 +268,13 @@ export const apiKeyScopeDetails: Record<
 > = {
   "events:ingest": {
     label: "Ingest Log Events",
-    description: "Submit raw security events and logs to the ingestion pipeline",
+    description:
+      "Submit raw security events and logs to the ingestion pipeline",
   },
   "events:read": {
     label: "Read Normalized Events",
-    description: "Query and retrieve normalized security events and audit records",
+    description:
+      "Query and retrieve normalized security events and audit records",
   },
   "alerts:read": {
     label: "Read AI Anomaly Alerts",
@@ -305,7 +286,8 @@ export const apiKeyScopeDetails: Record<
   },
   "compliance:read": {
     label: "Read Compliance Policies",
-    description: "Access ISMS policy guidelines and compliance control definitions",
+    description:
+      "Access ISMS policy guidelines and compliance control definitions",
   },
 };
 
@@ -317,8 +299,10 @@ export const createdApiKeyResponseSchema = baseIntegrationApiKeySchema
     ...item,
     name: item.name || item.keyName || "API Key",
     keyName: item.keyName || item.name || "API Key",
-    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
-    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+    maskedKey:
+      item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint:
+      item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
   }));
 export type CreatedApiKeyResponse = z.infer<typeof createdApiKeyResponseSchema>;
 
@@ -358,8 +342,10 @@ export const apiKeyDetailSchema = baseIntegrationApiKeySchema
     ...item,
     name: item.name || item.keyName || "API Key",
     keyName: item.keyName || item.name || "API Key",
-    maskedKey: item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
-    keyFingerprint: item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
+    maskedKey:
+      item.maskedKey || item.keyFingerprint || item.keyPrefix || "sec_live_...",
+    keyFingerprint:
+      item.keyFingerprint || item.maskedKey || item.keyPrefix || "sec_live_...",
     usage: item.usage ?? {
       lastUsedAt: item.lastUsedAt ?? null,
       lastUsedIp: item.lastUsedIp ?? null,
@@ -391,21 +377,17 @@ export const createApiKeyFormSchema = z
       .string()
       .nullable()
       .optional()
-      .refine(
-        (val) => !val || new Date(val).getTime() > Date.now(),
-        { message: "Expiration date must be in the future" },
-      ),
+      .refine((val) => !val || new Date(val).getTime() > Date.now(), {
+        message: "Expiration date must be in the future",
+      }),
     isActive: z.boolean().default(true),
     eventSourceId: z.string().uuid().nullable().optional(),
     integrationId: z.string().uuid().nullable().optional(),
   })
-  .refine(
-    (data) => Boolean(data.keyName?.trim() || data.name?.trim()),
-    {
-      message: "Key name is required",
-      path: ["keyName"],
-    },
-  );
+  .refine((data) => Boolean(data.keyName?.trim() || data.name?.trim()), {
+    message: "Key name is required",
+    path: ["keyName"],
+  });
 export type CreateApiKeyInput = z.infer<typeof createApiKeyFormSchema>;
 
 export const updateApiKeyFormSchema = z.object({
@@ -429,10 +411,9 @@ export const updateApiKeyFormSchema = z.object({
     .string()
     .nullable()
     .optional()
-    .refine(
-      (val) => !val || new Date(val).getTime() > Date.now(),
-      { message: "Expiration date must be in the future" },
-    ),
+    .refine((val) => !val || new Date(val).getTime() > Date.now(), {
+      message: "Expiration date must be in the future",
+    }),
   isActive: z.boolean().optional(),
 });
 export type UpdateApiKeyInput = z.infer<typeof updateApiKeyFormSchema>;
@@ -503,7 +484,9 @@ export const connectionStatusSummarySchema = z.object({
   failingIntegrations: z.array(failingIntegrationSchema),
   recentLogs: z.array(connectionLogEntrySchema),
 });
-export type ConnectionStatusSummary = z.infer<typeof connectionStatusSummarySchema>;
+export type ConnectionStatusSummary = z.infer<
+  typeof connectionStatusSummarySchema
+>;
 
 export const singleCheckProbeResultSchema = z.object({
   integrationId: z.string().uuid(),
@@ -513,7 +496,9 @@ export const singleCheckProbeResultSchema = z.object({
   latencyMs: z.number(),
   message: z.string(),
 });
-export type SingleCheckProbeResult = z.infer<typeof singleCheckProbeResultSchema>;
+export type SingleCheckProbeResult = z.infer<
+  typeof singleCheckProbeResultSchema
+>;
 
 export const batchConnectionCheckResultSchema = z.object({
   totalTested: z.number(),
@@ -521,7 +506,9 @@ export const batchConnectionCheckResultSchema = z.object({
   failed: z.number(),
   results: z.array(singleCheckProbeResultSchema),
 });
-export type BatchConnectionCheckResult = z.infer<typeof batchConnectionCheckResultSchema>;
+export type BatchConnectionCheckResult = z.infer<
+  typeof batchConnectionCheckResultSchema
+>;
 
 export const integrationConnectionStatusSchema = z.object({
   id: z.string().uuid(),
@@ -538,8 +525,9 @@ export const integrationConnectionStatusSchema = z.object({
   averageLatency24h: z.number().nullable(),
   recentLogs: z.array(connectionLogEntrySchema),
 });
-export type IntegrationConnectionStatus = z.infer<typeof integrationConnectionStatusSchema>;
-
+export type IntegrationConnectionStatus = z.infer<
+  typeof integrationConnectionStatusSchema
+>;
 
 export const integrationLogStatsSchema = z.object({
   totalErrors: z.number(),

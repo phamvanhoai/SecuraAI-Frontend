@@ -5,8 +5,6 @@ import {
   integrationLogStatsSchema,
   integrationSchema,
   syncJobListSchema,
-  syncScheduleListSchema,
-  syncScheduleSchema,
   testConnectionResultSchema,
   integrationApiKeySchema,
   integrationApiKeyListSchema,
@@ -16,7 +14,6 @@ import {
   batchConnectionCheckResultSchema,
   integrationConnectionStatusSchema,
   type CreateIntegrationInput,
-  type CreateSyncScheduleInput,
   type Integration,
   type IntegrationList,
   type IntegrationLogList,
@@ -25,11 +22,8 @@ import {
   type IntegrationType,
   type SyncJob,
   type SyncJobList,
-  type SyncSchedule,
-  type SyncScheduleList,
   type TestConnectionResult,
   type UpdateIntegrationInput,
-  type UpdateSyncScheduleInput,
   type CreateApiKeyInput,
   type UpdateApiKeyInput,
   type RotateApiKeyInput,
@@ -41,7 +35,6 @@ import {
   type BatchConnectionCheckResult,
   type IntegrationConnectionStatus,
 } from "../schemas/integration-schema";
-
 
 async function safeJson(response: Response): Promise<unknown> {
   const text = await response.text();
@@ -195,58 +188,6 @@ export function triggerIntegrationSync(
   );
 }
 
-export function listSyncSchedules(
-  integrationId: string,
-  signal?: AbortSignal,
-): Promise<SyncScheduleList> {
-  return integrationRequest(
-    `/api/integrations/${encodeURIComponent(integrationId)}/schedules`,
-    syncScheduleListSchema,
-    signal ? { signal } : undefined,
-  );
-}
-
-export function createSyncSchedule(
-  integrationId: string,
-  input: CreateSyncScheduleInput,
-): Promise<SyncSchedule> {
-  return integrationRequest(
-    `/api/integrations/${encodeURIComponent(integrationId)}/schedules`,
-    syncScheduleSchema,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
-  );
-}
-
-export function updateSyncSchedule(
-  integrationId: string,
-  scheduleId: string,
-  input: UpdateSyncScheduleInput,
-): Promise<SyncSchedule> {
-  return integrationRequest(
-    `/api/integrations/${encodeURIComponent(integrationId)}/schedules/${encodeURIComponent(scheduleId)}`,
-    syncScheduleSchema,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
-  );
-}
-
-export async function deleteSyncSchedule(
-  integrationId: string,
-  scheduleId: string,
-): Promise<void> {
-  const path = `/api/integrations/${encodeURIComponent(integrationId)}/schedules/${encodeURIComponent(scheduleId)}`;
-  const response = await fetchWithSessionRefresh(path, { method: "DELETE" });
-  if (response.ok) return;
-  throw normalizeApiError(response.status, await safeJson(response));
-}
-
 export type ListSyncJobsInput = {
   integrationId: string;
   page?: number | undefined;
@@ -257,9 +198,7 @@ export type ListSyncJobsInput = {
   signal?: AbortSignal | undefined;
 };
 
-export function listSyncJobs(
-  input: ListSyncJobsInput,
-): Promise<SyncJobList> {
+export function listSyncJobs(input: ListSyncJobsInput): Promise<SyncJobList> {
   const query = new URLSearchParams({
     page: String(input.page ?? 1),
     limit: String(input.limit ?? 20),
@@ -320,7 +259,8 @@ export function listApiKeys(
   input: ListApiKeysInput,
 ): Promise<IntegrationApiKeyList> {
   const query = new URLSearchParams();
-  if (input.isActive !== undefined) query.set("isActive", String(input.isActive));
+  if (input.isActive !== undefined)
+    query.set("isActive", String(input.isActive));
   if (input.search) query.set("search", input.search);
   if (input.page !== undefined) query.set("page", String(input.page));
   if (input.limit !== undefined) query.set("limit", String(input.limit));
@@ -513,15 +453,12 @@ export function getIntegrationConnectionStatus(
   });
 }
 
-
-export function getIntegrationLogStats(
-  params?: {
-    integrationId?: string | undefined;
-    startDate?: string | undefined;
-    endDate?: string | undefined;
-    signal?: AbortSignal | undefined;
-  },
-): Promise<IntegrationLogStats> {
+export function getIntegrationLogStats(params?: {
+  integrationId?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  signal?: AbortSignal | undefined;
+}): Promise<IntegrationLogStats> {
   const query = new URLSearchParams();
   if (params?.integrationId) query.set("integrationId", params.integrationId);
   if (params?.startDate) query.set("startDate", params.startDate);
