@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Clock,
   Edit2,
   Flame,
   Globe,
@@ -38,11 +37,9 @@ import { ApiKeysTab } from "./api-keys-tab";
 import { ConnectionDiagnosticsTab } from "./connection-diagnostics-tab";
 import { IntegrationLogsTab } from "./integration-logs-tab";
 import { SyncJobsTab } from "./sync-jobs-tab";
-import { SyncSchedulesTab } from "./sync-schedules-tab";
 import { TestConnectionDialog } from "./test-connection-dialog";
 
-type DetailTab = "overview" | "diagnostics" | "api-keys" | "schedules" | "jobs" | "logs";
-
+type DetailTab = "overview" | "diagnostics" | "api-keys" | "jobs" | "logs";
 
 function IntegrationOverviewTab({
   integration,
@@ -102,7 +99,9 @@ function IntegrationOverviewTab({
       onSaved();
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "Unable to update configuration.";
+        err instanceof ApiError
+          ? err.message
+          : "Unable to update configuration.";
       setFormError(msg);
     }
   }
@@ -143,7 +142,8 @@ function IntegrationOverviewTab({
               <option value="disabled">Disabled</option>
             </Select>
             <p className="text-muted text-[11px]">
-              Connection health (Connected / Connection Error) is probed and updated automatically by SecuraAI.
+              Connection health (Connected / Connection Error) is probed and
+              updated automatically by SecuraAI.
             </p>
           </div>
         </div>
@@ -174,9 +174,9 @@ function IntegrationOverviewTab({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-border">
+        <div className="border-border flex justify-end gap-2 border-t pt-2">
           <Button
-            className="min-h-9 px-3 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+            className="bg-surface text-foreground ring-border hover:bg-neutral-soft min-h-9 px-3 text-xs ring-1"
             onClick={onCancelEdit}
             type="button"
           >
@@ -198,34 +198,32 @@ function IntegrationOverviewTab({
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <div className="border-border space-y-3 rounded-lg border p-4 text-xs">
-        <h3 className="font-semibold text-foreground text-sm">
+        <h3 className="text-foreground text-sm font-semibold">
           Identity & Status
         </h3>
-        <div className="flex justify-between items-center py-1 border-b border-border/50">
+        <div className="border-border/50 flex items-center justify-between border-b py-1">
           <span className="text-muted">Integration State:</span>
           <IntegrationAdminBadge isEnabled={isInitiallyEnabled} />
         </div>
-        <div className="flex justify-between items-center py-1 border-b border-border/50">
+        <div className="border-border/50 flex items-center justify-between border-b py-1">
           <span className="text-muted">Connection Health:</span>
           <IntegrationConnectionBadge status={integration.status} />
         </div>
-        <div className="flex justify-between py-1 border-b border-border/50">
+        <div className="border-border/50 flex justify-between border-b py-1">
           <span className="text-muted">Integration ID (UUID):</span>
           <span className="font-mono">{integration.id}</span>
         </div>
-        <div className="flex justify-between py-1 border-b border-border/50">
+        <div className="border-border/50 flex justify-between border-b py-1">
           <span className="text-muted">System Type:</span>
           <span className="font-medium uppercase">
             {integration.integrationType}
           </span>
         </div>
-        <div className="flex justify-between py-1 border-b border-border/50">
+        <div className="border-border/50 flex justify-between border-b py-1">
           <span className="text-muted">Last Connected:</span>
           <span>
             {integration.lastConnectedAt
-              ? new Date(integration.lastConnectedAt).toLocaleString(
-                  "en-US",
-                )
+              ? new Date(integration.lastConnectedAt).toLocaleString("en-US")
               : "Never connected"}
           </span>
         </div>
@@ -233,27 +231,25 @@ function IntegrationOverviewTab({
           <span className="text-muted">Created Date:</span>
           <span>
             {integration.createdAt
-              ? new Date(integration.createdAt).toLocaleString(
-                  "en-US",
-                )
+              ? new Date(integration.createdAt).toLocaleString("en-US")
               : "—"}
           </span>
         </div>
       </div>
 
       <div className="border-border space-y-3 rounded-lg border p-4 text-xs">
-        <h3 className="font-semibold text-foreground text-sm">
+        <h3 className="text-foreground text-sm font-semibold">
           Connection Configuration
         </h3>
         <div className="space-y-1">
           <span className="text-muted block">Base URL:</span>
-          <p className="font-mono bg-neutral-soft/60 p-2 rounded border border-border text-foreground font-semibold break-all">
+          <p className="bg-neutral-soft/60 border-border text-foreground rounded border p-2 font-mono font-semibold break-all">
             {integration.baseUrl || "(No URL configured)"}
           </p>
         </div>
         <div className="space-y-1 pt-1">
           <span className="text-muted block">JSON Configuration:</span>
-          <pre className="font-mono bg-neutral-soft/60 p-2 rounded border border-border text-[11px] overflow-x-auto max-h-32">
+          <pre className="bg-neutral-soft/60 border-border max-h-32 overflow-x-auto rounded border p-2 font-mono text-[11px]">
             {JSON.stringify(integration.configuration ?? {}, null, 2)}
           </pre>
         </div>
@@ -317,7 +313,10 @@ export function IntegrationDetailDrawer({
                       <Server className="size-5" />
                     )}
                 </div>
-                <h2 id="integration-detail-title" className="text-lg font-bold tracking-tight">
+                <h2
+                  id="integration-detail-title"
+                  className="text-lg font-bold tracking-tight"
+                >
                   {integration?.name ?? "Integration Details"}
                 </h2>
                 {integration ? (
@@ -341,7 +340,7 @@ export function IntegrationDetailDrawer({
 
             <div className="flex flex-wrap items-center gap-2">
               <Button
-                className="min-h-8 px-2.5 text-xs bg-surface text-foreground ring-border hover:bg-neutral-soft ring-1"
+                className="bg-surface text-foreground ring-border hover:bg-neutral-soft min-h-8 px-2.5 text-xs ring-1"
                 onClick={() => setTestDialogOpen(true)}
                 type="button"
               >
@@ -411,18 +410,6 @@ export function IntegrationDetailDrawer({
             </button>
             <button
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                activeTab === "schedules"
-                  ? "bg-brand-soft text-brand"
-                  : "text-muted hover:bg-neutral-soft hover:text-foreground"
-              }`}
-              onClick={() => setActiveTab("schedules")}
-              type="button"
-            >
-              <Clock className="size-3.5" />
-              Sync Schedules
-            </button>
-            <button
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                 activeTab === "jobs"
                   ? "bg-brand-soft text-brand"
                   : "text-muted hover:bg-neutral-soft hover:text-foreground"
@@ -466,11 +453,6 @@ export function IntegrationDetailDrawer({
 
           {activeTab === "api-keys" && integration && (
             <ApiKeysTab integrationId={integration.id} />
-          )}
-
-
-          {activeTab === "schedules" && integration && (
-            <SyncSchedulesTab integrationId={integration.id} />
           )}
 
           {activeTab === "jobs" && integration && (

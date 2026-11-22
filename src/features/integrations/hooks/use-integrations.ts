@@ -3,19 +3,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createIntegration,
-  createSyncSchedule,
-  deleteSyncSchedule,
   getIntegrationById,
   getIntegrationLogStats,
   listAllIntegrationLogs,
   listIntegrationLogs,
   listIntegrations,
   listSyncJobs,
-  listSyncSchedules,
   testIntegrationConnection,
   triggerIntegrationSync,
   updateIntegration,
-  updateSyncSchedule,
   listApiKeys,
   getApiKeyById,
   createApiKey,
@@ -33,9 +29,7 @@ import {
 } from "../api/integrations";
 import type {
   CreateIntegrationInput,
-  CreateSyncScheduleInput,
   UpdateIntegrationInput,
-  UpdateSyncScheduleInput,
   CreateApiKeyInput,
   UpdateApiKeyInput,
   RotateApiKeyInput,
@@ -46,7 +40,6 @@ export const integrationKeys = {
   list: (input: Omit<ListIntegrationsInput, "signal">) =>
     [...integrationKeys.all, "list", input] as const,
   detail: (id: string) => [...integrationKeys.all, "detail", id] as const,
-  schedules: (id: string) => [...integrationKeys.all, "schedules", id] as const,
   apiKeys: (integrationId?: string | undefined) =>
     [...integrationKeys.all, "api-keys", integrationId ?? "all"] as const,
   jobs: (input: Omit<ListSyncJobsInput, "signal">) =>
@@ -54,15 +47,28 @@ export const integrationKeys = {
   logs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
     [...integrationKeys.all, "logs", input] as const,
   connectionSummary: (timeWindow?: "24h" | "7d") =>
-    [...integrationKeys.all, "monitoring", "connection-summary", timeWindow ?? "24h"] as const,
+    [
+      ...integrationKeys.all,
+      "monitoring",
+      "connection-summary",
+      timeWindow ?? "24h",
+    ] as const,
   connectionStatus: (id: string, timeWindow?: "24h" | "7d") =>
-    [...integrationKeys.all, "monitoring", "connection-status", id, timeWindow ?? "24h"] as const,
+    [
+      ...integrationKeys.all,
+      "monitoring",
+      "connection-status",
+      id,
+      timeWindow ?? "24h",
+    ] as const,
   allLogs: (input: Omit<ListIntegrationLogsInput, "signal">) =>
     [...integrationKeys.all, "all-logs", input] as const,
-  logStats: (params?: { integrationId?: string; startDate?: string; endDate?: string }) =>
-    [...integrationKeys.all, "log-stats", params] as const,
+  logStats: (params?: {
+    integrationId?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => [...integrationKeys.all, "log-stats", params] as const,
 };
-
 
 export function useIntegrations(
   input: Omit<ListIntegrationsInput, "signal"> = {},
@@ -155,7 +161,11 @@ export function useTriggerSync() {
     }: {
       id: string;
       syncScheduleId?: string | undefined;
-    }) => triggerIntegrationSync(id, syncScheduleId ? { syncScheduleId } : undefined),
+    }) =>
+      triggerIntegrationSync(
+        id,
+        syncScheduleId ? { syncScheduleId } : undefined,
+      ),
     onSettled: (_, __, variables) => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.all });
       queryClient.invalidateQueries({
@@ -166,70 +176,6 @@ export function useTriggerSync() {
       });
       queryClient.invalidateQueries({
         queryKey: [...integrationKeys.all, "logs"],
-      });
-    },
-  });
-}
-
-export function useSyncSchedules(integrationId: string) {
-  return useQuery({
-    queryKey: integrationKeys.schedules(integrationId),
-    queryFn: ({ signal }) => listSyncSchedules(integrationId, signal),
-    enabled: Boolean(integrationId),
-  });
-}
-
-export function useCreateSyncSchedule() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      integrationId,
-      input,
-    }: {
-      integrationId: string;
-      input: CreateSyncScheduleInput;
-    }) => createSyncSchedule(integrationId, input),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: integrationKeys.schedules(variables.integrationId),
-      });
-    },
-  });
-}
-
-export function useUpdateSyncSchedule() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      integrationId,
-      scheduleId,
-      input,
-    }: {
-      integrationId: string;
-      scheduleId: string;
-      input: UpdateSyncScheduleInput;
-    }) => updateSyncSchedule(integrationId, scheduleId, input),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: integrationKeys.schedules(variables.integrationId),
-      });
-    },
-  });
-}
-
-export function useDeleteSyncSchedule() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      integrationId,
-      scheduleId,
-    }: {
-      integrationId: string;
-      scheduleId: string;
-    }) => deleteSyncSchedule(integrationId, scheduleId),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: integrationKeys.schedules(variables.integrationId),
       });
     },
   });
@@ -256,9 +202,7 @@ export function useIntegrationLogs(
 // -------------------------------------------------------------
 // API Key Hooks
 // -------------------------------------------------------------
-export function useApiKeys(
-  input: Omit<ListApiKeysInput, "signal"> = {},
-) {
+export function useApiKeys(input: Omit<ListApiKeysInput, "signal"> = {}) {
   const effectiveId = input.integrationId?.trim() || "all";
   return useQuery({
     queryKey: [
@@ -299,7 +243,9 @@ export function useCreateApiKey() {
         queryKey: integrationKeys.apiKeys("all"),
       });
       queryClient.invalidateQueries({
-        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+        queryKey: integrationKeys.logs({
+          integrationId: variables.integrationId,
+        }),
       });
     },
   });
@@ -328,7 +274,9 @@ export function useUpdateApiKey() {
         queryKey: ["integration-api-key-detail", variables.keyId],
       });
       queryClient.invalidateQueries({
-        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+        queryKey: integrationKeys.logs({
+          integrationId: variables.integrationId,
+        }),
       });
     },
   });
@@ -357,7 +305,9 @@ export function useRotateApiKey() {
         queryKey: ["integration-api-key-detail", variables.keyId],
       });
       queryClient.invalidateQueries({
-        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+        queryKey: integrationKeys.logs({
+          integrationId: variables.integrationId,
+        }),
       });
     },
   });
@@ -386,7 +336,9 @@ export function useRevokeApiKey() {
         queryKey: ["integration-api-key-detail", variables.keyId],
       });
       queryClient.invalidateQueries({
-        queryKey: integrationKeys.logs({ integrationId: variables.integrationId }),
+        queryKey: integrationKeys.logs({
+          integrationId: variables.integrationId,
+        }),
       });
     },
   });
@@ -414,7 +366,8 @@ export function useConnectionStatusSummary(
 export function useCheckAllConnections() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: BatchConnectionCheckInput = {}) => checkAllConnections(input),
+    mutationFn: (input: BatchConnectionCheckInput = {}) =>
+      checkAllConnections(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: integrationKeys.all });
     },
@@ -432,12 +385,12 @@ export function useIntegrationConnectionStatus(
   const { timeWindow = "24h", refetchInterval, enabled = true } = options;
   return useQuery({
     queryKey: integrationKeys.connectionStatus(id, timeWindow),
-    queryFn: ({ signal }) => getIntegrationConnectionStatus(id, { timeWindow, signal }),
+    queryFn: ({ signal }) =>
+      getIntegrationConnectionStatus(id, { timeWindow, signal }),
     enabled: Boolean(id) && enabled,
     ...(refetchInterval !== undefined ? { refetchInterval } : {}),
   });
 }
-
 
 export function useAllIntegrationLogs(
   input: Omit<ListIntegrationLogsInput, "signal">,
@@ -448,9 +401,11 @@ export function useAllIntegrationLogs(
   });
 }
 
-export function useIntegrationLogStats(
-  params?: { integrationId?: string; startDate?: string; endDate?: string },
-) {
+export function useIntegrationLogStats(params?: {
+  integrationId?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
   return useQuery({
     queryKey: integrationKeys.logStats(params),
     queryFn: ({ signal }) => getIntegrationLogStats({ ...params, signal }),
