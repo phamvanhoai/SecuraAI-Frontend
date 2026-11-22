@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo:record": "node scripts/demo/run-securaai-demo.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
