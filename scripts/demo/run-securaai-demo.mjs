@@ -112,6 +112,10 @@ try {
         "The Administrator manages accounts and assigns contextual Asset, Control, Risk and approval responsibilities.",
       route: "/users",
     });
+  if (shouldRun(2))
+    await runOptionalStep(page, "Assign Business Responsibility", () =>
+      demonstrateBusinessResponsibilityAssignment(page),
+    );
   if (shouldRun(3))
     await visitChapter(page, {
       number: "3",
@@ -125,6 +129,10 @@ try {
       actionName: /view API key details for/iu,
       title: "Integration API key details",
     });
+  if (shouldRun(3))
+    await runOptionalStep(page, "Create Integration API Key", () =>
+      demonstrateIntegrationApiKeyCreation(page),
+    );
   if (shouldRun(4))
     await visitChapter(page, {
       number: "4",
@@ -138,6 +146,10 @@ try {
       actionName: /view details for/iu,
       title: "Audit record details",
     });
+  if (shouldRun(4))
+    await runOptionalStep(page, "Event Data Governance", () =>
+      demonstrateEventDataGovernance(page),
+    );
 
   page = await switchRole(
     "Security Officer",
@@ -276,6 +288,10 @@ try {
       demonstrateEventSourceAdministration(page),
     );
   if (shouldRun(9))
+    await runOptionalStep(page, "Import Normalized Events", () =>
+      demonstrateNormalizedEventImport(page),
+    );
+  if (shouldRun(9))
     await runOptionalStep(page, "Detection Model Configuration", () =>
       demonstrateDetectionModelConfiguration(page),
     );
@@ -359,6 +375,9 @@ try {
       await closeVisibleDialog(page);
     }
     await triageAndConfirmMatchingAlert(page);
+    await runOptionalStep(page, "Alternate Alert Decisions", () =>
+      demonstrateAlternateAlertDecisions(page),
+    );
   } else if (shouldRun(12)) {
     await showOverlay(
       page,
@@ -374,6 +393,9 @@ try {
       "The new events remain visible without an alert. The Security Officer now demonstrates triage on an existing eligible alert.",
     );
     await triageAndConfirmMatchingAlert(page);
+    await runOptionalStep(page, "Alternate Alert Decisions", () =>
+      demonstrateAlternateAlertDecisions(page),
+    );
   }
 
   if (shouldRun(14))
@@ -419,6 +441,9 @@ try {
     );
     await runOptionalStep(page, "Complete Risk Reassessment", () =>
       completeRiskReassessmentReview(page),
+    );
+    await runOptionalStep(page, "Submit Risk Acceptance", () =>
+      submitDemoRiskAcceptance(page),
     );
   }
 
@@ -472,6 +497,9 @@ try {
         "The workflow-specific Authorized Approver reviews pending risk acceptance decisions.",
       route: "/risks",
     });
+    await runOptionalStep(page, "Decide Risk Acceptance", () =>
+      decideDemoRiskAcceptance(page),
+    );
   }
 
   if (shouldRun(20) || shouldRun(21)) {
@@ -491,6 +519,10 @@ try {
   if (shouldRun(20))
     await runOptionalStep(page, "Acknowledge Policy", () =>
       acknowledgeDemoPolicy(page),
+    );
+  if (shouldRun(20))
+    await runOptionalStep(page, "Configure Notification Channels", () =>
+      demonstratePersonalNotificationChannels(page),
     );
   if (shouldRun(21))
     await visitChapter(page, {
@@ -523,6 +555,45 @@ try {
         "The end-to-end workflow concludes with filtered and exportable security reports.",
       route: "/reports",
     });
+  if (shouldRun(23))
+    await runOptionalStep(page, "Export Security Report", () =>
+      demonstrateSecurityReportExport(page),
+    );
+
+  if (shouldRun(24) || shouldRun(25)) {
+    page = await switchRole(
+      "Administrator",
+      roleEmail("ADMIN", "admin@gmail.com"),
+    );
+  }
+  if (shouldRun(24))
+    await visitChapter(page, {
+      number: "24",
+      title: "Notification operations",
+      narration:
+        "The Administrator sends a real in-system notification and verifies the recorded delivery workflow.",
+      route: "/notifications",
+    });
+  if (shouldRun(24))
+    await runOptionalStep(page, "Send In-System Notification", () =>
+      demonstrateInSystemNotification(page),
+    );
+  if (shouldRun(24))
+    await runOptionalStep(page, "Send Email Notification", () =>
+      demonstrateEmailNotification(page),
+    );
+  if (shouldRun(25))
+    await visitChapter(page, {
+      number: "25",
+      title: "System log investigation",
+      narration:
+        "The Administrator applies advanced search, exports the matching investigation logs and reviews configuration history.",
+      route: "/system-logs",
+    });
+  if (shouldRun(25))
+    await runOptionalStep(page, "Search and Export System Logs", () =>
+      demonstrateSystemLogInvestigation(page),
+    );
   await showOverlay(
     page,
     "Complete",
@@ -623,7 +694,15 @@ async function switchRole(roleLabel, accountEmail) {
 
 async function resetLocalLoginLimiter() {
   if (process.env.SECURAAI_DEMO_RESET_LOCAL_RATE_LIMIT === "false") return;
-  await runProcess("docker.exe", ["restart", "securaai-demo-backend-1"]);
+  try {
+    const ready = await fetch("http://127.0.0.1:3000/api/v1/health/ready", {
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (ready.ok) return;
+  } catch {
+    // The backend is offline; attempt the local Docker recovery below.
+  }
+  await runProcess("docker.exe", ["start", "securaai-demo-backend-1"]);
   const deadline = Date.now() + 90_000;
   while (Date.now() < deadline) {
     try {
@@ -938,11 +1017,123 @@ async function triageAndConfirmMatchingAlert(targetPage) {
   }
 }
 
+async function demonstrateAlternateAlertDecisions(targetPage) {
+  const outcomes = [
+    {
+      action: /^need further investigation$/iu,
+      dialog: /mark as needing further investigation/iu,
+      reasonLabel: /^feedback reason$/iu,
+      reason:
+        "Additional endpoint and identity evidence is required before a final analyst decision.",
+      submit: /^need further investigation$/iu,
+      label: "Need Further Investigation",
+    },
+    {
+      action: /^dismiss as false positive$/iu,
+      dialog: /dismiss alert as false positive/iu,
+      reasonLabel: /feedback reason/iu,
+      reason:
+        "Validated as expected authorized activity during the controlled demonstration.",
+      submit: /dismiss as false positive/iu,
+      label: "Dismiss False Positive",
+    },
+  ];
+
+  for (const outcome of outcomes) {
+    const candidateRows = targetPage.locator("tbody tr");
+    let completed = false;
+    for (let index = 0; index < (await candidateRows.count()); index += 1) {
+      const row = candidateRows.nth(index);
+      const menu = row.getByRole("button", { name: /actions for/iu }).first();
+      if (!(await menu.isVisible().catch(() => false))) continue;
+      await menu.click();
+      const start = targetPage
+        .getByRole("button", { name: /^start triage$/iu })
+        .first();
+      if (await start.isVisible().catch(() => false)) {
+        await start.click();
+        await targetPage.waitForTimeout(actionPauseMs);
+        await menu.click();
+      }
+      const action = targetPage
+        .getByRole("button", {
+          name: outcome.action,
+        })
+        .first();
+      if (!(await action.isVisible().catch(() => false))) {
+        await targetPage.keyboard.press("Escape");
+        continue;
+      }
+      await revealAndClick(targetPage, action);
+      const dialog = targetPage.getByRole("dialog", { name: outcome.dialog });
+      await dialog.waitFor({ state: "visible", timeout: 20_000 });
+      await dialog.getByLabel(outcome.reasonLabel).fill(outcome.reason);
+      await revealAndClick(
+        targetPage,
+        dialog.getByRole("button", { name: outcome.submit }),
+      );
+      await dialog.waitFor({ state: "hidden", timeout: 30_000 });
+      await targetPage.waitForTimeout(sectionPauseMs);
+      console.log(`PASS Alert Decision: ${outcome.label}`);
+      completed = true;
+      break;
+    }
+    if (!completed) {
+      throw new Error(`No eligible alert was available for ${outcome.label}.`);
+    }
+  }
+}
+
 async function clickIfVisible(targetPage, locator) {
   if (!(await locator.isVisible().catch(() => false))) return false;
   await locator.click();
   await targetPage.waitForTimeout(actionPauseMs);
   return true;
+}
+
+async function demonstrateBusinessResponsibilityAssignment(targetPage) {
+  const approverEmail = roleEmail(
+    "AUTHORIZED_APPROVER",
+    "authorizedapprover@gmail.com",
+  );
+  const search = targetPage.getByPlaceholder(/name, email, or username/iu);
+  await search.waitFor({ state: "visible", timeout: 20_000 });
+  await search.fill(approverEmail);
+  const searchButton = targetPage.getByRole("button", { name: /^search$/iu });
+  if (await searchButton.isVisible().catch(() => false)) {
+    await searchButton.click();
+  } else {
+    await search.press("Enter");
+  }
+  const row = targetPage
+    .locator("tr")
+    .filter({ hasText: approverEmail })
+    .first();
+  await row.waitFor({ state: "visible", timeout: 30_000 });
+  await row.getByRole("button", { name: /more/iu }).click();
+  await targetPage.getByRole("button", { name: /assign access to/iu }).click();
+  const dialog = targetPage.getByRole("dialog", {
+    name: /assign role, scope & ownership/iu,
+  });
+  await dialog.waitFor({ timeout: 20_000 });
+  await dialog
+    .getByRole("status", { name: /loading responsibilities/iu })
+    .waitFor({ state: "hidden", timeout: 30_000 })
+    .catch(() => undefined);
+  const responsibility = dialog.getByRole("checkbox", {
+    name: /authorized approver/iu,
+  });
+  await responsibility.waitFor({ state: "visible", timeout: 20_000 });
+  if (!(await responsibility.isChecked())) await responsibility.check();
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    dialog.getByRole("button", { name: /save assignment/iu }),
+  );
+  await dialog.waitFor({ state: "hidden", timeout: 30_000 });
+  console.log(
+    `PASS Assign Business Responsibility: Authorized Approver -> ${approverEmail}`,
+  );
 }
 
 async function createDemoAsset(targetPage) {
@@ -1924,6 +2115,119 @@ async function completeRiskReassessmentReview(targetPage) {
   console.log(`PASS Complete Risk Reassessment: ${demoData.riskTitle}`);
 }
 
+async function submitDemoRiskAcceptance(targetPage) {
+  await closeVisibleDialog(targetPage);
+  await targetPage.goto(`${baseUrl}/risks`, { waitUntil: "domcontentloaded" });
+  await waitForPageToSettle(targetPage);
+  const search = targetPage.getByPlaceholder(
+    /risk code, title, owner, or asset/iu,
+  );
+  await search.fill(demoData.riskTitle);
+  await targetPage.getByRole("button", { name: /^search$/iu }).click();
+  await targetPage.waitForTimeout(actionPauseMs);
+  await showOverlay(
+    targetPage,
+    "16A",
+    "Submit risk acceptance",
+    "The assigned Risk Owner submits the current residual assessment and treatment plan for an independent Authorized Approver decision.",
+  );
+  await openRowAction(targetPage, demoData.riskTitle, /^view details$/iu);
+  const detail = targetPage.locator("dialog[open]").last();
+  await detail.waitFor({ timeout: 20_000 });
+  const acceptanceSummary = detail
+    .locator("summary")
+    .filter({ hasText: /risk acceptance/iu });
+  await acceptanceSummary.click();
+  const submitAction = detail.getByRole("button", {
+    name: /review and submit acceptance/iu,
+  });
+  await submitAction.waitFor({ state: "visible", timeout: 20_000 });
+  if (await submitAction.isDisabled()) {
+    throw new Error(
+      "Risk acceptance is not eligible after reassessment. Review the displayed workflow reason.",
+    );
+  }
+  await revealAndClick(targetPage, submitAction);
+  const acceptance = targetPage.getByRole("dialog", {
+    name: /review, reassess and accept risk/iu,
+  });
+  await acceptance.waitFor({ timeout: 20_000 });
+  await acceptance
+    .getByLabel(/reassessment rationale/iu)
+    .fill(
+      "Incident response and the completed reassessment confirm that the remaining exposure is understood, monitored and owned for the requested acceptance period.",
+    );
+  const validUntil = new Date(Date.now() + 90 * 24 * 60 * 60 * 1_000)
+    .toISOString()
+    .slice(0, 10);
+  await acceptance.getByLabel(/acceptance valid until/iu).fill(validUntil);
+  await acceptance
+    .getByLabel(/acceptance justification/iu)
+    .fill(
+      "The residual exposure is within the documented tolerance for the temporary period while the active monitoring improvement plan remains accountable and auditable.",
+    );
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    acceptance.getByRole("button", { name: /submit for approval/iu }),
+  );
+  await acceptance.waitFor({ state: "hidden", timeout: 30_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  console.log(`PASS Submit Risk Acceptance: ${demoData.riskTitle}`);
+  await closeVisibleDialog(targetPage);
+}
+
+async function decideDemoRiskAcceptance(targetPage) {
+  const row = targetPage
+    .locator("tr")
+    .filter({ hasText: demoData.riskTitle })
+    .first();
+  await row.waitFor({ state: "visible", timeout: 30_000 });
+  await showOverlay(
+    targetPage,
+    "19A",
+    "Authorized acceptance decision",
+    "The workflow-specific Authorized Approver reviews the pending request and records an independent decision with rationale.",
+  );
+  await row.getByRole("button", { name: /actions for/iu }).click();
+  await targetPage.getByRole("button", { name: /^view details$/iu }).click();
+  const detail = targetPage.locator("dialog[open]").last();
+  await detail.waitFor({ timeout: 20_000 });
+  const acceptanceSummary = detail
+    .locator("summary")
+    .filter({ hasText: /risk acceptance/iu });
+  await acceptanceSummary.click();
+  const review = detail.getByRole("button", { name: /review decision/iu });
+  await review.waitFor({ state: "visible", timeout: 20_000 });
+  await revealAndClick(targetPage, review);
+  const decisionDialog = targetPage.getByRole("dialog", {
+    name: /risk acceptance decision/iu,
+  });
+  await decisionDialog.waitFor({ timeout: 20_000 });
+  const decision = decisionDialog.getByLabel("Decision");
+  const approveOption = decision.getByRole("option", { name: "Approve" });
+  const approveAvailable = !(await approveOption.isDisabled());
+  await decision.selectOption(approveAvailable ? "approved" : "rejected");
+  await decisionDialog
+    .getByLabel(/decision rationale/iu)
+    .fill(
+      approveAvailable
+        ? "Approved after reviewing the current residual assessment, incident evidence, accountable treatment plan and defined acceptance period."
+        : "Returned to the Risk Owner because the current workflow state requires reassessment before approval can be granted.",
+    );
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    decisionDialog.getByRole("button", { name: /record decision/iu }),
+  );
+  await decisionDialog.waitFor({ state: "hidden", timeout: 30_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  console.log(
+    `PASS Risk Acceptance Decision: ${approveAvailable ? "approved" : "rejected"} ${demoData.riskTitle}`,
+  );
+  await closeVisibleDialog(targetPage);
+}
+
 async function completeDemoIncidentResponse(targetPage) {
   await closeVisibleDialog(targetPage);
   await targetPage.goto(`${baseUrl}/incidents`, {
@@ -2210,11 +2514,12 @@ async function demonstrateRowDetails(targetPage, recordName, title) {
 }
 
 async function demonstrateEventSourceAdministration(targetPage) {
+  const sourceName = `${demoRunId} Wazuh SIEM Source`;
   await showOverlay(
     targetPage,
     "9A",
     "Register and validate an event source",
-    "Review the registration contract, inspect the active Wazuh source and open its connection diagnostic.",
+    "Register a real Wazuh push-ingestion source, inspect the saved record and execute its Manager API connection diagnostic.",
   );
   const register = targetPage.getByRole("button", {
     name: /^register event source$/iu,
@@ -2224,13 +2529,17 @@ async function demonstrateEventSourceAdministration(targetPage) {
     const registration = targetPage.getByRole("dialog", {
       name: /register Wazuh SIEM event source/iu,
     });
-    await registration
-      .getByLabel("Event source name *")
-      .fill(`${demoRunId} Wazuh Replay Source`);
-    await registration.getByLabel("Status *").selectOption("INACTIVE");
+    await registration.getByLabel("Event source name *").fill(sourceName);
+    await registration.getByLabel("Status *").selectOption("ACTIVE");
     await registration
       .getByLabel("SecuraAI Ingestion Webhook Endpoint *")
-      .fill(`/api/v1/integrations/wazuh/events/${demoRunId.toLowerCase()}`);
+      .fill("/api/v1/integrations/wazuh/events");
+    const duplicateConfirmation = registration.getByRole("checkbox", {
+      name: /I understand and confirm/iu,
+    });
+    if (await duplicateConfirmation.isVisible().catch(() => false)) {
+      await duplicateConfirmation.check();
+    }
     for (const family of [
       "VPN & Remote SSO Access",
       "Application & Privilege Access",
@@ -2243,23 +2552,24 @@ async function demonstrateEventSourceAdministration(targetPage) {
     await registration
       .getByLabel("Description")
       .fill(
-        "Inactive demonstration source showing the Wazuh push-ingestion registration workflow.",
+        "Active Wazuh SIEM source registered during the recorded demo for authenticated push ingestion and Manager API diagnostics.",
       );
     await revealAndClick(
       targetPage,
       registration.getByRole("button", { name: /^register event source$/iu }),
     );
     await targetPage
-      .getByText(`${demoRunId} Wazuh Replay Source`, { exact: true })
+      .getByText(sourceName, { exact: true })
       .first()
       .waitFor({ timeout: 30_000 });
-    console.log("PASS Register event source");
+    console.log(`PASS Register Wazuh SIEM Event Source: ${sourceName}`);
   }
 
   const sourceRow = targetPage
     .locator("tr")
-    .filter({ hasText: /Wazuh SIEM Ingestion \(Default\)|Wazuh/iu })
+    .filter({ hasText: sourceName })
     .first();
+  await sourceRow.waitFor({ state: "visible", timeout: 30_000 });
   const details = sourceRow.getByRole("button", { name: /^details$/iu });
   if (!(await details.isVisible().catch(() => false))) {
     throw new Error("No Wazuh event source is available for detail review.");
@@ -2281,34 +2591,145 @@ async function demonstrateEventSourceAdministration(targetPage) {
       name: /test event source connection/iu,
     });
     await testDialog.waitFor({ timeout: 20_000 });
-    const wazuhUsername = process.env.SECURAAI_DEMO_WAZUH_API_USERNAME;
-    const wazuhPassword = process.env.SECURAAI_DEMO_WAZUH_API_PASSWORD;
-    const wazuhEndpoint = process.env.SECURAAI_DEMO_WAZUH_API_URL;
-    if (wazuhEndpoint)
-      await testDialog.getByLabel("Wazuh Manager Endpoint").fill(wazuhEndpoint);
-    if (wazuhUsername)
-      await testDialog.getByLabel("API Username").fill(wazuhUsername);
-    if (wazuhPassword)
-      await testDialog.getByLabel("API Password").fill(wazuhPassword);
-    await targetPage.waitForTimeout(sectionPauseMs);
-    if (wazuhEndpoint && wazuhUsername && wazuhPassword) {
-      await revealAndClick(
-        targetPage,
-        testDialog.getByRole("button", { name: /run connection test/iu }),
-      );
-      await testDialog
-        .getByText(/connection successful|connection failed/iu)
-        .waitFor({ timeout: 35_000 });
-      await targetPage.waitForTimeout(sectionPauseMs);
-      console.log("PASS Test Event Source Connection result");
-    } else {
-      console.log(
-        "PASS Test Event Source Connection form (credentials not supplied)",
+    const wazuhEndpoint =
+      process.env.SECURAAI_DEMO_WAZUH_API_URL ??
+      "https://host.docker.internal:55000";
+    const wazuhUsername =
+      process.env.SECURAAI_DEMO_WAZUH_API_USERNAME ?? "wazuh-wui";
+    const wazuhPassword =
+      process.env.SECURAAI_DEMO_WAZUH_API_PASSWORD ??
+      (await readSecret("Wazuh Manager API password: "));
+    if (!wazuhPassword) {
+      throw new Error(
+        "Wazuh API password is required to execute Test Event Source Connection.",
       );
     }
+    await testDialog.getByLabel("Wazuh Manager Endpoint").fill(wazuhEndpoint);
+    await testDialog.getByLabel("API Username").fill(wazuhUsername);
+    await testDialog.getByLabel("API Password").fill(wazuhPassword);
+    await targetPage.waitForTimeout(sectionPauseMs);
+    await revealAndClick(
+      targetPage,
+      testDialog.getByRole("button", { name: /run connection test/iu }),
+    );
+    const diagnostic = testDialog
+      .getByText(/connection successful|connection failed/iu)
+      .first();
+    await diagnostic.waitFor({ timeout: 35_000 });
+    if (/connection failed/iu.test((await diagnostic.textContent()) ?? "")) {
+      const message = await diagnostic
+        .locator("xpath=following-sibling::p")
+        .textContent();
+      throw new Error(
+        `Wazuh connection test failed: ${message?.trim() || "No diagnostic message returned."}`,
+      );
+    }
+    await targetPage.waitForTimeout(sectionPauseMs);
+    console.log(`PASS Test Event Source Connection: ${wazuhEndpoint}`);
     await closeVisibleDialog(targetPage);
   }
+
+  const configureSource = sourceDialog.getByRole("button", {
+    name: /configure source/iu,
+  });
+  await revealAndClick(targetPage, configureSource);
+  const description = sourceDialog.getByLabel("Description");
+  await description.fill(
+    "Active Wazuh SIEM source validated and updated during the recorded end-to-end demonstration.",
+  );
+  await revealAndClick(
+    targetPage,
+    sourceDialog.getByRole("button", { name: /save configuration/iu }),
+  );
+  await sourceDialog
+    .getByRole("button", { name: /configure source/iu })
+    .waitFor({ state: "visible", timeout: 30_000 });
+  console.log("PASS Update Event Source Configuration");
+
+  await revealAndClick(
+    targetPage,
+    sourceDialog.getByRole("button", { name: /^pause$/iu }),
+  );
+  const pauseDialog = targetPage.getByRole("dialog", {
+    name: /pause event ingestion/iu,
+  });
+  await revealAndClick(
+    targetPage,
+    pauseDialog.getByRole("button", { name: /pause ingestion/iu }),
+  );
+  await sourceDialog
+    .getByRole("button", { name: /^resume$/iu })
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await revealAndClick(
+    targetPage,
+    sourceDialog.getByRole("button", { name: /^resume$/iu }),
+  );
+  const resumeDialog = targetPage.getByRole("dialog", {
+    name: /resume event ingestion/iu,
+  });
+  await revealAndClick(
+    targetPage,
+    resumeDialog.getByRole("button", { name: /resume ingestion/iu }),
+  );
+  await sourceDialog
+    .getByRole("button", { name: /^pause$/iu })
+    .waitFor({ state: "visible", timeout: 30_000 });
+  console.log("PASS Pause and Resume Event Ingestion");
   await closeVisibleDialog(targetPage);
+}
+
+async function demonstrateNormalizedEventImport(targetPage) {
+  const importFile = path.resolve(
+    backendRoot,
+    "project-docs/new/demo-ai-anomaly-events.json",
+  );
+  if (!existsSync(importFile)) {
+    throw new Error(`Demo import file was not found: ${importFile}`);
+  }
+
+  await targetPage.goto(`${baseUrl}/event-logs`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  await targetPage
+    .getByRole("button", { name: /normalized event sources/iu })
+    .click();
+  await targetPage.getByRole("button", { name: /import events/iu }).click();
+
+  const dialog = targetPage.getByRole("dialog", {
+    name: /import normalized events from file/iu,
+  });
+  await dialog.waitFor({ state: "visible" });
+  const sourceSelect = dialog.getByLabel(/select target event source/iu);
+  await sourceSelect.selectOption({ index: 1 });
+  await dialog
+    .getByLabel(/upload normalized event file/iu)
+    .setInputFiles(importFile);
+
+  const importButton = dialog.getByRole("button", {
+    name: /import \d+ events/iu,
+  });
+  await importButton.waitFor({ state: "visible" });
+  await revealAndClick(targetPage, importButton);
+  await targetPage
+    .getByRole("heading", { name: /batch ingestion summary/iu })
+    .waitFor({ state: "visible", timeout: 60_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+
+  const fullReport = targetPage.getByRole("button", {
+    name: /view full batch report/iu,
+  });
+  if (await fullReport.isVisible().catch(() => false)) {
+    await revealAndClick(targetPage, fullReport);
+    await targetPage.waitForTimeout(sectionPauseMs);
+    await closeVisibleDialog(targetPage);
+  } else {
+    await revealAndClick(
+      targetPage,
+      targetPage.getByRole("button", { name: /^done$/iu }),
+    );
+  }
+  console.log("PASS Import Normalized Events: batch result displayed");
 }
 
 async function demonstrateDetectionModelConfiguration(targetPage) {
@@ -2345,9 +2766,351 @@ async function demonstrateDetectionModelConfiguration(targetPage) {
       .waitFor({ state: "hidden", timeout: 30_000 })
       .catch(() => undefined);
     await targetPage.waitForTimeout(sectionPauseMs);
-    await closeVisibleDialog(targetPage);
-    console.log("PASS Configure Detection Threshold");
+    const thresholdInput = dialog.getByLabel("Detection score threshold (%)");
+    const thresholdValue = await thresholdInput.inputValue();
+    await revealAndClick(
+      targetPage,
+      dialog.getByRole("button", { name: /save threshold/iu }),
+    );
+    await dialog.waitFor({ state: "hidden", timeout: 30_000 });
+    await targetPage
+      .getByText(/detection threshold updated/iu)
+      .first()
+      .waitFor({ timeout: 10_000 })
+      .catch(() => undefined);
+    console.log(`PASS Configure Detection Threshold: saved ${thresholdValue}%`);
   }
+}
+
+async function demonstrateEventDataGovernance(targetPage) {
+  await targetPage.goto(`${baseUrl}/event-logs`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  await showOverlay(
+    targetPage,
+    "4B",
+    "Event data governance and retention",
+    "Review the active lifecycle policy and save its current retention configuration through the backend workflow.",
+  );
+  const governanceTab = targetPage.getByRole("button", {
+    name: /data governance & retention/iu,
+  });
+  await governanceTab.waitFor({ state: "visible", timeout: 20_000 });
+  await revealAndClick(targetPage, governanceTab);
+  const edit = targetPage
+    .getByRole("button", { name: /configure policy settings for/iu })
+    .first();
+  await edit.waitFor({ state: "visible", timeout: 30_000 });
+  const policyName =
+    (await edit.getAttribute("aria-label"))?.replace(
+      /configure policy settings for\s*/iu,
+      "",
+    ) ?? "event governance policy";
+  await revealAndClick(targetPage, edit);
+  const dialog = targetPage.getByRole("dialog", {
+    name: /edit policy|configure event data governance policy/iu,
+  });
+  await dialog.waitFor({ timeout: 20_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    dialog.getByRole("button", { name: /save policy changes/iu }),
+  );
+  await dialog.waitFor({ state: "hidden", timeout: 30_000 });
+  console.log(`PASS Event Data Governance & Retention: saved ${policyName}`);
+}
+
+async function demonstrateIntegrationApiKeyCreation(targetPage) {
+  const keyName = `${demoRunId} Reporting Read Key`;
+  const generate = targetPage.getByRole("button", {
+    name: /generate API key/iu,
+  });
+  await generate.waitFor({ state: "visible", timeout: 20_000 });
+  await showOverlay(
+    targetPage,
+    "3B",
+    "Create integration API key",
+    "Create a real time-limited read key, confirm its one-time secret workflow, and verify the saved metadata without exposing the secret in the recording log.",
+  );
+  await revealAndClick(targetPage, generate);
+  const dialog = targetPage.locator("dialog[open]").filter({
+    has: targetPage.getByRole("heading", { name: /create new API key/iu }),
+  });
+  await dialog.waitFor({ timeout: 20_000 });
+  await dialog.getByLabel(/key identifier name/iu).fill(keyName);
+  await revealAndClick(
+    targetPage,
+    dialog.getByRole("button", { name: /^30 days$/iu }),
+  );
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    dialog.getByRole("button", { name: /create API key/iu }),
+  );
+
+  const secretDialog = targetPage.locator("dialog[open]").filter({
+    hasText: /not be able to view|one-time/iu,
+  });
+  await secretDialog.waitFor({ timeout: 30_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    secretDialog.getByRole("button", {
+      name: /done, I have saved the secret/iu,
+    }),
+  );
+  await secretDialog.waitFor({ state: "hidden", timeout: 20_000 });
+  await targetPage.getByText(keyName, { exact: true }).first().waitFor({
+    timeout: 30_000,
+  });
+  console.log(`PASS Create Integration API Key: ${keyName}`);
+
+  await showOverlay(
+    targetPage,
+    "3C",
+    "Edit API key access",
+    "Update the real credential expiration while preserving its authorized read scope.",
+  );
+  await revealAndClick(
+    targetPage,
+    targetPage.getByRole("button", { name: `Edit API key ${keyName}` }),
+  );
+  const editDialog = targetPage.locator("dialog[open]").filter({
+    has: targetPage.getByRole("heading", { name: /edit API key/iu }),
+  });
+  await editDialog.waitFor({ timeout: 20_000 });
+  await revealAndClick(
+    targetPage,
+    editDialog.getByRole("button", { name: /^90 days$/iu }),
+  );
+  await revealAndClick(
+    targetPage,
+    editDialog.getByRole("button", { name: /save changes/iu }),
+  );
+  await editDialog.waitFor({ state: "hidden", timeout: 30_000 });
+  console.log(`PASS Edit API Key Scope & Expiration: ${keyName}`);
+
+  await showOverlay(
+    targetPage,
+    "3D",
+    "Rotate and revoke API key",
+    "Rotate the credential, complete the replacement secret workflow, then revoke the active replacement to demonstrate the complete lifecycle.",
+  );
+  await revealAndClick(
+    targetPage,
+    targetPage.getByRole("button", { name: `Rotate API key ${keyName}` }),
+  );
+  const rotateDialog = targetPage.locator("dialog[open]").filter({
+    has: targetPage.getByRole("heading", { name: /rotate API key secret/iu }),
+  });
+  await rotateDialog.waitFor({ timeout: 20_000 });
+  await revealAndClick(
+    targetPage,
+    rotateDialog.getByRole("button", { name: /confirm rotation/iu }),
+  );
+  const rotatedSecret = targetPage.locator("dialog[open]").filter({
+    hasText: /not be able to view|one-time/iu,
+  });
+  await rotatedSecret.waitFor({ timeout: 30_000 });
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    rotatedSecret.getByRole("button", {
+      name: /done, I have saved the secret/iu,
+    }),
+  );
+  await rotatedSecret.waitFor({ state: "hidden", timeout: 20_000 });
+  console.log(`PASS Rotate Integration API Key: ${keyName}`);
+
+  const activeReplacementRow = targetPage
+    .locator("tr")
+    .filter({ hasText: keyName })
+    .filter({
+      has: targetPage.getByRole("button", { name: /revoke API key/iu }),
+    })
+    .first();
+  await activeReplacementRow.waitFor({ state: "visible", timeout: 30_000 });
+  await revealAndClick(
+    targetPage,
+    activeReplacementRow.getByRole("button", { name: /revoke API key/iu }),
+  );
+  const revokeDialog = targetPage.locator("dialog[open]").filter({
+    hasText: /revocation reason/iu,
+  });
+  await revokeDialog.waitFor({ timeout: 20_000 });
+  await revokeDialog
+    .getByLabel(/revocation reason/iu)
+    .fill(
+      `Demo lifecycle ${demoRunId}: replacement credential is no longer required after verification.`,
+    );
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    revokeDialog.getByRole("button", { name: /confirm revocation/iu }),
+  );
+  await revokeDialog.waitFor({ state: "hidden", timeout: 30_000 });
+  console.log(`PASS Revoke Integration API Key: ${keyName}`);
+}
+
+async function demonstrateInSystemNotification(targetPage) {
+  await targetPage.goto(`${baseUrl}/notifications`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  await targetPage.getByRole("tab", { name: /send in-system/iu }).click();
+
+  await targetPage
+    .getByLabel("Notification title")
+    .fill(`${demoRunId} security operations update`);
+  await targetPage
+    .getByLabel("Message")
+    .fill(
+      "The end-to-end security monitoring demonstration has completed. Review the generated alert and incident records.",
+    );
+  const send = targetPage.getByRole("button", {
+    name: /^send notification/iu,
+  });
+  await revealAndClick(targetPage, send);
+  await targetPage
+    .getByText(/notification sent/iu)
+    .waitFor({ state: "visible", timeout: 30_000 });
+
+  await targetPage.getByRole("tab", { name: /delivery history/iu }).click();
+  await targetPage.waitForTimeout(sectionPauseMs);
+  console.log("PASS Send In-System Notification: delivery history displayed");
+}
+
+async function demonstrateEmailNotification(targetPage) {
+  await targetPage.goto(`${baseUrl}/notifications`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  await targetPage.getByRole("tab", { name: /^send email$/iu }).click();
+  const recipient = targetPage
+    .locator("label")
+    .filter({ hasText: "securityofficer@gmail.com" })
+    .first();
+  await recipient.getByRole("checkbox").check();
+  await targetPage
+    .getByLabel("Subject")
+    .fill(`${demoRunId} security operations summary`);
+  await targetPage
+    .getByLabel("Email message")
+    .fill(
+      "The recorded SecuraAI workflow completed. Review the alert, incident and risk reassessment records in the application.",
+    );
+  await revealAndClick(
+    targetPage,
+    targetPage.getByRole("button", { name: /^send email$/iu }),
+  );
+  await targetPage
+    .getByText(/email notification sent|delivery partially completed/iu)
+    .waitFor({ state: "visible", timeout: 45_000 });
+  console.log("PASS Send Email Notification: delivery result recorded");
+}
+
+async function demonstratePersonalNotificationChannels(targetPage) {
+  await targetPage.goto(`${baseUrl}/notifications`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+  await targetPage.getByRole("tab", { name: /personal channels/iu }).click();
+  const emailChannel = targetPage
+    .locator("label")
+    .filter({ hasText: "Email notifications" })
+    .getByRole("checkbox");
+  await emailChannel.click();
+  await revealAndClick(
+    targetPage,
+    targetPage.getByRole("button", { name: /save preferences/iu }),
+  );
+  await targetPage
+    .getByText(/preferences updated|preferences saved/iu)
+    .waitFor({ state: "visible", timeout: 30_000 });
+  console.log("PASS Configure Personal Notification Channel");
+}
+
+async function demonstrateSystemLogInvestigation(targetPage) {
+  await targetPage.goto(`${baseUrl}/system-logs`, {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForPageToSettle(targetPage);
+
+  const advanced = targetPage.getByRole("button", { name: /advanced/iu });
+  await advanced.click();
+  const actor = targetPage.getByLabel("Actor");
+  await actor.fill("admin");
+  await targetPage.getByRole("button", { name: /^search$/iu }).click();
+  await targetPage.waitForTimeout(sectionPauseMs);
+
+  const exportButton = targetPage.getByRole("button", {
+    name: /export logs/iu,
+  });
+  if (!(await exportButton.isDisabled())) {
+    await revealAndClick(targetPage, exportButton);
+    const exportDialog = targetPage.getByRole("dialog", {
+      name: /export investigation logs/iu,
+    });
+    await exportDialog
+      .getByRole("radio", { name: /all matching results/iu })
+      .check();
+    await exportDialog.getByLabel(/select output format/iu).selectOption("CSV");
+    await exportDialog
+      .getByLabel(/investigation purpose/iu)
+      .fill("Evidence export for the recorded end-to-end demonstration.");
+    await revealAndClick(
+      targetPage,
+      exportDialog.getByRole("button", { name: /generate export/iu }),
+    );
+    await targetPage
+      .getByText(/export generated/iu)
+      .waitFor({ state: "visible", timeout: 30_000 });
+  }
+
+  await targetPage
+    .getByRole("tab", { name: /configuration change history/iu })
+    .click();
+  await targetPage.waitForTimeout(sectionPauseMs);
+  const detail = targetPage
+    .getByRole("button", {
+      name: /^view$/iu,
+    })
+    .first();
+  if (await detail.isVisible().catch(() => false)) {
+    await revealAndClick(targetPage, detail);
+    await targetPage.waitForTimeout(sectionPauseMs);
+    await closeVisibleDialog(targetPage);
+  }
+  console.log(
+    "PASS System Log Investigation: search, export and history shown",
+  );
+}
+
+async function demonstrateSecurityReportExport(targetPage) {
+  const generate = targetPage.getByRole("button", {
+    name: /generate report/iu,
+  });
+  await generate.waitFor({ state: "visible", timeout: 20_000 });
+  await revealAndClick(targetPage, generate);
+  const dialog = targetPage.getByRole("dialog", {
+    name: /export security & risk report/iu,
+  });
+  await dialog.waitFor({ timeout: 20_000 });
+  await dialog.getByLabel("Report Type").selectOption("SECURITY_POSTURE");
+  await dialog.getByLabel("Export Format").selectOption("PDF");
+  await targetPage.waitForTimeout(sectionPauseMs);
+  await revealAndClick(
+    targetPage,
+    dialog.getByRole("button", { name: /generate report/iu }),
+  );
+  await dialog.waitFor({ state: "hidden", timeout: 90_000 });
+  await targetPage
+    .getByText(/report generated successfully/iu)
+    .first()
+    .waitFor({ timeout: 10_000 })
+    .catch(() => undefined);
+  console.log("PASS Export Security Report: SECURITY_POSTURE PDF generated");
 }
 
 async function demonstrateDetectionOperations(targetPage) {
@@ -2371,22 +3134,30 @@ async function demonstrateDetectionOperations(targetPage) {
     const add = targetPage
       .getByRole("button", { name: /add override/iu })
       .first();
-    const action = (await edit.isVisible().catch(() => false)) ? edit : add;
-    if (await action.isVisible().catch(() => false)) {
-      await revealAndClick(targetPage, action);
+    if (await edit.isVisible().catch(() => false)) {
+      await revealAndClick(targetPage, edit);
       await targetPage.waitForTimeout(sectionPauseMs);
       const overrideDialog = targetPage.getByRole("dialog", {
         name: /asset threshold override/iu,
       });
-      const cancel = overrideDialog.getByRole("button", {
-        name: /^cancel$/iu,
-      });
-      if (await cancel.isVisible().catch(() => false)) await cancel.click();
-      await overrideDialog
-        .waitFor({ state: "hidden", timeout: 10_000 })
-        .catch(() => undefined);
+      const assetName = "the selected existing asset";
+      const thresholdValue = await overrideDialog
+        .getByLabel(/detection score threshold/iu)
+        .inputValue();
+      await revealAndClick(
+        targetPage,
+        overrideDialog.getByRole("button", { name: /save changes/iu }),
+      );
+      await overrideDialog.waitFor({ state: "hidden", timeout: 30_000 });
+      console.log(
+        `PASS Asset threshold override: saved ${thresholdValue}% for ${assetName}`,
+      );
+    } else if (await add.isVisible().catch(() => false)) {
+      recordSkip(
+        "Asset threshold override mutation",
+        "No existing override is available; the demo does not invent a production override.",
+      );
     }
-    console.log("PASS Asset threshold overrides");
   }
 
   const alertsTab = targetPage.getByRole("tab", {
@@ -2407,12 +3178,16 @@ async function demonstrateDetectionOperations(targetPage) {
       targetPage,
       dialog.getByRole("button", { name: /run up to 100 events/iu }),
     );
-    await targetPage
+    const result = targetPage
       .getByText(/manual detection (batch )?completed|detection run failed/iu)
-      .waitFor({ timeout: 90_000 })
-      .catch(() => undefined);
+      .first();
+    await result.waitFor({ timeout: 90_000 });
+    const resultText = (await result.textContent())?.trim() ?? "";
+    if (/failed/iu.test(resultText)) {
+      throw new Error(`Manual detection failed: ${resultText}`);
+    }
     await targetPage.waitForTimeout(sectionPauseMs);
-    console.log("PASS Run manual detection");
+    console.log(`PASS Run manual detection: ${resultText}`);
   }
 }
 
@@ -2437,12 +3212,17 @@ async function demonstrateEntityMappingReview(targetPage) {
     });
     await mapping.waitFor({ timeout: 20_000 });
     await targetPage.waitForTimeout(sectionPauseMs);
-    const cancel = mapping.getByRole("button", { name: /^cancel$/iu });
-    if (await cancel.isVisible().catch(() => false)) await cancel.click();
     await mapping
-      .waitFor({ state: "hidden", timeout: 10_000 })
-      .catch(() => undefined);
-    console.log("PASS Review & Correct Entity Mapping");
+      .getByLabel(/reason for correction/iu)
+      .fill(
+        `Demo verification ${demoRunId}: reviewed the current entity associations.`,
+      );
+    await revealAndClick(
+      targetPage,
+      mapping.getByRole("button", { name: /save corrected mapping/iu }),
+    );
+    await mapping.waitFor({ state: "hidden", timeout: 30_000 });
+    console.log("PASS Review & Correct Entity Mapping: correction saved");
   }
   await closeVisibleDialog(targetPage);
 }
