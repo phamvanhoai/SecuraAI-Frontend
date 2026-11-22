@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import {
   DecideRiskAcceptanceDialog,
@@ -61,6 +67,32 @@ it("shows submitted financial justification to the approver without auto-approvi
   expect(screen.getByText("5,000,000 VND")).toBeInTheDocument();
   expect(screen.getByText(/Comparison period: 12 months/)).toBeInTheDocument();
   expect(mutations.decide).not.toHaveBeenCalled();
+});
+it("closes the parent risk detail after recording an acceptance decision", async () => {
+  mutations.decide.mockResolvedValueOnce({});
+  const onClose = vi.fn();
+  const onDecisionRecorded = vi.fn();
+  render(
+    <DecideRiskAcceptanceDialog
+      acceptanceId={id}
+      onClose={onClose}
+      onDecisionRecorded={onDecisionRecorded}
+    />,
+  );
+
+  fireEvent.change(screen.getByLabelText("Decision rationale"), {
+    target: { value: "Residual risk is within the approved appetite." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record decision" }));
+
+  await waitFor(() => {
+    expect(mutations.decide).toHaveBeenCalledWith({
+      decision: "approved",
+      reason: "Residual risk is within the approved appetite.",
+    });
+    expect(onDecisionRecorded).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
 const date = "2026-10-14T00:00:00Z";
 const assessment = {

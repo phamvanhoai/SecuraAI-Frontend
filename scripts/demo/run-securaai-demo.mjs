@@ -3250,22 +3250,73 @@ async function demonstrateEntityMappingReview(targetPage) {
     });
     await mapping.waitFor({ timeout: 20_000 });
     await targetPage.waitForTimeout(sectionPauseMs);
+
+    const assetSelect = mapping.getByRole("combobox", {
+      name: /associated asset \/ device/iu,
+    });
+    await assetSelect.click();
+    const assetSearch = mapping.getByPlaceholder(
+      /search assets by name, code, or type/iu,
+    );
+    await assetSearch.fill(demoData.assetName);
+    const demoAssetOption = mapping
+      .getByRole("option", {
+        name: new RegExp(escapeRegex(demoData.assetName), "iu"),
+      })
+      .first();
+    if (await demoAssetOption.isVisible().catch(() => false)) {
+      await demoAssetOption.click();
+    } else {
+      await assetSearch.fill("");
+      const firstAssetOption = mapping
+        .getByRole("option")
+        .filter({ hasNotText: /no asset mapped|unassigned/iu })
+        .first();
+      if (!(await firstAssetOption.isVisible().catch(() => false))) {
+        throw new Error(
+          "No eligible Asset is available for the entity-mapping correction.",
+        );
+      }
+      await firstAssetOption.click();
+    }
+    const selectedAssetText = (await assetSelect.innerText()).trim();
+    if (/no asset mapped|unassigned/iu.test(selectedAssetText)) {
+      throw new Error("The entity-mapping Asset selection was not applied.");
+    }
+
+    await mapping
+      .getByLabel(/mapping confidence score/iu)
+      .fill("90");
     await mapping
       .getByLabel(/reason for correction/iu)
       .fill(
-        `Demo verification ${demoRunId}: reviewed the current entity associations.`,
+        `Demo verification ${demoRunId}: linked the verified event context to the affected asset.`,
       );
     await revealAndClick(
       targetPage,
       mapping.getByRole("button", { name: /save corrected mapping/iu }),
     );
-    await targetPage
-      .getByText(/mapping updated|correction saved/iu)
-      .first()
-      .waitFor({ state: "visible", timeout: 30_000 })
-      .catch(() => undefined);
-    console.log("PASS Review & Correct Entity Mapping: correction saved");
+    await mapping.waitFor({ state: "hidden", timeout: 30_000 });
+
+    await review.waitFor({ state: "visible", timeout: 30_000 });
+    await revealAndClick(targetPage, review);
+    const savedMapping = targetPage.getByRole("dialog", {
+      name: /review & correct entity mapping/iu,
+    });
+    await savedMapping.waitFor({ timeout: 20_000 });
+    const savedAsset = savedMapping.getByRole("combobox", {
+      name: /associated asset \/ device/iu,
+    });
+    await savedAsset.waitFor({ state: "visible", timeout: 20_000 });
+    const savedAssetText = await savedAsset.innerText();
+    if (!savedAssetText.includes(selectedAssetText)) {
+      throw new Error(
+        `Saved mapping verification failed; expected ${selectedAssetText}.`,
+      );
+    }
+    await targetPage.waitForTimeout(sectionPauseMs);
     await closeVisibleDialog(targetPage);
+    console.log("PASS Review & Correct Entity Mapping: correction saved");
   }
   await closeVisibleDialog(targetPage);
 }
