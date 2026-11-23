@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createAssessmentSchema } from "./control-assessment-schema";
 describe("createAssessmentSchema", () => {
   const valid = {
-    testMethod: "Inspect configuration and sample access logs",
+    evidenceIds: ["00000000-0000-4000-8000-000000000001"], testMethod: "Inspect configuration and sample access logs",
     result: "effective",
     effectiveness: 92,
     notes: "The control operated consistently throughout the sampled period.",
@@ -84,7 +84,7 @@ describe("createAssessmentSchema", () => {
     expect(
       createAssessmentSchema.safeParse({
         ...valid,
-        testMethod: "x",
+        evidenceIds: ["00000000-0000-4000-8000-000000000001"], testMethod: "x",
         notes: "short",
       }).success,
     ).toBe(false);
