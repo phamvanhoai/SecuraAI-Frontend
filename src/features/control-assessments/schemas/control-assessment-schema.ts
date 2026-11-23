@@ -2,6 +2,7 @@ import { z } from "zod";
 import { implementationSchema } from "./control-catalog-schema";
 const assessment = z.object({
   id: z.uuid(),
+  evidenceBasis: z.array(z.object({ id: z.string(), name: z.string(), source: z.string(), collectedAt: z.string(), validFrom: z.string().nullable(), validUntil: z.string().nullable() })).nullable().default(null),
   testMethod: z.string().nullable(),
   result: z
     .enum(["effective", "partially_effective", "ineffective"])
@@ -18,6 +19,8 @@ export const controlAssessmentListSchema = z.object({
       controlCode: z.string(),
       name: z.string(),
       description: z.string().nullable(),
+      reviewRequired: z.boolean().default(false),
+      reviewReasons: z.array(z.string()).default([]),
       canManageEvidence: z.boolean().default(false),
       applicability: z.string(),
       implementationStatus: implementationSchema,
@@ -52,6 +55,7 @@ export function resultForEffectiveness(
 }
 export const createAssessmentSchema = z
   .object({
+    evidenceIds: z.array(z.uuid()).min(1, "Select at least one Evidence item.").max(100).refine(ids => new Set(ids).size === ids.length, "Select each Evidence only once."),
     testMethod: z.string().trim().min(3).max(1000),
     result: z.enum(["effective", "partially_effective", "ineffective"]),
     effectiveness: z.number().min(0).max(100).multipleOf(0.01),

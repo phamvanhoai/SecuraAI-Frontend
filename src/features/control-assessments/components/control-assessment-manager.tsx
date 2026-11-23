@@ -79,8 +79,9 @@ export function ControlAssessmentManager() {
   const toast = useToast();
   const ref = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState<ControlAssessmentItem>();
+  const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
   const [method, setMethod] = useState("");
-  const [effectiveness, setEffectiveness] = useState("100");
+  const [effectiveness, setEffectiveness] = useState("");
   const validScore =
     effectiveness.trim() !== "" &&
     Number.isFinite(Number(effectiveness)) &&
@@ -102,19 +103,27 @@ export function ControlAssessmentManager() {
   const open = (item: ControlAssessmentItem) => {
     setStale(false);
     setSelected(item);
+    setEvidenceIds([]);
     setImplementationStatus(item.implementationStatus);
     setImplementationChangeReason("");
     setMethod("");
-    setEffectiveness(item.assessments[0]?.effectiveness?.toString() ?? "100");
+    setEffectiveness(item.assessments[0]?.effectiveness?.toString() ?? "");
     setNotes("");
     setAssessmentTab("assess");
     setHistoryPage(1);
     setError(undefined);
     ref.current?.showModal();
   };
+  const eligibilityReason = selected && selected.applicability !== "applicable"
+    ? "Only Applicable controls can be assessed for operating effectiveness. Update applicability in Edit Control, then reopen this form."
+    : selected && !["partially_implemented", "implemented"].includes(implementationStatus)
+      ? "Select Partially implemented or Implemented to assess operating effectiveness. Record actual deployment progress and explain any status change."
+      : undefined;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!selected || stale || mutation.isPending) return;
+    if (eligibilityReason) { setError(eligibilityReason); return; }
+    if (!evidenceIds.length) { setError("Select at least one Evidence item used for this assessment."); return; }
     if (
       implementationStatus !== selected.implementationStatus &&
       (implementationChangeReason.trim().length < 10 || implementationChangeReason.trim().length > 2000)
@@ -142,6 +151,7 @@ export function ControlAssessmentManager() {
       await mutation.mutateAsync({
         controlId: selected.id,
         body: {
+          evidenceIds,
           testMethod: method.trim(),
           result,
           effectiveness: score,
@@ -204,9 +214,13 @@ export function ControlAssessmentManager() {
       cell: (item) => {
         const latest = item.assessments[0];
         return latest?.result ? (
-          <StatusBadge tone={tones[latest.result]}>
-            {labels[latest.result]}
-          </StatusBadge>
+          <div className="space-y-1">
+            <StatusBadge tone={tones[latest.result]}>{labels[latest.result]}</StatusBadge>
+            {item.reviewRequired ? <div>
+              <StatusBadge tone="warning">Review required</StatusBadge>
+              <ul className="mt-1 max-w-sm space-y-1 text-xs text-muted">{item.reviewReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+            </div> : null}
+          </div>
         ) : (
           <StatusBadge tone="neutral">Not assessed</StatusBadge>
         );
@@ -755,6 +769,14 @@ export function ControlAssessmentManager() {
                       <p className="mt-3 text-sm whitespace-pre-wrap">
                         {assessment.notes}
                       </p>
+                      <section className="mt-3 space-y-2" aria-label="Evidence used">
+                        <h4 className="text-sm font-medium">Evidence used</h4>
+                        {assessment.evidenceBasis?.length ? assessment.evidenceBasis.map(item => <div key={item.id} className="rounded border border-border p-2 text-sm">
+                          <p className="font-medium">{item.name}</p><p>{item.source}</p>
+                          <p className="text-muted text-xs">Collected: {new Date(item.collectedAt).toLocaleString("en-GB")}</p>
+                          <p className="text-muted text-xs">Valid until: {item.validUntil ? new Date(item.validUntil).toLocaleString("en-GB") : "No expiry recorded"}</p>
+                        </div>) : <p className="text-muted text-sm">Evidence snapshot was not recorded for this historical assessment.</p>}
+                      </section>
                     </article>
                   );
                 })
@@ -791,11 +813,17 @@ export function ControlAssessmentManager() {
             className="space-y-4"
             onSubmit={submit}
           >
+            {selected?.reviewRequired ? <Alert>
+              <p className="font-medium">Review required</p>
+              <ul className="mt-1 space-y-1 text-sm">{selected.reviewReasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+              <p className="mt-2 text-sm">Review the Control and Evidence, then save a new assessment. Historical results are preserved.</p>
+            </Alert> : null}
             {error ? (
               <Alert className="border-danger/25 bg-danger-soft text-danger">
                 {error}
               </Alert>
             ) : null}
+            {eligibilityReason ? <Alert>{eligibilityReason}</Alert> : null}
             <section className="border-border grid gap-3 rounded-lg border p-4 sm:grid-cols-3">
               <div>
                 <p className="text-muted text-xs uppercase">Applicability</p>
@@ -873,6 +901,14 @@ export function ControlAssessmentManager() {
                 </p>
               </div>
             ) : null}
+            <fieldset className="space-y-2 rounded-lg border border-border p-3">
+              <legend className="px-1 text-sm font-medium">Evidence used for this assessment *</legend>
+              <p className="text-muted text-xs">Select the Evidence you actually reviewed. A snapshot is preserved with this assessment even if links change later.</p>
+              {selected?.evidence.map(item => <label key={item.id} className="flex items-start gap-2 text-sm">
+                <input type="checkbox" checked={evidenceIds.includes(item.id)} onChange={event => setEvidenceIds(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))} />
+                <span>{item.name}<span className="text-muted block text-xs">{item.source}</span></span>
+              </label>)}
+            </fieldset>
             <div>
               <Label htmlFor="testMethod">Test method</Label>
               <Textarea
@@ -964,7 +1000,7 @@ export function ControlAssessmentManager() {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending || stale}>
+              <Button type="submit" disabled={mutation.isPending || stale || Boolean(eligibilityReason)}>
                 {mutation.isPending ? "Saving…" : "Save assessment"}
               </Button>
             </div>
