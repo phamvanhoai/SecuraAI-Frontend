@@ -942,6 +942,11 @@ export function RiskAssessmentDetailDialog({
               ?.approvalBlockedReason ?? null
           }
           onClose={() => setDecidingAcceptance(null)}
+          onDecisionRecorded={() => {
+            setDecidingAcceptance(null);
+            ref.current?.close();
+            onClose();
+          }}
         />
       ) : null}
       {completingReview && risk ? <CompleteRiskReviewDialog risk={risk} onClose={() => setCompletingReview(false)} /> : null}

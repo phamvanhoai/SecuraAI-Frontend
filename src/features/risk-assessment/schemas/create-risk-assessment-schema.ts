@@ -6,7 +6,7 @@ const reviewDateSchema = z
   .date("Select a valid review date.")
   .refine(
     (value) => value > riskToday(),
-    "Review date must be after today (Asia/Bangkok, UTC+7).",
+    "Review date must be after today in Vietnam time (UTC+7).",
   );
 
 export const createRiskAssessmentSchema = z.object({

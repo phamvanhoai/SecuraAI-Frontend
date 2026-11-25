@@ -3,7 +3,6 @@ import {
   Bell,
   Boxes,
   BrainCircuit,
-  CalendarClock,
   ClipboardCheck,
   FileStack,
   Gauge,
@@ -115,13 +114,6 @@ const modules = {
     icon: FileStack,
     section: "AI & Monitoring",
     requiredAnyPermission: ["log-sources.read"],
-  },
-  integrationSchedules: {
-    title: "Sync Schedules",
-    slug: "integrations/schedules",
-    icon: CalendarClock,
-    section: "AI & Monitoring",
-    requiredAnyPermission: ["integrations.read"],
   },
   reports: {
     title: "Reports",
@@ -339,21 +331,18 @@ export function getPanelNavigation(
     })),
   ];
 
-  // Add direct-href items that are not panel-scoped
-  if (panel === "admin") {
-    base.splice(base.findIndex((i) => i.title === "AI Models") + 1, 0, {
-      title: "Sync Schedules",
-      href: "/integrations/schedules",
-      icon: CalendarClock,
-      section: "AI & Monitoring",
-      requiredAnyPermission: ["integrations.read"],
-    });
-  }
-
   return base.map((item) => {
     if (!roleCodes.includes("EMPLOYEE")) return item;
-    if (item.href === "/risks" && permissions.includes("risks.review-reassessment")) return { ...item, title: "My Risks" };
-    if (item.href === "/risks" && permissions.includes("risks.approve-acceptance")) return { ...item, title: "Risk Acceptance Requests" };
+    if (
+      item.href === "/risks" &&
+      permissions.includes("risks.review-reassessment")
+    )
+      return { ...item, title: "My Risks" };
+    if (
+      item.href === "/risks" &&
+      permissions.includes("risks.approve-acceptance")
+    )
+      return { ...item, title: "Risk Acceptance Requests" };
     return item;
   });
 }

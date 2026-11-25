@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   createApiKeyFormSchema,
   createIntegrationFormSchema,
-  createSyncScheduleFormSchema,
   deriveApiKeyStatus,
   integrationListSchema,
   integrationSchema,
@@ -104,15 +103,6 @@ describe("integration-schema", () => {
     const parsed = testConnectionResultSchema.parse(raw);
     expect(parsed.latencyMs).toBe(124);
     expect(parsed.success).toBe(true);
-  });
-
-  it("validates createSyncScheduleFormSchema", () => {
-    const valid = createSyncScheduleFormSchema.parse({
-      scheduleExpression: "*/15 * * * *",
-      isActive: true,
-    });
-    expect(valid.scheduleExpression).toBe("*/15 * * * *");
-    expect(valid.isActive).toBe(true);
   });
 
   it("validates updateIntegrationFormSchema", () => {
