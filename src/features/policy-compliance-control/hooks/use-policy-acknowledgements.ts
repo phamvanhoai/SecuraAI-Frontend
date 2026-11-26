@@ -6,6 +6,7 @@ import {
   listEmployeePolicies,
 } from "../api/policy-acknowledgements";
 import type { EmployeePolicyQuery } from "../schemas/policy-acknowledgement-schema";
+import { ApiError } from "@/lib/api/api-error";
 const keys = ["policies", "acknowledgements"] as const;
 export const useEmployeePolicies = (
   query: EmployeePolicyQuery,
@@ -36,5 +37,11 @@ export function useAcknowledgePolicy() {
     }) => acknowledgePolicy(policyId, versionId),
     retry: false,
     onSuccess: () => client.invalidateQueries({ queryKey: keys }),
+    onError: async (error) => {
+      if (error instanceof ApiError && [401, 403, 404, 409].includes(error.status)) {
+        await client.invalidateQueries({ queryKey: keys });
+        if ([401, 403].includes(error.status)) await client.invalidateQueries({ queryKey: ["auth", "session"] });
+      }
+    },
   });
 }
