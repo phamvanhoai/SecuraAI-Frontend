@@ -1,5 +1,7 @@
 # SecuraAI Frontend
 
+Employee policy reading shows the current published version, its change summary and the Employee's latest confirmation of an older published version. Every new publication requires its own confirmation; creating a draft does not. All active Employees share this workspace without department filtering. Stale confirmations refresh the list and require reopening the current version; prior confirmations are retained. No schema migration.
+
 Create new version consumes the V2 policy version endpoint. A newly created version is a draft while its parent policy stays active, keeping the current publication available until the replacement is published.
 
 Incident creation is Security Officer-only (manual and confirmed-source modes). Executive retains incident list/detail access without create/handling actions. Other roles retain access to their historical reports without a create prompt. Losing the officer role closes the creation dialog. No new reporting workflow or database changes.

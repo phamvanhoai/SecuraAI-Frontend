@@ -326,7 +326,7 @@ export function PoliciesManager() {
     acknowledge: {
       title: "Policies Requiring Acknowledgement",
       description:
-        "Read policies applicable to your department and confirm your understanding.",
+        "Read the current published versions available to all Employees. Confirm each new published version separately.",
     },
     departments: {
       title: "Policy Department Assignments",
@@ -481,7 +481,7 @@ export function PoliciesManager() {
       {
         label: "Assigned to you",
         value: acknowledgeMetrics.data ? String(acknowledgeTotal) : "—",
-        detail: "Policies assigned to your department",
+        detail: "Published policies available to all Employees",
         tone: "brand",
         loading: acknowledgeMetrics.isPending,
       },

@@ -1,5 +1,8 @@
 import { z } from "zod";
 const dt = z.string().datetime().nullable();
+const previousAcknowledgementSchema = z.object({
+  versionId: z.uuid(), versionNumber: z.string(), acknowledgedAt: z.string().datetime(),
+}).nullable();
 export const employeePolicyListSchema = z.object({
   items: z.array(
     z.object({
@@ -12,6 +15,8 @@ export const employeePolicyListSchema = z.object({
       effectiveDate: dt,
       publishedAt: dt,
       acknowledgedAt: dt,
+      changeSummary: z.string().nullable(),
+      previousAcknowledgement: previousAcknowledgementSchema,
     }),
   ),
   pagination: z.object({
@@ -35,6 +40,7 @@ export const employeePolicyDetailSchema = z.object({
     publishedAt: dt,
   }),
   acknowledgedAt: dt,
+  previousAcknowledgement: previousAcknowledgementSchema,
 });
 export const acknowledgementSchema = z.object({
   policyId: z.uuid(),

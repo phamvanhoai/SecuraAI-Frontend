@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { ApiError } from "@/lib/api/api-error";
 import { useSessionUser } from "@/features/authentication-account";
 import {
   useAcknowledgePolicy,
@@ -30,6 +31,9 @@ import type {
 } from "../schemas/policy-acknowledgement-schema";
 import { PolicyViewTabs } from "./policy-view-tabs";
 const initial: EmployeePolicyQuery = { page: 1, limit: 20, status: "all" };
+function formatAcknowledgementDate(value: string): string {
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
 export function EmployeePolicyAcknowledgementManager({
   onViewHistory,
   hideHeader = false,
@@ -79,9 +83,15 @@ export function EmployeePolicyAcknowledgementManager({
       header: "Reading status",
       cell: (p) =>
         p.acknowledgedAt ? (
-          <StatusBadge tone="success">Acknowledged</StatusBadge>
+          <div><StatusBadge tone="success">Acknowledged</StatusBadge>
+            <p className="text-muted mt-1 text-xs">{formatAcknowledgementDate(p.acknowledgedAt)}</p>
+          </div>
         ) : (
-          <StatusBadge tone="warning">Reading required</StatusBadge>
+          <div><StatusBadge tone="warning">{p.previousAcknowledgement ? "New version — reading required" : "Reading required"}</StatusBadge>
+            {p.previousAcknowledgement ? <p className="text-muted mt-1 text-xs">
+              Previously acknowledged v{p.previousAcknowledgement.versionNumber} on {formatAcknowledgementDate(p.previousAcknowledgement.acknowledgedAt)}
+            </p> : null}
+          </div>
         ),
     },
     {
@@ -121,9 +131,15 @@ export function EmployeePolicyAcknowledgementManager({
       );
       setSelected(null);
     } catch (error) {
+      if (error instanceof ApiError && [401, 403, 404, 409].includes(error.status)) {
+        setConfirmed(false);
+        setSelected(null);
+      }
       toast.error(
         "Unable to confirm reading",
-        error instanceof Error ? error.message : "Please try again.",
+        error instanceof ApiError && [404, 409].includes(error.status)
+          ? "The published policy changed or is no longer available. Open the current version from the refreshed list and read it before confirming."
+          : error instanceof Error ? error.message : "Please try again.",
       );
     }
   }
@@ -140,7 +156,7 @@ export function EmployeePolicyAcknowledgementManager({
       {!hideHeader && (
         <ProductPageHeader
           title="Policies requiring acknowledgement"
-          description="Read policies applicable to your department and confirm your understanding."
+          description="Read the current published policy versions and confirm reading. Each new published version requires a separate confirmation."
           showSampleNotice={false}
         />
       )}
@@ -178,11 +194,11 @@ export function EmployeePolicyAcknowledgementManager({
         </div>
       ) : null}
       <ProductPanel
-        title="Applicable policies"
+        title="Published policies"
         description={
           list.data
             ? `${list.data.pagination.total} policies found`
-            : "Published policies assigned to your department"
+            : "Published policies available to all Employees"
         }
       >
         <form
@@ -227,7 +243,7 @@ export function EmployeePolicyAcknowledgementManager({
               className="bg-neutral-soft h-56 animate-pulse rounded-xl"
             />
           ) : list.isError ? (
-            <Alert>Unable to load applicable policies.</Alert>
+            <Alert>Unable to load published policies. <Button variant="secondary" onClick={() => void list.refetch()}>Try again</Button></Alert>
           ) : list.data?.items.length ? (
             <DataTable
               columns={columns}
@@ -243,12 +259,12 @@ export function EmployeePolicyAcknowledgementManager({
               <h3 className="mt-2 text-base font-semibold">
                 {hasActiveFilters
                   ? "No matching policies found"
-                  : "No applicable policies"}
+                  : "No published policies"}
               </h3>
               <p className="text-muted mx-auto mt-1 max-w-sm text-sm">
                 {hasActiveFilters
                   ? "No policies match the current search and reading status. Try adjusting or clearing the filters."
-                  : "No published policies are currently assigned to your department."}
+                  : "No policies have been published yet."}
               </p>
               {hasActiveFilters ? (
                 <Button
@@ -285,7 +301,12 @@ export function EmployeePolicyAcknowledgementManager({
         {detail.isPending ? (
           <div className="bg-neutral-soft h-64 animate-pulse rounded-xl" />
         ) : detail.isError ? (
-          <Alert>Unable to load policy content.</Alert>
+          <Alert>
+            <p>{detail.error instanceof ApiError && [404, 409].includes(detail.error.status)
+              ? "This published version is no longer available. Refresh the list and open the current version."
+              : "Unable to load policy content. Return to the list and try again."}</p>
+            <Button variant="secondary" onClick={() => { setConfirmed(false); setSelected(null); void list.refetch(); }}>Back to policies</Button>
+          </Alert>
         ) : detail.data ? (
           <div className="space-y-5">
             <div>
@@ -296,6 +317,18 @@ export function EmployeePolicyAcknowledgementManager({
                 {detail.data.title}
               </h3>
             </div>
+            {detail.data.previousAcknowledgement ? (
+              <Alert>
+                <strong className="block">{detail.data.acknowledgedAt ? "Previous confirmation" : "New published version requires confirmation"}</strong>
+                You acknowledged v{detail.data.previousAcknowledgement.versionNumber} on {formatAcknowledgementDate(detail.data.previousAcknowledgement.acknowledgedAt)}.
+                {detail.data.acknowledgedAt ? " That confirmation remains in your history." : ` The current published version is v${detail.data.version.versionNumber}. Read and confirm this version separately.`}
+              </Alert>
+            ) : null}
+            <p className="text-muted text-sm">Published: {detail.data.version.publishedAt ? formatAcknowledgementDate(detail.data.version.publishedAt) : "Not recorded"}</p>
+            <section aria-label="Change summary" className="space-y-1 text-sm">
+              <h4 className="font-semibold">Change summary</h4>
+              <p className="whitespace-pre-wrap">{detail.data.version.changeSummary || "No change summary recorded."}</p>
+            </section>
             <section
               aria-label="Policy content"
               className="border-border bg-background max-h-80 overflow-y-auto rounded-lg border p-4 text-sm leading-6 whitespace-pre-wrap"
@@ -303,7 +336,7 @@ export function EmployeePolicyAcknowledgementManager({
               {detail.data.version.content}
             </section>
             {detail.data.acknowledgedAt ? (
-              <Alert>Already acknowledged.</Alert>
+              <Alert>You acknowledged v{detail.data.version.versionNumber} on {formatAcknowledgementDate(detail.data.acknowledgedAt)}.</Alert>
             ) : (
               <label className="border-border flex cursor-pointer items-start gap-3 rounded-lg border p-4">
                 <Checkbox
