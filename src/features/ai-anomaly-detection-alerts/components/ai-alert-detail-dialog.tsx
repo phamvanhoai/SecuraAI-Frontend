@@ -697,7 +697,7 @@ function ContributionDetails({
           </ol>
         </details>
       ) : null}
-      {correlated.length ? (
+      {initialEvent || correlated.length ? (
         <details className="border-border rounded-lg border">
           <summary className="focus-visible:outline-brand cursor-pointer p-3 text-sm font-medium">
             Events in this alert ({correlated.length + (initialEvent ? 1 : 0)})

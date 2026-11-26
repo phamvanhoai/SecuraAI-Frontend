@@ -98,6 +98,32 @@ beforeEach(() => {
 });
 
 describe("AiAlertDetailDialog", () => {
+  it("shows the source event when an alert has no grouped events", async () => {
+    const onViewSourceEvent = vi.fn();
+    explanationState.current.data = {
+      explanationText: "A single event created this alert.",
+      featureContributions: [],
+      baselineData: null,
+      createdAt: "2026-09-11T03:00:01.000Z",
+    };
+
+    render(
+      <AiAlertDetailDialog
+        alert={alert}
+        onClose={vi.fn()}
+        onViewSourceEvent={onViewSourceEvent}
+      />,
+    );
+
+    const events = screen.getByText("Events in this alert (1)");
+    await userEvent.setup().click(events);
+    expect(screen.getByText("Event 1 (created alert)")).toBeVisible();
+    expect(screen.getByText(alert.event.id)).toBeVisible();
+
+    await userEvent.setup().click(screen.getByText("View ingested event"));
+    expect(onViewSourceEvent).toHaveBeenCalledWith(alert.event.id);
+  });
+
   it("explains statistical rarity using actual sample counts without fixed-point terms", () => {
     explanationState.current.data = {
       explanationText: "Unusual compared with prior activity.",
