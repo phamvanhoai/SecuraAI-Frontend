@@ -91,6 +91,7 @@ import { CloseIncidentDialog } from "./close-incident-dialog";
 import { ClassificationHistory } from "./classification-history";
 import { AssignmentHistory } from "./assignment-history";
 import { RecordContainmentActionDialog } from "./record-containment-action-dialog";
+import { RelatedIncidentReview, relatedIncidentErrorSchema, type RelatedIncident } from "./related-incident-review";
 
 const defaults: ReportIncidentForm = {
   creationMode: "source",
@@ -277,6 +278,10 @@ export function IncidentReportingManager() {
   const displayedList = canRead ? classificationQueue : list;
   const detail = useMyIncident(selectedId);
   const mutation = useReportIncident();
+  const [relatedReview, setRelatedReview] = useState<{
+    values: ReportIncidentForm;
+    items: RelatedIncident[];
+  }>();
   const classificationMutation = useClassifyIncidentSeverity();
   const assignmentOptions = useIncidentAssignmentOptions(canAssign);
   const assignmentMutation = useAssignIncidentHandler();
@@ -376,6 +381,7 @@ export function IncidentReportingManager() {
     if (!removalTarget && dialog.open) dialog.close();
   }, [removalTarget]);
   const close = () => {
+    setRelatedReview(undefined);
     setOpen(false);
     setMessage(undefined);
     reset(createDefaults(isSecurityOfficer));
@@ -386,10 +392,22 @@ export function IncidentReportingManager() {
     reset(createDefaults(isSecurityOfficer));
     setOpen(true);
   };
-  const submit = async (values: ReportIncidentForm) => {
+  const submit = async (
+    values: ReportIncidentForm,
+    separateReason?: string,
+  ) => {
     if (!isSecurityOfficer || mutation.isPending) return;
     try {
-      const created = await mutation.mutateAsync(values);
+      setMessage(undefined);
+      const created = await mutation.mutateAsync({
+        ...values,
+        ...(separateReason && relatedReview
+          ? {
+              separateReason,
+              reviewedIncidentIds: relatedReview.items.map((item) => item.id),
+            }
+          : {}),
+      });
       close();
       setPage(1);
       toast.success(
@@ -399,6 +417,13 @@ export function IncidentReportingManager() {
           : `${created.incidentCode} was created for investigation.`,
       );
     } catch (error) {
+      const review = relatedIncidentErrorSchema.safeParse(
+        error instanceof ApiError ? error.details : undefined,
+      );
+      if (error instanceof ApiError && error.status === 409 && review.success) {
+        setRelatedReview({ values, items: review.data.error.details.items });
+        return;
+      }
       setMessage(
         error instanceof Error
           ? error.message
@@ -1115,7 +1140,13 @@ export function IncidentReportingManager() {
         className="max-h-[calc(100dvh-2rem)] w-[min(40rem,calc(100%-2rem))] overflow-y-auto"
         onClose={close}
       >
-        <form className="space-y-5" noValidate onSubmit={handleSubmit(submit)}>
+        {relatedReview ? <>
+          {message ? <p role="alert" className="text-sm text-danger">{message}</p> : null}
+          <RelatedIncidentReview items={relatedReview.items} pending={mutation.isPending}
+            onView={(id) => setSelectedId(id)}
+            onBack={() => { setRelatedReview(undefined); setMessage(undefined); }}
+            onConfirm={(reason) => void submit(relatedReview.values, reason)} />
+        </> : <form className="space-y-5" noValidate onSubmit={handleSubmit((values) => submit(values))}>
           {message ? (
             <div className="border-border bg-neutral-soft/30 flex gap-2.5 rounded-xl border p-3.5">
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-danger" strokeWidth={1.8} />
@@ -1369,7 +1400,7 @@ export function IncidentReportingManager() {
               )}
             </Button>
           </div>
-        </form>
+        </form>}
       </Dialog>
       <Dialog
         dialogRef={assignmentDialogRef}
