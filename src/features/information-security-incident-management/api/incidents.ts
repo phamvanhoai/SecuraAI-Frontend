@@ -325,7 +325,12 @@ export async function unlinkIncidentFromAsset(input: {
     { target: "same-origin", method: "DELETE" },
   );
 }
-export async function reportIncident(input: ReportIncidentForm) {
+export async function reportIncident(
+  input: ReportIncidentForm & {
+    separateReason?: string;
+    reviewedIncidentIds?: string[];
+  },
+) {
   return incidentSchema.parse(
     await apiRequest<unknown>("/api/incidents", {
       target: "same-origin",
@@ -338,8 +343,14 @@ export async function reportIncident(input: ReportIncidentForm) {
         title: input.title.trim(),
         description: input.description.trim(),
         severity: input.severity,
+        ...(input.separateReason
+          ? {
+              separateReason: input.separateReason,
+              reviewedIncidentIds: input.reviewedIncidentIds,
+            }
+          : {}),
         ...(input.occurredAt
-          ? { occurredAt: new Date(input.occurredAt).toISOString() }
+          ? { detectedAt: new Date(input.occurredAt).toISOString() }
           : {}),
       },
     }),
