@@ -802,7 +802,7 @@ export function AiAlertsManager() {
         <div className="space-y-4">
           <Alert className="border-info/25 bg-info-soft text-foreground">
             This run processes up to 100 of the oldest pending security events
-            from the last 24 hours.
+            regardless of when they occurred.
           </Alert>
           <div className="text-muted space-y-2 text-sm leading-6">
             <p>
