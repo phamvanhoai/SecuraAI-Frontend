@@ -124,10 +124,11 @@ export const normalizedEventItemSchema = z.object({
       status: z.enum([
         "PENDING",
         "PROCESSING",
-        "INSUFFICIENT_BASELINE",
         "FAILED",
         "LINKED_TO_ALERT",
         "BELOW_THRESHOLD",
+        "LLM_BENIGN",
+        "LLM_SUSPICIOUS",
         "PREVIOUSLY_EVALUATED",
       ]),
       score: z.number().min(0).max(1).nullable(),

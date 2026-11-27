@@ -11,7 +11,6 @@ export const anomalyDetectionRunResultSchema = z.object({
   scope: z.literal("ALL_PENDING"),
   hasMore: z.boolean().default(false),
   eventsEvaluated: z.number().int().nonnegative(),
-  insufficientBaseline: z.number().int().nonnegative().default(0),
   anomaliesDetected: z.number().int().nonnegative(),
   detectionsCreated: z.number().int().nonnegative(),
   alertsCreated: z.number().int().nonnegative(),
