@@ -62,7 +62,7 @@ export function DeleteAssetDialog({
       confirmation.trim() !== asset.assetCode
     )
       return;
-    const parsed = archiveAssetSchema.safeParse({ reason });
+    const parsed = archiveAssetSchema.safeParse({ reason, confirmationCode: confirmation });
     if (!parsed.success) {
       setMessage(parsed.error.issues[0]?.message ?? "Enter an archive reason (20-1,000 characters).");
       return;
@@ -83,7 +83,7 @@ export function DeleteAssetDialog({
   const isActive = asset?.status === "active";
   const locked = !isActive || stale || mutation.isPending;
   const confirmationMatches = confirmation.trim() === (asset?.assetCode ?? "___");
-  const reasonValidation = archiveAssetSchema.safeParse({ reason });
+  const reasonValidation = archiveAssetSchema.pick({ reason: true }).safeParse({ reason });
   const reasonError = reason.length > 0 && !reasonValidation.success
     ? reasonValidation.error.issues[0]?.message
     : undefined;

@@ -21,6 +21,17 @@ vi.mock("../hooks/use-create-asset", () => ({
 vi.mock("../hooks/use-asset-create-options", () => ({
   useAssetCreateOptions: optionsMock,
 }));
+vi.mock("../hooks/use-asset-owner-options", () => ({
+  useAssetOwnerOptions: () => ({
+    isPending: false,
+    isFetching: false,
+    isError: false,
+    data: { items: [
+      { id: "00000000-0000-4000-8000-000000000020", fullName: "Asset Owner", email: "owner.one@example.com" },
+      { id: "00000000-0000-4000-8000-000000000021", fullName: "Asset Owner", email: "owner.two@example.com" },
+    ] },
+  }),
+}));
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: successMock, error: vi.fn() }),
 }));
@@ -109,7 +120,12 @@ describe("CreateAssetDialog", () => {
       " Application Server ",
     );
     await user.selectOptions(screen.getByLabelText("Asset type"), "SERVER");
-    await user.selectOptions(screen.getByLabelText("Asset owner"), ownerUserId);
+    await user.click(screen.getByRole("combobox", { name: "Asset owner" }));
+    expect(screen.getByRole("option", { name: /owner.two@example.com/ })).toBeVisible();
+    await user.click(screen.getByRole("option", { name: /owner.one@example.com/ }));
+    expect(screen.getByRole("combobox", { name: "Asset owner" })).toHaveValue(
+      "Asset Owner \u2014 owner.one@example.com",
+    );
     await user.click(screen.getByRole("button", { name: "Create asset" }));
     await waitFor(() =>
       expect(mutateAsyncMock).toHaveBeenCalledWith(
@@ -117,11 +133,13 @@ describe("CreateAssetDialog", () => {
           name: "Application Server",
           assetType: "SERVER",
           ownerUserId,
-          dependencies: [],
-          eventSourceIds: [],
+
+
         }),
       ),
     );
+    expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("dependencies");
+    expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("eventSourceIds");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("criticality");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("dataClassification");
     expect(mutateAsyncMock.mock.calls[0]?.[0]).not.toHaveProperty("businessServiceId");

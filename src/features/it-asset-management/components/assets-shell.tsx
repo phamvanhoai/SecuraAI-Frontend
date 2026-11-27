@@ -124,9 +124,6 @@ export function AssetsShell() {
   const canEdit = session.data?.permissions.includes("assets.update") ?? false;
   const assets = useAssets(query, canRead);
   const [search, setSearch] = useState(query.q ?? "");
-  const [type, setType] = useState(query.assetType ?? "");
-  const [criticality, setCriticality] = useState(query.criticality ?? "");
-  const [status, setStatus] = useState(query.status ?? "");
   const hasActiveFilters = Boolean(
     query.q || query.assetType || query.criticality || query.status,
   );
@@ -180,11 +177,6 @@ export function AssetsShell() {
     navigate({
       page: 1,
       q: search.trim() || undefined,
-      assetType: assetTypeSchema.safeParse(type).data,
-      criticality: criticality
-        ? (criticality as AssetListQuery["criticality"])
-        : undefined,
-      status: status ? (status as AssetListQuery["status"]) : undefined,
     });
   };
   if (session.isPending) return <TableSkeleton rows={8} columns={8} />;
@@ -213,58 +205,57 @@ export function AssetsShell() {
       >
         <form
           aria-label="Asset filters"
-          className="border-border flex flex-wrap items-center gap-2 border-b p-4"
+          className="border-border grid gap-3 border-b p-4 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1fr)_10rem_10rem_9rem_auto]"
           onSubmit={submit}
         >
-          <label className="relative block min-w-[220px] max-w-md flex-1">
-            <span className="sr-only">Search</span>
-            <Search
-              aria-hidden="true"
-              className="text-muted absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              strokeWidth={1.8}
-            />
+          <label className="min-w-0 text-sm font-medium">
+            Search
             <Input
-              className="bg-background min-h-10 pl-9"
+              className="mt-1"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Code, name, owner, or service"
             />
           </label>
-          <Select aria-label="Asset type" className="min-h-10 w-40" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">All types</option>
-            {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
-          </Select>
-          <Select aria-label="Criticality" className="min-h-10 w-40" value={criticality} onChange={(e) => setCriticality(e.target.value)}>
-            <option value="">All criticalities</option>
-            {assetCriticalities.map((value) => <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>)}
-          </Select>
-          <Select aria-label="Status" className="min-h-10 w-36" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </Select>
-          <Button className="min-h-10" type="submit">
-            <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
-            Filter
-          </Button>
-          {search || type || criticality || status ? (
+          <label className="min-w-0 text-sm font-medium">
+            Asset type
+            <Select className="mt-1" value={query.assetType ?? ""} onChange={(e) => navigate({ page: 1, assetType: assetTypeSchema.safeParse(e.target.value).data })}>
+              <option value="">All types</option>
+              {assetTypes.map((value) => <option key={value} value={value}>{assetTypeLabels[value]}</option>)}
+            </Select>
+          </label>
+          <label className="min-w-0 text-sm font-medium">
+            Criticality
+            <Select className="mt-1" value={query.criticality ?? ""} onChange={(e) => navigate({ page: 1, criticality: e.target.value ? e.target.value as AssetListQuery["criticality"] : undefined })}>
+              <option value="">All criticalities</option>
+              {assetCriticalities.map((value) => <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>)}
+            </Select>
+          </label>
+          <label className="min-w-0 text-sm font-medium">
+            Status
+            <Select className="mt-1" value={query.status ?? ""} onChange={(e) => navigate({ page: 1, status: e.target.value ? e.target.value as AssetListQuery["status"] : undefined })}>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </Select>
+          </label>
+          <div className="flex items-end gap-2">
+            <Button type="submit">
+              <Search aria-hidden="true" className="size-4" strokeWidth={1.8} />
+              Search
+            </Button>
             <Button
               type="button"
               variant="secondary"
-              className="min-h-10 gap-1.5"
               aria-label="Clear filters"
               onClick={() => {
                 setSearch("");
-                setType("");
-                setCriticality("");
-                setStatus("");
                 router.push("/assets");
               }}
             >
               <X aria-hidden="true" className="size-4" strokeWidth={1.8} />
-              Clear
             </Button>
-          ) : null}
+          </div>
         </form>
         <div className="p-4">
           {assets.isPending ? (
@@ -310,9 +301,6 @@ export function AssetsShell() {
                   className="mt-4 min-h-9 text-xs"
                   onClick={() => {
                     setSearch("");
-                    setType("");
-                    setCriticality("");
-                    setStatus("");
                     router.push("/assets");
                   }}
                   type="button"

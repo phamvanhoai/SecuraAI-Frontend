@@ -30,8 +30,8 @@ describe("createAsset", () => {
       createAsset({
         name: "Server",
         assetType: "SERVER",
-        dependencies: [],
-        eventSourceIds: [],
+
+
       }),
     ).resolves.toEqual(created);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -41,8 +41,8 @@ describe("createAsset", () => {
         body: JSON.stringify({
           name: "Server",
           assetType: "SERVER",
-          dependencies: [],
-          eventSourceIds: [],
+
+
         }),
       }),
     );
@@ -68,8 +68,8 @@ describe("createAsset", () => {
       createAsset({
         name: "Server",
         assetType: "SERVER",
-        dependencies: [],
-        eventSourceIds: [],
+
+
       }),
     ).rejects.toMatchObject({
       status: 409,

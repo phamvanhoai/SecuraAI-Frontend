@@ -208,7 +208,7 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Archive reason is required" } }, { status: 422 });
   }
   const input = archiveAssetSchema.safeParse(body);
-  if (!input.success) return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Enter an archive reason (1–1000 characters)." } }, { status: 422 });
+  if (!input.success) return NextResponse.json({ success: false, error: { code: "VALIDATION_ERROR", message: "Enter the asset confirmation code and an archive reason (20-1,000 characters)." } }, { status: 422 });
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(authCookieNames.access)?.value;
   if (!accessToken) {

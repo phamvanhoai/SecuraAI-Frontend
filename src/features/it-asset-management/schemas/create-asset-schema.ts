@@ -21,8 +21,6 @@ export const createAssetSchema = z
     assetType: z.string().pipe(assetTypeSchema),
     ownerUserId: optionalUuid,
     description: optionalText(2000),
-    dependencyIds: z.array(z.uuid()).max(50).default([]),
-    eventSourceIds: z.array(z.uuid()).max(50).default([]),
   })
   .strict();
 
@@ -56,8 +54,6 @@ export const createAssetRequestSchema = z.object({
   assetType: assetTypeSchema,
   ownerUserId: z.uuid().optional(),
   description: z.string().trim().max(2000).refine((value) => value.length === 0 || value.length >= 20, "Enter at least 20 characters or leave blank.").optional(),
-  dependencies: z.array(z.object({ assetId: z.uuid() })).max(50),
-  eventSourceIds: z.array(z.uuid()).max(50),
 }).strict();
 export const assetDetailSchema = assetListItemSchema.extend({
   description: z.string().nullable(),

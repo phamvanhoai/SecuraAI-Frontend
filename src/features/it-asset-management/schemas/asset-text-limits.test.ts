@@ -18,7 +18,7 @@ describe("createAssetSchema text limits", () => {
   });
 });
 describe("createAssetRequestSchema text limits", () => {
-  const fields = { name: "CRM", assetType: "SERVER", dependencies: [], eventSourceIds: [] };
+  const fields = { name: "CRM", assetType: "SERVER" };
   it.each([2, 101])("rejects name length %i after trimming", (length) => {
     expect(createAssetRequestSchema.safeParse({ ...fields, name: "  " + "a".repeat(length) + "  " }).success).toBe(false);
   });
