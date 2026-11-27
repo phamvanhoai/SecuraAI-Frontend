@@ -1,3 +1,8 @@
+/**
+ * Layer: Feature Query & Mutation Hooks (Event Ingestion - Event Sources)
+ * Purpose: Wraps feature API calls with TanStack Query for caching, refetching, and cache invalidation.
+ * Flow: UI Component -> TanStack Query Hook -> Feature API
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createEventSource,
@@ -28,6 +33,11 @@ import type {
   UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
+/**
+ * TanStack Query hook for the paginated event source list.
+ * Including `params` in the queryKey ensures automatic refetching and per-filter caching
+ * whenever page, search query, or status filter changes.
+ */
 export function useEventSources(
   params?: Partial<EventSourceListQuery>,
   options?: { enabled?: boolean },
@@ -39,6 +49,7 @@ export function useEventSources(
   });
 }
 
+/** Fetches detailed metadata for a single event source; stays idle when `id` is null. */
 export function useEventSource(id: string | null) {
   return useQuery<EventSourceDetailResponse, Error>({
     queryKey: ["event-sources", id],
@@ -50,6 +61,7 @@ export function useEventSource(id: string | null) {
   });
 }
 
+/** Mutation hook to register a new event source and invalidate the cached source list. */
 export function useCreateEventSource() {
   const queryClient = useQueryClient();
 
@@ -61,6 +73,7 @@ export function useCreateEventSource() {
   });
 }
 
+/** Mutation hook to update an event source and refresh both the list and detail caches. */
 export function useUpdateEventSource() {
   const queryClient = useQueryClient();
 
@@ -77,6 +90,7 @@ export function useUpdateEventSource() {
   });
 }
 
+/** Mutation hook to test live connectivity for an event source configuration. */
 export function useTestEventSourceConnection() {
   return useMutation<
     TestEventSourceDiagnosticResponse,
@@ -87,6 +101,7 @@ export function useTestEventSourceConnection() {
   });
 }
 
+/** Mutation hook to import normalized events and refresh source and batch caches. */
 export function useImportEvents() {
   const queryClient = useQueryClient();
 
@@ -104,6 +119,7 @@ export function useImportEvents() {
   });
 }
 
+/** Fetches summary details for a single ingestion batch when `batchId` is provided. */
 export function useBatchDetail(batchId: string | null) {
   return useQuery<BatchDetailResponse, Error>({
     queryKey: ["event-ingestion-batches", batchId],
@@ -115,6 +131,7 @@ export function useBatchDetail(batchId: string | null) {
   });
 }
 
+/** Fetches paginated invalid events for a given ingestion batch. */
 export function useBatchInvalidEvents(
   batchId: string | null,
   params?: Partial<GetBatchInvalidEventsQuery>,
@@ -129,6 +146,7 @@ export function useBatchInvalidEvents(
   });
 }
 
+/** Fetches paginated historical ingestion batches for a given event source. */
 export function useSourceBatches(
   sourceId: string | null,
   params?: Partial<GetSourceBatchesQuery>,
