@@ -141,7 +141,7 @@ export function AiAlertsManager() {
   function runManualDetectionBatch() {
     manualDetectionDialogRef.current?.close();
     void runDetection
-      .mutateAsync({ lookbackHours: 24, maxEvents: 100 })
+      .mutateAsync({ maxEvents: 100 })
       .then((result) => {
         const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.${result.insufficientBaseline ? ` ${result.insufficientBaseline} events lacked sufficient baseline.` : ""}`;
         if (result.hasMore) {
