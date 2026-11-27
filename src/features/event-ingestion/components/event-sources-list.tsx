@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Layer: Feature UI Component (Event Ingestion - Event Sources)
+ * Purpose: Renders the interactive event source table with search, status filtering, pagination, and action dialogs.
+ * Flow: Page -> LogSourcesManager -> EventSourcesList -> useEventSources Hook
+ */
 import { Eye, Power, RotateCcw, Search, Server, Upload, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
@@ -49,12 +54,17 @@ const formatFamilyLabel: Record<string, string> = {
   AUDIT_LOGS: "Audit Logs",
 };
 
+/**
+ * Interactive event source directory with server-side pagination, search, status filtering,
+ * and quick actions (view details, pause/resume for ADMIN, and batch event import).
+ */
 export function EventSourcesList({
   onRegisterClick,
 }: {
   onRegisterClick?: () => void;
 }) {
   const [page, setPage] = useState(1);
+  // Keep input text (`draft`) separate from committed search (`query`) so API requests only fire on submit
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -63,10 +73,12 @@ export function EventSourcesList({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [viewingBatchId, setViewingBatchId] = useState<string | null>(null);
 
+  // UI-level check for ADMIN-only Pause/Resume action (backend enforces the same rule)
   const session = useSessionUser();
   const canToggleStatus =
     session.data?.roles.some((role) => role.code === "ADMIN") ?? false;
 
+  // Omit empty filters from the request object to stay compatible with backend strict query validation
   const eventSourcesQuery = useEventSources({
     page,
     limit: 20,
@@ -203,17 +215,20 @@ export function EventSourcesList({
     },
   ];
 
+  /** Commits the trimmed search text and resets pagination to page 1. */
   function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
     setPage(1);
     setQuery(draft.trim());
   }
 
+  /** Applies the selected status filter and resets pagination to page 1. */
   function handleStatusChange(value: string) {
     setPage(1);
     setStatusFilter(value);
   }
 
+  /** Resets search text, status filter, and current page back to defaults. */
   function handleClearFilters() {
     setDraft("");
     setQuery("");
@@ -415,6 +430,7 @@ export function EventSourcesList({
   );
 }
 
+/** Formats an ISO timestamp into a readable localized date/time string, falling back to the raw value on error. */
 function formatDate(value: string): string {
   try {
     return new Intl.DateTimeFormat("en-US", {

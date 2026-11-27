@@ -1,3 +1,8 @@
+/**
+ * Layer: Feature Schema / Runtime Contract (Event Ingestion - Event Sources)
+ * Purpose: Defines Zod schemas and inferred TypeScript types for forms, query params, and API responses.
+ * Flow: Backend JSON -> Feature API (Zod parse) -> Query Hook -> UI Component
+ */
 import { z } from "zod";
 
 export const eventFamilies = [
@@ -123,6 +128,7 @@ export const updateEventSourceFormSchema = z
 
 export type UpdateEventSourceFormValues = z.infer<typeof updateEventSourceFormSchema>;
 
+/** Runtime validation schema for a single event source item returned by the backend API. */
 export const eventSourceResponseSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
@@ -140,6 +146,7 @@ export const eventSourceResponseSchema = z.object({
 
 export type EventSourceResponse = z.infer<typeof eventSourceResponseSchema>;
 
+/** Query parameters supported by GET /api/event-sources (mirrors backend listEventSourcesQuerySchema). */
 export const eventSourceListQuerySchema = z.object({
   page: z.number().int().min(1).default(1),
   limit: z.number().int().min(1).max(100).default(20),
@@ -152,6 +159,7 @@ export const eventSourceListQuerySchema = z.object({
 
 export type EventSourceListQuery = z.infer<typeof eventSourceListQuerySchema>;
 
+/** Paginated response contract validated at the frontend API boundary. */
 export const paginatedEventSourcesSchema = z.object({
   items: z.array(eventSourceResponseSchema),
   pagination: z.object({

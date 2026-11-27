@@ -1,3 +1,8 @@
+/**
+ * Layer: Feature API Client (Event Ingestion - Event Sources)
+ * Purpose: Builds same-origin BFF HTTP requests and validates untrusted responses with Zod schemas.
+ * Flow: TanStack Query Hook -> Feature API -> Shared apiRequest -> Next.js BFF Route
+ */
 import { apiRequest } from "@/lib/api/api-client";
 import {
   batchDetailResponseSchema,
@@ -25,6 +30,7 @@ import {
   type UpdateEventSourceFormValues,
 } from "../schemas/event-source-schema";
 
+/** Registers a new event source via POST /api/event-sources and validates the response DTO. */
 export async function createEventSource(
   values: RegisterEventSourceFormValues,
 ): Promise<EventSourceResponse> {
@@ -54,6 +60,11 @@ export async function createEventSource(
   return eventSourceResponseSchema.parse(data);
 }
 
+/**
+ * Fetches a paginated list of event sources through the same-origin Next.js BFF route.
+ * Only non-empty filter params are serialized so the backend's strict Zod schema never receives empty strings.
+ * Validates the untrusted response payload at runtime with paginatedEventSourcesSchema.
+ */
 export async function listEventSources(
   params?: Partial<EventSourceListQuery>,
 ): Promise<PaginatedEventSources> {
@@ -77,6 +88,7 @@ export async function listEventSources(
   return paginatedEventSourcesSchema.parse(data);
 }
 
+/** Fetches full details, creator info, masked API keys, and stats for a single event source. */
 export async function getEventSource(id: string): Promise<EventSourceDetailResponse> {
   const data = await apiRequest<unknown>(`/api/event-sources/${encodeURIComponent(id)}`, {
     target: "same-origin",
@@ -86,6 +98,7 @@ export async function getEventSource(id: string): Promise<EventSourceDetailRespo
   return eventSourceDetailResponseSchema.parse(data);
 }
 
+/** Updates an existing event source configuration via PUT /api/event-sources/:id. */
 export async function updateEventSource(
   id: string,
   values: UpdateEventSourceFormValues,
@@ -115,6 +128,7 @@ export async function updateEventSource(
   return eventSourceResponseSchema.parse(data);
 }
 
+/** Tests live connectivity to an event source endpoint before saving configuration. */
 export async function testEventSourceConnection(
   values: TestEventSourceConnectionValues,
 ): Promise<TestEventSourceDiagnosticResponse> {
@@ -135,6 +149,7 @@ export async function testEventSourceConnection(
   return testEventSourceDiagnosticSchema.parse(data);
 }
 
+/** Uploads a batch of parsed events to POST /api/event-sources/:id/import. */
 export async function importEvents(
   sourceId: string,
   payload: ImportEventsPayload,
@@ -151,6 +166,7 @@ export async function importEvents(
   return importEventsResponseSchema.parse(data);
 }
 
+/** Retrieves summary metrics and status for a specific event ingestion batch. */
 export async function getBatchDetail(batchId: string): Promise<BatchDetailResponse> {
   const data = await apiRequest<unknown>(
     `/api/event-sources/batches/${encodeURIComponent(batchId)}`,
@@ -163,6 +179,7 @@ export async function getBatchDetail(batchId: string): Promise<BatchDetailRespon
   return batchDetailResponseSchema.parse(data);
 }
 
+/** Fetches paginated invalid event rows recorded during a specific import batch. */
 export async function listBatchInvalidEvents(
   batchId: string,
   params?: Partial<GetBatchInvalidEventsQuery>,
@@ -186,6 +203,7 @@ export async function listBatchInvalidEvents(
   return paginatedInvalidEventsSchema.parse(data);
 }
 
+/** Fetches paginated ingestion batch history for a specific event source. */
 export async function listSourceBatches(
   sourceId: string,
   params?: Partial<GetSourceBatchesQuery>,
