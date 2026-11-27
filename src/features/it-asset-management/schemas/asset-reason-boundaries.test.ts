@@ -3,7 +3,7 @@ import { archiveAssetSchema } from "./archive-asset-schema";
 import { assignAssetOwnerSchema } from "./assign-asset-owner-schema";
 import { deactivateBusinessServiceSchema } from "./deactivate-business-service-schema";
 describe("archiveAssetSchema reason boundaries", () => {
-  const fields = {};
+  const fields = { confirmationCode: "AST-001" };
   it.each(["", " ", "a".repeat(19), " " + "a".repeat(19) + " "]) ("rejects short reason %j", (reason) => {
     expect(archiveAssetSchema.safeParse({ ...fields, reason }).success).toBe(false);
   });

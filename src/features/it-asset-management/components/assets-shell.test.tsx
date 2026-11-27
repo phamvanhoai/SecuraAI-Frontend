@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-const { push, useAssets, useSessionUser } = vi.hoisted(() => ({ push: vi.fn(), useAssets: vi.fn(), useSessionUser: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams(), usePathname: () => "/assets" }));
+const { push, useAssets, useSessionUser, location } = vi.hoisted(() => ({ location: { search: "" }, push: vi.fn(), useAssets: vi.fn(), useSessionUser: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }), useSearchParams: () => new URLSearchParams(location.search), usePathname: () => "/assets" }));
 vi.mock("../hooks/use-assets", () => ({ useAssets }));
 vi.mock("@/features/authentication-account", () => ({ useSessionUser }));
 vi.mock("./asset-detail-dialog", () => ({ AssetDetailDialog: () => null }));
@@ -15,23 +15,53 @@ vi.mock("./link-asset-context-dialog", () => ({ LinkAssetContextDialog: () => nu
 import { AssetsShell } from "./assets-shell";
 afterEach(cleanup);
 const response = { items: [{ id: "00000000-0000-4000-8000-000000000001", assetCode: "AST-001", name: "Core Server", assetType: "server", criticality: "high", dataClassification: "confidential", description: null, status: "active", owner: { id: "00000000-0000-4000-8000-000000000002", fullName: "Asset Owner", inactive: false }, businessService: null, createdAt: "2026-09-10T00:00:00.000Z", updatedAt: "2026-09-11T00:00:00.000Z" }], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } };
-describe("AssetsShell", () => { beforeEach(() => { push.mockReset(); useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read"] } }); useAssets.mockReturnValue({ isPending: false, isError: false, data: response, refetch: vi.fn() }); });
+describe("AssetsShell", () => { beforeEach(() => { push.mockReset(); location.search = ""; useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read"] } }); useAssets.mockReturnValue({ isPending: false, isError: false, data: response, refetch: vi.fn() }); });
   it("filters by a canonical type and clears the selection", async () => {
     render(<AssetsShell />);
     const user = userEvent.setup();
     const select = screen.getByRole("combobox", { name: "Asset type" });
     expect(select).toHaveValue("");
     await user.selectOptions(select, "DATABASE");
-    await user.click(screen.getByRole("button", { name: "Filter" }));
     expect(push).toHaveBeenCalledWith(expect.stringContaining("assetType=DATABASE"));
     await user.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(select).toHaveValue("");
     expect(push).toHaveBeenLastCalledWith("/assets");
   });
+  it("applies dropdowns immediately while preserving submitted search and resetting the page", async () => {
+    location.search = "page=3&q=server&assetType=DATABASE&criticality=high&status=active";
+    render(<AssetsShell />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Search"), " draft");
+    expect(push).not.toHaveBeenCalled();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Criticality" }), "low");
+    let url = new URL(push.mock.calls.at(-1)?.[0], "http://localhost");
+    expect(url.searchParams.get("page")).toBe("1");
+    expect(url.searchParams.get("q")).toBe("server");
+    expect(url.searchParams.get("assetType")).toBe("DATABASE");
+    expect(url.searchParams.get("criticality")).toBe("low");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Status" }), "archived");
+    url = new URL(push.mock.calls.at(-1)?.[0], "http://localhost");
+    expect(url.searchParams.get("status")).toBe("archived");
+    expect(url.searchParams.get("page")).toBe("1");
+    await user.click(screen.getByRole("button", { name: "Search" }));
+    expect(push).toHaveBeenLastCalledWith(expect.stringContaining("q=server+draft"));
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(push).toHaveBeenLastCalledWith("/assets");
+    expect(screen.getByLabelText("Search")).toHaveValue("");
+  });
+  it("submits search with Enter and keeps applied dropdown filters", async () => {
+    location.search = "status=active&criticality=high";
+    render(<AssetsShell />);
+    await userEvent.type(screen.getByLabelText("Search"), "database{Enter}");
+    const url = new URL(push.mock.calls.at(-1)?.[0], "http://localhost");
+    expect(url.searchParams.get("q")).toBe("database");
+    expect(url.searchParams.get("status")).toBe("active");
+    expect(url.searchParams.get("criticality")).toBe("high");
+  });
   it("renders the V2 asset directory", () => { render(<AssetsShell />); expect(screen.getByText("Core Server")).toBeInTheDocument(); expect(screen.getByText("Asset Owner")).toBeInTheDocument(); expect(screen.getByText("confidential")).toBeInTheDocument(); });
   it("groups asset actions in an overflow menu", async () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read", "assets.update"] } }); render(<AssetsShell />); expect(screen.queryByRole("button", { name: "Assign owner" })).not.toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Actions for AST-001" })); expect(screen.getByRole("button", { name: "View details" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Edit asset" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Manage links" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Classify asset" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Assign owner" })).toBeInTheDocument(); expect(screen.getByRole("button", { name: "Archive asset" })).toBeInTheDocument(); });
   it("only allows viewing an archived asset", async () => { useSessionUser.mockReturnValue({ isPending: false, data: { permissions: ["assets.read", "assets.update"] } }); useAssets.mockReturnValue({ isPending: false, isError: false, data: { ...response, items: [{ ...response.items[0], status: "archived" }] }, refetch: vi.fn() }); render(<AssetsShell />); await userEvent.click(screen.getByRole("button", { name: "Actions for AST-001" })); expect(screen.getByRole("button", { name: "View details" })).toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Edit asset" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Manage links" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Classify asset" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Assign owner" })).not.toBeInTheDocument(); expect(screen.queryByRole("button", { name: "Archive asset" })).not.toBeInTheDocument(); });
-  it("writes bounded filters to the URL", async () => { render(<AssetsShell />); const user = userEvent.setup(); await user.type(screen.getByLabelText("Search"), "server"); await user.click(screen.getByRole("button", { name: "Filter" })); expect(push).toHaveBeenCalledWith(expect.stringContaining("q=server")); });
+  it("writes bounded filters to the URL", async () => { render(<AssetsShell />); const user = userEvent.setup(); await user.type(screen.getByLabelText("Search"), "server"); await user.click(screen.getByRole("button", { name: "Search" })); expect(push).toHaveBeenCalledWith(expect.stringContaining("q=server")); });
   it("uses the product collection empty-state pattern", () => {
     useAssets.mockReturnValue({
       isPending: false,

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, Info, Loader2, Plus, Tag, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/feedback/toast";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AssetOwnerPicker } from "./asset-owner-picker";
 import { useCreateAsset } from "../hooks/use-create-asset";
 import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
 import { assetTypes, assetTypeLabels } from "../schemas/asset-type-schema";
@@ -25,8 +26,6 @@ const defaults: CreateAssetInput = {
   assetType: "",
   ownerUserId: "",
   description: "",
-  dependencyIds: [],
-  eventSourceIds: [],
 };
 
 export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
@@ -38,6 +37,7 @@ export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -58,11 +58,7 @@ export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
 
   const submit = handleSubmit(async (values) => {
     try {
-      const { dependencyIds, ...assetFields } = values;
-      const asset = await mutation.mutateAsync({
-        ...assetFields,
-        dependencies: dependencyIds.map((assetId) => ({ assetId })),
-      });
+      const asset = await mutation.mutateAsync(values);
       reset(defaults);
       close();
       onCreated?.();
@@ -176,21 +172,21 @@ export function CreateAssetDialog({ onCreated }: { onCreated?: () => void }) {
                 Asset owner
                 <span aria-hidden="true" className="text-muted ml-1 font-normal">(optional)</span>
               </label>
-              <Select
-                id="ownerUserId"
-                aria-label="Asset owner"
-                disabled={options.isPending || options.isError}
-                aria-invalid={Boolean(errors.ownerUserId)}
-                aria-describedby={errors.ownerUserId ? "ownerUserId-error" : undefined}
-                {...register("ownerUserId")}
-              >
-                <option value="">Unassigned</option>
-                {options.data?.owners.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.fullName} · {owner.role}
-                  </option>
-                ))}
-              </Select>
+              <Controller
+                name="ownerUserId"
+                control={control}
+                render={({ field }) => (
+                  <AssetOwnerPicker
+                    id="ownerUserId"
+                    value={field.value ?? ""}
+                    enabled={open && !options.isPending && !options.isError && !mutation.isPending}
+                    invalid={Boolean(errors.ownerUserId)}
+                    inputRef={field.ref}
+                    onBlur={field.onBlur}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
               {errors.ownerUserId && (
                 <p id="ownerUserId-error" role="alert" className="text-danger text-xs">
                   {errors.ownerUserId.message}

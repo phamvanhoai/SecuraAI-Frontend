@@ -69,7 +69,7 @@ describe("DeleteAssetDialog", () => {
     expect(archiveButton).toBeEnabled();
     await user.click(archiveButton);
     await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({
-      assetId: asset.id, reason: "Asset retired after migration",
+      assetId: asset.id, confirmationCode: asset.assetCode, reason: "Asset retired after migration",
     }));
   });
 
@@ -85,7 +85,7 @@ describe("DeleteAssetDialog", () => {
     expect(deleteButton).toBeEnabled();
     await user.click(deleteButton);
 
-    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({ assetId: asset.id, reason: "Replaced by a new server" }));
+    await waitFor(() => expect(mutateAsyncMock).toHaveBeenCalledWith({ assetId: asset.id, confirmationCode: asset.assetCode, reason: "Replaced by a new server" }));
     expect(successMock).toHaveBeenCalledOnce();
   });
 
