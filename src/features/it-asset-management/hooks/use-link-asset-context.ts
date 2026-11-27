@@ -10,6 +10,7 @@ export function useLinkAssetContext(assetId: string | null) {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["risk-register"] }),
       queryClient.invalidateQueries({ queryKey: ["assets", "list"] }),
+      queryClient.invalidateQueries({ queryKey: ["assets", "dependency-options"] }),
       queryClient.invalidateQueries({
         queryKey: ["assets", "detail", assetId],
       }),

@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useEventSources } from "@/features/event-ingestion";
-import { useAssets } from "../hooks/use-assets";
+import { useAssetDependencyOptions } from "../hooks/use-asset-dependency-options";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssetCreateOptions } from "../hooks/use-asset-create-options";
@@ -70,18 +70,11 @@ export function LinkAssetContextDialog({
     );
     return () => clearTimeout(timer);
   }, [dependencySearch]);
-  const dependencyResults = useAssets(
-    {
-      page: 1,
-      limit: 10,
-      status: "active",
-      sortBy: "createdAt",
-      sortOrder: "desc",
-      ...(debouncedSearch ? { q: debouncedSearch } : {}),
-    },
-    Boolean(assetId) &&
-      tab === "links" &&
-      dependencySearch.trim() === debouncedSearch,
+  const dependencyResults = useAssetDependencyOptions(
+    assetId,
+    debouncedSearch,
+    Boolean(assetId) && detail.data?.status === "active" &&
+      tab === "links" && dependencySearch.trim() === debouncedSearch,
   );
 
   const [sourceSearch, setSourceSearch] = useState("");
@@ -570,22 +563,23 @@ export function LinkAssetContextDialog({
                     >
                       {matches.map((item) => (
                         <li key={item.id}>
-                          <label className="flex cursor-pointer gap-2 py-2 text-xs">
+                          <label className={`flex gap-2 py-2 text-xs ${item.canSelect ? "cursor-pointer" : "text-muted cursor-not-allowed"}`}>
                             <input
                               type="checkbox"
                               checked={false}
-                              disabled={
-                                isArchived ||
-                                mutation.isPending ||
-                                selectedDependencyIds.length >= 50
-                              }
-                              onChange={() => toggleDependency(item, true)}
+                              disabled={!item.canSelect || isArchived || mutation.isPending || selectedDependencyIds.length >= 50}
+                              aria-describedby={!item.canSelect ? `dependency-blocked-${item.id}` : undefined}
+                              onChange={() => { if (item.canSelect) toggleDependency(item, true); }}
                             />
                             <span className="min-w-0 break-words">
-                              <span className="block font-medium">
-                                {item.assetCode}
-                              </span>
-                              {item.name}
+                              <span className="block">{item.assetCode}</span>
+                              <span className="block">{item.name}</span>
+                              {!item.canSelect ? (
+                                <span id={`dependency-blocked-${item.id}`} className="mt-1 block">
+                                  {item.blockedReason ?? "Cannot select: circular dependency."}
+                                  {item.cyclePath.length ? <span className="mt-1 block">{item.cyclePath.join(" → ")}</span> : null}
+                                </span>
+                              ) : null}
                             </span>
                           </label>
                         </li>
