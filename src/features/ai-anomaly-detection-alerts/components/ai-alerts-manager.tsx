@@ -143,7 +143,7 @@ export function AiAlertsManager() {
     void runDetection
       .mutateAsync({ maxEvents: 100 })
       .then((result) => {
-        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.${result.insufficientBaseline ? ` ${result.insufficientBaseline} events lacked sufficient baseline.` : ""}`;
+        const summary = `${result.eventsEvaluated} events evaluated; ${result.alertsCreated} alerts created; ${result.alertsGrouped} matches grouped into existing alerts.`;
         if (result.hasMore) {
           toast.warning(
             "Manual detection batch completed",

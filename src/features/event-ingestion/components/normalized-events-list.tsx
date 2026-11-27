@@ -330,6 +330,10 @@ export function NormalizedEventsList() {
                 ) : null}
                 {item.detection.status === "BELOW_THRESHOLD"
                   ? "Evaluated — below threshold"
+                  : item.detection.status === "LLM_BENIGN"
+                    ? "Reviewed by LLM — benign"
+                    : item.detection.status === "LLM_SUSPICIOUS"
+                      ? "Reviewed by LLM — suspicious"
                   : item.detection.status === "LINKED_TO_ALERT"
                     ? "Linked to alert"
                     : item.detection.status === "FAILED"
