@@ -45,23 +45,23 @@ vi.mock("../hooks/use-link-asset-context", () => ({
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({ success: mocks.success }),
 }));
-vi.mock("../hooks/use-assets", () => ({
-  useAssets: (
-    query: { q?: string; page: number; limit: number },
-    enabled: boolean,
-  ) => {
-    searchMock(query, enabled);
+vi.mock("../hooks/use-asset-dependency-options", () => ({
+  useAssetDependencyOptions: (id: string, q: string, enabled: boolean) => {
+    const query = { q };
+    searchMock(id, q, enabled);
     return {
       isPending: false,
       isFetching: false,
       isError: false,
       data: {
         items: [
-          { id: assetId, assetCode: "AST-01", name: "App", status: "active" },
+          { id: assetId, assetCode: "AST-01", name: "App", status: "active", canSelect: false, blockedReason: null, cyclePath: [] },
+          { id: "00000000-0000-4000-8000-000000000005", assetCode: "AST-CYCLE", name: "Circular server", status: "active", canSelect: false, blockedReason: "Cannot select: this dependency would create a circular dependency.", cyclePath: ["App", "Circular server", "App"] },
           {
             id: "00000000-0000-4000-8000-000000000003",
             assetCode: "AST-03",
             name: query.q ? "Remote matching server" : "Other server",
+            canSelect: true, blockedReason: null, cyclePath: [],
             status: "active",
           },
         ],
@@ -126,15 +126,7 @@ describe("LinkAssetContextDialog existing links", () => {
     expect(
       screen.queryByRole("list", { name: "Dependency search results" }),
     ).toBeInTheDocument();
-    expect(searchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        page: 1,
-        limit: 10,
-        sortBy: "createdAt",
-        sortOrder: "desc",
-      }),
-      true,
-    );
+    expect(searchMock).toHaveBeenCalledWith(assetId, "", true);
     expect(
       screen.queryByRole("button", { name: "Next results" }),
     ).not.toBeInTheDocument();
@@ -144,17 +136,7 @@ describe("LinkAssetContextDialog existing links", () => {
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: /Other server/ }));
     await user.type(screen.getByLabelText("Search dependencies"), "remote");
-    await waitFor(() =>
-      expect(searchMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          q: "remote",
-          page: 1,
-          limit: 10,
-          status: "active",
-        }),
-        true,
-      ),
-    );
+    await waitFor(() => expect(searchMock).toHaveBeenCalledWith(assetId, "remote", true));
     expect(
       screen.getByRole("checkbox", { name: /Other server/ }),
     ).toBeChecked();
@@ -167,6 +149,15 @@ describe("LinkAssetContextDialog existing links", () => {
         eventSourceIds: [],
       }),
     );
+  });
+  it("shows blocked candidates with a reason and prevents selecting them", async () => {
+    render(<LinkAssetContextDialog assetId={assetId} onClose={vi.fn()} />);
+    const blocked = screen.getByRole("checkbox", { name: /AST-CYCLE/ });
+    expect(blocked).toBeDisabled();
+    expect(screen.getByText("App → Circular server → App")).toBeVisible();
+    await userEvent.click(blocked);
+    expect(blocked).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /Other server/ })).toBeEnabled();
   });
   it("loads latest event sources, searches and preserves chosen sources", async () => {
     const user = userEvent.setup();
