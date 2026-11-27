@@ -56,6 +56,9 @@ export function useUpdateEventGovernancePolicy() {
       queryClient.invalidateQueries({
         queryKey: ["event-governance", "policies", "summary"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["event-governance", "retention-purge", "status"],
+      });
     },
   });
 }
