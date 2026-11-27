@@ -4,6 +4,7 @@ import {
   Layers,
   Radio,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -16,6 +17,7 @@ import { useEventGovernanceSummary } from "../hooks/use-event-governance";
 import { useSessionUser } from "@/features/authentication-account";
 import { EventSourcesList } from "./event-sources-list";
 import { EventGovernancePoliciesList } from "./event-governance-policies-list";
+import { RetentionPurgeDialog } from "./retention-purge-dialog";
 import { NormalizedEventsList } from "./normalized-events-list";
 import { RegisterEventSourceDialog } from "./register-event-source-dialog";
 import { cn } from "@/lib/utils";
@@ -31,6 +33,7 @@ export function LogSourcesManager() {
     "events" | "event-sources" | "governance"
   >("events");
   const [registerEventSourceOpen, setRegisterEventSourceOpen] = useState(false);
+  const [retentionPurgeOpen, setRetentionPurgeOpen] = useState(false);
 
   const activeTab =
     !canViewEvents && selectedTab === "events"
@@ -68,7 +71,15 @@ export function LogSourcesManager() {
               primaryAction: "Register event source",
               onPrimaryAction: () => setRegisterEventSourceOpen(true),
             }
-          : {})}
+          : activeTab === "governance" && canManageGovernance
+            ? {
+                secondaryAction: "Retention purge",
+                secondaryActionIcon: (
+                  <Trash2 aria-hidden="true" className="size-4" strokeWidth={1.8} />
+                ),
+                onSecondaryAction: () => setRetentionPurgeOpen(true),
+              }
+            : {})}
       />
       <MetricStrip
         ariaLabel={
@@ -321,6 +332,11 @@ export function LogSourcesManager() {
           setRegisterEventSourceOpen(false);
           eventSourcesOverview.refetch();
         }}
+      />
+
+      <RetentionPurgeDialog
+        isOpen={retentionPurgeOpen}
+        onClose={() => setRetentionPurgeOpen(false)}
       />
 
       {activeTab === "events" && canViewEvents ? (

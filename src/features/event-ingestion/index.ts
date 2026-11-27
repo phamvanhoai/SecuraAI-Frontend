@@ -129,6 +129,36 @@ export { EventGovernancePoliciesList } from "./components/event-governance-polic
 export { EventGovernancePolicyDetailDialog } from "./components/event-governance-policy-detail-dialog";
 export { EditEventGovernancePolicyDialog } from "./components/edit-event-governance-policy-dialog";
 export {
+  RetentionPurgeDialog,
+  type RetentionPurgeDialogProps,
+} from "./components/retention-purge-dialog";
+export {
+  effectiveRetentionReasons,
+  retentionPurgeRunStatuses,
+  retentionPurgeTriggers,
+  runRetentionPurgePayloadSchema,
+  effectiveFamilyRetentionPolicySchema,
+  retentionPurgeFamilyResultSchema,
+  retentionPurgeRunResultSchema,
+  retentionPurgeHistoryItemSchema,
+  retentionPurgeStatusSchema,
+  type EffectiveRetentionReason,
+  type RetentionPurgeRunStatus,
+  type RetentionPurgeTrigger,
+  type RunRetentionPurgePayload,
+  type RunRetentionPurgeInput,
+  type EffectiveFamilyRetentionPolicy,
+  type RetentionPurgeFamilyResult,
+  type RetentionPurgeRunResult,
+  type RetentionPurgeHistoryItem,
+  type RetentionPurgeStatus,
+} from "./schemas/retention-purge-schema";
+export { getRetentionPurgeStatus, runRetentionPurge } from "./api/retention-purge";
+export {
+  useRetentionPurgeStatus,
+  useRunRetentionPurge,
+} from "./hooks/use-retention-purge";
+export {
   governancePolicyStatuses,
   governanceEventFamilies,
   userSummarySchema,

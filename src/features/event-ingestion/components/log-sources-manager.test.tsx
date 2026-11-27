@@ -122,6 +122,22 @@ vi.mock("../hooks/use-event-governance", () => ({
   }),
 }));
 
+vi.mock("../hooks/use-retention-purge", () => ({
+  useRetentionPurgeStatus: () => ({
+    data: undefined,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+  useRunRetentionPurge: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    variables: undefined,
+  }),
+}));
+
 vi.mock("@/components/feedback/toast", () => ({
   useToast: () => ({
     success: vi.fn(),
@@ -201,6 +217,12 @@ describe("LogSourcesManager", () => {
       screen.getByRole("button", { name: /Data governance & Retention/i }),
     );
     expect(screen.getByText("Total policies")).toBeInTheDocument();
+
+    // Open Automated Retention Purge popup from header action
+    const purgeButton = screen.getByRole("button", { name: /Retention purge/i });
+    expect(purgeButton).toBeInTheDocument();
+    await user.click(purgeButton);
+    expect(screen.getByText("Automated Retention Purge")).toBeInTheDocument();
   });
 });
 
