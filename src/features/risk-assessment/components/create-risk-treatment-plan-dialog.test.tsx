@@ -14,6 +14,22 @@ beforeAll(() => {
 });
 afterEach(() => { cleanup(); state.status = 'open'; state.pending = false; state.activePlan = false; state.residual = true; });
 describe('create Risk Treatment Plan', () => {
+  it('requires plan and action dates after today in Vietnam at the UTC day boundary', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-28T17:00:00Z'));
+    try {
+      render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);
+      const planDate = screen.getByLabelText('Due date');
+      const actionDate = screen.getByLabelText('Action 1 due date');
+      for (const input of [planDate, actionDate]) {
+        expect(input).toHaveAttribute('min', '2026-11-30');
+        fireEvent.change(input, { target: { value: '2026-11-29' } });
+        expect(input).toBeInvalid();
+        fireEvent.change(input, { target: { value: '2026-11-30' } });
+        expect(input).toBeValid();
+      }
+    } finally { vi.useRealTimers(); }
+  });
   it('blocks all four strategies when residual is missing', () => {
     state.residual = false;
     render(<CreateRiskTreatmentPlanDialog riskId='risk' riskLabel='Risk' onClose={vi.fn()} />);

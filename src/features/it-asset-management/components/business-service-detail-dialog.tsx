@@ -51,7 +51,7 @@ const date = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
     dateStyle: "short",
     timeStyle: "short",
-    timeZone: "Asia/Bangkok",
+    timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date(value));
 
 export function BusinessServiceDetailDialog({

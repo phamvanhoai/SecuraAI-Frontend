@@ -1,4 +1,5 @@
 "use client";
+import { riskToday } from "../schemas/risk-review-date";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,10 +18,7 @@ import type { TreatmentPlanDetail } from "../schemas/treatment-plan-detail-schem
 import { updateTreatmentPlanSchema, type UpdateTreatmentPlanForm, type UpdateTreatmentPlanInput } from "../schemas/update-treatment-plan-schema";
 
 const dateValue = (value: string | null): string => value?.slice(0, 10) ?? "";
-const today = (): string => {
-  const value = new Date();
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-};
+const today = riskToday;
 
 export function EditTreatmentPlanDialog({ plan, open, onClose }: { plan: TreatmentPlanDetail; open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);

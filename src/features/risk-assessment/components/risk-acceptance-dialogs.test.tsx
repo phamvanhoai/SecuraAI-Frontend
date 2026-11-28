@@ -157,6 +157,19 @@ const risk = riskRegisterDetailSchema.parse({
   },
 });
 
+it("limits acceptance validity to today or later in Vietnam", () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-28T17:00:00Z"));
+  try {
+    render(<SubmitRiskAcceptanceDialog risk={risk} onClose={vi.fn()} />);
+    const input = screen.getByLabelText("Acceptance valid until (UTC+7)");
+    expect(input).toHaveAttribute("min", "2026-11-29");
+    fireEvent.change(input, { target: { value: "2026-11-28" } });
+    expect(input).toBeInvalid();
+    fireEvent.change(input, { target: { value: "2026-11-29" } });
+    expect(input).toBeValid();
+  } finally { vi.useRealTimers(); }
+});
 it("keeps expired request rejection available and disables approval", () => {
   render(
     <DecideRiskAcceptanceDialog acceptanceId={id} expired onClose={vi.fn()} />,

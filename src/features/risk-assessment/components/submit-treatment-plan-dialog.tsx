@@ -161,7 +161,7 @@ export function SubmitTreatmentPlanDialog({
               <dt className="text-muted text-xs uppercase">Target date</dt>
               <dd className="mt-1 font-medium">
                 {plan.targetDate
-                  ? new Intl.DateTimeFormat("en-GB").format(
+                  ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh" }).format(
                       new Date(plan.targetDate),
                     )
                   : "Not set"}

@@ -40,7 +40,8 @@ import { RiskReassessmentRequestDetailDialog } from "./risk-reassessment-request
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
+    timeZone: "Asia/Ho_Chi_Minh",
+    dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
 

@@ -84,7 +84,8 @@ export function AssetClassificationHistory({ assetId }: { assetId: string }) {
                   {entry.actor?.fullName ?? "Unknown actor"} ·{" "}
                   <time dateTime={entry.occurredAt}>
                     {new Intl.DateTimeFormat("en-GB", {
-                      dateStyle: "medium",
+                      timeZone: "Asia/Ho_Chi_Minh",
+                      dateStyle: "short",
                       timeStyle: "short",
                     }).format(new Date(entry.occurredAt))}
                   </time>

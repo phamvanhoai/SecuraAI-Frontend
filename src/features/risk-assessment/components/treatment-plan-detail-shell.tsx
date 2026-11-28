@@ -42,7 +42,7 @@ const tones = {
 } as const;
 const date = (value: string | null) =>
   value
-    ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+    ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short" }).format(
         new Date(value),
       )
     : "Not set";

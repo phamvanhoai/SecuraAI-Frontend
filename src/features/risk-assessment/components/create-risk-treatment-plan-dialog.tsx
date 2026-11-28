@@ -1,4 +1,5 @@
 "use client";
+import { nextRiskReviewDate } from "../schemas/risk-review-date";
 import { AcceptanceCostFields } from "./acceptance-cost-fields";
 import { emptyAcceptanceCost } from "../schemas/acceptance-cost-schema";
 import {
@@ -92,6 +93,7 @@ export function CreateRiskTreatmentPlanDialog({
 
   const rank = { low: 1, medium: 2, high: 3, critical: 4 } as const;
 
+  const [minimumDueDate] = useState(() => nextRiskReviewDate());
   const [title, setTitle] = useState("");
   const [strategy, setStrategy] = useState("mitigate");
   const [acceptanceCost, setAcceptanceCost] = useState({
@@ -328,6 +330,7 @@ export function CreateRiskTreatmentPlanDialog({
               <Input
                 id="plan-due-date"
                 type="date"
+                min={minimumDueDate}
                 value={targetDate}
                 onChange={(e) => setTargetDate(e.target.value)}
                 disabled={cannotSave}
@@ -600,6 +603,7 @@ export function CreateRiskTreatmentPlanDialog({
                   <Input
                     aria-label={`Action ${index + 1} due date`}
                     type="date"
+                    min={minimumDueDate}
                     value={action.dueDate}
                     disabled={cannotSave}
                     onChange={(e) =>

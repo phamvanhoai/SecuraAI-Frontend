@@ -42,8 +42,8 @@ const targetLevelMeta: Record<
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Bangkok",
-    dateStyle: "medium",
+    timeZone: "Asia/Ho_Chi_Minh",
+    dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
 

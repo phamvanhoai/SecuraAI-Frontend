@@ -100,7 +100,8 @@ export function RiskContextHistoryList({
         <p className="text-muted text-xs">
           {entry.actor?.fullName ?? "Unknown actor"} ·{" "}
           {new Intl.DateTimeFormat("en-GB", {
-            dateStyle: "medium",
+            timeZone: "Asia/Ho_Chi_Minh",
+            dateStyle: "short",
             timeStyle: "short",
           }).format(new Date(entry.occurredAt))}
         </p>
