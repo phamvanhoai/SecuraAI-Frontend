@@ -203,7 +203,8 @@ export function UpdateRiskTreatmentPlanDialog({
                 Due:{" "}
                 <span className="font-medium">
                   {new Intl.DateTimeFormat("en-GB", {
-                    dateStyle: "medium",
+                    timeZone: "Asia/Ho_Chi_Minh",
+                    dateStyle: "short",
                   }).format(new Date(plan.targetCompletionDate))}
                 </span>
               </span>

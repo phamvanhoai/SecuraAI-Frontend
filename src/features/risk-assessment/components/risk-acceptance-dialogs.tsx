@@ -1,4 +1,5 @@
 "use client";
+import { riskToday } from "../schemas/risk-review-date";
 import { AcceptanceCostSummary } from "./acceptance-cost-fields";
 import type { AcceptanceCost } from "../schemas/acceptance-cost-schema";
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +24,7 @@ import {
 } from "../hooks/use-risk-acceptance";
 type Risk = RiskRegisterDetail;
 const acceptanceExpired = (value: string) =>
-  new Date(`${value}T23:59:59.999Z`).getTime() <= Date.now();
+  value < riskToday();
 export function SubmitRiskAcceptanceDialog({
   risk,
   onClose,
@@ -70,7 +71,7 @@ export function SubmitRiskAcceptanceDialog({
         "Refresh the risk and complete the residual assessment and eligible plan before submitting.",
       );
     if (acceptanceExpired(validUntil))
-      return setError("Acceptance validity must be in the future.");
+      return setError("Acceptance validity must be today or later in Vietnam time (UTC+7).");
     const parsed = submitRiskAcceptanceSchema.safeParse({
       residualLikelihood: likelihood,
       residualImpact: impact,
@@ -231,10 +232,11 @@ export function SubmitRiskAcceptanceDialog({
           </div>
           {selectedPlan?.strategy === "accept" ? <div className="sm:col-span-2"><AcceptanceCostSummary value={selectedPlan.acceptanceCost} /></div> : null}
           <label className="text-sm font-medium">
-            Acceptance valid until (UTC date)
+            Acceptance valid until (UTC+7)
             <Input
               className="mt-1"
               type="date"
+              min={riskToday()}
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
             />

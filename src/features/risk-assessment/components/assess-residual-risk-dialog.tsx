@@ -364,8 +364,8 @@ export function AssessResidualRiskDialog({
                           </p>
                           <p className="text-muted text-xs mt-0.5">
                             {new Intl.DateTimeFormat("en-GB", {
-                              timeZone: "Asia/Bangkok",
-                              dateStyle: "medium",
+                              timeZone: "Asia/Ho_Chi_Minh",
+                              dateStyle: "short",
                               timeStyle: "short",
                             }).format(new Date(item.assessedAt))}{" "}
                             (UTC+7)

@@ -105,7 +105,7 @@ export function ApproveTreatmentPlanDialog({ plan, risk, onClose }: {
             <div><dt className="text-muted text-xs uppercase">Workflow step</dt><dd className="mt-1 font-medium">{plan.approval.currentStepName ?? `Step ${plan.approval.currentStep}`}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Strategy</dt><dd className="mt-1 font-medium capitalize">{plan.strategy}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Owner</dt><dd className="mt-1 font-medium">{plan.owner?.fullName ?? "Unassigned"}</dd></div>
-            <div><dt className="text-muted text-xs uppercase">Target date</dt><dd className="mt-1 font-medium">{plan.targetDate ? new Intl.DateTimeFormat("en-GB").format(new Date(plan.targetDate)) : "Not set"}</dd></div>
+            <div><dt className="text-muted text-xs uppercase">Target date</dt><dd className="mt-1 font-medium">{plan.targetDate ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(plan.targetDate)) : "Not set"}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Actions</dt><dd className="mt-1 font-medium">{plan.actions.length}</dd></div>
             <div><dt className="text-muted text-xs uppercase">Risk analysis</dt><dd className="mt-1 font-medium">{risk.threatCount} threats, {risk.vulnerabilityCount} vulnerabilities</dd></div>
           </dl>

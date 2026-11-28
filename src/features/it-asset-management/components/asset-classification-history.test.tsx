@@ -47,7 +47,7 @@ describe("classification history", () => {
           {
             id: "event",
             actor: { fullName: "Demo officer" },
-            occurredAt: "2026-10-26T12:00:00Z",
+            occurredAt: "2026-10-26T17:05:00Z",
             before: {
               ...after,
               criticality: "low",
@@ -61,6 +61,7 @@ describe("classification history", () => {
       },
     });
     render(<AssetClassificationHistory assetId="asset" />);
+    expect(screen.getByText("27/10/2026, 00:05")).toBeVisible();
     await userEvent.click(screen.getByText("View changes"));
     expect(screen.getByText("Previous explanation.")).toBeVisible();
     expect(

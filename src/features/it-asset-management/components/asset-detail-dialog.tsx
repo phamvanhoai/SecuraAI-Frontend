@@ -28,7 +28,7 @@ import {
 
 const date = (value: string | null) =>
   value
-    ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+    ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short" }).format(
         new Date(value),
       )
     : "Not set";
@@ -229,7 +229,8 @@ function AssetDetailContent({
                       </span>{" "}
                       ·{" "}
                       {new Intl.DateTimeFormat("en-GB", {
-                        dateStyle: "medium",
+                        timeZone: "Asia/Ho_Chi_Minh",
+                        dateStyle: "short",
                         timeStyle: "short",
                       }).format(new Date(asset.classification.assessedAt))}
                     </span>
@@ -411,7 +412,8 @@ function AssetDetailContent({
                         value={
                           asset.archivedAt
                             ? new Intl.DateTimeFormat("en-GB", {
-                                dateStyle: "medium",
+                                timeZone: "Asia/Ho_Chi_Minh",
+                                dateStyle: "short",
                                 timeStyle: "short",
                               }).format(new Date(asset.archivedAt))
                             : "Not recorded"

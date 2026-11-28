@@ -128,7 +128,7 @@ const columns: readonly DataTableColumn<TreatmentPlanListItem>[] = [
       <span>
         <span className="block">
           {plan.targetDate
-            ? new Intl.DateTimeFormat("en-GB").format(new Date(plan.targetDate))
+            ? new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(plan.targetDate))
             : "Not set"}
         </span>
         {plan.isOverdue ? (
@@ -146,7 +146,7 @@ const columns: readonly DataTableColumn<TreatmentPlanListItem>[] = [
     key: "updatedAt",
     header: "Updated",
     cell: (plan) =>
-      new Intl.DateTimeFormat("en-GB").format(new Date(plan.updatedAt)),
+      new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(plan.updatedAt)),
   },
   {
     key: "actions",

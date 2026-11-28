@@ -44,7 +44,8 @@ const severityTone = {
 const formatDate = (value: string | null) =>
   value
     ? new Intl.DateTimeFormat("en-GB", {
-        dateStyle: "medium",
+        timeZone: "Asia/Ho_Chi_Minh",
+        dateStyle: "short",
         timeStyle: "short",
       }).format(new Date(value))
     : "Not recorded";
