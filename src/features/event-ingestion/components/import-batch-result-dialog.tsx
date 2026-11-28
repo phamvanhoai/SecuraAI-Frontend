@@ -256,7 +256,7 @@ export function ImportBatchResultDialog({
             {/* Invalid Events Section */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <AlertCircle className="size-4 text-rose-600 dark:text-rose-400" />
                   <h4 className="text-foreground text-sm font-semibold">
                     Invalid & Rejected Events ({batch.rejectedRecords})
@@ -264,7 +264,7 @@ export function ImportBatchResultDialog({
                 </div>
 
                 {batch.rejectedRecords > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center sm:justify-end gap-2">
                     <div className="relative w-44">
                       <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
                       <Input
@@ -298,7 +298,7 @@ export function ImportBatchResultDialog({
                         setErrorCodeFilter(e.target.value);
                         setPage(1);
                       }}
-                      className="text-xs min-h-8 h-8 min-w-44 max-w-56"
+                      className="text-xs min-h-8 h-8 w-44 sm:w-48"
                     >
                       <option value="">All Error Codes</option>
                       {availableErrorCodes.map((code) => (

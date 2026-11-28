@@ -314,6 +314,9 @@ describe("ImportBatchResultDialog", () => {
 
     const select = screen.getByRole("combobox", { name: /Filter error code/i });
     expect(select).toBeInTheDocument();
+    // Explicit width overrides Select's default w-full so the filter controls stay inline
+    expect(select).toHaveClass("w-44");
+    expect(select).not.toHaveClass("w-full");
 
     expect(screen.getByRole("option", { name: "All Error Codes" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "VALIDATION_FAILED" })).toBeInTheDocument();
